@@ -1,0 +1,82 @@
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.filter {
+  flex: 1 1 220px;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control);
+  padding: 0 11px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+}
+.filter:focus-within { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+.filter svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.filter input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: var(--text-md); }
+.filter input::placeholder { color: var(--faint); }
+.chip { display: inline-flex; align-items: center; gap: 4px; max-width: 280px; height: var(--control-sm); padding: 0 4px 0 10px; border-radius: var(--radius-control); border: 1px solid var(--line-strong); background: var(--panel); font-size: var(--text-sm); }
+.chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live { margin-left: auto; font-size: var(--text-sm); }
+
+/* New entries that arrived while the person was reading further down. */
+.heldWrap { position: sticky; top: 16px; z-index: 5; display: flex; justify-content: center; height: 0; overflow: visible; }
+.held { box-shadow: var(--shadow-pop); transform: translateY(-6px); }
+@media (max-width: 900px) { .heldWrap { top: calc(66px + env(safe-area-inset-top)); } }
+
+.list { margin: 0; padding: 0; list-style: none; }
+.day { position: sticky; top: 0; z-index: 2; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 18px 8px; border-top: 1px solid var(--line); background: var(--panel-2); }
+.day:first-child { border-top: 0; border-radius: calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px) 0 0; }
+@media (max-width: 900px) { .day { top: calc(56px + env(safe-area-inset-top)); } }
+.dayCount { font-size: var(--text-xs); color: var(--muted); }
+
+.row { display: grid; grid-template-columns: 72px 28px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 12px 16px 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
+.day + .row { border-top: 0; }
+.row[data-fresh] { animation: arrive var(--dur-slow) var(--ease-out); }
+@keyframes arrive { from { opacity: 0; transform: translateY(calc(-4px * var(--motion))); } }
+.time { display: grid; gap: 1px; padding-top: 5px; color: var(--muted); font-size: var(--text-sm); }
+.timeFrom { font-size: var(--text-xs); color: var(--faint); }
+.actor { display: grid; place-items: center; }
+/* The server is a square plate; people are round. The shape says who acted, colour isn't needed. */
+.serverTile { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; border: 1px dashed var(--line-strong); color: var(--muted); background: var(--panel); }
+.serverTile svg { width: 15px; height: 15px; }
+.main { min-width: 0; display: grid; gap: 3px; padding-top: 3px; }
+.text { overflow-wrap: anywhere; line-height: 1.45; color: var(--ink); }
+.row[data-kind="system"] .text { color: var(--ink-2); }
+.who, .whoStatic { font-weight: 620; background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; font-size: inherit; }
+.whoStatic { cursor: default; }
+@media (hover: hover) and (pointer: fine) { .who:hover { text-decoration: underline; } }
+.times { color: var(--muted); font-size: var(--text-sm); }
+.subTime { display: none; }
+.sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; font-size: var(--text-xs); color: var(--muted); min-width: 0; }
+.target { color: var(--ink-2); max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: underline; text-decoration-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) { .target:hover { color: var(--ink); text-decoration-color: currentColor; } }
+.only { background: none; border: 0; padding: 0; color: var(--muted); font-size: inherit; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .only:hover { color: var(--ink); text-decoration: underline; } }
+.outcome { display: inline-flex; align-items: center; gap: 7px; padding-top: 6px; font-size: var(--text-xs); font-weight: 600; white-space: nowrap; color: var(--ink-2); }
+.outcome[data-kind="failed"], .outcome[data-kind="problem"] { color: var(--fault); }
+.outcome[data-kind="cleared"] { color: var(--muted); font-weight: 560; }
+.inlineDisclosure { display: contents; }
+.inlineDisclosure > button { min-height: 0; font-size: inherit; font-weight: 400; color: var(--muted); }
+.inlineDisclosure > :last-child { flex-basis: 100%; }
+.details { margin-top: 4px; display: grid; gap: 8px; }
+.detailList { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: var(--text-xs); }
+.detailList dt { color: var(--muted); }
+.detailList dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.details pre { margin: 0; padding: 10px 12px; max-height: 260px; overflow: auto; border-radius: 8px; background: var(--sunk); font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-xs); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sentinel { display: flex; justify-content: center; padding: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-sm); }
+.skeletons { display: grid; gap: 0; padding: 0 18px; }
+.skeletons .skelRow { min-height: 70px; border-top: 1px solid var(--line); }
+.skeletons .skelRow:first-child { border-top: 0; }
+.skelRow { display: grid; grid-template-columns: 72px 28px 1fr; gap: 14px; align-items: center; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: 28px minmax(0, 1fr); gap: 4px 12px; padding: 12px 14px; }
+  .actor { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+  .main { grid-column: 2; grid-row: 1; }
+  .time { display: none; }
+  .subTime { display: inline; color: var(--ink-2); }
+  .outcome { grid-column: 2; grid-row: 2; padding-top: 0; }
+  .outcome:empty { display: none; }
+  .live { margin-left: 0; }
+  .filter { max-width: none; }
+}

@@ -1,0 +1,243 @@
+.page { padding: 32px var(--gutter) 64px; margin: 0 auto; width: 100%; max-width: 1480px; }
+.page[data-width="comfortable"] { max-width: 1120px; }
+.page[data-width="full"] { max-width: none; }
+
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.greeting {
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
+  font-weight: 480;
+  font-family: var(--font-display); font-stretch: 76%;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+.headActions { display: flex; gap: 8px; }
+
+/* Start search */
+.search {
+  position: relative;
+  margin: 22px 0 28px;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.search:focus-within { border-color: var(--ink-2); box-shadow: 0 0 0 4px color-mix(in oklab, var(--ink) 8%, transparent); }
+.searchIcon { width: 19px; height: 19px; color: var(--muted); flex: none; }
+.searchInput { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: var(--text-lg); color: var(--ink); }
+.searchInput::placeholder { color: var(--faint); }
+@media (hover: none) { .searchKbd { display: none; } }
+.searchKbd { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 11px; color: var(--muted); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; }
+.suggest {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+}
+.suggestItem { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 8px; font-size: var(--text-md); cursor: default; }
+.suggestItem[aria-selected="true"] { background: color-mix(in oklab, var(--ink) 7%, transparent); }
+.suggestIcon { width: 24px; height: 24px; display: grid; place-items: center; color: var(--muted); }
+.suggestIcon svg { width: 16px; height: 16px; }
+
+/* "Your apps can have widgets" line */
+.appsHint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 720px;
+  margin: -12px 0 24px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.appsHint p { flex: 1; min-width: 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.4; }
+.appsHint b { color: var(--ink); font-weight: 600; }
+.appsHintIcons { flex: none; display: flex; }
+.appsHintIcons > * + * { margin-left: -6px; }
+.appsHintIcons > * { outline: 2px solid var(--panel); border-radius: 7px; }
+@media (max-width: 720px) {
+  .appsHint { flex-wrap: wrap; margin: -8px 0 18px; }
+  .appsHint p { flex-basis: calc(100% - 120px); }
+}
+
+/* Edit bar */
+.editBar {
+  position: sticky;
+  top: 12px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  padding: 10px 10px 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style { opacity: 0; transform: translateY(calc(100% * var(--motion, 1))); }
+}
+.editBar[data-leaving] { opacity: 0; transform: translateY(calc(100% * var(--motion, 1))); pointer-events: none; }
+.editText { flex: 1 1 320px; min-width: 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.45; }
+.inlineIcon { width: 14px; height: 14px; display: inline; vertical-align: -2px; }
+.saveState { margin-left: 10px; color: var(--muted); }
+.editActions { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 900px) { .editBar { top: 64px; } }
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: 86px;
+  grid-auto-flow: row dense;
+  gap: 16px;
+}
+.widget {
+  position: relative;
+  grid-column: span var(--cols);
+  grid-row: span var(--rows);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  overflow: hidden;
+  transition: opacity var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
+  /* One inner rhythm for every widget: 16px sides, 16px top (10px under a title), 14px bottom. */
+  --px: 16px;
+  --pt: 16px;
+  --pb: 14px;
+  --figure: 1.625rem;
+}
+.widget[data-titled] { --pt: 10px; }
+.widgetTitle {
+  flex: none;
+  padding: 14px var(--px) 0;
+  font-size: var(--text-sm);
+  font-weight: 620;
+  line-height: 1.3;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.body { flex: 1; min-height: 0; }
+
+.grid[data-editing] .widget { border-color: var(--line-strong); }
+.grid[data-editing] .body { opacity: 0.6; pointer-events: none; user-select: none; }
+/* While dragging, the widget's place becomes the drop slot: an empty dashed outline where it will land. */
+.widget[data-dragging] { border-style: dashed; border-color: var(--ink-2); background: var(--sunk); }
+.widget[data-dragging] > * { visibility: hidden; }
+.widget[data-overlay] {
+  border-style: solid;
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-pop);
+  transform: rotate(calc(-0.6deg * var(--motion, 1))) scale(calc(1 + 0.015 * var(--motion, 1)));
+  cursor: grabbing;
+  height: 100%;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  @starting-style { transform: none; box-shadow: none; }
+}
+/* Just added from the catalog: fades up once in place. */
+.widget[data-fresh] {
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style { opacity: 0; transform: scale(calc(1 - 0.03 * var(--motion, 1))); }
+}
+.widget[data-overlay] .body { opacity: 0.8; }
+
+/* Entrance, once per session: each widget rises 6px into place, 40ms apart. */
+/* Reduced motion keeps the staggered fade and drops the travel (--motion is 0). */
+@keyframes widget-in {
+  from { opacity: 0; transform: translateY(calc(6px * var(--motion, 1))); }
+}
+.grid[data-enter] .widget { animation: widget-in var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 40ms); }
+
+.chrome {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 6px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.handle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  cursor: grab;
+  touch-action: none;
+  text-align: left;
+}
+.handle svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.handle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.handle:active { cursor: grabbing; }
+@media (hover: hover) and (pointer: fine) { .handle:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); } }
+.chromeBtn { flex: none; }
+.handle:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* Resize by picking the shape. */
+.sizes { flex: none; display: flex; gap: 1px; padding: 2px; border-radius: 8px; background: var(--sunk); }
+.sizeBtn {
+  width: 30px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--muted);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.sizeBtn[aria-checked="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px var(--line-strong); }
+@media (hover: hover) and (pointer: fine) { .sizeBtn:hover { color: var(--ink); } }
+.sizeBtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.sizeOne { flex: none; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink-2); }
+.glyph { width: 26px; height: 14px; }
+.glyph rect { fill: none; stroke: currentColor; stroke-width: 1.2; }
+.sizeBtn[aria-checked="true"] .glyph rect { fill: color-mix(in oklab, currentColor 18%, transparent); }
+@media (max-width: 720px) { .sizes { display: none; } }
+
+/* Responsive grid: 6 columns on tablets, 4 on phones. */
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .widget { grid-column: span min(var(--cols), 6); }
+}
+@media (max-width: 720px) {
+  .page { padding-top: 20px; }
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 64px; gap: 12px; }
+  .widget { grid-column: span 4; }
+  .widget[data-size="s"], .widget[data-size="t"] { grid-column: span 2; }
+  /* On phones the app grid grows to fit its apps instead of scrolling inside a fixed tile. */
+  .widget[data-type="apps"] { grid-row: auto; }
+  .grid { grid-auto-rows: minmax(64px, auto); }
+  .search { margin: 16px 0 20px; height: 48px; }
+}
+
+.emptyHome { display: grid; justify-items: start; gap: 10px; padding: 48px 0; max-width: 480px; }
+.emptyTitle { font-size: var(--text-xl); font-weight: 600; font-family: var(--font-display); font-stretch: 86%; }
+.emptyBody { color: var(--ink-2); font-size: var(--text-base); line-height: 1.5; }

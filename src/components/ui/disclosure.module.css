@@ -1,0 +1,53 @@
+.root { min-width: 0; }
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 0 6px 0 2px;
+  margin-left: -2px;
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  font-weight: 560;
+  color: var(--ink-2);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+.trigger[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover:not([data-disabled]) { color: var(--ink); }
+}
+@media (pointer: coarse) { .trigger { min-height: 40px; } }
+.chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: transform calc(var(--dur-base) * var(--motion)) var(--ease-out);
+}
+.trigger[data-panel-open] .chevron { transform: rotate(90deg); color: var(--ink-2); }
+.summary { min-width: 0; overflow-wrap: anywhere; }
+.meta { margin-left: 4px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.body {
+  height: var(--collapsible-panel-height);
+  overflow: hidden;
+  transition: height calc(var(--dur-base) * var(--motion)) var(--ease-out);
+}
+.body[hidden]:not([hidden="until-found"]) { display: none; }
+.body[data-starting-style], .body[data-ending-style] { height: 0; }
+.body[data-ending-style] { transition-duration: calc(var(--dur-fast) * var(--motion)); }
+.content { padding-top: 8px; transition: opacity var(--dur-base) var(--ease-out); }
+.body[data-starting-style] .content, .body[data-ending-style] .content { opacity: 0; }
+.body[data-ending-style] .content { transition-duration: var(--dur-fast); }
+
+/* Inside a panel: a full-width row under a hairline. */
+.panel { border-top: 1px solid var(--line); }
+.panel .trigger { display: flex; width: 100%; min-height: 44px; margin: 0; padding: 0 18px; border-radius: 0; font-size: var(--text-md); }
+.panel .meta { margin-left: auto; }
+.panel .content { padding: 0 18px 16px; }
+@media (hover: hover) and (pointer: fine) {
+  .panel .trigger:hover:not([data-disabled]) { background: var(--panel-2); }
+}

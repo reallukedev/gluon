@@ -1,0 +1,19 @@
+.frame, .tile {
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  border-radius: calc(var(--size) * 0.24);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.frame { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line); padding: calc(var(--size) * 0.12); }
+.frame img { width: 100%; height: 100%; object-fit: contain; }
+.tile {
+  background: var(--sunk);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink-2);
+  font-weight: 650;
+  font-family: var(--font-display); font-stretch: 80%;
+  font-size: calc(var(--size) * 0.46);
+}

@@ -1,0 +1,133 @@
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.filter {
+  flex: 1 1 260px;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control);
+  padding: 0 11px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+}
+.filter:focus-within { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+.filter svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.filter input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: var(--text-md); -webkit-appearance: none; appearance: none; }
+.filter input::placeholder { color: var(--faint); }
+/* The column heads sort on wide screens; the select is for phones, where the heads are hidden. */
+@media (min-width: 981px) { .sortSelect { display: none; } }
+
+.table {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  overflow: hidden;
+}
+.headRow, .row {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(150px, 1.15fr) 124px 124px minmax(210px, 1.9fr) 68px;
+  align-items: center;
+  gap: 18px;
+  padding: 0 14px 0 18px;
+}
+/* Every head cell shares one style: micro-caps, muted, 0.14em. */
+.headRow {
+  height: 38px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  font-family: var(--font-display); font-stretch: 85%;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  line-height: 1;
+}
+.headEnd { text-align: right; }
+.sortButton {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.sortButton[data-on] { color: var(--ink); }
+.sortButton[data-on]::after { content: "↓"; display: inline-block; margin-left: 5px; letter-spacing: 0; }
+.headRow > :first-child .sortButton[data-on]::after { content: "↑"; }
+.sortButton:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .sortButton:hover { color: var(--ink); } }
+
+.row {
+  position: relative;
+  min-height: 60px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.headRow + .row { border-top: 0; }
+@media (hover: hover) and (pointer: fine) { .row:hover { background: var(--panel-2); } }
+.row:active:not(:has(a:active, button:active)) { background: color-mix(in oklab, var(--ink) 5%, transparent); }
+.row[data-hidden] .appCell, .row[data-hidden] .stateCell { opacity: 0.6; }
+
+/* An old copy hangs under the app it copies, joined by a hairline elbow. */
+.row[data-nested] { border-top-color: transparent; }
+.row[data-nested] .appCell { padding-left: 28px; }
+.row[data-nested]::before {
+  content: "";
+  position: absolute;
+  left: 35px;
+  top: -6px;
+  height: calc(50% + 6px);
+  width: 14px;
+  border-left: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  border-bottom-left-radius: 5px;
+}
+.row[data-copy] .appName { color: var(--ink-2); font-weight: 560; }
+.row[data-copy] .appCell > span:first-child { opacity: 0.7; }
+
+.appCell { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 0; }
+.appText { min-width: 0; display: grid; gap: 1px; }
+.appName { font-size: var(--text-md); font-weight: 620; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) { .appName:hover { text-decoration: underline; text-underline-offset: 0.2em; } }
+.appSub { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stateCell { min-width: 0; display: grid; gap: 4px; justify-items: start; }
+.update { font-size: var(--text-xs); }
+.meterCell { min-width: 0; display: flex; align-items: center; }
+.addrCell { min-width: 0; }
+.actions { display: flex; justify-content: flex-end; gap: 2px; }
+
+.copyNote { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.copyText { font-size: var(--text-sm); color: var(--muted); min-width: 0; }
+.copyNote > button { margin-left: -10px; }
+
+/* Umbrel's own progress, from its app state. */
+.progress { display: grid; gap: 6px; width: 100%; max-width: 180px; }
+.progressTrack { position: relative; display: block; height: 3px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
+.progressTrack > span { position: absolute; inset: 0; background: var(--ink-2); transform-origin: left; transition: transform var(--dur-slow) var(--ease-out); }
+.progressTrack > span[data-indeterminate] { right: 65%; animation: sweep 1400ms var(--ease-in-out) infinite; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+
+@media (max-width: 980px) {
+  .headRow { display: none; }
+  .row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas: "app app actions" "state state state" "cpu mem mem" "addr addr addr";
+    gap: 8px 16px;
+    padding: 12px 12px 14px 16px;
+  }
+  .appCell { grid-area: app; padding: 0; }
+  .stateCell { grid-area: state; padding-left: 46px; }
+  .row > .meterCell:nth-of-type(3) { grid-area: cpu; padding-left: 46px; }
+  .row > .meterCell:nth-of-type(4) { grid-area: mem; }
+  .meterCell > span { justify-content: flex-start; }
+  .addrCell { grid-area: addr; padding-left: 46px; }
+  .actions { grid-area: actions; }
+  .row[data-nested] .appCell { padding-left: 24px; }
+  .row[data-nested] .stateCell, .row[data-nested] .addrCell, .row[data-nested] > .meterCell:nth-of-type(3) { padding-left: 70px; }
+  .row[data-nested]::before { left: 32px; top: -4px; height: 32px; }
+}

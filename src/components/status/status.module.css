@@ -1,0 +1,86 @@
+.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
+.side { display: grid; gap: 20px; min-width: 0; }
+@media (max-width: 1080px) { .cols { grid-template-columns: 1fr; } }
+
+/* Needs you */
+.needs { margin: 0; padding: 0; list-style: none; }
+.need {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 80px;
+}
+.need:first-child { border-top: 0; }
+.need:target { background: var(--attn-soft); }
+.need, .needsFoot { transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
+.needMark { position: relative; width: 2px; height: 34px; margin-top: 2px; background: var(--attn); transform-origin: top; transition: background-color var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out); }
+.needMark::after {
+  content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: var(--attn);
+  transform-origin: bottom;
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
+}
+/* Fixed: the doubled line settles into one ink line, then the item slides out. */
+.need[data-resolved] .needMark { background: var(--ink); }
+.need[data-resolved] .needMark::after { display: block; transform: scaleY(0); opacity: 0; }
+.need[data-leaving] { opacity: 0; transform: translateX(12px); pointer-events: none; transition-duration: 220ms; }
+.need[data-resolved][data-leaving] { transition-delay: var(--dur-slow); }
+.need[data-severity="fault"] .needMark { transform: scaleY(0.42); background: var(--fault); }
+.need[data-severity="fault"] .needMark::after { display: none; }
+/* A fixed fault's short red line grows into a full running line. */
+.need[data-severity="fault"][data-resolved] .needMark { transform: none; background: var(--ink); }
+.needText { min-width: 0; }
+.needTitle { font-size: var(--text-base); font-weight: 620; line-height: 1.3; }
+.needCause { margin-top: 4px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; max-width: 62ch; }
+.needMeta { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--text-xs); color: var(--muted); }
+.needActions { display: flex; align-items: center; gap: 4px; align-self: center; }
+.needsFoot { padding: 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); }
+.needsFoot a { color: var(--ink-2); }
+@media (max-width: 640px) {
+  .need { grid-template-columns: 14px minmax(0, 1fr); }
+  .needActions { grid-column: 2; justify-self: start; }
+}
+
+/* Machine */
+.vitals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 24px; }
+.vitals[data-offline] { opacity: 0.55; }
+.vital { min-width: 0; display: grid; gap: 4px; }
+.vitalValue { font-size: 1.75rem; font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; margin-top: 4px; }
+.vitalValue small { font-size: var(--text-md); font-weight: 450; color: var(--muted); font-stretch: 96%; }
+.vitalSub { font-size: var(--text-xs); color: var(--muted); margin-bottom: 6px; }
+
+.fsList { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.fsRow { display: grid; gap: 6px; }
+.fsHead { display: flex; justify-content: space-between; gap: 12px; font-size: var(--text-sm); }
+.fsName { color: var(--ink); }
+.fsVal { color: var(--muted); }
+.fsVal[data-attn] { color: var(--ink); font-weight: 600; }
+
+/* Recently */
+.recentPanel { margin-top: 20px; }
+.recent { margin: 0; padding: 0; list-style: none; }
+.recentRow { display: grid; grid-template-columns: 140px 1fr; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
+.recentRow:first-child { border-top: 0; }
+.recentTime { color: var(--muted); font-size: var(--text-sm); }
+.recentText b { font-weight: 600; }
+.recentRow[data-outcome="failed"] .recentText { color: var(--fault); }
+@media (max-width: 640px) { .recentRow { grid-template-columns: 1fr; gap: 2px; } }
+
+/* Member status */
+.announcements { display: grid; gap: 8px; margin-bottom: 20px; }
+.announcements p { padding: 12px 14px; border-radius: 10px; background: var(--attn-soft); font-size: var(--text-md); }
+.memberApps { margin: 0; padding: 0; list-style: none; }
+.memberApp { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-top: 1px solid var(--line); }
+.memberApp:first-child { border-top: 0; }
+.memberAppText { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.memberAppName { font-size: var(--text-base); font-weight: 600; }
+.memberEmpty { padding: 24px 18px; color: var(--muted); }
+.memberFoot { margin-top: 14px; font-size: var(--text-sm); color: var(--muted); }
+.open { font-size: var(--text-sm); font-weight: 600; color: var(--ink); padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line-strong); text-decoration: none; transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) ease; }
+.open:active { transform: scale(calc(1 - 0.03 * var(--motion))); }
+@media (hover: hover) and (pointer: fine) { .open:hover { background: var(--panel-2); } }
+
+/* Header: the tracked date line across from the verdict. */
+.dateLine { font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+@media (max-width: 720px) { .dateLine { display: none; } }

@@ -1,0 +1,41 @@
+/*
+ * StateLine: the state is the line's form. Changes settle over 250ms on --ease-out:
+ * the short red line drops from full height (scaleY from the baseline, no layout shift), the
+ * doubled "needs you" stroke slides into the main line and fades as the item resolves.
+ * Reduced motion keeps the colour and opacity fades and drops the travel.
+ */
+.wrap { display: inline-flex; align-items: center; gap: 8px; line-height: 1; min-width: 0; }
+.line {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 2px;
+  height: var(--h);
+  border-left: 2px solid var(--ink);
+  transform-origin: 50% 100%;
+  transition:
+    transform calc(var(--dur-slow) * var(--motion)) var(--ease-out),
+    border-color var(--dur-base) ease,
+    opacity var(--dur-base) ease;
+}
+.line[data-state="starting"] { border-left-style: dashed; }
+.line[data-state="unhealthy"] { transform: translateY(-10%) scaleY(0.45); border-left-color: var(--fault); }
+.line[data-state="stopped"] { opacity: 0.28; }
+.line[data-state="paused"] { border-left-style: dotted; opacity: 0.6; }
+.line[data-state="unknown"] { opacity: 0.28; border-left-style: dotted; }
+.line[data-state="attention"] { border-left-color: var(--attn); margin-right: 4px; }
+/* The second stroke of "needs you". Always present so it can settle into the first. */
+.line::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  background: var(--attn);
+  opacity: 0;
+  transform: translateX(calc(-2px * var(--motion)));
+  transition: opacity var(--dur-slow) var(--ease-out), transform calc(var(--dur-slow) * var(--motion)) var(--ease-out);
+}
+.line[data-state="attention"]::after { opacity: 1; transform: translateX(0); }
+.text { font-size: var(--text-sm); font-weight: 560; color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }

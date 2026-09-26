@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.impeccable
+data
+*.md
+!README.md
+.dev-credentials
+docker/*.yml

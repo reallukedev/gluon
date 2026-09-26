@@ -1,0 +1,50 @@
+.display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 28px;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: text;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-fast) ease;
+}
+.display:disabled { cursor: default; }
+.text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty { color: var(--faint); }
+.pencil { flex: none; width: 14px; height: 14px; color: var(--muted); opacity: 0; transition: opacity var(--dur-fast) ease; }
+.display:focus-visible .pencil { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .display:hover:not(:disabled) { background: color-mix(in oklab, var(--ink) 5%, transparent); }
+  .display:hover .pencil { opacity: 1; }
+}
+/* No hover on touch: keep the pencil visible so it reads as editable. */
+@media (hover: none) { .pencil { opacity: 0.8; } }
+
+.edit { display: inline-flex; flex-direction: column; gap: 6px; max-width: 100%; min-width: 0; }
+.row { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
+.input {
+  field-sizing: content;
+  min-width: 12ch;
+  max-width: 100%;
+  height: 30px;
+  margin-left: -7px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--ink-2);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent);
+}
+.input[aria-invalid="true"] { border-color: var(--fault); box-shadow: 0 0 0 3px color-mix(in oklab, var(--fault) 16%, transparent); }
+.input:disabled { opacity: 0.6; }
+@media (pointer: coarse) { .input { font-size: max(16px, 1em); height: 36px; } }
+.error { display: flex; gap: 7px; align-items: baseline; font-size: var(--text-sm); color: var(--fault); line-height: 1.4; }
+.error::before { content: ""; flex: none; width: 5px; height: 5px; transform: translateY(-2px) rotate(45deg); background: var(--fault); }

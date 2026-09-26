@@ -1,0 +1,28 @@
+.wrap { display: grid; gap: 14px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.steps li { display: flex; align-items: center; gap: 10px; font-size: var(--text-md); color: var(--ink-2); }
+.steps li[data-state="done"] { color: var(--ink); }
+.steps li[data-state="failed"] { color: var(--fault); }
+.stepMark { flex: none; width: 2px; height: 14px; background: var(--ink); }
+li[data-state="running"] .stepMark { background: repeating-linear-gradient(to bottom, var(--ink) 0 3px, transparent 3px 5px); animation: breathe 1.1s ease-in-out infinite; }
+li[data-state="failed"] .stepMark { background: var(--fault); height: 7px; }
+@keyframes breathe { 50% { opacity: 0.3; } }
+.progress { position: relative; height: 22px; border-radius: 6px; background: var(--sunk); overflow: hidden; }
+.progress div { position: absolute; inset: 0 auto 0 0; background: color-mix(in oklab, var(--ink) 18%, transparent); transition: width 300ms var(--ease-out); }
+.progress span { position: relative; display: block; padding: 3px 8px; font-size: var(--text-xs); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.out {
+  margin: 0;
+  overflow: auto;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ink-2);
+}
+.out span[data-err] { color: var(--ink); }
+.result { font-size: var(--text-md); font-weight: 560; color: var(--fault); }
+.result[data-ok] { color: var(--ink); }

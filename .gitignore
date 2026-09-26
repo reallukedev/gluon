@@ -1,0 +1,15 @@
+node_modules
+.next
+data
+*.tsbuildinfo
+.env*
+.dev-credentials
+.DS_Store
+
+# Working notes and personal deployment, not part of the product
+.impeccable/
+deploy/
+AGENTS-BRIEF.md
+UI-BRIEF.md
+PLAN.md
+PRODUCT.md

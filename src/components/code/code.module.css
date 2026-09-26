@@ -1,0 +1,6 @@
+.editor { border: 1px solid var(--line); border-radius: var(--radius-panel); overflow: hidden; background: var(--panel); transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+.editor :global(.cm-editor) { height: 100%; }
+/* CodeMirror hides its own outline; the frame shows focus instead (same ring as inputs). */
+.editor:has(:global(.cm-focused)) { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+.editor :global(.cm-scroller) { scrollbar-width: thin; }
+@media (pointer: coarse) { .editor :global(.cm-content) { font-size: 16px; } }

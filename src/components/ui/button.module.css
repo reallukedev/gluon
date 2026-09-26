@@ -1,0 +1,137 @@
+.button {
+  --btn-bg: var(--panel);
+  --btn-fg: var(--ink);
+  --btn-border: var(--line-strong);
+  --btn-hover: var(--panel-2);
+  --btn-press: color-mix(in oklab, var(--ink) 7%, var(--panel));
+  --btn-radius: var(--radius-control);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--control);
+  min-width: 0;
+  padding: 0 14px;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-size: var(--text-md);
+  font-weight: 560;
+  font-stretch: 94%;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  isolation: isolate;
+  text-decoration: none;
+  vertical-align: middle;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
+}
+.button svg { flex: none; width: 16px; height: 16px; }
+/* Press: a 0.97 scale (dropped under reduced motion) plus a darker plate, so touch gets feedback too. */
+.button:active:not(:disabled):not([data-disabled]):not([data-loading]) {
+  transform: scale(calc(1 - 0.03 * var(--motion)));
+  background: var(--btn-press);
+  transition-duration: 60ms, 0ms, 0ms, 0ms;
+}
+.button:disabled, .button[data-disabled] { cursor: not-allowed; opacity: 0.5; }
+.button[data-loading] { cursor: progress; opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .button:hover:not(:disabled):not([data-disabled]):not([data-loading]) { background: var(--btn-hover); }
+}
+
+.primary {
+  --btn-bg: var(--ink);
+  --btn-fg: var(--inverse);
+  --btn-border: var(--ink);
+  --btn-hover: color-mix(in oklab, var(--ink) 86%, var(--ground));
+  --btn-press: color-mix(in oklab, var(--ink) 78%, var(--ground));
+}
+.attention {
+  --btn-bg: var(--attn);
+  --btn-fg: var(--attn-ink);
+  --btn-border: var(--attn);
+  --btn-hover: var(--attn-strong);
+  --btn-press: var(--attn-strong);
+}
+.ghost {
+  --btn-bg: transparent;
+  --btn-border: transparent;
+  --btn-hover: color-mix(in oklab, var(--ink) 6%, transparent);
+  --btn-press: color-mix(in oklab, var(--ink) 11%, transparent);
+  --btn-fg: var(--ink-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ghost:hover:not(:disabled):not([data-disabled]) { color: var(--ink); }
+}
+.danger {
+  --btn-fg: var(--fault);
+  --btn-border: color-mix(in oklab, var(--fault) 45%, var(--line));
+  --btn-hover: var(--fault-soft);
+  --btn-press: color-mix(in oklab, var(--fault) 16%, var(--panel));
+}
+.dangerSolid {
+  --btn-bg: var(--fault);
+  --btn-fg: #fff;
+  --btn-border: var(--fault);
+  --btn-hover: color-mix(in oklab, var(--fault) 88%, #000);
+  --btn-press: color-mix(in oklab, var(--fault) 80%, #000);
+}
+/* Dark mode's fault is a light coral; white text on it fails contrast, so ink on it instead. */
+:global(:root[data-theme="dark"]) .dangerSolid { --btn-fg: var(--inverse); }
+@media (prefers-color-scheme: dark) { :global(:root[data-theme="system"]) .dangerSolid { --btn-fg: var(--inverse); } }
+
+.sm { --btn-radius: 7px; height: var(--control-sm); padding: 0 10px; font-size: var(--text-sm); gap: 6px; }
+.sm svg { width: 14px; height: 14px; }
+.lg { height: 42px; padding: 0 18px; font-size: var(--text-base); }
+.block { width: 100%; }
+
+.icon { width: var(--control); padding: 0; }
+.icon.sm { width: var(--control-sm); }
+
+.label { min-width: 0; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+
+/* Touch: small buttons keep their look but get a thumb-sized hit area. */
+@media (pointer: coarse) {
+  .sm::before, .icon::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+  }
+  .lg { height: 46px; }
+}
+
+/* Loading: the label stays put (no layout shift); a hairline sweeps along the bottom edge. */
+.label { transition: filter var(--dur-base) ease, opacity var(--dur-base) ease; }
+.button[data-loading] .label { opacity: 0.55; filter: blur(0.5px); }
+.button[data-loading]::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--btn-radius) - 1px);
+  right: calc(var(--btn-radius) - 1px);
+  bottom: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.8;
+  animation: sweep 900ms var(--ease-in-out) infinite;
+}
+@keyframes sweep {
+  0% { clip-path: inset(0 100% 0 0); }
+  50% { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 0 0 100%); }
+}
+/* Reduced motion: the hairline stays still and breathes instead of travelling. */
+:global(:root[data-motion="reduce"]) .button[data-loading]::after { animation: breathe 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .button[data-loading]::after { animation: breathe 1.4s ease-in-out infinite; } }
+@keyframes breathe { 50% { opacity: 0.25; } }

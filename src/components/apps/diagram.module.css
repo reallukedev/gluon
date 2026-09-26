@@ -1,0 +1,87 @@
+/* The diagram decides its own layout from the width it's given, not the window's. */
+.outer { container-type: inline-size; }
+.wrap { position: relative; display: grid; gap: 22px; --wires: 0; }
+@container (min-width: 820px) {
+  .wrap { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.2fr) minmax(0, 0.95fr); column-gap: 56px; align-items: start; --wires: 1; }
+  .linkText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+}
+
+.wires { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.wires path { fill: none; stroke: var(--line-strong); stroke-width: 1; transition: stroke var(--dur-fast) ease, opacity var(--dur-fast) ease; }
+.wires path[data-hot] { stroke: var(--ink-2); }
+.wires path[data-dim] { opacity: 0.3; }
+
+.col { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.col > h3 { margin-bottom: 2px; }
+
+.empty { font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 34ch; }
+.netNote { font-size: var(--text-xs); color: var(--muted); margin-top: -4px; }
+.netNote .mono { color: var(--ink-2); }
+
+.node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, opacity var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+div.node { cursor: default; }
+.node[data-hot] { border-color: var(--ink-2); }
+.node[data-dim] { opacity: 0.45; }
+.node:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.node[data-kind="container"][data-state="stopped"] { background: var(--panel-2); }
+.node[data-busy] { opacity: 0.6; }
+@media (hover: hover) and (pointer: fine) {
+  .node:hover { background: var(--panel-2); }
+}
+.nodeHead { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.nodeHead > svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
+.nodeTitle { flex: 1 1 auto; min-width: 0; font-size: var(--text-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nodeTitle:global(.mono) { font-weight: 500; font-size: var(--text-xs); }
+.nodeHead > .nodeGo { width: 13px; height: 13px; color: var(--faint); }
+.nodeNums { flex: none; font-size: var(--text-xs); color: var(--ink-2); }
+.nodeSub { font-size: var(--text-xs); color: var(--muted); line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+.nodeSub :global(.mono) { color: var(--ink-2); font-size: var(--text-2xs); }
+.node[data-kind="container"] .nodeSub:first-of-type :global(.mono) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linkText { font-size: var(--text-xs); color: var(--ink-2); }
+.bad { color: var(--fault); }
+
+/* Narrow: ports follow their container as a row of tags. */
+.ctrWrap { display: flex; flex-direction: column-reverse; gap: 6px; }
+.ports { display: flex; flex-wrap: wrap; gap: 4px; }
+/* Wide: a container's published ports sit on its left edge, where addresses plug in. */
+@container (min-width: 820px) {
+  .ctrHead { padding-left: 58px; }
+  .ctrWrap { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; }
+  .ctrWrap > :last-child { grid-column: 2; }
+  .ctrWrap > .ports { grid-column: 1; grid-row: 1; display: grid; justify-items: end; }
+}
+.port {
+  position: relative;
+  z-index: 1;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--panel);
+  font-size: var(--text-2xs);
+  line-height: 16px;
+  color: var(--ink-2);
+  transition: opacity var(--dur-fast) ease;
+}
+.port[data-dim] { opacity: 0.45; }
+
+.storeGroup { display: grid; gap: 6px; }
+.dir { font-size: var(--text-2xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 2px; }
+.storeGroup + .storeGroup { margin-top: 4px; }

@@ -1,0 +1,17 @@
+.meter { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; min-width: 0; }
+.value { flex: none; min-width: 7ch; text-align: right; font-size: var(--text-sm); color: var(--ink-2); }
+.none { display: block; width: 100%; text-align: right; color: var(--faint); font-size: var(--text-sm); }
+.spark { flex: 1 1 auto; max-width: 56px; min-width: 32px; height: 16px; display: block; }
+/* A 3px sunk track with an ink-2 fill; the fill scales from the left (a small absolutely placed bar). */
+.bar { position: relative; flex: 1 1 auto; max-width: 56px; min-width: 32px; height: 3px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
+.bar > span { position: absolute; inset: 0; background: var(--ink-2); transform-origin: left; transition: transform var(--dur-slow) var(--ease-out); }
+.name { display: none; }
+/* Phones: the column heads are gone, so each meter names itself; the CPU trace makes way. */
+@media (max-width: 980px) {
+  .meter { justify-content: flex-start; gap: 8px; }
+  .name { display: inline; font-size: var(--text-xs); color: var(--muted); }
+  .spark { display: none; }
+  .bar { max-width: 44px; min-width: 28px; }
+  .value { min-width: 0; }
+  .none { display: none; }
+}

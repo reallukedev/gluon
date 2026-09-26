@@ -1,0 +1,114 @@
+/* The Overview faceplate: three instruments on one plate, divided by hairlines. */
+
+.plate {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1.25fr);
+}
+.instrument { display: grid; align-content: start; gap: 10px; min-width: 0; padding: 16px 18px 18px; }
+.instrument + .instrument { border-left: 1px solid var(--line); }
+@media (max-width: 1180px) {
+  .plate { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tempInstrument { grid-column: 1 / -1; border-left: 0 !important; border-top: 1px solid var(--line); }
+}
+@media (max-width: 720px) {
+  .plate { grid-template-columns: 1fr; }
+  .instrument + .instrument { border-left: 0; border-top: 1px solid var(--line); }
+  .instrument { padding: 14px 16px 16px; }
+}
+
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 30px; }
+.label { margin: 0; font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.figure { display: inline-flex; align-items: baseline; gap: 5px; font-size: 1.75rem; font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; white-space: nowrap; }
+.figure small { font-size: var(--text-md); font-weight: 400; font-stretch: 96%; color: var(--muted); }
+.readout { margin: 0; min-height: 20px; font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.readout b { font-weight: 620; color: var(--ink); }
+.caption { margin: 0; font-size: var(--text-xs); color: var(--muted); }
+.dim { color: var(--muted); }
+.emptyNote { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
+
+/* ---------------------------------------------------------------- processor threads */
+
+.threads {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  height: 84px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.thread { position: relative; display: block; min-width: 10px; cursor: default; }
+.thread::before {
+  /* the empty track: a faint full-height rule */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 0.5px);
+  width: 1px;
+  background: var(--line);
+}
+.threadFill {
+  position: absolute;
+  inset: 0 auto 0 calc(50% - 1px);
+  width: 2px;
+  background: var(--ink);
+  transform-origin: bottom;
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-fast) ease;
+}
+.threadPeak {
+  /* full height, so translateY(%) moves the cap by a share of the field */
+  position: absolute;
+  inset: 0 auto 0 calc(50% - 4px);
+  width: 8px;
+  border-top: 1px solid var(--faint);
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-fast) ease;
+}
+.thread[data-dim] .threadFill, .thread[data-dim] .threadPeak { opacity: 0.22; }
+@media (hover: hover) and (pointer: fine) {
+  .thread:hover::before { background: var(--line-strong); }
+}
+
+/* ---------------------------------------------------------------- temperatures: one scale */
+
+.scale, .tempRow { display: grid; grid-template-columns: minmax(104px, 0.8fr) minmax(0, 2fr) 76px; gap: 12px; align-items: center; }
+.scaleName { min-height: 1px; }
+.ruler { position: relative; height: 22px; border-bottom: 1px solid var(--line-strong); }
+.tick { position: absolute; bottom: 0; width: 1px; height: 4px; background: var(--line-strong); }
+.tick[data-major] { height: 8px; background: var(--muted); }
+.tick b { position: absolute; bottom: 9px; left: 0; transform: translateX(-50%); font-size: 10.5px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.tick:first-child b { transform: none; }
+.tick:last-child b { transform: translateX(-100%); }
+
+.temps { list-style: none; margin: 0; padding: 0; display: grid; }
+.tempRow { min-height: 30px; }
+.tempRow + .tempRow { border-top: 1px solid var(--line); }
+.tempName { font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tempTrack { position: relative; height: 16px; }
+.tempLine { position: absolute; left: 0; top: calc(50% - 0.5px); height: 1px; background: var(--line-strong); }
+.tempRange { position: absolute; top: calc(50% - 3px); height: 6px; background: color-mix(in oklab, var(--ink) 18%, transparent); }
+.tempMark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+/* past "hot": the doubled needs-you line; near critical: the short red line */
+.tempRow[data-level="attention"] .tempMark { background: var(--attn); }
+.tempRow[data-level="attention"] .tempMark::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: var(--attn); }
+.tempRow[data-level="fault"] .tempMark { background: var(--fault); top: 45%; }
+.limit { position: absolute; width: 1px; }
+.limit[data-kind="high"] { top: 1px; bottom: 1px; background: var(--ink-2); opacity: 0.55; }
+.limit[data-kind="crit"] { top: 55%; bottom: 0; width: 2px; margin-left: -0.5px; background: var(--fault); }
+.tempValue { display: inline-flex; justify-content: flex-end; align-items: center; gap: 6px; font-size: var(--text-md); text-align: right; white-space: nowrap; }
+.faultGlyph { display: inline-block; width: 5px; height: 5px; background: var(--fault); transform: rotate(45deg); }
+.legendHigh, .legendCrit { display: inline-block; height: 10px; vertical-align: -1px; margin-right: 4px; }
+.legendHigh { width: 1px; background: var(--ink-2); opacity: 0.55; }
+.legendCrit { width: 2px; height: 5px; vertical-align: 0; background: var(--fault); }
+
+@media (max-width: 720px) {
+  .head { flex-wrap: wrap; }
+  .scale { grid-template-columns: minmax(0, 1fr); }
+  .scaleName { display: none; }
+  .tempRow { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 6px 0; }
+  .tempTrack { grid-column: 1 / -1; grid-row: 2; }
+}

@@ -1,0 +1,218 @@
+.stack { display: grid; gap: 20px; align-content: start; min-width: 0; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1080px) { .grid { grid-template-columns: 1fr; } }
+
+.pad { padding: 16px 18px; }
+.dim { color: var(--muted); }
+.away { font-weight: 600; color: var(--ink); }
+.host { overflow-wrap: anywhere; }
+.ip { font-size: var(--text-sm); color: var(--ink); }
+.skelRows { display: grid; gap: 12px; }
+.foot { margin: 0; padding: 11px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); }
+.subhead { margin: 0 0 8px; font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.note { margin: 10px 0 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
+
+/* ---------------------------------------------------------------- connected now */
+
+.people { display: grid; }
+.person + .person { border-top: 1px solid var(--line); }
+.personHead { display: flex; align-items: baseline; gap: 10px; padding: 12px 18px 4px; }
+.personName { font-size: var(--text-base); font-weight: 620; font-family: var(--font-display); font-stretch: 92%; }
+.personMeta { font-size: var(--text-sm); color: var(--muted); }
+
+.sessions { list-style: none; margin: 0; padding: 0 0 6px; }
+.session {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1.25fr) minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 54px;
+  padding: 8px 14px 8px 18px;
+}
+.session + .session { border-top: 1px solid var(--line); }
+.sessionMark { display: flex; align-self: start; padding-top: 3px; }
+.sessionWhat, .sessionFrom, .sessionWhen { display: grid; gap: 2px; min-width: 0; font-size: var(--text-md); }
+.sessionWhat > span, .sessionFrom > span, .sessionWhen > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sessionFrom > span:last-child, .sessionWhen > span:last-child { font-size: var(--text-sm); }
+.sessionKind { font-weight: 560; }
+.sessionRunning { display: flex; align-items: baseline; gap: 8px; font-size: var(--text-sm); color: var(--ink-2); }
+.program { font-size: var(--text-xs); color: var(--muted); }
+.sessionAction { display: flex; justify-content: flex-end; min-width: 64px; font-size: var(--text-sm); }
+
+@media (max-width: 900px) {
+  .session {
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    grid-template-areas: "mark what action" "mark from from" "mark when when";
+    gap: 4px 12px;
+    padding: 10px 12px 10px 16px;
+  }
+  .session .sessionMark { grid-area: mark; }
+  .sessionWhat { grid-area: what; }
+  .sessionFrom { grid-area: from; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: baseline; }
+  .sessionWhen { grid-area: when; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: baseline; }
+  .sessionAction { grid-area: action; align-self: start; }
+  .personHead { padding: 12px 16px 2px; }
+}
+
+/* ---------------------------------------------------------------- the week: chart */
+
+.chart { display: grid; gap: 10px; padding: 14px 18px 14px; min-width: 0; }
+
+.chartTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+.chartTop > :first-child { flex: 1 1 320px; }
+.readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  min-height: 44px;
+  align-content: start;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+.readTime { font-weight: 620; color: var(--ink); min-width: 92px; }
+.readHint { flex-basis: 100%; color: var(--muted); }
+@media (hover: none) { .readHint { display: none; } }
+
+.plotWrap {
+  position: relative;
+  display: grid;
+  --label-w: 124px;
+  grid-template-columns: var(--label-w) minmax(0, 1fr);
+  --lane-h: 36px;
+  --fail-h: 52px;
+  border-radius: var(--radius-small);
+  outline-offset: 4px;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+.plotWrap:focus-visible { outline: 2px solid var(--ink); }
+
+.axisLabel { grid-column: 1; }
+.axis { position: relative; grid-column: 2; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.day { position: absolute; top: 2px; padding-left: 5px; }
+.nowLabel { position: absolute; right: 0; top: 2px; padding-right: 5px; }
+
+.laneLabel { grid-column: 1; display: grid; align-content: center; min-width: 0; padding-right: 12px; }
+.laneText { display: grid; min-width: 0; }
+.laneName { font-size: var(--text-md); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.laneMeta { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; }
+
+.lane { position: relative; grid-column: 2; z-index: 1; border-top: 1px solid var(--line); }
+.lane::before {
+  /* the lane's own rail, faint, so empty stretches still read as "nobody" rather than "missing" */
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: var(--line);
+}
+.span {
+  position: absolute;
+  top: calc(50% - 1px);
+  height: 2px;
+  min-width: 2px;
+  background: var(--ink);
+ 
+  clip-path: inset(0 0 0 0);
+  animation: draw var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+.span[data-away] { top: calc(50% - 3px); height: 6px; background: transparent; border-block: 2px solid var(--attn); border-radius: 0; }
+.span[data-open]::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -5px;
+  width: 2px;
+  height: 12px;
+  background: var(--ink);
+}
+.span[data-away][data-open]::after { top: -5px; background: var(--attn); }
+@keyframes draw { from { clip-path: inset(0 100% 0 0); } }
+
+.laneEmpty { display: flex; align-items: center; font-size: var(--text-sm); color: var(--muted); }
+.laneEmpty::before { display: none; }
+.failTrack { position: relative; grid-column: 2; z-index: 1; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line-strong); }
+.failBin {
+  position: absolute;
+  bottom: 0;
+  height: calc(var(--h) * (100% - 16px) + 2px);
+}
+.failBin::before, .failBin::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: clamp(1px, calc(100% - 1px), 3px);
+  transform: translateX(-50%);
+}
+.failBin::before { top: 0; background: var(--line-strong); }
+/* the part that came from outside the home network, darker */
+.failBin::after { height: calc(var(--a) * 100%); background: var(--ink-2); }
+.failMax { position: absolute; top: 2px; right: 4px; font-size: 10.5px; color: var(--muted); }
+
+/* absolutely placed over the lane column (not a grid item, so it can't disturb auto-placement) */
+.overlay { position: absolute; top: 0; bottom: 0; left: var(--label-w); right: 0; pointer-events: none; z-index: 2; }
+.gridDay { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--line-strong); opacity: 0.8; }
+.boot { position: absolute; top: 18px; bottom: 0; width: 0; border-left: 1px dotted var(--muted); }
+.boot::before { content: ""; position: absolute; top: -2px; left: -3px; width: 5px; height: 5px; border: 1px solid var(--muted); border-radius: 50%; background: var(--panel); }
+.noRecords { position: absolute; top: 22px; bottom: 0; left: 0; background: color-mix(in oklab, var(--sunk) 70%, transparent); border-right: 1px solid var(--line-strong); }
+.now { position: absolute; top: 18px; bottom: 0; right: 0; width: 1px; background: var(--ink-2); }
+.cursor { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: var(--ink); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--text-xs); color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legendLine { display: inline-block; width: 16px; height: 2px; background: var(--ink); }
+.legendAway { display: inline-block; width: 16px; height: 6px; border-block: 2px solid var(--attn); }
+.legendFail { position: relative; display: inline-block; width: 2px; height: 10px; background: var(--line-strong); }
+.legendFail::after { content: ""; position: absolute; inset: 5px 0 0; background: var(--ink-2); }
+.legendBoot { display: inline-block; width: 7px; height: 7px; border: 1px solid var(--muted); border-radius: 50%; }
+
+@media (max-width: 640px) {
+  .chart { padding: 12px 16px; }
+  .source, .fact { padding-inline: 16px 12px; gap: 12px; }
+  .axis .day:nth-child(even), .nowLabel { display: none; }
+  .srcTitle { flex-wrap: wrap; }
+  .plotWrap { --label-w: 0px; --lane-h: 46px; --fail-h: 60px; }
+  .laneLabel { position: relative; z-index: 3; padding: 0; overflow: visible; }
+  .laneText { position: absolute; left: 0; top: 5px; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+  .laneName { font-size: var(--text-sm); }
+  .lane::before { top: 72%; }
+  .span { top: calc(72% - 1px); }
+  .span[data-away] { top: calc(72% - 3px); }
+}
+
+/* ---------------------------------------------------------------- failures detail */
+
+.failures { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding: 14px 18px 16px; border-top: 1px solid var(--line); }
+@media (max-width: 900px) { .failures { grid-template-columns: 1fr; gap: 18px; padding: 14px 16px; } }
+.failCol { min-width: 0; }
+.srcList { list-style: none; margin: 0; padding: 0; }
+.srcList li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); font-size: var(--text-sm); }
+.srcList li:first-child { border-top: 0; padding-top: 0; }
+.srcMain { display: grid; gap: 1px; min-width: 0; }
+.srcMain > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srcCount { display: grid; gap: 1px; justify-items: end; text-align: right; font-size: var(--text-sm); flex: none; }
+.nameList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--text-sm); }
+.nameList li { display: flex; justify-content: space-between; gap: 12px; }
+
+/* ---------------------------------------------------------------- sources */
+
+.sources { list-style: none; margin: 0; padding: 0; }
+.source { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 54px; padding: 8px 18px; }
+.source + .source { border-top: 1px solid var(--line); }
+.source .srcMain { font-size: var(--text-md); }
+.source .srcMain > span:last-child { font-size: var(--text-sm); }
+.srcTitle { display: flex; align-items: baseline; gap: 8px; }
+
+/* ---------------------------------------------------------------- posture */
+
+.facts { list-style: none; margin: 0; padding: 0; }
+.fact { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 12px 14px 12px 18px; }
+.fact + .fact { border-top: 1px solid var(--line); }
+.factText { display: grid; gap: 2px; font-size: var(--text-sm); line-height: 1.45; }
+.factTitle { font-size: var(--text-md); font-weight: 600; }
+.howTo { display: grid; gap: 10px; max-width: 340px; font-size: var(--text-sm); line-height: 1.45; }
+.howTo a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.code { margin: 0; padding: 8px 10px; border-radius: var(--radius-small); background: var(--sunk); font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-xs); white-space: pre-wrap; }

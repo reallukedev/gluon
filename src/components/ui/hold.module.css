@@ -1,0 +1,20 @@
+/* Hold to confirm: a darkening sweep, slow and linear while held, snappy on release. */
+.fill {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: var(--btn-radius, 8px);
+  background: var(--hold-fill, color-mix(in oklab, #000 20%, transparent));
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 200ms var(--ease-out);
+  pointer-events: none;
+}
+.hold[data-holding] .fill,
+.hold[data-done] .fill {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path var(--hold-ms, 1500ms) linear;
+}
+.hold[data-done] .fill { transition-duration: 0ms; }
+/* While held the press scale stays on, so the whole gesture reads as one long press. */
+.hold[data-holding] { transform: scale(calc(1 - 0.03 * var(--motion))); }
+.text { position: relative; }

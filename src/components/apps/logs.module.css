@@ -1,0 +1,118 @@
+/* .wrap is also used by the journal and diagnostics log screens. */
+.wrap { position: relative; display: grid; gap: 10px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.search {
+  flex: 1 1 240px;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control);
+  padding: 0 11px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  font-size: var(--text-md);
+  outline: 0;
+}
+.search:focus-within, input.search:focus { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+.search svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
+.search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: var(--text-md); -webkit-appearance: none; appearance: none; }
+.search input::placeholder { color: var(--faint); }
+.searchCount { flex: none; font-size: var(--text-xs); color: var(--muted); }
+.stepper { display: inline-flex; gap: 2px; }
+.spacer { flex: 1; }
+.live { display: inline-flex; align-items: center; gap: 4px; }
+.live > .status { margin-right: 6px; }
+.status { font-size: var(--text-xs); color: var(--muted); display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.status::before { content: ""; width: 2px; height: 11px; background: var(--ink-2); }
+.status[data-paused]::before { opacity: 0.35; }
+.status[data-status="connecting"]::before, .status[data-status="offline"]::before { opacity: 1; background: repeating-linear-gradient(to bottom, var(--ink-2) 0 2px, transparent 2px 4px); }
+.opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: var(--text-sm); }
+.errNav { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; font-size: var(--text-xs); }
+.errCount { color: var(--ink); padding: 0 4px; display: inline-flex; align-items: center; gap: 7px; }
+/* The count leads with the short red mark, so red never stands alone. */
+.errCount::before { content: ""; width: 2px; height: 6px; margin-top: 4px; background: var(--fault); }
+.errNone { color: var(--muted); }
+.errJump {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.errJump svg { width: 14px; height: 14px; }
+.errJump:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) { .errJump:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); } }
+.count { margin-left: auto; color: var(--muted); font-size: var(--text-xs); }
+.errNav + .count { margin-left: 12px; }
+
+.frame { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 12px; gap: 6px; }
+.viewport {
+  height: min(68dvh, 720px);
+  overflow: auto;
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--line);
+  background: var(--sunk);
+  font-family: var(--font-mono); font-stretch: var(--mono-stretch);
+  font-size: 12.5px;
+  line-height: 20px;
+  contain: strict;
+}
+.viewport:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  padding: 0 14px;
+  white-space: pre;
+  color: var(--ink-2);
+}
+.viewport[data-wrap] .line { white-space: pre-wrap; word-break: break-word; }
+.viewport:not([data-wrap]) .line { width: max-content; min-width: 100%; }
+.line[data-level="error"] { color: var(--ink); background: color-mix(in oklab, var(--fault) 9%, transparent); box-shadow: inset 2px 0 0 var(--fault); }
+.line[data-level="warn"] { color: var(--ink); box-shadow: inset 2px 0 0 var(--ink-2); }
+.line[data-level="debug"] { color: var(--muted); }
+.line[data-current] { background: color-mix(in oklab, var(--ink) 9%, transparent); box-shadow: inset 2px 0 0 var(--ink); }
+.ts { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; user-select: none; }
+.ctr { flex: none; width: var(--ctr-w, 14ch); overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.text { min-width: 0; }
+.text mark { background: color-mix(in oklab, var(--ink) 16%, transparent); color: var(--ink); border-radius: 2px; box-shadow: 0 1px 0 var(--ink-2); }
+.line[data-current] .text mark { background: var(--ink); color: var(--panel); }
+.text [data-c="red"] { color: var(--fault); }
+.text [data-c="yellow"] { color: color-mix(in oklab, var(--attn) 70%, var(--ink)); }
+.text [data-c="green"] { color: var(--ok); }
+.text [data-c="blue"] { color: var(--info); }
+.text [data-c="dim"] { color: var(--muted); }
+.text [data-b] { font-weight: 700; }
+.empty { padding: 28px 16px; color: var(--muted); font-family: var(--font-sans); font-size: var(--text-md); }
+
+/* Overview strip: where the errors (short red), warnings and matches are in what's loaded. */
+.map { position: relative; border-radius: 6px; background: var(--sunk); border: 1px solid var(--line); overflow: hidden; }
+.mapView { position: absolute; left: 0; right: 0; background: color-mix(in oklab, var(--ink) 10%, transparent); pointer-events: none; }
+.mark { position: absolute; left: 2px; right: 2px; height: 2px; padding: 0; border: 0; background: var(--ink-2); cursor: pointer; transform: translateY(-1px); }
+.mark[data-kind="error"] { left: 3px; right: 3px; height: 3px; background: var(--fault); }
+.mark[data-kind="warn"] { background: var(--muted); }
+.mark[data-kind="match"] { left: 1px; right: 1px; background: var(--ink); height: 1px; }
+.mark::before { content: ""; position: absolute; inset: -3px 0; }
+
+.jump { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); }
+
+@media (max-width: 640px) {
+  .frame { grid-template-columns: minmax(0, 1fr) 8px; gap: 4px; }
+  .errNav { margin-left: 0; }
+  .viewport { font-size: 12px; }
+  /* Phones: time and container sit above the message, which gets the full width. */
+  .viewport[data-wrap] .line { flex-wrap: wrap; column-gap: 10px; row-gap: 0; padding: 3px 12px; }
+  .viewport[data-wrap] .line .text { flex-basis: 100%; }
+  .viewport[data-wrap] .ts, .viewport[data-wrap] .ctr { font-size: 11px; line-height: 16px; }
+  .viewport[data-wrap] .ctr { width: auto; }
+}

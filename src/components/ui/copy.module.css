@@ -1,0 +1,13 @@
+.glyph { position: relative; display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; }
+.glyph > * { grid-area: 1 / 1; }
+.copy { transition: opacity var(--dur-fast) ease, transform var(--dur-base) var(--ease-out); }
+.tick { opacity: 0; transform: scale(calc(1 - 0.2 * var(--motion))); transition: opacity var(--dur-fast) ease, transform var(--dur-base) var(--ease-out); }
+.tick path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset calc(var(--dur-slow) * var(--motion)) var(--ease-out) 60ms; }
+.glyph[data-copied] .copy { opacity: 0; transform: scale(calc(1 - 0.2 * var(--motion))); }
+.glyph[data-copied] .tick { opacity: 1; transform: scale(1); }
+.glyph[data-copied] .tick path { stroke-dashoffset: 0; }
+
+/* Both labels occupy the same cell, so the button keeps the width of the longer one. */
+.slot { display: inline-grid; }
+.slot > span { grid-area: 1 / 1; opacity: 0; transition: opacity var(--dur-fast) ease; }
+.slot > span[data-shown] { opacity: 1; }

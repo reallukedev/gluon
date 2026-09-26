@@ -1,0 +1,35 @@
+/* Network: a seismograph of the last few minutes, incoming above the rail and outgoing below. */
+
+.net { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); }
+
+.figures { display: flex; align-items: flex-end; gap: 22px; min-width: 0; }
+.figure { display: grid; gap: 2px; min-width: 0; }
+.figure :global(.label) { display: inline-flex; align-items: center; gap: 3px; }
+.figure :global(.label) svg { width: 11px; height: 11px; stroke-width: 2; }
+.figure strong { font-size: var(--figure, 1.625rem); font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.figure[data-out] strong { color: var(--ink-2); }
+.when { margin-left: auto; padding-bottom: 3px; font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.plot { flex: 1; min-height: 0; position: relative; }
+.svg { display: block; overflow: visible; touch-action: pan-y; border-radius: 3px; }
+.svg:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+
+.grid line { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
+.grid text,
+.axis { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.rail { stroke: var(--line-strong); stroke-width: 1; }
+
+.tick line { stroke-width: 1.5; stroke-linecap: butt; transition: opacity var(--dur-fast) var(--ease-out); }
+.in { stroke: var(--ink-2); }
+.out { stroke: var(--faint); }
+/* Reading a moment: the chosen sample goes to full ink, the rest step back. */
+.svg:has(.tick[data-on]) .tick:not([data-on]) line { opacity: 0.45; }
+.tick[data-on] .in { stroke: var(--ink); }
+.tick[data-on] .out { stroke: var(--ink-2); }
+.cursor { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 1 2; pointer-events: none; }
+
+.foot { font-size: var(--text-xs); color: var(--muted); }
+.foot b { color: var(--ink-2); font-weight: 560; }
+
+.net[data-size="s"] { --figure: 1.375rem; gap: 8px; }
+.net[data-size="s"] .figures { gap: 14px; }

@@ -1,0 +1,21 @@
+.root { display: flex; align-items: center; gap: 8px; }
+.sep { width: 10px; height: 2px; background: var(--line-strong); }
+.slot {
+  width: 44px;
+  height: 52px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  text-align: center;
+  font-family: var(--font-mono); font-stretch: var(--mono-stretch);
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  caret-color: var(--ink);
+  outline: 0;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.slot:focus { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+.root[data-invalid] .slot { border-color: var(--fault); }
+.root[data-disabled] .slot { opacity: 0.55; }
+@media (max-width: 400px) { .slot { width: 40px; height: 48px; } .root { gap: 6px; } }
