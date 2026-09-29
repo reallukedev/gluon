@@ -36,7 +36,15 @@ if [ "$action" = github ]; then
   [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail "That isn't a GitHub repository name."
   [[ $ref =~ ^[A-Za-z0-9_./-]{1,100}$ ]] || fail "That isn't a version Gluon can download."
   [[ $version =~ ^[A-Za-z0-9_.+-]{1,64}$ ]] || fail "That isn't a version name Gluon can use."
-  WORK=$(mktemp -d /var/tmp/gluon-update.XXXXXX)
+  # Unpack where there's room: /var is often a small partition on home servers.
+  tmpbase=/var/tmp best=0
+  for d in /var/tmp /tmp /root; do
+    [ -d "$d" ] && [ -w "$d" ] || continue
+    free=$(df -Pk "$d" 2>/dev/null | awk 'NR==2 {print $4}')
+    [ -n "$free" ] && [ "$free" -gt "$best" ] && { best=$free; tmpbase=$d; }
+  done
+  [ "$best" -gt 204800 ] || fail "There isn't enough free space to download Gluon (it needs about 200 MB)."
+  WORK=$(mktemp -d "$tmpbase/gluon-update.XXXXXX")
 
   stage download "Downloading $repo at $ref…"
   curl -fsSL --retry 3 --max-time 600 "https://codeload.github.com/$repo/tar.gz/$ref" | tar -xz --strip-components=1 -C "$WORK"
@@ -48,18 +56,22 @@ if [ "$action" = github ]; then
     -f "$WORK/docker/Dockerfile" "$WORK" 2>&1
   NEW="gluon:$version"
 elif [ "$action" = pull ]; then
-  NEW=""
+  NEW="" commit=""
 else
   fail "Unknown update action: $action"
 fi
 
 mode=$1; shift
-wait_healthy() { # <container> <image id> → 0 when it runs that image and is healthy (or has no healthcheck)
-  local c=$1 want=$2
+wait_healthy() { # <container> <image id> [commit] → 0 when it runs that image (and commit) and is healthy (or has no healthcheck)
+  local c=$1 want=$2 commit=${3:-}
   for _ in $(seq 1 90); do
     sleep 4
-    local img state health
+    local img state health env
     img=$(docker inspect -f '{{.Image}}' "$c" 2>/dev/null || true)
+    if [ -n "$commit" ]; then
+      env=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$c" 2>/dev/null || true)
+      grep -qx "GLUON_COMMIT=$commit" <<<"$env" || continue
+    fi
     state=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || true)
     health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$c" 2>/dev/null || true)
     if [ -n "$want" ] && [ "$img" != "$want" ]; then continue; fi
@@ -89,9 +101,10 @@ if [ "$mode" = umbrel ]; then
   printf 'FROM %s\n' "$tag" > "$appdata/Dockerfile"
   umbreld apps.restart.mutate --appId "$app" >/dev/null
   stage verify "Waiting for Gluon to come back…"
-  # Umbrel rebuilds a thin image on top of the new one, so check the result by health, not image id.
+  # Umbrel rebuilds a thin image on top of the new one, so the image id differs; the build's own
+  # commit (carried in its environment) proves the new version is the one running.
   sleep 10
-  if wait_healthy "$container" ""; then
+  if wait_healthy "$container" "" "$commit"; then
     printf '::done ok %s\n' "Gluon ${NEW#gluon:} is running."
     exit 0
   fi
