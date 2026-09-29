@@ -14,7 +14,7 @@ import { useNavAccess } from "@/components/shell/Shell";
 import { formatBytes, formatDate, formatTemp, formatTime } from "@/lib/format";
 import { usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Skeleton } from "@/components/ui/Surface";
-import { Appearance, HomePrefs, Navigation, Formats } from "./personal";
+import { Appearance, HomePrefs, Formats } from "./personal";
 import s from "./settings.module.css";
 
 const Security = dynamic(() => import("./Security").then((m) => m.Security), { loading: () => <Skeleton height={320} radius={12} /> });
@@ -35,7 +35,10 @@ export type SectionData =
       pageSize: number;
     }
   | { kind: "people"; tab: PeopleTab; initialPeople: PersonView[]; person: PersonView | null; reportId: string | null }
-  | null;const Updates = dynamic(() => import("./Updates").then((m) => m.Updates), { loading: () => <Skeleton height={200} radius={12} /> });
+  | null;
+
+const Navigation = dynamic(() => import("./Navigation").then((m) => m.Navigation), { loading: () => <Skeleton height={320} radius={12} /> });
+const Updates = dynamic(() => import("./Updates").then((m) => m.Updates), { loading: () => <Skeleton height={200} radius={12} /> });
 const About = dynamic(() => import("./About").then((m) => m.About), { loading: () => <Skeleton height={200} radius={12} /> });
 const Notifications = dynamic(() => import("./Notifications").then((m) => m.Notifications), { loading: () => <Skeleton height={320} radius={12} /> });
 const Integrations = dynamic(() => import("./Integrations").then((m) => m.Integrations), { loading: () => <Skeleton height={320} radius={12} /> });

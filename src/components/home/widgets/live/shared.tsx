@@ -1,12 +1,13 @@
 "use client";
 import * as React from "react";
+import dynamic from "next/dynamic";
 import useSWR, { mutate } from "swr";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { StateLine } from "@/components/ui/StateLine";
 import { toast } from "@/components/ui/Toast";
-import { ConnectDialog, type ConnectTarget } from "../../connect/Connect";
+import type { ConnectTarget } from "../../connect/Connect";
 import { Field } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Notice, Skeleton } from "@/components/ui/Surface";
@@ -40,6 +41,9 @@ const KIND_NAME: Record<IntegrationKind, string> = {
   homebridge: "Homebridge",
   "generic-json": "that address",
 };
+
+// Only widgets that still need connecting show the connect step, so its form loads with the first of them.
+const ConnectDialog = dynamic(() => import("../../connect/Connect").then((m) => m.ConnectDialog), { ssr: false });
 
 // ---------------------------------------------------------------- integrations this viewer can use
 

@@ -23,5 +23,9 @@ export default async function StatusPage({ searchParams }: { searchParams: Searc
     if (tab === "activity") redirect(activityHref({ target: str(sp.target, 500), user: str(sp.user, 64) }));
   }
   const initial = await statusFor(user);
-  return <StatusView initial={initial} allFindings={user.role === "admin" ? listAllOpen() : undefined} />;
+  if (user.role !== "admin") return <StatusView initial={initial} />;
+  // The open findings are among all of them: hand over the same objects so the page carries each once.
+  const allFindings = listAllOpen();
+  const byId = new Map(allFindings.map((f) => [f.id, f]));
+  return <StatusView initial={{ ...initial, findings: initial.findings.map((f) => byId.get(f.id) ?? f) }} allFindings={allFindings} />;
 }

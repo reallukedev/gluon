@@ -24,17 +24,15 @@ export function AppsStep() {
   const [error, setError] = React.useState<string | null>(null);
 
   // Everything starts picked: most people want all of it, and unticking is quicker than finding.
-  React.useEffect(() => {
-    if (apps.data && picked === null) setPicked(new Set(openable(apps.data).map((a) => a.id)));
-  }, [apps.data, picked]);
-
-  const chosen = picked ?? new Set<string>();
+  // (Derived until the first change, so the first render with apps already shows them picked.)
+  const everything = React.useMemo(() => new Set(list.map((a) => a.id)), [list]);
+  const chosen = picked ?? everything;
   const all = list.length > 0 && list.every((a) => chosen.has(a.id));
   const n = list.filter((a) => chosen.has(a.id)).length;
 
   const toggle = (id: string, on: boolean) =>
     setPicked((p) => {
-      const s = new Set(p ?? []);
+      const s = new Set(p ?? everything);
       if (on) s.add(id);
       else s.delete(id);
       return s;

@@ -12,9 +12,7 @@ import { Empty, Notice, Page, PageHeader, Panel } from "@/components/ui/Surface"
 import { LinkButton } from "@/components/ui/Button";
 import { QuietFindings } from "@/components/alerts/FindingsTabs";
 import { CHANNELS_URL, FINDINGS_URL } from "@/components/alerts/shared";
-import { instanceHints, sourceName } from "@/lib/app-names";
 import { StateLine } from "@/components/ui/StateLine";
-import type { SpectrumGroup } from "@/components/spectrum/Spectrum";
 import { NeedsYou } from "./NeedsYou";
 import { MachineVitals, StorageBars } from "./Machine";
 import { AppRoster } from "./AppRoster";
@@ -24,53 +22,6 @@ import { ReportProblem } from "./ReportProblem";
 import { MyReports } from "@/components/people/MyReports";
 import { Time } from "@/components/ui/Time";
 import s from "./status.module.css";
-
-export function spectrumGroups(apps: StatusApp[], findings: Finding[], filesystems: StatusPayload["filesystems"], fmtBytes: (n: number) => string): SpectrumGroup[] {
-  const attentionSubjects = new Set(findings.filter((f) => f.severity === "attention").map((f) => f.subject));
-  const byId = new Map(apps.map((a) => [a.id, a]));
-  const hints = instanceHints(apps.filter((a) => !(a.copyOf && byId.has(a.copyOf.id))));
-  // An old copy sits inside the app it copies, a step apart, instead of taking a label of its own.
-  const copies = new Map<string, StatusApp[]>();
-  for (const a of apps) if (a.copyOf && byId.has(a.copyOf.id) && a.containers.length) copies.set(a.copyOf.id, [...(copies.get(a.copyOf.id) ?? []), a]);
-  const lines = (a: StatusApp, copy: boolean) =>
-    a.containers.map((c, i) => ({
-      id: c.name,
-      label: c.service ?? c.name,
-      container: c.name,
-      href: copy ? `/apps/${encodeURIComponent(a.id)}` : undefined,
-      note: copy ? `Old copy from ${sourceName(a.source)}` : undefined,
-      gapBefore: copy && i === 0,
-      state: attentionSubjects.has(a.id) && c.line === "running" ? ("attention" as const) : c.line,
-    }));
-  const groups: SpectrumGroup[] = apps
-    .filter((a) => a.containers.length && !(a.copyOf && byId.has(a.copyOf.id)))
-    .map((a) => ({
-      id: `app:${a.id}`,
-      label: hints.get(a.id) ? `${a.name} · ${hints.get(a.id)}` : a.name,
-      href: `/apps/${encodeURIComponent(a.id)}`,
-      lines: [...lines(a, false), ...(copies.get(a.id) ?? []).flatMap((c) => lines(c, true))],
-    }));
-  if (filesystems.length) {
-    groups.push({
-      id: "storage",
-      label: "Storage",
-      href: "/storage",
-      lines: filesystems
-        .filter((f) => f.size > 512 * 1024 * 1024)
-        .map((f) => {
-          const finding = findings.find((x) => x.subject === f.mount);
-          return {
-            id: `fs:${f.mount}`,
-            label: f.mount,
-            state: finding ? (finding.severity === "fault" ? ("unhealthy" as const) : ("attention" as const)) : ("running" as const),
-            detail: `${Math.round(f.pct)}% of ${fmtBytes(f.size)} used`,
-            href: `/storage?usage=${encodeURIComponent(f.mount)}`,
-          };
-        }),
-    });
-  }
-  return groups;
-}
 
 /**
  * Status: is everything working? Members see a calm page of their apps. Admins see the verdict, what

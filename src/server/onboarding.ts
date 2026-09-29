@@ -6,7 +6,7 @@ import { findById, type User } from "./auth/users";
 import { listApps } from "./docker/apps";
 import { activePlatform, PLATFORM_NAME } from "./platform";
 import { getInventory } from "./storage/inventory";
-import { tryReadConfig, routeUrl, THIS_SERVER } from "./caddy/routes";
+import { tryReadConfig, routeUrl, THIS_SERVER, type RoutesConfig } from "./caddy/routes";
 import { counts, listOpen } from "./findings";
 import { listSubscriptions } from "./notify/subscriptions";
 import { NAV } from "@/lib/nav";
@@ -37,11 +37,14 @@ import type { Zone } from "./net-zone";
 
 const GLUON_PORT = Number(process.env.PORT ?? "8130");
 
-/** Gluon's own public address: the public name in Settings → Server, else a route pointing at it. */
-export function gluonPublicAddress(): string | null {
+/**
+ * Gluon's own public address: the public name in Settings → Server, else a route pointing at it.
+ * Pass the routes when they've just been read, so they aren't read again.
+ */
+export function gluonPublicAddress(routes?: RoutesConfig | null): string | null {
   const host = getSetting("publicHost").trim();
   if (host) return host;
-  const cfg = tryReadConfig();
+  const cfg = routes === undefined ? tryReadConfig() : routes;
   if (!cfg) return null;
   const local = new Set([THIS_SERVER, "localhost", "127.0.0.1", "::1"]);
   const r = cfg.routes.find((x) => x.enabled && x.type !== "redirect" && local.has(x.backend.host) && x.backend.port === GLUON_PORT);
@@ -132,13 +135,13 @@ export async function inventoryDrives(): Promise<InventoryDrives> {
 
 export function inventoryAddresses(): InventoryAddresses {
   const cfg = tryReadConfig();
-  if (!cfg) return { configured: false, count: 0, sample: [], gluon: gluonPublicAddress() };
+  if (!cfg) return { configured: false, count: 0, sample: [], gluon: gluonPublicAddress(null) };
   const live = cfg.routes.filter((r) => r.enabled);
   return {
     configured: true,
     count: live.length,
     sample: live.slice(0, 4).map((r) => ({ name: r.name, url: routeUrl(cfg, r).replace(/^https:\/\//, "") })),
-    gluon: gluonPublicAddress(),
+    gluon: gluonPublicAddress(cfg),
   };
 }
 

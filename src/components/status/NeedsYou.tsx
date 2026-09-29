@@ -116,14 +116,21 @@ function useFlip(list: React.RefObject<HTMLUListElement | null>, key: string) {
     if (!el) return;
     const items = [...el.querySelectorAll<HTMLElement>(":scope > li[data-id]")];
     const next = new Map<string, number>();
+    // Read every position first, then write: one forced layout for the whole list, not one per row.
+    const moved: [HTMLElement, number][] = [];
     for (const li of items) {
       const top = li.offsetTop;
       next.set(li.dataset.id!, top);
       const old = tops.current.get(li.dataset.id!);
       if (old === undefined || old === top || li.hasAttribute("data-leaving")) continue;
+      moved.push([li, old - top]);
+    }
+    for (const [li, dy] of moved) {
       li.style.transition = "none";
-      li.style.transform = `translateY(${old - top}px)`;
-      void li.offsetHeight;
+      li.style.transform = `translateY(${dy}px)`;
+    }
+    if (moved.length) void el.offsetHeight;
+    for (const [li] of moved) {
       li.style.transition = "";
       li.style.transform = "";
     }

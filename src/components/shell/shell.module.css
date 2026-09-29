@@ -235,4 +235,3 @@
 .drawerPopup[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dur-drawer)); }
 .drawerPopup[data-swiping] { transition-duration: 0ms; user-select: none; }
 
-/* While a new account picks its sections on Home, each one slides into the sidebar as it's added. */

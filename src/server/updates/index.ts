@@ -120,7 +120,8 @@ export function forgetCheck() {
 
 const canSwapKind = (kind: InstallDetail["install"]["kind"]) => kind === "umbrel" || kind === "compose" || kind === "casaos";
 
-async function options(detail: InstallDetail, latest: GithubTarget | null, relation: UpdateRelation | null): Promise<UpdateOption[]> {
+/** `offered`: the version Umbrel's app store offers (asked for alongside GitHub; null when not on Umbrel). */
+function options(detail: InstallDetail, latest: GithubTarget | null, relation: UpdateRelation | null, offered: string | null): UpdateOption[] {
   const out: UpdateOption[] = [];
   const kind = detail.install.kind;
   const newer = relation === "newer";
@@ -148,7 +149,6 @@ async function options(detail: InstallDetail, latest: GithubTarget | null, relat
     storeVersion: null,
   });
   if (detail.install.kind === "umbrel") {
-    const offered = await umbrelStoreVersion(detail.install.appId);
     const installed = detail.install.storeVersion;
     const has = !!offered && offered !== installed;
     out.push({
@@ -177,7 +177,10 @@ async function options(detail: InstallDetail, latest: GithubTarget | null, relat
 /** The status, plus whether "newer" is certain (automatic updates never act on a guess). */
 async function evaluate(force = false): Promise<{ status: UpdatesStatus; certain: boolean }> {
   await watch();
-  const [detail, c] = await Promise.all([detectInstall(), check(force)]);
+  const install = detectInstall();
+  // What Umbrel's store offers depends only on how Gluon is installed: ask it while GitHub answers.
+  const store = install.then((d) => (d.install.kind === "umbrel" ? umbrelStoreVersion(d.install.appId) : null)).catch(() => null);
+  const [detail, c] = await Promise.all([install, check(force)]);
   const running = runningBuild();
   const settings = getSetting("updates");
   const latest = c.channel === settings.channel ? c.latest : null;
@@ -199,7 +202,7 @@ async function evaluate(force = false): Promise<{ status: UpdatesStatus; certain
       updateAvailable: relation === "newer",
       goBack: settings.channel === "stable" && relation === "ahead" && canSelfUpdate && latest ? latest : null,
       canSelfUpdate,
-      options: await options(detail, latest, relation),
+      options: options(detail, latest, relation, await store),
       current: current ? toRun(current) : null,
       recent: all<Row>("SELECT * FROM self_updates ORDER BY started_at DESC LIMIT 8").map(toRun),
     },

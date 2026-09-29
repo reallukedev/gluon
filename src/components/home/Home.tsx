@@ -25,7 +25,6 @@ import { ContextMenu, Menu, type MenuEntry } from "@/components/ui/Menu";
 import { Dialog, useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { allWidgets, widgetDef } from "./registry";
-import { Collection } from "./Collection";
 import { AppsHint } from "./AppsHint";
 import { HOME_KEY, useHomeLayout, type HomeData } from "./pinned";
 import { HomeContext, type CollectionSection } from "./context";
@@ -92,6 +91,9 @@ function useFlip(container: React.RefObject<HTMLElement | null>, key: string) {
   return capture;
 }
 
+/** Widgets don't shift while something is dragged: the order changes live instead (onDragOver). */
+const noStrategy = () => null;
+
 /** What a thing on Home is called in menus and announcements: its title, its label (an app's name), or its kind. */
 function nameFor(it: WidgetItem, d: WidgetDef | undefined): string {
   if (!d) return "this";
@@ -99,6 +101,19 @@ function nameFor(it: WidgetItem, d: WidgetDef | undefined): string {
 }
 
 const sizeLabel = (d: WidgetDef, z: Size) => d.sizeLabels?.[z] ?? SIZES[z].label;
+
+/** The Collection is only needed once someone opens it, so its code loads then (or when a pointer or focus heads for its button). */
+type CollectionView = typeof import("./Collection").Collection;
+const loadCollection = () => import("./Collection").then((m) => m.Collection);
+
+/** What a widget can ask of Home, by its id: one object for Home's lifetime, so widgets re-render only for their own changes. */
+interface WidgetActions {
+  move: (id: string, by: -1 | 1) => void;
+  resize: (id: string, size: Size) => void;
+  unpin: (id: string) => void;
+  settings: (id: string) => void;
+  update: (id: string, patch: Record<string, unknown>) => void;
+}
 
 /** Good first things to pin, by role, for an empty Home. */
 const STARTERS: Record<"admin" | "member", { type: string; why: string }[]> = {
@@ -137,6 +152,9 @@ export function Home({ initial }: Props) {
     return () => clearTimeout(t);
   }, [arranging]);
   const [collection, setCollection] = React.useState<CollectionSection | "top" | null>(null);
+  const [CollectionView, setCollectionView] = React.useState<CollectionView | null>(null);
+  // Asked for before its code arrived: it mounts closed first, then opens, so the dialog still plays its entrance.
+  const [collectionAsked, setCollectionAsked] = React.useState<CollectionSection | "top" | null>(null);
   const [settingsFor, setSettingsFor] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
   const [confirm, confirmNode] = useConfirm();
@@ -151,7 +169,9 @@ export function Home({ initial }: Props) {
     const d = widgetDef(i.type);
     return !!d && i.type !== ALL_APPS && (!d.adminOnly || admin);
   }, [admin]);
-  const items = layout.items.filter(visible);
+  const items = React.useMemo(() => layout.items.filter(visible), [layout.items, visible]);
+  // The sortable context changes (and re-renders every widget) whenever these do, so they keep their identity.
+  const sortableIds = React.useMemo(() => items.map((i) => i.id), [items]);
 
   // Leave ?edit=1 out of the URL once consumed.
   React.useEffect(() => {
@@ -243,7 +263,7 @@ export function Home({ initial }: Props) {
     }
   }
 
-  function unpin(ids: string[]) {
+  const unpin = React.useCallback((ids: string[]) => {
     const before = latest.current.items;
     const gone = before.filter((i) => ids.includes(i.id));
     if (!gone.length) return;
@@ -265,9 +285,9 @@ export function Home({ initial }: Props) {
           }, { immediate: true }),
       },
     });
-  }
+  }, [change]);
 
-  function moveWidget(id: string, by: -1 | 1) {
+  const moveWidget = React.useCallback((id: string, by: -1 | 1) => {
     change((its) => {
       const vis = its.filter(visible);
       const at = vis.findIndex((i) => i.id === id);
@@ -276,7 +296,18 @@ export function Home({ initial }: Props) {
       return arrayMove(its, its.findIndex((i) => i.id === id), its.findIndex((i) => i.id === other.id));
     });
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-widget="${id}"] [data-handle]`)?.focus());
-  }
+  }, [change, visible]);
+
+  const actions = React.useMemo<WidgetActions>(
+    () => ({
+      move: moveWidget,
+      resize: (id, size) => change((its) => its.map((i) => (i.id === id ? { ...i, size } : i))),
+      unpin: (id) => unpin([id]),
+      settings: setSettingsFor,
+      update: updateConfig,
+    }),
+    [change, moveWidget, unpin, updateConfig],
+  );
 
   async function resetToDefault() {
     const r = await api.del<HomeData>(HOME_KEY);
@@ -291,7 +322,22 @@ export function Home({ initial }: Props) {
     toast.success("Saved as the household's default", { description: "New members start with this. People who've changed theirs keep their own." });
   }
 
-  const openCollection = React.useCallback((section?: CollectionSection) => setCollection(section ?? "top"), []);
+  const preloadCollection = React.useCallback(() => {
+    // A failed load just leaves it closed; the next click tries again.
+    loadCollection().then((C) => setCollectionView(() => C), () => undefined);
+  }, []);
+  const openCollection = React.useCallback(
+    (section?: CollectionSection) => {
+      setCollectionAsked(section ?? "top");
+      preloadCollection();
+    },
+    [preloadCollection],
+  );
+  React.useEffect(() => {
+    if (!CollectionView || !collectionAsked) return;
+    setCollection(collectionAsked);
+    setCollectionAsked(null);
+  }, [CollectionView, collectionAsked]);
   const ctx = React.useMemo(() => ({ openCollection, arranging }), [openCollection, arranging]);
   const active = activeId ? layout.items.find((i) => i.id === activeId) : null;
   const settingsItem = settingsFor ? layout.items.find((i) => i.id === settingsFor) : null;
@@ -310,7 +356,7 @@ export function Home({ initial }: Props) {
                   Arrange
                 </Button>
               )}
-              <Button icon={<Pin />} onClick={() => openCollection()}>
+              <Button icon={<Pin />} onClick={() => openCollection()} onPointerEnter={preloadCollection} onFocus={preloadCollection}>
                 Collection
               </Button>
             </div>
@@ -328,7 +374,7 @@ export function Home({ initial }: Props) {
               </span>
             </span>
             <div className={s.editActions}>
-              <Button icon={<Pin />} onClick={() => openCollection()}>
+              <Button icon={<Pin />} onClick={() => openCollection()} onPointerEnter={preloadCollection} onFocus={preloadCollection}>
                 Collection
               </Button>
               <Menu
@@ -379,7 +425,7 @@ export function Home({ initial }: Props) {
         )}
 
         {items.length === 0 ? (
-          <EmptyHome role={admin ? "admin" : "member"} onPin={pin} onOpen={() => openCollection()} />
+          <EmptyHome role={admin ? "admin" : "member"} onPin={pin} onOpen={() => openCollection()} onPreload={preloadCollection} />
         ) : (
           <DndContext
             sensors={sensors}
@@ -390,7 +436,7 @@ export function Home({ initial }: Props) {
             onDragCancel={onDragEnd}
             accessibility={{ announcements }}
           >
-            <SortableContext items={items.map((i) => i.id)} strategy={() => null}>
+            <SortableContext items={sortableIds} strategy={noStrategy}>
               <div className={s.grid} ref={gridRef} data-editing={arranging ? "" : undefined} data-enter={enter ? "" : undefined}>
                 {items.map((item, index) => (
                   <SortableWidget
@@ -398,15 +444,11 @@ export function Home({ initial }: Props) {
                     index={index}
                     first={index === 0}
                     last={index === items.length - 1}
-                    onMove={(by) => moveWidget(item.id, by)}
                     fresh={freshId === item.id}
                     item={item}
                     editing={arranging}
                     dragging={activeId === item.id}
-                    onResize={(size) => change((its) => its.map((i) => (i.id === item.id ? { ...i, size } : i)))}
-                    onUnpin={() => unpin([item.id])}
-                    onSettings={() => setSettingsFor(item.id)}
-                    update={(patch) => updateConfig(item.id, patch)}
+                    actions={actions}
                   />
                 ))}
               </div>
@@ -415,15 +457,17 @@ export function Home({ initial }: Props) {
           </DndContext>
         )}
 
-        <Collection
-          open={collection !== null}
-          onOpenChange={(o) => !o && setCollection(null)}
-          section={collection === "top" ? null : collection}
-          widgets={collectionWidgets}
-          items={layout.items}
-          onPin={pin}
-          onUnpin={unpin}
-        />
+        {CollectionView && (
+          <CollectionView
+            open={collection !== null}
+            onOpenChange={(o) => !o && setCollection(null)}
+            section={collection === "top" ? null : collection}
+            widgets={collectionWidgets}
+            items={layout.items}
+            onPin={pin}
+            onUnpin={unpin}
+          />
+        )}
 
         {settingsItem && settingsDef?.Settings && (
           <WidgetSettingsDialog
@@ -442,7 +486,7 @@ export function Home({ initial }: Props) {
 }
 
 /** Nothing pinned at all: a calm first screen that points at the Collection, with a few good starters. */
-function EmptyHome({ role, onPin, onOpen }: { role: "admin" | "member"; onPin: (type: string) => void; onOpen: () => void }) {
+function EmptyHome({ role, onPin, onOpen, onPreload }: { role: "admin" | "member"; onPin: (type: string) => void; onOpen: () => void; onPreload: () => void }) {
   const starters = STARTERS[role].map((x) => ({ ...x, def: widgetDef(x.type) })).filter((x): x is typeof x & { def: WidgetDef } => !!x.def);
   return (
     <section className={s.emptyHome} aria-labelledby="empty-home-title">
@@ -450,7 +494,7 @@ function EmptyHome({ role, onPin, onOpen }: { role: "admin" | "member"; onPin: (
         Nothing is pinned to your Home
       </h2>
       <p className={s.emptyBody}>Everything here is something you pin: your apps, folders, the weather, notes. The Collection has all of it.</p>
-      <Button variant="primary" icon={<Pin />} onClick={onOpen}>
+      <Button variant="primary" icon={<Pin />} onClick={onOpen} onPointerEnter={onPreload} onFocus={onPreload}>
         Open the Collection
       </Button>
       {starters.length > 0 && (
@@ -523,19 +567,34 @@ interface SortableProps {
   index: number;
   first: boolean;
   last: boolean;
-  onMove: (by: -1 | 1) => void;
   editing: boolean;
   dragging: boolean;
-  onResize: (s: Size) => void;
-  onUnpin: () => void;
-  onSettings: () => void;
-  update: (patch: Record<string, unknown>) => void;
+  actions: WidgetActions;
 }
 
-function SortableWidget(props: SortableProps) {
-  const { setNodeRef, attributes, listeners, setActivatorNodeRef } = useSortable({ id: props.item.id, disabled: !props.editing });
-  return <WidgetFrame {...props} nodeRef={setNodeRef} handleRef={setActivatorNodeRef} handleProps={{ ...attributes, ...listeners }} />;
-}
+const SortableWidget = React.memo(function SortableWidget({ actions, ...props }: SortableProps) {
+  const id = props.item.id;
+  const { setNodeRef, attributes, listeners, setActivatorNodeRef } = useSortable({ id, disabled: !props.editing });
+  const handleProps = React.useMemo(() => ({ ...attributes, ...listeners }), [attributes, listeners]);
+  const onMove = React.useCallback((by: -1 | 1) => actions.move(id, by), [actions, id]);
+  const onResize = React.useCallback((size: Size) => actions.resize(id, size), [actions, id]);
+  const onUnpin = React.useCallback(() => actions.unpin(id), [actions, id]);
+  const onSettings = React.useCallback(() => actions.settings(id), [actions, id]);
+  const update = React.useCallback((patch: Record<string, unknown>) => actions.update(id, patch), [actions, id]);
+  return (
+    <WidgetFrame
+      {...props}
+      nodeRef={setNodeRef}
+      handleRef={setActivatorNodeRef}
+      handleProps={handleProps}
+      onMove={onMove}
+      onResize={onResize}
+      onUnpin={onUnpin}
+      onSettings={onSettings}
+      update={update}
+    />
+  );
+});
 
 interface FrameProps {
   item: WidgetItem;
@@ -576,6 +635,7 @@ function linkUnder(target: EventTarget | null): string | null {
   return href && href !== "#" ? a.href : null;
 }
 const nativeMenu = (target: EventTarget | null) => target instanceof Element && !!target.closest("input, textarea, select, [contenteditable='true']");
+const noUpdate = () => undefined;
 
 const WidgetFrame = React.memo(function WidgetFrame({
   item,
@@ -637,7 +697,7 @@ const WidgetFrame = React.memo(function WidgetFrame({
         else setLink(null);
       }}
     >
-      <C item={item} size={item.size} editing={editing} update={update ?? (() => undefined)} openSettings={def.Settings && onSettings ? onSettings : undefined} />
+      <C item={item} size={item.size} editing={editing} update={update ?? noUpdate} openSettings={def.Settings && onSettings ? onSettings : undefined} />
     </div>
   );
 

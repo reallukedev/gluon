@@ -120,9 +120,13 @@ export function useDayStart(): number {
   const { timeZone } = usePrefs();
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 60_000);
+    // Only a new day moves `now` on, so the widgets using this don't re-render every minute for nothing.
+    const t = setInterval(() => {
+      const next = Date.now();
+      setNow((prev) => (startOfDay(prev, timeZone) === startOfDay(next, timeZone) ? prev : next));
+    }, 60_000);
     return () => clearInterval(t);
-  }, []);
+  }, [timeZone]);
   const day = startOfDay(now, timeZone);
   return day;
 }

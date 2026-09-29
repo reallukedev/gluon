@@ -1,10 +1,11 @@
 "use client";
 import * as React from "react";
+import dynamic from "next/dynamic";
 import type { ChannelKind, ChannelView, SubscriptionFilter, SubscriptionsResponse, TestResult } from "@/lib/alerts-types";
 import { CHANNEL_KINDS } from "@/lib/alerts-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
-import { ChannelDialog, KIND_ICON } from "@/components/alerts/ChannelDialog";
+import { KIND_ICON } from "@/components/alerts/kinds";
 import { Button } from "@/components/ui/Button";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { Field, Input, Segmented } from "@/components/ui/Field";
@@ -13,6 +14,9 @@ import { Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { Actions, PartError, StepHead, useFlow } from "../flow";
 import o from "../onboarding.module.css";
+
+// Only opened for the less common kinds ("Set up another way"): its code loads after the step shows.
+const ChannelDialog = dynamic(() => import("@/components/alerts/ChannelDialog").then((m) => m.ChannelDialog), { ssr: false });
 
 const SUBS_URL = "/api/alerts/subscriptions";
 /** The "Send through" choice for entering mail server details instead. */

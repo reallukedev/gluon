@@ -13,7 +13,7 @@ import { Field, Input, Checkbox } from "@/components/ui/Field";
 import { Button, IconButton, LinkButton } from "@/components/ui/Button";
 import { Age, SetUp, WidgetState, useDriveNames, useFit } from "./kit";
 import { Spectrum } from "@/components/spectrum/Spectrum";
-import { spectrumGroups } from "@/components/status/StatusView";
+import { spectrumGroups } from "./spectrum-groups";
 import type { StatusPayload } from "@/server/status";
 import s from "./widgets.module.css";
 

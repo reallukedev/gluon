@@ -3,6 +3,9 @@ import * as React from "react";
 import { Notice } from "@/components/ui/Surface";
 import s from "./people.module.css";
 
+/** SWR key for the household's problem reports (the People tabs' count and the Reports tab share it). */
+export const REPORTS_URL = "/api/household/reports?status=all&limit=300";
+
 /** A person's initial in a hairline circle. */
 export function Avatar({ name, size = 34, off }: { name: string; size?: number; off?: boolean }) {
   const letter = (name.trim()[0] ?? "?").toUpperCase();

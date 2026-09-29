@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Bell, Link as LinkIcon, Mail, Phone, Plus, Trash } from "iconoir-react";
+import { Plus, Trash } from "iconoir-react";
 import type { ChannelKind, ChannelView, TestResult } from "@/lib/alerts-types";
 import { api, ApiError } from "@/lib/client/api";
 import { Dialog } from "@/components/ui/Dialog";
@@ -10,9 +10,10 @@ import { Checkbox, Field, Input, Segmented } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Notice } from "@/components/ui/Surface";
 import { toast } from "@/components/ui/Toast";
+import { KIND_ICON } from "./kinds";
 import s from "./alerts.module.css";
 
-export const KIND_ICON: Record<ChannelKind, React.ReactNode> = { ntfy: <Bell />, pushover: <Phone />, email: <Mail />, webhook: <LinkIcon /> };
+export { KIND_ICON };
 export const KIND_INFO: Record<ChannelKind, { label: string; hint: string }> = {
   ntfy: { label: "ntfy", hint: "Free push to the ntfy app" },
   pushover: { label: "Pushover", hint: "Push to the Pushover app" },

@@ -81,6 +81,8 @@ export function Updates() {
   const [confirm, confirmNode] = useConfirm();
 
   const apply = React.useCallback((fresh: UpdatesStatus) => void mutate(fresh, { revalidate: false }), [mutate]);
+  // Stable: Progress polls in an effect keyed on it, so a new function each render would restart the poll.
+  const refresh = React.useCallback(() => void mutate(), [mutate]);
 
   async function checkNow() {
     setChecking(true);
@@ -117,7 +119,7 @@ export function Updates() {
   return (
     <div className={s.stack}>
       <Running data={data} checking={checking} onCheck={() => void checkNow()} />
-      <Situation data={data} checking={checking} onCheck={() => void checkNow()} onChanged={() => void mutate()} confirm={confirm} />
+      <Situation data={data} checking={checking} onCheck={() => void checkNow()} onChanged={refresh} confirm={confirm} />
       <Channel data={data} onSaved={apply} setChecking={setChecking} />
       <Automatic data={data} onSaved={apply} />
       {data.recent.length > 0 && <History runs={data.recent} />}
@@ -448,10 +450,14 @@ function Progress({ run, onDone }: { run: UpdateRun; onDone: () => void }) {
       }
     };
     void tick();
-    const t = setInterval(() => void tick(), 2500);
+    // Hidden tabs skip the poll and catch up the moment they're shown again.
+    const t = setInterval(() => !document.hidden && void tick(), 2500);
+    const onVisible = () => !document.hidden && void tick();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       stop = true;
       clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [run.id, onDone]);
 

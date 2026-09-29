@@ -4,7 +4,7 @@ import { mutate } from "swr";
 import { ArrowUpRight, Play } from "iconoir-react";
 import type { WidgetProps } from "./types";
 import type { AppConfig, ApiApp } from "./widgets/app";
-import { Vitals, hostOf, uptimeOf } from "./widgets/app";
+import { Vitals, appHints, hostOf, uptimeOf } from "./widgets/app";
 import { useSmartUrl } from "./widgets/core";
 import { SetUp, WidgetState } from "./widgets/kit";
 import { api, ApiError, useApi } from "@/lib/client/api";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { StateLine } from "@/components/ui/StateLine";
 import { Skeleton } from "@/components/ui/Surface";
 import { toast } from "@/components/ui/Toast";
-import { instanceHints, shortName } from "@/lib/app-names";
+import { shortName } from "@/lib/app-names";
 import c from "./appCard.module.css";
 
 /**
@@ -99,7 +99,7 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
     );
   }
 
-  const hint = instanceHints(data).get(app.id) ?? null;
+  const hint = appHints(data).get(app.id) ?? null;
   const name = shortName(app.name, serverName);
   const href = url(app.urls);
   const target = prefs.openLinks === "new" ? "_blank" : undefined;

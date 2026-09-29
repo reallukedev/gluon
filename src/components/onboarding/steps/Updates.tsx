@@ -41,16 +41,18 @@ export function UpdatesStep() {
   const { next } = useFlow();
   const { prefs } = usePrefs();
   const { data, error, mutate } = useApi<UpdatesStatus>("/api/updates", { revalidateOnFocus: false });
-  const [draft, setDraft] = React.useState<UpdateSettings | null>(null);
+  const [edits, setEdits] = React.useState<UpdateSettings | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (data && !draft) setDraft({ ...data.settings, nightlyTiming: data.settings.nightlyTiming ?? "hour" });
-  }, [data, draft]);
+  // The server's settings until the first change (derived here, so there's no extra skeleton render).
+  const draft = edits ?? (data ? { ...data.settings, nightlyTiming: data.settings.nightlyTiming ?? "hour" } : null);
 
   const set = (patch: Partial<UpdateSettings>) => {
-    setDraft((d) => (d ? { ...d, ...patch } : d));
+    setEdits((d) => {
+      const base = d ?? draft;
+      return base ? { ...base, ...patch } : base;
+    });
     setSaveError(null);
   };
 

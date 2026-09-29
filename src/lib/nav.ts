@@ -14,7 +14,7 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { id: "home", label: "Home", href: "/", hint: "Your start page and widgets", key: "h" },
-  { id: "status", label: "Status", href: "/status", hint: "Problems, monitors, notifications, history", memberHint: "Is everything working?", key: "s" },
+  { id: "status", label: "Status", href: "/status", hint: "What needs you, and the machine right now", memberHint: "Is everything working?", key: "s" },
   { id: "apps", label: "Apps", href: "/apps", admin: true, hint: "Apps, the app store, Docker", key: "a" },
   { id: "files", label: "Files", href: "/files", hint: "Browse and share files", key: "f" },
   { id: "storage", label: "Storage", href: "/storage", admin: true, hint: "Disks, mounts, space", key: "d" },

@@ -170,10 +170,23 @@ export const WIDGETS: WidgetDef[] = [
 
 export { registerWidget } from "./widgetStore";
 
-export function allWidgets(): WidgetDef[] {
-  return [...WIDGETS, ...extraWidgets];
+// Home looks definitions up for every item on every render: build the list and a by-type index once (again only if
+// something registers later).
+let index: { count: number; list: WidgetDef[]; byType: Map<string, WidgetDef> } | null = null;
+function widgetIndex() {
+  if (!index || index.count !== extraWidgets.length) {
+    const list = [...WIDGETS, ...extraWidgets];
+    const byType = new Map<string, WidgetDef>();
+    for (const w of list) if (!byType.has(w.type)) byType.set(w.type, w);
+    index = { count: extraWidgets.length, list, byType };
+  }
+  return index;
+}
+
+export function allWidgets(): readonly WidgetDef[] {
+  return widgetIndex().list;
 }
 
 export function widgetDef(type: string): WidgetDef | undefined {
-  return allWidgets().find((w) => w.type === type);
+  return widgetIndex().byType.get(type);
 }

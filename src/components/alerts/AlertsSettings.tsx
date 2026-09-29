@@ -1,18 +1,22 @@
 "use client";
 import * as React from "react";
+import dynamic from "next/dynamic";
 import type { ChannelView, MonitorView } from "@/lib/alerts-types";
 import { alertsHref, type AlertsTab } from "@/lib/settings-links";
 import { useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Section } from "@/components/ui/Surface";
+import { Section, Skeleton } from "@/components/ui/Surface";
 import { Tabs } from "@/components/ui/Tabs";
 import { SectionHeader } from "@/components/settings/SectionHeader";
-import { MonitorsTab } from "./MonitorsTab";
-import { ChannelsTab } from "./ChannelsTab";
-import { SentTab } from "./SentTab";
-import { HistoryTab } from "./FindingsTabs";
 import { CHANNELS_URL, MONITORS_URL } from "./shared";
 import s from "./alerts.module.css";
+
+// Each tab is its own page (a link), and only one shows: load just that one's code.
+const loading = () => <Skeleton height={320} radius={12} />;
+const MonitorsTab = dynamic(() => import("./MonitorsTab").then((m) => m.MonitorsTab), { loading });
+const ChannelsTab = dynamic(() => import("./ChannelsTab").then((m) => m.ChannelsTab), { loading });
+const SentTab = dynamic(() => import("./SentTab").then((m) => m.SentTab), { loading });
+const HistoryTab = dynamic(() => import("./FindingsTabs").then((m) => m.HistoryTab), { loading });
 
 /**
  * Settings → Alerts: what Gluon watches (monitors), where it tells you (shared channels and what was

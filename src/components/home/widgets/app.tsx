@@ -33,6 +33,14 @@ export type ApiApp = HomeApp & {
 const HOST = /^https?:\/\/([^/]+)/i;
 export const hostOf = (u: string | null) => (u ? (HOST.exec(u)?.[1] ?? u) : null);
 
+/** Which copy each app is, worked out once per /api/apps answer rather than once per card showing it. */
+const hintsCache = new WeakMap<ApiApp[], Map<string, string | null>>();
+export function appHints(apps: ApiApp[]) {
+  let hints = hintsCache.get(apps);
+  if (!hints) hintsCache.set(apps, (hints = instanceHints(apps)));
+  return hints;
+}
+
 /** Docker's "Up 3 days (healthy)" → "3 days". */
 export function uptimeOf(app: ApiApp): string | null {
   const c = app.containers?.find((x) => x.state === "running");
@@ -163,7 +171,7 @@ export function AppWidget({ item, size, openSettings }: WidgetProps<AppConfig>) 
       </WidgetState>
     );
   }
-  const hint = instanceHints(data).get(app.id);
+  const hint = appHints(data).get(app.id);
   const href = url(app.urls);
   const target = prefs.openLinks === "new" ? "_blank" : undefined;
   const stopped = app.line === "stopped";

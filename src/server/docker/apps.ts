@@ -400,17 +400,19 @@ function markCopies(apps: AppSummary[]) {
 }
 
 async function buildApps(): Promise<AppSummary[]> {
-  const list = await docker().listContainers({ all: true });
   // Working with Umbrel: its own view of each app (name, icon, port, state, version) wins over
-  // the manifest files, and the store says whether a newer version exists.
-  const onUmbrel = (await activePlatform()) === "umbrel";
-  const [uApps, uStores] = onUmbrel ? await Promise.all([umbrelApps().catch(() => null), umbrelStores().catch(() => null)]) : [null, null];
+  // the manifest files, and the store says whether a newer version exists. None of it waits on
+  // Docker's list (nor the LAN address), so all three are asked at once.
+  const umbrelView = activePlatform().then((p) => {
+    const on = p === "umbrel";
+    return Promise.all([on ? umbrelApps().catch(() => null) : null, on ? umbrelStores().catch(() => null) : null]);
+  });
+  const [list, [uApps, uStores], lan] = await Promise.all([docker().listContainers({ all: true }), umbrelView, lanHost()]);
   const uById = new Map((uApps ?? []).map((a) => [a.id, a]));
   const latestById = new Map<string, { version: string; storeId: string }>();
   for (const st of uStores ?? []) for (const a of st.apps) if (!latestById.has(a.id)) latestById.set(a.id, { version: a.version, storeId: st.id });
   const prefs = new Map(all<PrefRow>("SELECT * FROM app_prefs").map((r) => [r.app_id, r]));
   const routesCfg = tryReadConfig();
-  const lan = await lanHost();
   const selfId = process.env.HOSTNAME ?? "";
 
   const groups = new Map<string, Docker.ContainerInfo[]>();
@@ -441,6 +443,8 @@ async function buildApps(): Promise<AppSummary[]> {
   // Ports each app serves, for matching public addresses to the app that answers them.
   const served = new Map<string, { ports: Set<number>; running: boolean }>();
   const apps: AppSummary[] = [];
+  // Guessing an icon can ask the icon CDN (once per name): every app asks at once, not one after another.
+  const guesses: Promise<void>[] = [];
   for (const [key, cs] of groups) {
     const isStack = key.startsWith("stack:");
     const id = key.slice(key.indexOf(":") + 1);
@@ -480,13 +484,13 @@ async function buildApps(): Promise<AppSummary[]> {
     const home = pref?.url_home || (webPort ? `${scheme}://${lan}:${webPort}${index}` : null);
     const baseName = pref?.display_name || meta?.title || (umbrel && id === "umbrelc" ? "Umbrel services" : titleCase(isStack ? id.replace(/\.(casaos|compose)$/, "") : main.name));
 
-    apps.push({
+    const app: AppSummary = {
       id,
       kind: isStack ? "stack" : "container",
       name: baseName,
       description: pref?.description || meta?.description || null,
       category: meta?.category ?? null,
-      icon: pref?.icon || meta?.icon || (await guessIcon(isStack ? id.replace(/\.(casaos|compose)$/, "") : main.name, main.image)),
+      icon: pref?.icon || meta?.icon || null,
       source: umbrel ? "umbrel" : meta ? "casaos" : isStack ? "compose" : "docker",
       configFile,
       workingDir,
@@ -502,7 +506,14 @@ async function buildApps(): Promise<AppSummary[]> {
       self: containers.some((c) => c.shortId === selfId.slice(0, 12) || c.name === "gluon" || c.name === "gluon-dev" || c.name === "tend" || c.name === "tend-dev"),
       umbrel: u ? umbrelInfo(u, latestById.get(id)) : null,
       copyOf: null,
-    });
+    };
+    if (!app.icon)
+      guesses.push(
+        guessIcon(isStack ? id.replace(/\.(casaos|compose)$/, "") : main.name, main.image).then((icon) => {
+          app.icon = icon;
+        }),
+      );
+    apps.push(app);
   }
   // Apps Umbrel knows about that have no containers yet (installing) or any more (uninstalling).
   for (const u of uApps ?? []) {
@@ -552,15 +563,16 @@ async function buildApps(): Promise<AppSummary[]> {
     }
   }
 
-  // Umbrel is installing, updating or removing: ask how far along it is.
-  await Promise.all(
-    apps
+  // Umbrel is installing, updating or removing: ask how far along it is (while the icon guesses finish).
+  await Promise.all([
+    ...guesses,
+    ...apps
       .filter((a) => a.umbrel && (a.umbrel.state === "installing" || a.umbrel.state === "updating" || a.umbrel.state === "uninstalling"))
       .map(async (a) => {
         const st = await umbrelAppState(a.id).catch(() => null);
         if (st && a.umbrel) a.umbrel.progress = Math.max(0, Math.min(100, Math.round(st.progress || 0)));
       }),
-  );
+  ]);
 
   markCopies(apps);
   return apps.sort((a, b) => a.name.localeCompare(b.name));

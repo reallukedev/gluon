@@ -10,11 +10,10 @@ import { Menu } from "@/components/ui/Menu";
 import { Time } from "@/components/ui/Time";
 import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
-import { Avatar, errorMessage, LoadError, ReportSteps, reportStage, type ReportStage } from "./bits";
+import { Avatar, errorMessage, LoadError, REPORTS_URL, ReportSteps, reportStage, type ReportStage } from "./bits";
 import s from "./people.module.css";
 
 type Show = "new" | "seen" | "fixed" | "all";
-export const REPORTS_URL = "/api/household/reports?status=all&limit=300";
 
 /** Problem reports from the household as a small inbox: new → seen → fixed. */
 export function ReportsTab({ focus }: { focus: string | null }) {

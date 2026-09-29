@@ -163,20 +163,28 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
     return () => io.disconnect();
   }, [cursor, loadMore]);
 
-  const seen = new Set<number>();
-  const items = [...live, ...(first?.items ?? []), ...older].filter((x) => (seen.has(x.id) ? false : (seen.add(x.id), true)));
+  // Rebuilt only when entries arrive, not on every keystroke in the search box: the rows are memoized
+  // and keep their runs, so typing doesn't re-render the whole timeline.
+  const firstItems = first?.items;
+  const items = React.useMemo(() => {
+    const seen = new Set<number>();
+    return [...live, ...(firstItems ?? []), ...older].filter((x) => (seen.has(x.id) ? false : (seen.add(x.id), true)));
+  }, [live, firstItems, older]);
 
-  const groups: { key: string; ts: number; runs: Run[]; count: number; problems: number }[] = [];
-  for (const it of items) {
-    const key = fmt.date(it.at, { year: true });
-    let g = groups[groups.length - 1];
-    if (!g || g.key !== key) groups.push((g = { key, ts: it.at, runs: [], count: 0, problems: 0 }));
-    g.count++;
-    if (it.outcome === "failed" && !it.action.endsWith(".resolved")) g.problems++;
-    const last = g.runs[g.runs.length - 1];
-    if (last && sameRun(last.items[0]!, it)) last.items.push(it);
-    else g.runs.push({ key: it.id, items: [it] });
-  }
+  const groups = React.useMemo(() => {
+    const out: { key: string; ts: number; runs: Run[]; count: number; problems: number }[] = [];
+    for (const it of items) {
+      const key = fmt.date(it.at, { year: true });
+      let g = out[out.length - 1];
+      if (!g || g.key !== key) out.push((g = { key, ts: it.at, runs: [], count: 0, problems: 0 }));
+      g.count++;
+      if (it.outcome === "failed" && !it.action.endsWith(".resolved")) g.problems++;
+      const last = g.runs[g.runs.length - 1];
+      if (last && sameRun(last.items[0]!, it)) last.items.push(it);
+      else g.runs.push({ key: it.id, items: [it] });
+    }
+    return out;
+  }, [items, fmt]);
 
   const todayKey = fmt.date(Date.now(), { year: true });
   const today = groups[0]?.key === todayKey ? groups[0] : null;
@@ -326,7 +334,7 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
   );
 }
 
-function Row({ run, fresh, names, serverName, onPerson, onTarget }: { run: Run; fresh: boolean; names: Names; serverName: string; onPerson: (id: string) => void; onTarget: (t: string) => void }) {
+const Row = React.memo(function Row({ run, fresh, names, serverName, onPerson, onTarget }: { run: Run; fresh: boolean; names: Names; serverName: string; onPerson: (id: string) => void; onTarget: (t: string) => void }) {
   const fmt = useFormat();
   const e = run.items[0]!;
   const n = run.items.length;
@@ -430,4 +438,4 @@ function Row({ run, fresh, names, serverName, onPerson, onTarget }: { run: Run; 
       </span>
     </li>
   );
-}
+});

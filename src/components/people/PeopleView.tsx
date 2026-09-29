@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { NavArrowRight, UserPlus, Trash } from "iconoir-react";
@@ -8,7 +9,6 @@ import { api, ApiError, useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Empty, Panel, Skeleton } from "@/components/ui/Surface";
 import { SectionHeader } from "@/components/settings/SectionHeader";
-import { Household } from "@/components/settings/Household";
 import { peopleHref, type PeopleTab } from "@/lib/settings-links";
 import { Button, IconButton } from "@/components/ui/Button";
 import { StateLine } from "@/components/ui/StateLine";
@@ -17,12 +17,16 @@ import { Time } from "@/components/ui/Time";
 import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { InviteDialog } from "./InviteDialog";
-import { REPORTS_URL, ReportsTab } from "./ReportsTab";
-import { AccessMap } from "./AccessMap";
-import { AnnouncementsTab } from "./AnnouncementsTab";
-import { PersonDetail } from "./PersonDetail";
-import { Avatar, reportStage, roleLabel } from "./bits";
+import { Avatar, REPORTS_URL, reportStage, roleLabel } from "./bits";
 import s from "./people.module.css";
+
+// Each tab (and a person's page) is its own address, and only one shows: load just that one's code.
+const loading = () => <Skeleton height={320} radius={12} />;
+const AccessMap = dynamic(() => import("./AccessMap").then((m) => m.AccessMap), { loading });
+const ReportsTab = dynamic(() => import("./ReportsTab").then((m) => m.ReportsTab), { loading });
+const AnnouncementsTab = dynamic(() => import("./AnnouncementsTab").then((m) => m.AnnouncementsTab), { loading });
+const Household = dynamic(() => import("@/components/settings/Household").then((m) => m.Household), { loading });
+const PersonDetail = dynamic(() => import("./PersonDetail").then((m) => m.PersonDetail), { loading });
 
 export type { PeopleTab };
 
