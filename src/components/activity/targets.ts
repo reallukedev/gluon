@@ -1,4 +1,5 @@
 import type { ActivityItem } from "@/lib/people-types";
+import { alertsHref, peopleHref } from "@/lib/settings-links";
 
 export interface Names {
   people: Map<string, string>;
@@ -13,13 +14,13 @@ export function targetLink(e: ActivityItem, names: Names): { href: string | null
   const app = names.apps.get(t);
   const person = names.people.get(t);
 
-  if (a.startsWith("monitor.")) return { href: `/alerts?tab=monitors&monitor=${encodeURIComponent(t)}`, label: "the monitor" };
-  if (a.startsWith("channel.")) return { href: `/alerts?tab=channels&channel=${encodeURIComponent(t)}`, label: "the channel" };
+  if (a.startsWith("monitor.")) return { href: alertsHref("watching", { monitor: t }), label: "the monitor" };
+  if (a.startsWith("channel.")) return { href: alertsHref("notifications", { channel: t }), label: "the channel" };
   if (a.startsWith("people.folder") || a.startsWith("files.")) return { href: t.startsWith("/") ? `/files?path=${encodeURIComponent(t)}` : "/files", label: t };
-  if (a.startsWith("people.invite")) return { href: "/people", label: "the invite" };
-  if (person) return { href: `/people?person=${encodeURIComponent(t)}`, label: person };
-  if (a.startsWith("household.report")) return { href: "/people?tab=reports", label: app ?? "the report" };
-  if (a.startsWith("people.")) return { href: "/people", label: app ?? t };
+  if (a.startsWith("people.invite")) return { href: peopleHref(), label: "the invite" };
+  if (person) return { href: peopleHref({ person: t }), label: person };
+  if (a.startsWith("household.report")) return { href: peopleHref({ tab: "reports" }), label: app ?? "the report" };
+  if (a.startsWith("people.")) return { href: peopleHref(), label: app ?? t };
   if (app || a.startsWith("app.") || a.startsWith("apps.") || a.startsWith("stack.") || a.startsWith("container.") || a.startsWith("finding.app.")) {
     return { href: `/apps/${encodeURIComponent(t)}`, label: app ?? t };
   }

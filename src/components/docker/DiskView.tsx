@@ -116,9 +116,8 @@ export function DiskView() {
 
   return (
     <Page>
-      <AppsSectionTabs current="disk" />
       <PageHeader
-        title="Disk use"
+        title="Apps"
         summary={summary}
         actions={
           <Button
@@ -133,6 +132,7 @@ export function DiskView() {
           </Button>
         }
       />
+      <AppsSectionTabs current="docker" docker="disk" />
       {error && !data ? (
         <LoadError error={error} what="Docker's disk use" onRetry={() => void mutate()} retrying={isValidating} />
       ) : (

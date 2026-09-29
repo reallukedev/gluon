@@ -2,7 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import { docker } from "../docker/client";
 import { findUmbrel, umbrelApps, umbrelStores } from "../platform/umbrel";
-import type { GithubTarget, Install, RunningBuild, UpdateChannel } from "@/lib/updates-types";
+import { isNightlyVersion, type GithubTarget, type Install, type RunningBuild, type UpdateChannel, type UpdateRelation } from "@/lib/updates-types";
 import pkg from "../../../package.json";
 
 /**
@@ -17,10 +17,12 @@ const startedAt = Date.now();
 
 export function runningBuild(): RunningBuild {
   const commit = (process.env.GLUON_COMMIT ?? "").trim();
+  const version = (process.env.GLUON_VERSION ?? "").trim() || pkg.version;
   return {
-    version: (process.env.GLUON_VERSION ?? "").trim() || pkg.version,
+    version,
     commit: /^[0-9a-f]{7,40}$/.test(commit) ? commit : null,
     build: (process.env.GLUON_BUILD ?? "").trim() || null,
+    channel: isNightlyVersion(version) ? "nightly" : "stable",
     startedAt,
   };
 }
@@ -107,6 +109,44 @@ export async function umbrelStoreVersion(appId: string): Promise<string | null> 
 
 // ---------------------------------------------------------------- GitHub
 
+/*
+ * Unauthenticated, GitHub allows 60 requests an hour per address. A background check costs one or
+ * two: Stable reads the newest release (plus the commit its tag points at, remembered per tag);
+ * Nightly reads main's newest commit, plus package.json and "what changed since yours" once per new
+ * commit. Answers about a commit never change, so they're remembered for a day; failures for 10 min.
+ */
+
+const MIN = 60_000;
+const DAY = 24 * 60 * MIN;
+
+type G = typeof globalThis & { __gluonGhMemo?: Map<string, { v: unknown; failed: boolean; until: number }> };
+const memo = ((globalThis as G).__gluonGhMemo ??= new Map());
+
+async function remember<T>(key: string, ttlMs: number, failTtlMs: number, fn: () => Promise<T>): Promise<T> {
+  const hit = memo.get(key);
+  if (hit && hit.until > Date.now()) {
+    if (hit.failed) throw hit.v;
+    return hit.v as T;
+  }
+  const put = (v: unknown, failed: boolean, ttl: number) => {
+    memo.delete(key);
+    if (ttl > 0) memo.set(key, { v, failed, until: Date.now() + ttl });
+    // Oldest first: keep the memo small.
+    for (const k of memo.keys()) {
+      if (memo.size <= 200) break;
+      memo.delete(k);
+    }
+  };
+  try {
+    const v = await fn();
+    put(v, false, ttlMs);
+    return v;
+  } catch (e) {
+    put(e, true, failTtlMs);
+    throw e;
+  }
+}
+
 async function gh<T>(path: string): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": "Gluon", "X-GitHub-Api-Version": "2022-11-28" };
   const token = process.env.GLUON_GITHUB_TOKEN;
@@ -117,11 +157,13 @@ async function gh<T>(path: string): Promise<T> {
   } catch {
     throw new Error("Gluon couldn't reach GitHub. Check this server's internet connection.");
   }
-  if (res.status === 404) throw Object.assign(new Error("not found"), { status: 404 });
+  if (res.status === 404 || res.status === 422) throw Object.assign(new Error("not found"), { status: 404 });
   if (res.status === 403 || res.status === 429) throw new Error("GitHub is limiting how often this server can check. Gluon will try again later.");
-  if (!res.ok) throw new Error(`GitHub answered ${res.status}.`);
+  if (!res.ok) throw new Error(`GitHub answered ${res.status}. Gluon will try again later.`);
   return (await res.json()) as T;
 }
+
+const notFound = (e: unknown) => (e as { status?: number }).status === 404;
 
 interface GhCommit {
   sha: string;
@@ -137,59 +179,187 @@ interface GhRelease {
   draft: boolean;
   prerelease: boolean;
 }
+interface GhCompare {
+  status: "ahead" | "behind" | "identical" | "diverged";
+  ahead_by: number;
+  behind_by: number;
+  commits: GhCommit[];
+}
+
+const firstLine = (message: string) => message.split("\n")[0]?.trim() ?? "";
+
+/** The "x.y.z" in package.json at a commit; null when it has none (or no package.json). */
+async function packageVersionAt(sha: string): Promise<string | null> {
+  return remember(`pkg:${sha}`, DAY, 10 * MIN, async () => {
+    try {
+      const f = await gh<{ content?: string; encoding?: string }>(`/contents/package.json?ref=${encodeURIComponent(sha)}`);
+      if (f.encoding !== "base64" || !f.content) return null;
+      const v = (JSON.parse(Buffer.from(f.content, "base64").toString("utf8")) as { version?: unknown }).version;
+      return typeof v === "string" ? (v.trim().replace(/^v/, "").match(/^\d+\.\d+\.\d+/)?.[0] ?? null) : null;
+    } catch (e) {
+      // Missing or unreadable: name the build 0.0.0-nightly…; GitHub unreachable: fail the check,
+      // so a build isn't named (and installed) under a stand-in version by accident.
+      if (notFound(e) || e instanceof SyntaxError) return null;
+      throw e;
+    }
+  });
+}
+
+/** A nightly's name: "<package.json version>-nightly.<yyyymmdd UTC>.<sha7>". Valid as a Docker tag. */
+export function nightlyVersion(base: string | null, committedAt: number, sha: string): string {
+  const d = new Date(committedAt);
+  const ymd = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+  const name = `${base && /^\d+\.\d+\.\d+$/.test(base) ? base : "0.0.0"}-nightly.${ymd}.${sha.slice(0, 7)}`;
+  return /^[A-Za-z0-9_.-]{1,64}$/.test(name) ? name : `0.0.0-nightly.${ymd}.${sha.slice(0, 7)}`;
+}
+
+/** How `head` relates to `base` on GitHub, remembered per pair; null when GitHub doesn't know one of them. */
+async function compareCommits(base: string, head: string): Promise<{ status: GhCompare["status"]; aheadBy: number; titles: string[] } | null> {
+  if (!/^[0-9a-f]{7,40}$/.test(base) || !/^[0-9a-f]{7,40}$/.test(head)) return null;
+  return remember(`cmp:${base}...${head}`, DAY, 10 * MIN, async () => {
+    try {
+      const c = await gh<GhCompare>(`/compare/${base}...${head}?per_page=100`);
+      const titles = c.commits
+        .map((x) => firstLine(x.commit.message))
+        .filter(Boolean)
+        .reverse()
+        .slice(0, 20);
+      return { status: c.status, aheadBy: c.ahead_by, titles };
+    } catch (e) {
+      if (notFound(e)) return null;
+      throw e;
+    }
+  });
+}
+
+/** Nightly: the changes on main since the running commit. Null when that can't be told (costs nothing then). */
+export async function changesSince(runningCommit: string | null, target: GithubTarget): Promise<GithubTarget["since"]> {
+  if (!runningCommit || sameCommit(runningCommit, target.commit)) return null;
+  try {
+    const c = await compareCommits(runningCommit, target.ref);
+    return c && c.aheadBy > 0 ? { count: c.aheadBy, titles: c.titles } : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function latestOnGithub(channel: UpdateChannel): Promise<GithubTarget | null> {
-  if (channel === "main") {
-    const c = await gh<GhCommit>("/commits/main");
+  if (channel === "nightly") {
+    let c: GhCommit;
+    try {
+      c = await gh<GhCommit>("/commits/main");
+    } catch (e) {
+      if (notFound(e)) return null;
+      throw e;
+    }
+    const at = Date.parse(c.commit.committer?.date ?? c.commit.author?.date ?? "") || Date.now();
     const [title, ...rest] = c.commit.message.split("\n");
     return {
+      channel,
       ref: c.sha,
-      version: `main-${c.sha.slice(0, 7)}`,
+      version: nightlyVersion(await packageVersionAt(c.sha), at, c.sha),
       commit: c.sha.slice(0, 12),
-      title: title ?? "Latest change",
+      title: title?.trim() || "Latest change",
       notes: rest.join("\n").trim(),
       url: c.html_url,
-      publishedAt: Date.parse(c.commit.committer?.date ?? c.commit.author?.date ?? "") || Date.now(),
+      publishedAt: at,
+      since: null,
     };
   }
   let r: GhRelease;
   try {
     r = await gh<GhRelease>("/releases/latest");
   } catch (e) {
-    if ((e as { status?: number }).status === 404) return null;
+    if (notFound(e)) return null;
     throw e;
   }
-  const c = await gh<GhCommit>(`/commits/${encodeURIComponent(r.tag_name)}`);
+  const sha = await remember(`tag:${r.tag_name}`, DAY, 0, async () => (await gh<GhCommit>(`/commits/${encodeURIComponent(r.tag_name)}`)).sha);
+  const version = r.tag_name.replace(/^v/, "");
   return {
+    channel,
     ref: r.tag_name,
-    version: r.tag_name.replace(/^v/, ""),
-    commit: c.sha.slice(0, 12),
-    title: r.name?.trim() || `Gluon ${r.tag_name.replace(/^v/, "")}`,
+    version,
+    commit: sha.slice(0, 12),
+    title: r.name?.trim() || `Gluon ${version}`,
     notes: (r.body ?? "").trim(),
     url: r.html_url,
     publishedAt: Date.parse(r.published_at ?? "") || Date.now(),
+    since: null,
   };
 }
 
-/** -1 / 0 / 1 for dotted versions ("1.10.0" > "1.9.2"); pre-release suffixes sort before the release. */
+// ---------------------------------------------------------------- comparing versions
+
+function parseVersion(v: string) {
+  const s = v.trim().replace(/^v/, "").split("+")[0] ?? "";
+  const dash = s.indexOf("-");
+  const main = dash < 0 ? s : s.slice(0, dash);
+  const pre = dash < 0 ? null : s.slice(dash + 1);
+  return { nums: main.split(".").map((n) => Number.parseInt(n, 10) || 0), pre: pre ? pre.split(".") : null };
+}
+
+/**
+ * -1 / 0 / 1 for versions, semver-style: "1.10.0" > "1.9.2"; a pre-release sorts before its
+ * release ("1.2.0-nightly.…" < "1.2.0"); pre-release parts compare numerically when they're numbers,
+ * so nightlies sort by date ("1.3.0-nightly.20260928.…" < "1.3.0-nightly.20261001.…").
+ */
 export function compareVersions(a: string, b: string): number {
-  const parse = (v: string) => {
-    const [main, pre] = v.replace(/^v/, "").split("-", 2);
-    return { nums: (main ?? "").split(".").map((n) => Number.parseInt(n, 10) || 0), pre: pre ?? null };
-  };
-  const x = parse(a);
-  const y = parse(b);
+  const x = parseVersion(a);
+  const y = parseVersion(b);
   for (let i = 0; i < Math.max(x.nums.length, y.nums.length); i++) {
     const d = (x.nums[i] ?? 0) - (y.nums[i] ?? 0);
     if (d) return Math.sign(d);
   }
-  if (x.pre === y.pre) return 0;
-  if (x.pre === null) return 1;
-  if (y.pre === null) return -1;
-  return x.pre < y.pre ? -1 : 1;
+  if (!x.pre && !y.pre) return 0;
+  if (!x.pre) return 1;
+  if (!y.pre) return -1;
+  for (let i = 0; i < Math.max(x.pre.length, y.pre.length); i++) {
+    const p = x.pre[i];
+    const q = y.pre[i];
+    if (p === undefined) return -1;
+    if (q === undefined) return 1;
+    if (p === q) continue;
+    const pn = /^\d+$/.test(p);
+    const qn = /^\d+$/.test(q);
+    if (pn && qn) return Math.sign(Number(p) - Number(q)) || (p < q ? -1 : 1);
+    if (pn !== qn) return pn ? -1 : 1;
+    return p < q ? -1 : 1;
+  }
+  return 0;
 }
 
+export function sameCommit(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  const n = Math.min(a.length, b.length, 40);
+  return n >= 7 && a.slice(0, n) === b.slice(0, n);
+}
+
+/** By name alone: Nightly = a different commit than yours; Stable = a higher version. */
 export function isNewer(target: GithubTarget, running: RunningBuild, channel: UpdateChannel): boolean {
-  if (channel === "main") return !running.commit || (!target.commit.startsWith(running.commit.slice(0, 7)) && !running.commit.startsWith(target.commit.slice(0, 7)));
+  if (channel === "nightly") return !sameCommit(target.commit, running.commit);
   return compareVersions(target.version, running.version) > 0;
+}
+
+/**
+ * How the newest build relates to what's running. On Stable a nightly can carry the last release's
+ * number yet contain everything in it (and more): when the name says "the release is newer", ask
+ * GitHub which commit came first. `certain: false` when GitHub couldn't answer; automatic updates
+ * then wait rather than risk going backwards.
+ */
+export async function relate(target: GithubTarget, running: RunningBuild, channel: UpdateChannel): Promise<{ relation: UpdateRelation; certain: boolean }> {
+  if (channel === "nightly") return { relation: sameCommit(target.commit, running.commit) ? "current" : "newer", certain: true };
+  if (sameCommit(target.commit, running.commit)) return { relation: "current", certain: true };
+  const c = compareVersions(target.version, running.version);
+  if (c < 0) return { relation: "ahead", certain: true };
+  if (c === 0) return { relation: "current", certain: true };
+  if (running.channel === "nightly" && running.commit) {
+    try {
+      const cmp = await compareCommits(target.commit, running.commit);
+      if (cmp?.status === "ahead") return { relation: "ahead", certain: true };
+      if (cmp?.status === "identical") return { relation: "current", certain: true };
+    } catch {
+      return { relation: "newer", certain: false };
+    }
+  }
+  return { relation: "newer", certain: true };
 }

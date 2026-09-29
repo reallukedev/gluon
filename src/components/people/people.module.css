@@ -1,4 +1,4 @@
-.tabBody { margin-top: 20px; display: grid; gap: 20px; }
+.tabBody { margin-top: 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .muted { color: var(--muted); }
 .hint { font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
 .pad { padding: 16px 18px; }
@@ -26,7 +26,10 @@
 .avatar[data-off] { opacity: 0.5; }
 
 /* ---------------------------------------------------------------- people table */
-.table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; }
+/* Sized by the table's own width (sidebar and density change it), not the viewport.
+   Full: 200+110+110+120+150+44 + 5×16 gaps + 30 padding = 844px. overflow: hidden only rounds the hover
+   fill into the corners; the tiers below keep every column inside. */
+.table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; container: people / inline-size; }
 .headRow, .row { display: grid; grid-template-columns: minmax(200px, 2fr) 110px 110px minmax(120px, 1fr) minmax(150px, 1.2fr) 44px; align-items: center; gap: 16px; padding: 0 12px 0 18px; }
 .headRow {
   height: 38px;
@@ -39,6 +42,7 @@
   color: var(--muted);
 }
 .row { min-height: 58px; border-top: 1px solid var(--line); cursor: pointer; transition: background-color var(--dur-fast) ease; font-size: var(--text-md); }
+.row > * { min-width: 0; }
 .headRow + .row { border-top: 0; }
 @media (hover: hover) and (pointer: fine) { .row:hover { background: var(--panel-2); } }
 .row:active { background: color-mix(in oklab, var(--ink) 5%, transparent); }
@@ -50,15 +54,44 @@
 .cellLabel { display: none; }
 .go { display: flex; justify-content: flex-end; color: var(--muted); }
 .go svg { width: 18px; height: 18px; }
-@media (max-width: 900px) {
+/* Two-step moves under the role: 180+110+120+150+44 + 4×16 + 30 = 698px. */
+@container people (max-width: 843px) {
+  .headRow, .row {
+    grid-template-columns: minmax(180px, 2fr) 110px minmax(120px, 1fr) minmax(150px, 1.2fr) 44px;
+    grid-template-areas: "who role seen state go" "who mfa seen state go";
+    column-gap: 16px;
+    row-gap: 2px;
+  }
+  .headRow { grid-template-areas: "who role seen state go"; }
+  .headRow > :nth-child(3) { display: none; }
+  .headRow > :nth-child(1), .who { grid-area: who; }
+  .headRow > :nth-child(2), .role { grid-area: role; }
+  .mfa { grid-area: mfa; }
+  .headRow > :nth-child(4), .seen { grid-area: seen; }
+  .headRow > :nth-child(5), .state { grid-area: state; }
+  .headRow > :nth-child(6), .go { grid-area: go; }
+  .row > .role { align-self: end; }
+  .row > .mfa { align-self: start; font-size: var(--text-sm); color: var(--ink-2); }
+  .mfa .cellLabel { display: inline; color: var(--muted); margin-right: 6px; }
+}
+/* Last seen moves under the status too: 180+110+150+44 + 3×16 + 30 = 562px. */
+@container people (max-width: 697px) {
+  .headRow, .row {
+    grid-template-columns: minmax(180px, 2fr) 110px minmax(150px, 1.4fr) 44px;
+    grid-template-areas: "who role state go" "who mfa seen go";
+  }
+  .headRow { grid-template-areas: "who role state go"; }
+  .headRow > :nth-child(4) { display: none; }
+  .row > .state { align-self: end; }
+  .row > .seen { align-self: start; font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seen .cellLabel { display: inline; color: var(--muted); margin-right: 6px; }
+}
+/* Phones and narrow panes: stacked rows. */
+@container people (max-width: 561px) {
   .headRow { display: none; }
   .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "who who go" "role mfa mfa" "seen state state"; gap: 6px 12px; padding: 12px 12px 14px 16px; }
-  .who { grid-area: who; padding: 0; }
-  .role { grid-area: role; }
-  .mfa { grid-area: mfa; }
-  .seen { grid-area: seen; }
-  .state { grid-area: state; }
-  .go { grid-area: go; }
+  .who { padding: 0; }
+  .row > .role, .row > .mfa, .row > .seen, .row > .state { align-self: auto; }
   .role, .mfa, .seen, .state { padding-left: 46px; font-size: var(--text-sm); }
   .mfa, .state { padding-left: 0; }
   .cellLabel { display: inline; color: var(--muted); margin-right: 6px; }
@@ -197,3 +230,5 @@
 .steps li[data-reached] i { border-left-style: solid; border-color: var(--ink-2); }
 .steps li[data-current] { color: var(--ink); font-weight: 620; }
 .steps li[data-current] i { border-color: var(--ink); }
+/* One person, opened from Settings → People. */
+.detail { min-width: 0; }

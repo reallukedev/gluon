@@ -15,3 +15,31 @@
   .value { min-width: 0; }
   .none { display: none; }
 }
+
+/*
+ * `fit` meters (the Apps table) follow the width of the box around the table, not the window (see
+ * the "apps" container in apps.module.css; the query is unnamed so it works across CSS modules).
+ * They come after the phone rules above and win: the trace goes first, then the bar; under 700px
+ * the rows restack and each meter names itself.
+ */
+@container (max-width: 1079px) {
+  .meter[data-fit] .spark { display: none; }
+  .meter[data-fit] .bar { max-width: 48px; }
+}
+@container (max-width: 959px) {
+  .meter[data-fit] .bar { display: none; }
+  .meter[data-fit] .value { min-width: 0; }
+}
+@container (min-width: 700px) {
+  .meter[data-fit] { justify-content: flex-end; gap: 10px; }
+  .meter[data-fit] .name { display: none; }
+  .none[data-fit] { display: block; }
+}
+@container (max-width: 699px) {
+  .meter[data-fit] { justify-content: flex-start; gap: 8px; }
+  .meter[data-fit] .name { display: inline; font-size: var(--text-xs); color: var(--muted); }
+  .meter[data-fit] .spark { display: none; }
+  .meter[data-fit] .bar { display: block; max-width: 44px; min-width: 28px; }
+  .meter[data-fit] .value { min-width: 0; }
+  .none[data-fit] { display: none; }
+}

@@ -5,7 +5,7 @@ import { ArrowUp, Search, Server, Xmark } from "iconoir-react";
 import type { ActivityItem, ActivityPage } from "@/lib/people-types";
 import { api, useApi, useStream } from "@/lib/client/api";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
-import { Empty, Notice, Page, PageHeader, Panel, Skeleton } from "@/components/ui/Surface";
+import { Empty, Notice, Panel, Skeleton } from "@/components/ui/Surface";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { Segmented } from "@/components/ui/Field";
@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { StateLine } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
 import { Avatar } from "@/components/people/bits";
+import { SectionHeader } from "@/components/settings/SectionHeader";
 import { outcomeOf, sameRun, targetLink, type Names } from "./targets";
 import s from "./activity.module.css";
 
@@ -49,7 +50,10 @@ interface Run {
 /** Scrolled further than this, new entries wait above instead of pushing the page down. */
 const HOLD_BELOW = 240;
 
-/** Who did what to which thing, and what the server noticed: a live timeline grouped by day. */
+/**
+ * Who did what to which thing, and what the server noticed: a live timeline grouped by day, with
+ * its filters. Lives in Settings → Activity (its summary goes in the section's header).
+ */
 export function ActivityView({ initial, people, initialTarget, initialUser, pageSize }: { initial: ActivityPage; people: Person[]; initialTarget: string; initialUser: string; pageSize: number }) {
   const fmt = useFormat();
   const { serverName } = usePrefs();
@@ -208,8 +212,9 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
   };
 
   return (
-    <Page>
-      <PageHeader title="Activity" summary={summary} />
+    <>
+    <SectionHeader summary={summary} />
+    <div className={s.view}>
       <div className={s.toolbar}>
         <label className={s.filter}>
           <Search aria-hidden />
@@ -316,7 +321,8 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
           )}
         </Panel>
       )}
-    </Page>
+    </div>
+    </>
   );
 }
 

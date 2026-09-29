@@ -26,7 +26,8 @@ import s from "./docker.module.css";
 type Filter = "all" | "used" | "unused";
 type Sort = "created" | "name" | "size";
 
-const COLUMNS = "18px minmax(240px, 2.3fr) minmax(170px, 1.5fr) 104px 112px 68px";
+/** Loading placeholder columns: the table's proportions, allowed to shrink so they never overflow. */
+const COLUMNS = "18px minmax(0, 2.3fr) minmax(0, 1.5fr) minmax(0, 104px) minmax(0, 112px) 68px";
 const PAGE = 150;
 
 /** "ghcr.io/immich-app/immich-server" + ":v3.2.2", the tag quieter than the name. */
@@ -105,7 +106,7 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
   const summary = !images ? (
     error ? "Gluon couldn't get the list from Docker." : "Asking Docker…"
   ) : images.length === 0 ? (
-    "No images yet."
+    "No Docker images yet."
   ) : (
     <>
       <b>
@@ -263,9 +264,8 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
 
   return (
     <Page>
-      <AppsSectionTabs current="images" />
       <PageHeader
-        title="Images"
+        title="Apps"
         summary={summary}
         actions={
           <>
@@ -280,6 +280,7 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
           </>
         }
       />
+      <AppsSectionTabs current="docker" docker="images" />
 
       {error && (
         <div style={{ marginBottom: 16 }}>

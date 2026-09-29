@@ -1,162 +1,64 @@
 "use client";
 import * as React from "react";
-import { Clock, EyeClosed, MoreHoriz } from "iconoir-react";
 import type { Finding } from "@/server/findings";
 import { api, useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Empty, Notice, Panel, Skeleton } from "@/components/ui/Surface";
-import { Button, IconButton } from "@/components/ui/Button";
-import { Menu } from "@/components/ui/Menu";
+import { Button } from "@/components/ui/Button";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
 import { RemedyButton } from "@/components/status/NeedsYou";
-import { byDay, dayLabel, errorMessage, FINDINGS_URL } from "./shared";
+import { byDay, dayLabel, errorMessage } from "./shared";
 import s from "./alerts.module.css";
 
 export const isSnoozed = (f: Finding, now = Date.now()) => !!f.snoozedUntil && f.snoozedUntil > now;
-/** Counts toward "needs you": not dismissed, not snoozed, not informational. */
-export const isActive = (f: Finding) => !f.dismissedAt && !isSnoozed(f) && f.severity !== "info";
 
-// ---------------------------------------------------------------- open
+// ---------------------------------------------------------------- quiet
 
-/** Hours from now until 8 in the morning tomorrow (a "not now, first thing tomorrow" snooze). */
-function hoursUntilMorning(): number {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(8, 0, 0, 0);
-  return Math.max(1, Math.round((d.getTime() - Date.now()) / 3_600_000));
-}
-
-export function OpenTab({ findings }: { findings: Finding[] }) {
-  const { mutate, error } = useApi<Finding[]>(FINDINGS_URL);
-  const refresh = React.useCallback(() => void mutate(), [mutate]);
-  /** Items just fixed with their remedy: their doubled line settles while Gluon confirms. */
-  const [settled, setSettled] = React.useState<Set<string>>(() => new Set());
-  const settle = React.useCallback(
-    (id: string) => {
-      setSettled((cur) => new Set(cur).add(id));
-      refresh();
-      window.setTimeout(() => {
-        setSettled((cur) => {
-          const n = new Set(cur);
-          n.delete(id);
-          return n;
-        });
-        refresh();
-      }, 60_000);
-    },
-    [refresh],
-  );
-
-  async function op(f: Finding, body: Record<string, unknown>, message: string, description?: string) {
+/**
+ * The rest of the open list, under Status's "Needs you": things worth knowing (no alerts are sent),
+ * snoozed ones and ones marked as not a problem, each with a way back onto the list.
+ */
+export function QuietFindings({ findings, onChange }: { findings: Finding[]; onChange: () => void }) {
+  const [busy, setBusy] = React.useState<string | null>(null);
+  async function restore(f: Finding) {
+    setBusy(f.id);
     try {
-      await api.post(`/api/findings/${encodeURIComponent(f.id)}`, body);
-      toast.info(message, {
-        description,
-        action:
-          body.op !== "restore"
-            ? { label: "Undo", onClick: () => void api.post(`/api/findings/${encodeURIComponent(f.id)}`, { op: "restore" }).then(refresh) }
-            : undefined,
-      });
-      refresh();
+      await api.post(`/api/findings/${encodeURIComponent(f.id)}`, { op: "restore" });
+      toast.info("Back on the list");
+      onChange();
     } catch (e) {
       toast.error(errorMessage(e));
+    } finally {
+      setBusy(null);
     }
   }
 
   const now = Date.now();
-  const live = findings.filter((f) => !f.dismissedAt && !isSnoozed(f, now));
-  const broken = live.filter((f) => f.severity === "fault");
-  const attention = live.filter((f) => f.severity === "attention");
-  const info = live.filter((f) => f.severity === "info");
+  const info = findings.filter((f) => !f.dismissedAt && !isSnoozed(f, now) && f.severity === "info");
   const snoozed = findings.filter((f) => !f.dismissedAt && isSnoozed(f, now));
   const dismissed = findings.filter((f) => f.dismissedAt);
-
-  const later = (f: Finding) => (
-    <>
-      <Menu
-        trigger={
-          <Button size="sm" variant="ghost" icon={<Clock />}>
-            Snooze
-          </Button>
-        }
-        items={[
-          { kind: "label", label: "Hide it and hold its alerts" },
-          { label: "For an hour", onSelect: () => void op(f, { op: "snooze", hours: 1 }, "Snoozed for an hour", "It comes back then if it's still true.") },
-          { label: "Until tomorrow morning", onSelect: () => void op(f, { op: "snooze", hours: hoursUntilMorning() }, "Snoozed until tomorrow morning", "It comes back then if it's still true.") },
-          { label: "For a week", onSelect: () => void op(f, { op: "snooze", hours: 24 * 7 }, "Snoozed for a week", "It comes back then if it's still true.") },
-        ]}
-      />
-      <Menu
-        trigger={
-          <IconButton label="More options" size="sm">
-            <MoreHoriz />
-          </IconButton>
-        }
-        items={[
-          {
-            label: "This isn't a problem",
-            description: "Hidden until it clears. If it happens again, it's back.",
-            icon: <EyeClosed />,
-            onSelect: () => void op(f, { op: "dismiss" }, "Marked as not a problem", "If it clears and happens again, it's back on the list."),
-          },
-        ]}
-      />
-    </>
-  );
-  const restore = (f: Finding) => (
-    <Button size="sm" onClick={() => void op(f, { op: "restore" }, "Back on the list")}>
+  const back = (f: Finding) => (
+    <Button size="sm" loading={busy === f.id} onClick={() => void restore(f)}>
       Show it again
     </Button>
-  );
-  const active = (f: Finding) => (
-    <>
-      {f.remedy && <RemedyButton remedy={f.remedy} findingId={f.id} onDone={() => settle(f.id)} />}
-      {later(f)}
-    </>
   );
 
   return (
     <>
-      {error && (
-        <Notice tone="fault" title="Couldn't refresh the list">
-          {error.message} What you see may be out of date.
-        </Notice>
-      )}
-      {broken.length + attention.length === 0 ? (
-        <Panel flush>
-          <Empty title="Nothing needs you.">
-            Gluon checks disks, apps, certificates, monitors and updates around the clock. Problems show up here with the fix next to them, and you're told
-            through your notification channels.
-          </Empty>
-        </Panel>
-      ) : (
-        <>
-          {broken.length > 0 && (
-            <Panel title="Broken" meta={<span className="num">{broken.length}</span>} flush>
-              <FindingList items={broken} settled={settled} actions={active} />
-            </Panel>
-          )}
-          {attention.length > 0 && (
-            <Panel title="Needs you" meta={<span className="num">{attention.length}</span>} flush>
-              <FindingList items={attention} settled={settled} actions={active} />
-            </Panel>
-          )}
-        </>
-      )}
       {info.length > 0 && (
         <Panel title="Worth knowing" meta={<span className={s.panelNote}>No alerts are sent for these</span>} flush>
-          <FindingList items={info} settled={settled} actions={(f) => (f.remedy ? <RemedyButton remedy={f.remedy} findingId={f.id} onDone={() => settle(f.id)} /> : null)} />
+          <FindingList items={info} actions={(f) => (f.remedy ? <RemedyButton remedy={f.remedy} findingId={f.id} onDone={onChange} /> : null)} />
         </Panel>
       )}
       {snoozed.length > 0 && (
         <Panel title="Snoozed" meta={<span className={s.panelNote}>Each comes back at its time if it's still true</span>} flush>
-          <FindingList quiet items={snoozed} note={(f) => <>back <Time ts={f.snoozedUntil!} kind="dateTime" /></>} actions={(f) => restore(f)} />
+          <FindingList quiet items={snoozed} note={(f) => <>back <Time ts={f.snoozedUntil!} kind="dateTime" /></>} actions={back} />
         </Panel>
       )}
       {dismissed.length > 0 && (
         <Panel title="Marked as not a problem" meta={<span className={s.panelNote}>Back on the list if it clears and happens again</span>} flush>
-          <FindingList quiet items={dismissed} note={(f) => <>hidden <Time ts={f.dismissedAt!} /></>} actions={(f) => restore(f)} />
+          <FindingList quiet items={dismissed} note={(f) => <>hidden <Time ts={f.dismissedAt!} /></>} actions={back} />
         </Panel>
       )}
     </>

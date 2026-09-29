@@ -64,14 +64,18 @@
 /* Small: the figures shrink a step so both fit beside each other. */
 .app[data-size="s"] { --figure: 1.375rem; gap: 10px; }
 
-.state { height: 100%; display: grid; place-content: center; gap: 4px; padding: 16px; text-align: center; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
+.state { height: 100%; display: grid; place-content: center; justify-items: center; gap: 4px; padding: 16px 16px calc(16px + var(--title-h, 0px)); text-align: center; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
 .state b { color: var(--ink); font-size: var(--text-md); font-weight: 600; }
 
-/* Catalog preview */
-.preview { display: flex; align-items: center; gap: 10px; }
-.previewLine { width: 2px; height: 20px; background: var(--ink); }
-.preview svg { width: 56px; height: 20px; }
-.preview polyline { fill: none; stroke: var(--ink-2); stroke-width: 1.25; }
+/* Catalog preview: a 120×56 miniature tile, like previews.tsx, with the app's real icon. */
+.preview { box-sizing: border-box; width: 120px; height: 56px; display: grid; align-content: space-between; padding: 9px 11px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); }
+.previewHead { display: flex; align-items: center; gap: 8px; }
+.previewWords { display: grid; gap: 5px; }
+.previewWords i { display: block; height: 2px; width: 40px; border-radius: 1px; background: var(--ink); }
+.previewWords i + i { width: 22px; background: var(--line-strong); }
+.preview svg { width: 96px; height: 14px; overflow: visible; }
+.preview polyline { fill: none; stroke: var(--ink-2); stroke-width: 1.25; stroke-linejoin: round; }
+.preview line { stroke: var(--ink-2); stroke-width: 1; }
 
 @media (max-width: 720px) {
   .app[data-size="m"] { display: flex; }

@@ -22,9 +22,10 @@ export function ZoneLine({ zone, serverName, children }: { zone: "home" | "away"
           <span className={s.zoneWireLabel}>{label}</span>
         </span>
         <span className={s.zoneNode}>
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-            <path d="M3 2.5v11M6.2 5.5v8M12.8 2.5v11" />
-            <path d="M9.5 2.5v11" stroke="var(--attn)" />
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden>
+            <rect x="2.5" y="2.5" width="11" height="4.5" rx="1" />
+            <rect x="2.5" y="9" width="11" height="4.5" rx="1" />
+            <path d="M5 4.75h1.5M5 11.25h1.5" strokeLinecap="round" />
           </svg>
           {serverName}
         </span>

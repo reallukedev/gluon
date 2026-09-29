@@ -20,6 +20,9 @@ import { Time } from "@/components/ui/Time";
 import { monitorLine, pct, Trace } from "@/components/alerts/monitorBits";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { useAppUsage } from "@/components/apps/Meters";
+import { WidgetState, useFit } from "./kit";
+import { activityHref, alertsHref } from "@/lib/settings-links";
+import { Preview } from "../previews";
 import w from "./watch.module.css";
 
 // ---------------------------------------------------------------- shared bits
@@ -35,14 +38,21 @@ function Loading({ rows = 3 }: { rows?: number }) {
   );
 }
 
-function Failed({ title, status }: { title: string; status?: number }) {
+function Failed({ title, status, retry }: { title: string; status?: number; retry?: () => void }) {
   return (
-    <div className={w.center}>
-      <div>
-        <b>{title}</b>
-        {status === 403 ? "Only admins can see this." : "Gluon couldn't load it just now. It will try again."}
-      </div>
-    </div>
+    <WidgetState
+      line={status === 403 ? undefined : "unknown"}
+      title={title}
+      action={
+        retry && status !== 403 ? (
+          <button type="button" className={w.retry} onClick={retry}>
+            Try again
+          </button>
+        ) : undefined
+      }
+    >
+      {status === 403 ? "Only admins can see this." : "Gluon couldn't load it just now. It tries again on its own."}
+    </WidgetState>
   );
 }
 
@@ -51,10 +61,11 @@ const QUARTER = 15 * 60_000;
 // ---------------------------------------------------------------- uptime
 
 function UptimeWidget({ size }: WidgetProps) {
-  const { data, error } = useApi<MonitorView[]>("/api/alerts/monitors?range=24h", { refresh: 60_000 });
-  if (!data) return error ? <Failed title="Can't show uptime" status={error.status} /> : <Loading />;
+  const { data, error, mutate } = useApi<MonitorView[]>("/api/alerts/monitors?range=24h", { refresh: 60_000 });
+  const watched = (data ?? []).filter((m) => m.enabled && m.state !== "idle");
+  const [listRef, fit] = useFit<HTMLUListElement>(size === "s" ? 0 : watched.length);
+  if (!data) return error ? <Failed title="Can't show uptime" status={error.status} retry={() => void mutate()} /> : <Loading />;
 
-  const watched = data.filter((m) => m.enabled && m.state !== "idle");
   if (!watched.length) {
     return (
       <div className={w.body}>
@@ -62,8 +73,8 @@ function UptimeWidget({ size }: WidgetProps) {
           <StateLine state="stopped" label={false} size={18} />
           <span>Nothing is being watched</span>
         </p>
-        <p className={w.subWrap}>Gluon checks your apps and public addresses once they're added in Alerts.</p>
-        <Link href="/alerts?tab=monitors" className={w.more}>
+        <p className={w.subWrap}>Gluon checks your apps and public addresses once they're added in Settings → Alerts.</p>
+        <Link href={alertsHref()} className={w.more}>
           Watch an address
         </Link>
       </div>
@@ -74,8 +85,9 @@ function UptimeWidget({ size }: WidgetProps) {
   const order = (m: MonitorView) => (m.state === "down" ? 0 : m.state === "failing" ? 1 : m.flapping ? 2 : 3);
   const list = [...watched].sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
   const wide = size === "w" || size === "x";
-  const max = size === "s" ? 0 : size === "m" ? 3 : size === "t" ? 5 : wide ? 12 : 9;
+  const max = size === "s" ? 0 : watched.length;
   const traces = size === "l" || wide;
+  const hidden = size === "s" ? 0 : watched.length - fit;
 
   return (
     <div className={w.body}>
@@ -87,19 +99,17 @@ function UptimeWidget({ size }: WidgetProps) {
               <span className="num">{down.length}</span> of <span className="num">{watched.length}</span> not answering
             </>
           ) : (
-            <>
-              {watched.length === 1 ? "Answering" : "All"} <span className="num">{watched.length > 1 ? watched.length : ""}</span> {watched.length > 1 ? "answering" : ""}
-            </>
+            <>{watched.length === 1 ? `${watched[0]!.name} is answering` : <>All <span className="num">{watched.length}</span> answering</>}</>
           )}
         </span>
       </p>
       <p className={w.sub}>{down.length ? down.map((m) => m.name).join(", ") : "Checked every minute from this server"}</p>
       {max > 0 && (
-        <ul className={wide ? w.cells : w.list} role="list">
-          {list.slice(0, max).map((m) => {
+        <ul className={wide ? w.cells : w.list} role="list" ref={listRef}>
+          {list.map((m, i) => {
             const st = monitorLine(m);
             return (
-              <li key={m.id} className={wide ? w.cell : w.row} data-trace={traces ? "" : undefined}>
+              <li key={m.id} className={wide ? w.cell : w.row} data-trace={traces ? "" : undefined} aria-hidden={i >= fit || undefined}>
                 <StateLine state={st.line} label={false} size={12} />
                 <span className={w.rowText}>
                   <span className={w.rowSplit}>
@@ -122,8 +132,8 @@ function UptimeWidget({ size }: WidgetProps) {
         </ul>
       )}
       {size !== "s" && (
-        <Link href="/alerts?tab=monitors" className={w.more}>
-          {watched.length > max ? `All ${watched.length} in Alerts` : "Open Alerts"}
+        <Link href={alertsHref()} className={w.more}>
+          {hidden > 0 ? `${hidden} more in Alerts` : "Open Alerts"}
         </Link>
       )}
     </div>
@@ -141,30 +151,17 @@ registerWidget({
   adminOnly: true,
   title: () => "Uptime",
   Component: UptimeWidget,
-  preview: (
-    <span className={w.preview} aria-hidden>
-      <i />
-      <i />
-      <i data-bad="" />
-    </span>
-  ),
+  preview: <Preview of="uptime" />,
 });
 
 // ---------------------------------------------------------------- activity
 
 function ActivityWidget({ size }: WidgetProps) {
   const limit = size === "s" ? 1 : size === "m" ? 3 : size === "t" || size === "w" ? 5 : 9;
-  const { data, error } = useApi<ActivityPage>(`/api/activity?limit=${limit}`, { refresh: 30_000 });
-  if (!data) return error ? <Failed title="Can't show activity" status={error.status} /> : <Loading rows={limit} />;
+  const { data, error, mutate } = useApi<ActivityPage>(`/api/activity?limit=${limit}`, { refresh: 30_000 });
+  if (!data) return error ? <Failed title="Can't show activity" status={error.status} retry={() => void mutate()} /> : <Loading rows={Math.min(limit, 4)} />;
   if (!data.items.length) {
-    return (
-      <div className={w.center}>
-        <div>
-          <b>Nothing yet</b>
-          Changes people make and things the server notices appear here.
-        </div>
-      </div>
-    );
+    return <WidgetState title="Nothing yet">Changes people make and things the server notices appear here.</WidgetState>;
   }
   return (
     <div className={w.body}>
@@ -185,7 +182,7 @@ function ActivityWidget({ size }: WidgetProps) {
         ))}
       </ul>
       {size !== "s" && (
-        <Link href="/activity" className={w.more}>
+        <Link href={activityHref()} className={w.more}>
           All activity
         </Link>
       )}
@@ -204,13 +201,7 @@ registerWidget({
   adminOnly: true,
   title: () => "Recent activity",
   Component: ActivityWidget,
-  preview: (
-    <span className={w.preview} aria-hidden>
-      <i />
-      <i data-short="" />
-      <i />
-    </span>
-  ),
+  preview: <Preview of="activity" />,
 });
 
 // ---------------------------------------------------------------- drive health
@@ -237,15 +228,17 @@ function driveState(d: DiskView): { line: LineState; word: string } {
 
 function DrivesWidget({ size }: WidgetProps) {
   const fmt = useFormat();
-  const { data, error } = useApi<Inventory>("/api/storage", { refresh: 120_000 });
-  if (!data) return error ? <Failed title="Can't show drives" status={error.status} /> : <Loading />;
-  const disks = data.disks.filter((d) => d.mediaPresent && d.size > 0 && !d.removable);
-  if (!disks.length) return <Failed title="No drives found" />;
+  const { data, error, mutate } = useApi<Inventory>("/api/storage", { refresh: 120_000 });
+  const disks = (data?.disks ?? []).filter((d) => d.mediaPresent && d.size > 0 && !d.removable);
+  const [listRef, fit] = useFit<HTMLUListElement>(size === "s" ? 0 : disks.length);
+  if (!data) return error ? <Failed title="Can't show drives" status={error.status} retry={() => void mutate()} /> : <Loading />;
+  if (!disks.length) return <WidgetState title="No drives found">Gluon didn&apos;t find any fixed drives on this machine.</WidgetState>;
   const states = disks.map((d) => ({ d, ...driveState(d) }));
   const bad = states.filter((x) => x.line === "unhealthy");
   const look = states.filter((x) => x.line === "attention");
   const order = (x: { line: LineState }) => (x.line === "unhealthy" ? 0 : x.line === "attention" ? 1 : 2);
-  const max = size === "s" ? 0 : size === "m" ? 3 : 6;
+  const max = size === "s" ? 0 : disks.length;
+  const hidden = size === "s" ? 0 : disks.length - fit;
   return (
     <div className={w.body}>
       <p className={w.headline}>
@@ -262,9 +255,9 @@ function DrivesWidget({ size }: WidgetProps) {
       </p>
       {size === "s" && <p className={w.sub}>{[...bad, ...look].map((x) => x.d.title).join(", ") || "Checked every 30 minutes"}</p>}
       {max > 0 && (
-        <ul className={w.list} role="list">
-          {[...states].sort((a, b) => order(a) - order(b) || b.d.size - a.d.size).slice(0, max).map((x) => (
-            <li key={x.d.id} className={w.row}>
+        <ul className={w.list} role="list" ref={listRef}>
+          {[...states].sort((a, b) => order(a) - order(b) || b.d.size - a.d.size).map((x, i) => (
+            <li key={x.d.id} className={w.row} aria-hidden={i >= fit || undefined}>
               <StateLine state={x.line} label={false} size={12} />
               <span className={w.rowText}>
                 <span className={w.rowSplit}>
@@ -286,7 +279,7 @@ function DrivesWidget({ size }: WidgetProps) {
       )}
       {size !== "s" && (
         <Link href="/storage" className={w.more}>
-          Open Storage
+          {hidden > 0 ? `${hidden} more in Storage` : "Open Storage"}
         </Link>
       )}
     </div>
@@ -304,13 +297,7 @@ registerWidget({
   adminOnly: true,
   title: () => "Drives",
   Component: DrivesWidget,
-  preview: (
-    <span className={w.preview} aria-hidden>
-      <i />
-      <i />
-      <i data-short="" />
-    </span>
-  ),
+  preview: <Preview of="drives" />,
 });
 
 // ---------------------------------------------------------------- busiest apps
@@ -322,29 +309,34 @@ interface BusyConfig {
 function BusyWidget({ item, size }: WidgetProps<BusyConfig>) {
   const fmt = useFormat();
   const by = item.config.by ?? "memory";
-  const { data, error } = useApi<StatusPayload>("/api/status", { refresh: 30_000 });
+  const { data, error, mutate } = useApi<StatusPayload>("/api/status", { refresh: 30_000 });
   const apps = React.useMemo(() => (data?.apps ?? []).filter((a) => a.line !== "stopped"), [data]);
   const usage = useAppUsage(apps);
-  const { host } = useLive();
-  if (!data) return error ? <Failed title="Can't show apps" status={error.status} /> : <Loading />;
-  if (!usage.size) return <Loading />;
-  const max = size === "s" ? 1 : size === "m" ? 3 : 5;
+  const { host, status } = useLive();
   const ranked = apps
     .map((a) => ({ a, u: usage.get(a.id) }))
     .filter((x): x is { a: (typeof apps)[number]; u: NonNullable<typeof x.u> } => !!x.u)
     .sort((x, y) => (by === "cpu" ? y.u.cpu - x.u.cpu : y.u.mem - x.u.mem))
-    .slice(0, max);
+    .slice(0, 12);
+  // Rows that don't fit whole are hidden (never half a row cut off at the bottom of the tile).
+  const [listRef, fit] = useFit<HTMLUListElement>(ranked.length);
+  if (!data) return error ? <Failed title="Can't show apps" status={error.status} retry={() => void mutate()} /> : <Loading />;
+  if (!apps.length) return <WidgetState title="Nothing is running">Apps appear here, busiest first, once they&apos;re started.</WidgetState>;
+  if (!usage.size) {
+    if (status === "offline") return <Failed title="Live readings stopped" />;
+    return <Loading />;
+  }
   const top = ranked[0] ? (by === "cpu" ? ranked[0].u.cpu : ranked[0].u.mem) : 0;
   const total = host.at(-1)?.mem.total ?? null;
   return (
     <div className={w.body}>
-      <ul className={w.list} role="list" data-flush="">
-        {ranked.map(({ a, u }) => {
+      <ul className={w.list} role="list" data-flush="" ref={listRef}>
+        {ranked.map(({ a, u }, i) => {
           const v = by === "cpu" ? u.cpu : u.mem;
           return (
-            <li key={a.id} className={w.appRow}>
+            <li key={a.id} className={w.appRow} aria-hidden={i >= fit || undefined}>
               <AppIcon src={a.icon} name={a.name} size={24} />
-              <Link href={`/apps/${encodeURIComponent(a.id)}`} className={w.appName} title={a.name}>
+              <Link href={`/apps/${encodeURIComponent(a.id)}`} className={w.appName} title={a.name} tabIndex={i >= fit ? -1 : undefined}>
                 {a.name}
               </Link>
               <span className={`${w.rowFig} num`} title={by === "memory" && total ? `${fmt.percent((u.mem / total) * 100, 1)} of this server's memory` : undefined}>
@@ -359,7 +351,7 @@ function BusyWidget({ item, size }: WidgetProps<BusyConfig>) {
       </ul>
       {size !== "s" && (
         <Link href={`/apps?sort=${by === "cpu" ? "cpu" : "memory"}`} className={w.more}>
-          All apps
+          All apps by {by === "cpu" ? "processor" : "memory"}
         </Link>
       )}
     </div>
@@ -394,11 +386,5 @@ registerWidget<BusyConfig>({
   title: (c: BusyConfig) => ((c.by ?? "memory") === "cpu" ? "Busiest apps" : "Biggest apps"),
   Component: BusyWidget,
   Settings: BusySettings,
-  preview: (
-    <span className={w.previewBars} aria-hidden>
-      <i style={{ width: "86%" }} />
-      <i style={{ width: "52%" }} />
-      <i style={{ width: "30%" }} />
-    </span>
-  ),
+  preview: <Preview of="busy" />,
 });

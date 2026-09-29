@@ -47,10 +47,10 @@
     --shadow-dialog: 0 2px 4px rgb(24 24 26 / 6%), 0 28px 64px -12px rgb(24 24 26 / 28%);
     --backdrop: rgb(24 24 26 / 28%);
 
-    --font-sans: var(--font-mona), ui-sans-serif, system-ui, sans-serif;
-    --font-display: var(--font-hubot), var(--font-mona), ui-sans-serif, system-ui, sans-serif;
-    --font-mono: var(--font-martian), ui-monospace, "SF Mono", Menlo, monospace;
-    --mono-stretch: 87.5%; /* Martian Mono is wide at 100%; this sets it at a comfortable measure */
+    --font-sans: var(--font-reading), ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-placard), var(--font-reading), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-typed), ui-monospace, "SF Mono", Menlo, monospace;
+    --mono-stretch: 100%; /* Atkinson Hyperlegible Mono has one width; the token stays for older rules */
 
     --text-2xs: 0.6875rem;  /* 11 */
     --text-xs: 0.75rem;     /* 12 */
@@ -217,7 +217,7 @@
     line-height: 1.45;
     font-stretch: 96%;
     font-feature-settings: "ss01" 0;
-    /* Archivo ships every weight; never let the browser fake bold or small caps. */
+    /* Every weight is in the variable fonts; never let the browser fake bold or small caps. */
     font-synthesis-weight: none;
     font-synthesis-small-caps: none;
     -webkit-font-smoothing: antialiased;
@@ -235,7 +235,7 @@
     transition: text-decoration-color var(--dur-fast) ease;
   }
   @media (hover: hover) and (pointer: fine) { a:hover { text-decoration-color: currentColor; } }
-  code, kbd, samp, pre { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.88em; }
+  code, kbd, samp, pre { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.93em; }
   h1, h2, h3, h4 { text-wrap: balance; font-weight: 600; }
   p, li, dd { text-wrap: pretty; }
   time, output, meter, progress { font-variant-numeric: tabular-nums; }
@@ -293,7 +293,7 @@
 /* ------------------------------------------------------------------ utilities */
 @layer utilities {
   .num { font-variant-numeric: tabular-nums; }
-  .mono { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.88em; }
+  .mono { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.93em; }
   .label {
     font-size: var(--text-2xs);
     font-weight: 600;

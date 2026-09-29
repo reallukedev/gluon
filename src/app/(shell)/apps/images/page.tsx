@@ -3,7 +3,7 @@ import { listImages } from "@/server/dockerx/images";
 import { AppError } from "@/server/errors";
 import { ImagesView } from "@/components/docker/ImagesView";
 
-export const metadata = { title: "Images" };
+export const metadata = { title: "Docker images" };
 
 export default async function ImagesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireAdmin();

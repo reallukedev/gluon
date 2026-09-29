@@ -236,7 +236,7 @@ export type CheckState = "ok" | "warn" | "fail" | "skip";
 
 export type CheckupKind = "full" | "app" | "address" | "internet" | "server" | "space" | "drive" | "safety";
 
-/** A fix offered next to a result: a server-side remedy (same as the Alerts ones) or a place to go. */
+/** A fix offered next to a result: a server-side remedy (same as the ones on Status) or a place to go. */
 export interface CheckFix {
   label: string;
   /** Registered remedy action ("apps.start"); empty when `href` is set. */

@@ -3,7 +3,7 @@
 .fill { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .pad { padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); }
 .muted { color: var(--muted); }
-.center { display: grid; place-items: center; height: 100%; text-align: center; padding: 16px; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
+.center { display: grid; place-items: center; height: 100%; text-align: center; padding: 16px 16px calc(16px + var(--title-h, 0px)); color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 .center b { color: var(--ink); display: block; font-size: var(--text-md); margin-bottom: 4px; }
 
 /* Clock */
@@ -12,71 +12,55 @@
 .clockTime small { font-size: 0.34em; font-family: var(--font-display); font-stretch: 90%; letter-spacing: 0; color: var(--muted); margin-left: 6px; font-weight: 500; }
 .clockDate { font-size: var(--text-md); color: var(--ink-2); }
 .zones { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: var(--text-sm); color: var(--muted); }
-.zones b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 6px; }
+.zones > span { display: inline-flex; min-width: 0; max-width: 100%; }
+.zoneLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zones b { flex: none; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 6px; }
 .clock[data-size="t"] .clockTime { font-size: 3rem; }
 
 /* Status */
 .status { height: 100%; display: flex; flex-direction: column; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); gap: 10px; min-height: 0; }
-.statusHead { display: flex; align-items: flex-start; gap: 12px; }
+.statusHead { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.statusWords { min-width: 0; }
 .statusMark { flex: none; width: 2px; height: 22px; margin-top: 3px; background: var(--ink); position: relative; }
 .statusMark[data-tone="attention"] { background: var(--attn); margin-right: 4px; }
 .statusMark[data-tone="attention"]::after { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: var(--attn); }
 .statusMark[data-tone="fault"] { background: var(--fault); height: 10px; margin-top: 9px; }
-.statusText { font-size: var(--text-lg); font-weight: 620; line-height: 1.25; }
+.statusText { font-size: var(--text-lg); font-weight: 620; line-height: 1.25; overflow-wrap: anywhere; }
 .statusDetail { font-size: var(--text-sm); color: var(--muted); margin-top: 2px; }
-.statusItems { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; display: flex; flex-direction: column; flex-wrap: wrap; column-gap: 40px; overflow: hidden; }
-/* Rows that don't fit wrap into a clipped second column: whole rows or none, never half a line. */
-.statusItem { width: 100%; }
-.statusItem span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.statusItem a { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; font-size: var(--text-sm); color: var(--ink-2); text-decoration: none; border-top: 1px solid var(--line); }
-.statusItem a:hover { color: var(--ink); }
-.statusItem span:last-child { margin-left: auto; color: var(--muted); white-space: nowrap; }
-.statusAll { flex: none; align-self: flex-start; font-size: var(--text-xs); color: var(--muted); text-underline-offset: 0.2em; }
-@media (hover: hover) and (pointer: fine) { .statusAll:hover { color: var(--ink); } }
-
-/* Apps */
-.apps { height: 100%; overflow-y: auto; padding: calc(var(--pt, 16px) - 8px) 8px 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); align-content: start; gap: 2px; scrollbar-width: thin; }
-.app {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 6px 10px;
-  border-radius: 10px;
-  text-decoration: none;
-  color: var(--ink);
-  text-align: center;
-  transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out);
-}
-.app:active { transform: scale(calc(1 - 0.03 * var(--motion, 1))); }
-@media (hover: hover) and (pointer: fine) { .app:hover { background: color-mix(in oklab, var(--ink) 5%, transparent); } }
-.appName { margin-top: 2px; font-size: var(--text-sm); font-weight: 560; line-height: 1.2; max-width: 100%; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.appIconWrap { position: relative; display: grid; }
-.appHint { margin-top: -3px; display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-2xs); color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Roomy: a handful of apps sit centred, larger. */
-.apps[data-roomy] { align-content: center; justify-content: center; grid-template-columns: repeat(auto-fit, minmax(112px, 136px)); gap: 8px; }
-.apps[data-roomy] .appName { font-size: var(--text-md); }
-
-/* A stopped copy steps back: dimmed icon and name, with its state in words underneath. */
-.app[data-down] .appIconWrap { opacity: 0.45; filter: grayscale(1); }
-.app[data-down] .appName { color: var(--muted); }
-.app[data-line="unhealthy"] .appHint { color: var(--fault); }
-.appsList { height: 100%; overflow-y: auto; list-style: none; margin: 0; padding: 4px 0; }
-.appsList a { display: flex; align-items: center; gap: 12px; padding: 8px var(--px, 16px); text-decoration: none; color: var(--ink); }
-@media (hover: hover) and (pointer: fine) { .appsList a:hover { background: color-mix(in oklab, var(--ink) 5%, transparent); } }
-.appsListText { flex: 1; min-width: 0; }
-.appsListText span { display: block; font-size: var(--text-xs); color: var(--muted); }
+.statusAge { margin-left: 8px; }
+/* One column of whole rows: whatever doesn't fit is clipped and counted in the link underneath. */
+.statusItems { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.statusItem { flex: none; width: 100%; }
+.statusItem[aria-hidden] { visibility: hidden; }
+.statusItem a { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: var(--text-sm); color: var(--ink-2); text-decoration: none; border-top: 1px solid var(--line); min-width: 0; }
+.statusItem a > span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statusItem a > span:nth-child(3) { flex: none; max-width: 40%; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) { .statusItem a:hover { color: var(--ink); } }
+.statusItem a:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; border-radius: 4px; }
+.statusAll { flex: none; align-self: flex-start; margin-top: auto; font-size: var(--text-sm); color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) { .statusAll:hover { color: var(--ink); text-decoration-color: currentColor; } }
+@media (max-width: 640px) { .statusItem a > span:nth-child(3) { display: none; } }
 
 /* Vitals */
-.vitals { height: 100%; display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 12px 16px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); align-content: start; }
+.vitals { position: relative; height: 100%; display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 12px 16px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); align-content: start; }
 .vital { min-width: 0; display: grid; gap: 2px; }
+/* Live readings stopped: the last values stay, dimmed, with their age. */
+.vitals[data-offline] .vital { opacity: 0.55; }
+.vitalsAge { position: absolute; right: var(--px, 16px); top: var(--pt, 16px); }
 .vitalValue { font-size: var(--figure, 1.625rem); font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .vitalValue small { font-size: var(--text-sm); color: var(--muted); font-stretch: 96%; font-weight: 450; }
 
 
 /* Storage */
-.storage { height: 100%; overflow-y: auto; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); display: grid; gap: 12px; align-content: start; scrollbar-width: thin; }
+.storageWrap { height: 100%; min-height: 0; display: flex; flex-direction: column; padding-bottom: var(--pb, 14px); }
+.storage { flex: 1; min-height: 0; overflow: hidden; padding: var(--pt, 16px) var(--px, 16px) 2px; display: flex; flex-direction: column; gap: 12px; }
+.storage > * { flex: none; }
+.storage > [aria-hidden] { visibility: hidden; }
+.fsOf { color: var(--faint); }
+.moreLink { flex: none; align-self: flex-start; margin: 6px var(--px, 16px) 0; font-size: var(--text-sm); color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) { .moreLink:hover { color: var(--ink); text-decoration-color: currentColor; } }
+.spectrumSkel { height: 80px; display: flex; align-items: flex-end; gap: 6px; }
+.spectrumSkel i { width: 2px; background: var(--sunk); }
 .fsRow { display: grid; gap: 5px; }
 .fsHead { display: flex; justify-content: space-between; gap: 12px; font-size: var(--text-xs); min-width: 0; }
 .fsHead span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -121,5 +105,4 @@
 @media (max-width: 640px) { .linkEditRow { grid-template-columns: 1fr; } }
 .pickGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; max-height: 280px; overflow-y: auto; }
 
-/* Phones: the Home grid lets the apps widget grow to its content, so it never scrolls inside itself. */
-@media (max-width: 720px) { .apps, .appsList { height: auto; overflow: visible; } }
+

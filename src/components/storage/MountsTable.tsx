@@ -118,7 +118,7 @@ export function MountsTable({ disks, onAction, busy }: { disks: DiskView[]; onAc
               <Link href={`/storage/${encodeURIComponent(disk.id)}`} className="mono">
                 {vol.name}
               </Link>
-              <span className={s.sub}>
+              <span className={s.sub} title={[vol.fstype, vol.label ? `“${vol.label}”` : null, disk.title].filter(Boolean).join(" · ")}>
                 {[vol.fstype, vol.label ? `“${vol.label}”` : null, disk.title].filter(Boolean).join(" · ")}
               </span>
             </span>

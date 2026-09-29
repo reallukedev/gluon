@@ -56,8 +56,7 @@
 /* Empty state */
 .empty { padding: 36px 24px; text-align: left; display: grid; gap: 8px; justify-items: start; max-width: 520px; }
 .emptyCenter { margin: 0 auto; justify-items: center; text-align: center; }
-.emptyGlyph { display: flex; gap: 5px; height: 26px; align-items: flex-end; margin-bottom: 6px; }
-.emptyGlyph i { width: 2px; background: var(--line-strong); }
+.emptyGlyph { width: 44px; height: 20px; color: var(--faint); margin-bottom: 6px; overflow: visible; }
 .emptyTitle { font-size: var(--text-base); font-weight: 620; }
 .emptyBody { font-size: var(--text-md); color: var(--muted); line-height: 1.5; }
 .emptyAction { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }

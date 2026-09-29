@@ -1,0 +1,78 @@
+/* Collection previews (previews.tsx): a miniature tile per widget, drawn in the product's line language. */
+.preview { display: block; width: 120px; height: 56px; overflow: visible; }
+.tile { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+
+/* Words: 2px rounded strokes. */
+.word { stroke-width: 2; stroke-linecap: round; stroke: var(--line-strong); }
+.word[data-t="ink"] { stroke: var(--ink); }
+.word[data-t="ink2"] { stroke: var(--ink-2); opacity: 0.8; }
+.word[data-t="faint"] { stroke: var(--line-strong); }
+.rule { stroke: var(--line); stroke-width: 1; }
+.rail { stroke: var(--line-strong); stroke-width: 1; }
+
+/* Figures and small labels in the display face, tabular like the real thing. */
+.fig { font-family: var(--font-display); font-stretch: 78%; font-weight: 520; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; fill: var(--ink); }
+.fig[data-t="ink2"] { fill: var(--ink-2); }
+.small { font-family: var(--font-sans); font-size: 7.5px; font-weight: 560; font-variant-numeric: tabular-nums; fill: var(--muted); }
+.small[data-t="ink"] { fill: var(--ink); }
+.small[data-t="ink2"] { fill: var(--ink-2); }
+.small[data-t="faint"] { fill: var(--faint); }
+
+/* StateLine geometry. */
+.glyph { stroke: var(--ink); stroke-width: 2; }
+.glyph[data-s="starting"] { stroke-dasharray: 2.5 2; }
+.glyph[data-s="stopped"] { stroke: var(--faint); opacity: 0.55; }
+.fault { stroke: var(--fault); stroke-width: 2; }
+.attn line { stroke: var(--attn); stroke-width: 2; }
+
+/* Tracks, fills and traces. */
+.track { fill: var(--sunk); }
+.fill { fill: var(--ink-2); }
+.fillAttn { fill: var(--attn); }
+.thresh { stroke: var(--line-strong); stroke-width: 1; }
+.projection { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.trace { fill: none; stroke: var(--ink-2); stroke-width: 1.25; stroke-linejoin: round; stroke-linecap: round; }
+.area { fill: var(--ink); opacity: 0.07; }
+.now { stroke: var(--ink-2); stroke-width: 1; }
+.tickIn { stroke: var(--ink-2); stroke-width: 1.5; }
+.tickOut { stroke: var(--faint); stroke-width: 1.5; }
+.tickSlow { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 2 1.5; }
+.progress { stroke: var(--ink); stroke-width: 2; }
+.progressWait { stroke: var(--ink-2); stroke-width: 2; stroke-dasharray: 3 2; }
+.arrow { fill: none; stroke: var(--muted); stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Images stand in as quiet frames, never pictures. */
+.thumb { fill: var(--sunk); stroke: var(--line-strong); stroke-width: 1; }
+.thumb[data-dim] { opacity: 0.45; }
+.play { fill: var(--ink-2); }
+.photo { fill: var(--sunk); stroke: none; }
+.ridge { fill: none; stroke: var(--faint); stroke-width: 1.25; stroke-linejoin: round; }
+.plate { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+.chev { fill: none; stroke: var(--ink-2); stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Home accessories. */
+.acc { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; }
+.acc[data-on] { stroke: var(--ink-2); }
+.accIcon { fill: none; stroke: var(--faint); stroke-width: 1.25; }
+.accIcon[data-on] { stroke: var(--ink); }
+
+/* Guest Wi-Fi: the code stays dark on a light card in both themes, like the widget. */
+.qrPlate { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; }
+.qrRing { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+.qrDot { fill: var(--ink); }
+.dot { fill: var(--ink-2); }
+:global(:root[data-theme="dark"]) .qrPlate { fill: var(--ink); stroke: none; }
+:global(:root[data-theme="dark"]) .qrRing { stroke: var(--inverse); }
+:global(:root[data-theme="dark"]) .qrDot { fill: var(--inverse); }
+@media (prefers-color-scheme: dark) {
+  :global(:root[data-theme="system"]) .qrPlate { fill: var(--ink); stroke: none; }
+  :global(:root[data-theme="system"]) .qrRing { stroke: var(--inverse); }
+  :global(:root[data-theme="system"]) .qrDot { fill: var(--inverse); }
+}
+.card { fill: var(--panel-2); stroke: var(--line); stroke-width: 1; }
+.dashCard { fill: none; stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 2; }
+.plus { stroke: var(--faint); stroke-width: 1.5; stroke-linecap: round; }
+
+/* Search bar and single cards. */
+.field { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; }
+.lens { fill: none; stroke: var(--muted); stroke-width: 1.25; stroke-linecap: round; }

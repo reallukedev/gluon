@@ -5,6 +5,7 @@ import type { WidgetProps } from "../types";
 import { useLive } from "@/lib/client/live";
 import { useFormat } from "@/components/PrefsProvider";
 import { Skeleton } from "@/components/ui/Surface";
+import { Age } from "./kit";
 import s from "./network.module.css";
 
 /** Size of an element, kept current as the widget is resized. */
@@ -35,9 +36,10 @@ const scale = (v: number, top: number) => Math.log10(1 + Math.max(0, v) / FLOOR)
  * log scale with a dashed rule per decade. Hover, touch or arrow keys read any moment back into the figures.
  */
 export function NetworkWidget({ size }: WidgetProps) {
-  const { host } = useLive();
+  const { host, status } = useLive();
   const fmt = useFormat();
   const [ref, box] = useSize<HTMLDivElement>();
+  const offline = status === "offline";
   const [cursor, setCursor] = React.useState<number | null>(null);
   const samples = host.length > 1 ? host : [];
   const last = host.at(-1);
@@ -89,11 +91,13 @@ export function NetworkWidget({ size }: WidgetProps) {
           </span>
           <strong>{shown ? fmt.rate(shown.net.tx) : "—"}</strong>
         </div>
-        {!compact && <span className={s.when}>{sel ? fmt.time(sel.t, true) : "Now"}</span>}
+        {!compact && <span className={s.when}>{sel ? fmt.time(sel.t, true) : offline && last ? <Age at={last.t} expectMs={10_000} /> : "Now"}</span>}
       </div>
 
       <div className={s.plot} ref={ref}>
-        {!samples.length || w < 40 || h < 30 ? (
+        {!samples.length && offline ? (
+          <p className={s.waiting}>Waiting for the server. Live readings pick up again as soon as it answers.</p>
+        ) : !samples.length || w < 40 || h < 30 ? (
           <Skeleton height="100%" />
         ) : (
           <svg

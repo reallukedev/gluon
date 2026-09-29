@@ -3,7 +3,7 @@ import { listNetworks } from "@/server/dockerx/networks";
 import { AppError } from "@/server/errors";
 import { NetworksView } from "@/components/docker/NetworksView";
 
-export const metadata = { title: "Networks" };
+export const metadata = { title: "Docker networks" };
 
 export default async function NetworksPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireAdmin();

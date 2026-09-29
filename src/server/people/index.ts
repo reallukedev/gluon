@@ -1,6 +1,7 @@
 import "server-only";
 import { onStart, every } from "../jobs";
 import { registerSearch } from "../search";
+import { peopleHref } from "@/lib/settings-links";
 import { all } from "../db";
 import { pruneAnnouncements } from "./household";
 
@@ -24,7 +25,7 @@ registerSearch((user, q) => {
       id: `person:${r.id}`,
       label: r.display_name,
       hint: `${r.username} · ${r.role === "admin" ? "Admin" : "Household"}${r.disabled ? " · turned off" : ""}`,
-      href: `/people?person=${encodeURIComponent(r.id)}`,
+      href: peopleHref({ person: r.id }),
     })),
   };
 });

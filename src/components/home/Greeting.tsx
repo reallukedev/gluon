@@ -20,10 +20,10 @@ export function Greeting() {
     return () => clearInterval(t);
   }, [timeZone]);
   const name = prefs.greetingName.trim() || viewer.displayName.split(" ")[0];
-  if (!prefs.greeting) return <h1 className={s.greeting}>{serverName}</h1>;
+  if (!prefs.greeting) return <h2 className={s.greeting}>{serverName}</h2>;
   return (
-    <h1 className={s.greeting} suppressHydrationWarning>
+    <h2 className={s.greeting} suppressHydrationWarning>
       {hour === null ? "Hello" : partOfDay(hour)}, {name}.
-    </h1>
+    </h2>
   );
 }

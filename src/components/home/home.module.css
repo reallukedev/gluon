@@ -2,7 +2,9 @@
 .page[data-width="comfortable"] { max-width: 1120px; }
 .page[data-width="full"] { max-width: none; }
 
-.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+/* The only fixed thing on Home: two buttons. Everything under them is pinned. */
+.toolbar { display: flex; justify-content: flex-end; min-height: 34px; margin-bottom: 14px; }
+.toolbarActions { display: flex; gap: 6px; }
 .greeting {
   font-size: clamp(2rem, 3.4vw, 2.75rem);
   font-weight: 480;
@@ -10,7 +12,6 @@
   line-height: 1.02;
   letter-spacing: -0.015em;
 }
-.headActions { display: flex; gap: 8px; }
 
 /* Start search */
 .search {
@@ -58,7 +59,7 @@
   align-items: center;
   gap: 12px;
   max-width: 720px;
-  margin: -12px 0 24px;
+  margin: 0 0 18px;
   padding: 8px 8px 8px 12px;
   border-radius: var(--radius-panel);
   border: 1px solid var(--line);
@@ -70,7 +71,7 @@
 .appsHintIcons > * + * { margin-left: -6px; }
 .appsHintIcons > * { outline: 2px solid var(--panel); border-radius: 7px; }
 @media (max-width: 720px) {
-  .appsHint { flex-wrap: wrap; margin: -8px 0 18px; }
+  .appsHint { flex-wrap: wrap; margin: 0 0 14px; }
   .appsHint p { flex-basis: calc(100% - 120px); }
 }
 
@@ -127,7 +128,24 @@
   --pb: 14px;
   --figure: 1.625rem;
 }
-.widget[data-titled] { --pt: 10px; }
+.widget[data-titled] { --pt: 10px; --title-h: 31px; }
+/* Bare items (the greeting, the search bar, a folder or link card) are their own surface: no panel around them. */
+.widget[data-bare] { border-color: transparent; background: transparent; overflow: visible; }
+/* The search bar's suggestions float over whatever comes after it. */
+.widget[data-type="search"] { z-index: 5; }
+/* The in-place menu: top-right, shown on hover or keyboard focus, never covering more than itself. */
+.placeMenu { position: absolute; top: 8px; right: 8px; z-index: 3; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+.widget[data-type="greeting"] .placeMenu, .widget[data-type="search"] .placeMenu { top: 0; right: 0; }
+.widget[data-type="app"] .placeMenu, .widget[data-type="folder"] .placeMenu, .widget[data-type="link"] .placeMenu { top: 6px; right: 6px; }
+.widget:focus-within > .placeMenu, .placeMenu:has([data-popup-open]) { opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .widget:hover > .placeMenu { opacity: 1; } }
+.placeBtn { box-shadow: var(--shadow-pop); }
+/* Touch: nothing invisible may sit over an item's corner; press and hold opens the same menu instead. */
+@media (hover: none) {
+  .placeMenu { pointer-events: none; }
+  .widget:focus-within > .placeMenu { pointer-events: auto; }
+}
+/* Empty and error states centre on the whole tile, not the space under the title (else they sit visibly low). */
 .widgetTitle {
   flex: none;
   padding: 14px var(--px) 0;
@@ -222,22 +240,33 @@
 .sizeBtn[aria-checked="true"] .glyph rect { fill: color-mix(in oklab, currentColor 18%, transparent); }
 @media (max-width: 720px) { .sizes { display: none; } }
 
-/* Responsive grid: 6 columns on tablets, 4 on phones. */
+/* Responsive grid: 6 columns on tablets; 12 narrow ones on phones, so three app icons share a row. */
 @media (max-width: 1100px) {
   .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .widget { grid-column: span min(var(--cols), 6); }
 }
 @media (max-width: 720px) {
   .page { padding-top: 20px; }
-  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 64px; gap: 12px; }
-  .widget { grid-column: span 4; }
-  .widget[data-size="s"], .widget[data-size="t"] { grid-column: span 2; }
-  /* On phones the app grid grows to fit its apps instead of scrolling inside a fixed tile. */
-  .widget[data-type="apps"] { grid-row: auto; }
-  .grid { grid-auto-rows: minmax(64px, auto); }
-  .search { margin: 16px 0 20px; height: 48px; }
+  .grid { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 64px; gap: 12px; }
+  .widget { grid-column: span 12; }
+  .widget[data-size="s"], .widget[data-size="t"], .widget[data-size="c"] { grid-column: span 6; }
+  .widget[data-size="i"] { grid-column: span 4; }
+  .toolbar { margin-bottom: 10px; }
+}
+/* Small phones: small and tall widgets take the full width; icons and short cards keep sharing a row. */
+@media (max-width: 480px) {
+  .widget[data-size="s"], .widget[data-size="t"] { grid-column: span 12; }
 }
 
-.emptyHome { display: grid; justify-items: start; gap: 10px; padding: 48px 0; max-width: 480px; }
+.emptyHome { display: grid; justify-items: start; gap: 10px; padding: 40px 0; max-width: 560px; }
+.starters { display: grid; gap: 8px; width: 100%; margin-top: 22px; }
+.starters ul { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); }
+.starter { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 10px 12px; }
+.starter + .starter { border-top: 1px solid var(--line); }
+.starterPreview { display: grid; place-items: center; width: 84px; height: 42px; border-radius: 6px; background: var(--sunk); overflow: hidden; }
+.starterPreview svg { width: 72px; height: 34px; }
+.starterText { display: grid; gap: 1px; min-width: 0; }
+.starterText b { font-size: var(--text-md); font-weight: 600; }
+.starterText span { font-size: var(--text-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .emptyTitle { font-size: var(--text-xl); font-weight: 600; font-family: var(--font-display); font-stretch: 86%; }
 .emptyBody { color: var(--ink-2); font-size: var(--text-base); line-height: 1.5; }

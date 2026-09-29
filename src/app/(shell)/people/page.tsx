@@ -1,20 +1,22 @@
-import { requireAdmin } from "@/server/auth/session";
-import { listPeople } from "@/server/people/users";
-import { PeopleView, type PeopleTab } from "@/components/people/PeopleView";
-import { PersonDetail } from "@/components/people/PersonDetail";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/server/auth/session";
+import { PEOPLE_TABS, peopleHref, type PeopleTab } from "@/lib/settings-links";
 
-export const metadata = { title: "People" };
+type Search = Promise<Record<string, string | string[] | undefined>>;
+const str = (v: string | string[] | undefined, max: number) => (typeof v === "string" && v ? v.slice(0, max) : undefined);
 
-const TABS: PeopleTab[] = ["people", "access", "reports", "announcements"];
-
-export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ tab?: string; person?: string; report?: string }> }) {
-  const { user } = await requireAdmin();
+/** People is in Settings now. Old links keep their tab, person and report. */
+export default async function PeopleRedirect({ searchParams }: { searchParams: Search }) {
+  const { user } = await requireUser();
+  // Only admins keep watch; anyone else lands on their start page instead of a "not found".
+  if (user.role !== "admin") redirect("/");
   const sp = await searchParams;
-  const people = listPeople(user);
-  if (sp.person) {
-    const person = people.find((p) => p.id === sp.person);
-    if (person) return <PersonDetail initial={person} />;
-  }
-  const tab = TABS.includes(sp.tab as PeopleTab) ? (sp.tab as PeopleTab) : "people";
-  return <PeopleView tab={tab} initialPeople={people} reportId={sp.report ?? null} />;
+  const tab = str(sp.tab, 40);
+  redirect(
+    peopleHref({
+      tab: PEOPLE_TABS.includes(tab as PeopleTab) ? (tab as PeopleTab) : null,
+      person: str(sp.person, 64),
+      report: str(sp.report, 64),
+    }),
+  );
 }

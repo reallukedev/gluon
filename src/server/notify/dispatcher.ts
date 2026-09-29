@@ -5,6 +5,7 @@ import { findById } from "../auth/users";
 import { listApps, appsForMember } from "../docker/apps";
 import { getFinding, markNotified, needsNotification, raise, resolve, type Finding } from "../findings";
 import type { ChannelKind, DeliveryEvent } from "@/lib/alerts-types";
+import { alertsHref } from "@/lib/settings-links";
 import { getChannel, sendContext, type Channel } from "./channels";
 import { activeSubscriptions, localParts, quietState, wants, type ActiveSub } from "./subscriptions";
 import { batchMessage, digestMessage, problemMessage, reportReplyMessage, resolvedMessage, type Composed } from "./messages";
@@ -292,7 +293,7 @@ function channelFailing(ch: Channel, error: string) {
     title: `Alerts to “${ch.name}” aren't getting through`,
     cause: error,
     detail: { channelId: ch.id },
-    remedy: { action: "", label: "Check the channel", href: `/alerts?tab=channels&channel=${encodeURIComponent(ch.id)}` },
+    remedy: { action: "", label: "Check the channel", href: alertsHref("notifications", { channel: ch.id }) },
   });
 }
 

@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef } from "./base";
 import { imageUrl } from "../image-refs";
-import type { ImmichMemory, ImmichRecentData, ImmichStatsData } from "@/lib/widgets-types";
+import type { ImmichMemory, ImmichOnThisDayData, ImmichRecentData, ImmichStatsData } from "@/lib/widgets-types";
 
 const schema = z.object({
   apiKey: z.string().trim().min(20, "Paste the whole API key from Immich.").max(200),
@@ -20,39 +20,55 @@ function http(ctx: KindContext<Config>) {
   );
 }
 
-function thumb(ctx: KindContext<Config>, assetId: string): string | null {
+function thumb(ctx: KindContext<Config>, assetId: string, size: "thumbnail" | "preview" = "thumbnail"): string | null {
   if (!UUID.test(assetId)) return null;
-  return imageUrl(ctx.id, assetId.toLowerCase(), { asset: assetId.toLowerCase(), size: "thumbnail" });
+  return imageUrl(ctx.id, assetId.toLowerCase(), { asset: assetId.toLowerCase(), size });
 }
 
-async function memories(ctx: KindContext<Config>): Promise<{ list: ImmichMemory[] | null; note: string | null }> {
+interface RawMemory {
+  id: string;
+  year: number | null;
+  yearsAgo: number | null;
+  assets: Record<string, unknown>[];
+}
+
+/** Immich's "on this day" memories for today: /api/memories (1.113+), else the older memory lane. */
+async function rawMemories(ctx: KindContext<Config>): Promise<{ list: RawMemory[] | null; note: string | null }> {
   const h = http(ctx);
+  const res = await h.json<unknown>("/api/memories", { query: { for: new Date().toISOString() }, allow: [403, 404] });
+  const status = num(obj(res).__status);
+  if (status === 403) return { list: null, note: "This API key can't read memories (it needs the memory.read permission)." };
+  if (status === 404) {
+    const d = new Date();
+    const lane = await h.json<unknown>("/api/assets/memory-lane", { query: { day: d.getDate(), month: d.getMonth() + 1 }, allow: [403, 404] });
+    if (num(obj(lane).__status)) return { list: null, note: "This version of Immich doesn't offer memories to other apps." };
+    return { list: arr<Record<string, unknown>>(lane).map((m, i) => ({ id: `lane-${i}`, year: null, yearsAgo: num(m.yearsAgo), assets: arr(m.assets) })), note: null };
+  }
+  return {
+    list: arr<Record<string, unknown>>(res)
+      .filter((m) => m.type === undefined || m.type === "on_this_day")
+      .map((m) => ({ id: String(m.id ?? ""), year: num(obj(m.data).year), yearsAgo: null, assets: arr(m.assets) })),
+    note: null,
+  };
+}
+
+const visible = (a: Record<string, unknown>) => typeof a.id === "string" && !a.isTrashed && a.visibility !== "hidden" && a.visibility !== "locked" && !a.isArchived;
+
+async function memories(ctx: KindContext<Config>): Promise<{ list: ImmichMemory[] | null; note: string | null }> {
   const nowYear = new Date().getFullYear();
   const title = (year: number | null, yearsAgo?: number | null) => {
     const n = yearsAgo ?? (year !== null ? nowYear - year : null);
     return n === null ? "On this day" : n === 1 ? "1 year ago" : `${n} years ago`;
   };
-  const res = await h.json<unknown>("/api/memories", { query: { for: new Date().toISOString() }, allow: [403, 404] });
-  const status = num(obj(res).__status);
-  if (status === 403) return { list: null, note: "This API key can't read memories (it needs the memory.read permission)." };
-  let raw: { id: string; year: number | null; yearsAgo: number | null; assets: Record<string, unknown>[] }[] = [];
-  if (status === 404) {
-    const d = new Date();
-    const lane = await h.json<unknown>("/api/assets/memory-lane", { query: { day: d.getDate(), month: d.getMonth() + 1 }, allow: [403, 404] });
-    if (num(obj(lane).__status)) return { list: null, note: "This version of Immich doesn't offer memories to other apps." };
-    raw = arr<Record<string, unknown>>(lane).map((m, i) => ({ id: `lane-${i}`, year: null, yearsAgo: num(m.yearsAgo), assets: arr(m.assets) }));
-  } else {
-    raw = arr<Record<string, unknown>>(res)
-      .filter((m) => m.type === undefined || m.type === "on_this_day")
-      .map((m) => ({ id: String(m.id ?? ""), year: num(obj(m.data).year), yearsAgo: null, assets: arr(m.assets) }));
-  }
-  const list: ImmichMemory[] = raw
+  const raw = await rawMemories(ctx);
+  if (!raw.list) return { list: null, note: raw.note };
+  const list: ImmichMemory[] = raw.list
     .map((m) => ({
       id: m.id,
       title: title(m.year, m.yearsAgo),
       year: m.year ?? (m.yearsAgo !== null ? nowYear - m.yearsAgo : null),
       assets: m.assets
-        .filter((a) => typeof a.id === "string" && !a.isTrashed && a.visibility !== "hidden" && a.visibility !== "locked")
+        .filter(visible)
         .slice(0, 8)
         .map((a) => ({ id: String(a.id), kind: a.type === "VIDEO" ? ("video" as const) : ("image" as const), image: thumb(ctx, String(a.id)) }))
         .filter((a): a is { id: string; kind: "image" | "video"; image: string } => !!a.image),
@@ -61,6 +77,26 @@ async function memories(ctx: KindContext<Config>): Promise<{ list: ImmichMemory[
     .sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
     .slice(0, 6);
   return { list, note: null };
+}
+
+/** One entry per earlier year with photos from today's date, each with larger (preview) images. */
+async function onThisDay(ctx: KindContext<Config>): Promise<ImmichOnThisDayData> {
+  const raw = await rawMemories(ctx);
+  if (!raw.list) return { years: [], note: raw.note };
+  const nowYear = new Date().getFullYear();
+  const byYear = new Map<number, ImmichOnThisDayData["years"][number]>();
+  for (const m of raw.list) {
+    const year = m.year ?? (m.yearsAgo !== null ? nowYear - m.yearsAgo : null);
+    if (year === null || year >= nowYear) continue;
+    const entry = byYear.get(year) ?? { id: m.id || String(year), year, yearsAgo: nowYear - year, photos: [] };
+    for (const a of m.assets.filter(visible)) {
+      if (entry.photos.length >= 12 || entry.photos.some((p) => p.id === a.id)) continue;
+      const image = thumb(ctx, String(a.id), "preview");
+      if (image) entry.photos.push({ id: String(a.id), kind: a.type === "VIDEO" ? "video" : "image", image, takenAt: time(a.localDateTime ?? a.fileCreatedAt) });
+    }
+    if (entry.photos.length) byYear.set(year, entry);
+  }
+  return { years: [...byYear.values()].sort((a, b) => b.year - a.year).slice(0, 10), note: null };
 }
 
 async function stats(ctx: KindContext<Config>, params: Record<string, unknown>): Promise<ImmichStatsData> {
@@ -128,7 +164,7 @@ export const def: KindDef<Config> = {
   ],
   schema,
   secretKeys: ["apiKey"],
-  widgets: ["immich.stats", "immich.recent"],
+  widgets: ["immich.stats", "immich.recent", "immich.onThisDay"],
   insecureTls: (c) => c.allowSelfSigned,
   authorize(ctx, req) {
     req.headers["x-api-key"] = ctx.config.apiKey;
@@ -150,6 +186,7 @@ export const def: KindDef<Config> = {
   data: {
     "immich.stats": (ctx, p) => stats(ctx, p),
     "immich.recent": (ctx, p) => recent(ctx, p),
+    "immich.onThisDay": (ctx) => onThisDay(ctx),
   },
   image: {
     schema: z.object({

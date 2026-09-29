@@ -1,6 +1,7 @@
 import "server-only";
 import { onStart, every } from "../jobs";
 import { registerSearch } from "../search";
+import { alertsHref } from "@/lib/settings-links";
 import { listMonitorRows } from "./store";
 import { schedule } from "./runner";
 import { syncAutoMonitors } from "./auto";
@@ -27,7 +28,7 @@ registerSearch((user, q) => {
       id: `monitor:${m.id}`,
       label: m.name,
       hint: m.source === "auto" ? `Monitor · ${m.target}` : `Monitor · ${m.kind.toUpperCase()} ${m.target}`,
-      href: `/alerts?tab=monitors&monitor=${encodeURIComponent(m.id)}`,
+      href: alertsHref("watching", { monitor: m.id }),
     }));
   return { name: "Monitors", items };
 });

@@ -24,7 +24,8 @@ import s from "./docker.module.css";
 type Filter = "all" | "used" | "unused";
 type Sort = "name" | "size" | "created";
 
-const COLUMNS = "18px minmax(220px, 2.2fr) minmax(170px, 1.6fr) 96px 112px 68px";
+/** Loading placeholder columns: the table's proportions, allowed to shrink so they never overflow. */
+const COLUMNS = "18px minmax(0, 2.2fr) minmax(0, 1.6fr) minmax(0, 96px) minmax(0, 112px) 68px";
 
 const volName = (v: DockerVolume) => (v.anonymous ? `unnamed volume ${v.name.slice(0, 12)}` : v.name);
 const filesHref = (p: string) => `/files?path=${encodeURIComponent(p)}`;
@@ -73,7 +74,7 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
   const summary = !volumes ? (
     error ? "Gluon couldn't get the list from Docker." : "Asking Docker…"
   ) : volumes.length === 0 ? (
-    "No volumes."
+    "No Docker volumes yet."
   ) : (
     <>
       <b>
@@ -187,9 +188,8 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
 
   return (
     <Page>
-      <AppsSectionTabs current="volumes" />
       <PageHeader
-        title="Volumes"
+        title="Apps"
         summary={summary}
         actions={
           <>
@@ -204,6 +204,7 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
           </>
         }
       />
+      <AppsSectionTabs current="docker" docker="volumes" />
 
       {error && (
         <div style={{ marginBottom: 16 }}>

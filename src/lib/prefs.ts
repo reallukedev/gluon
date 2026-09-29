@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ONBOARDING_STATES } from "./onboarding";
 
 /** Per-user preferences. Shared by server (validation, persistence) and client (settings UI). */
 export const prefsSchema = z.object({
@@ -24,12 +25,21 @@ export const prefsSchema = z.object({
   greeting: z.boolean().default(true),
   greetingName: z.string().max(40).default(""),
   homeWidth: z.enum(["comfortable", "wide", "full"]).default("wide"),
+  /**
+   * The apps pinned to Home, in order: the Apps widget shows exactly these. null = never chosen (an
+   * account from before pins, or brand new); the widget then pins what it used to show, once.
+   */
+  homeApps: z.array(z.string().max(200)).max(80).nullable().catch(null).default(null),
 
   sidebarOrder: z.array(z.string().max(40)).max(40).default([]),
   sidebarHidden: z.array(z.string().max(40)).max(40).default([]),
   sidebarCollapsed: z.boolean().default(false),
-  /** "pending" for accounts made since onboarding existed: they start with only Home and choose the rest. */
-  onboarding: z.enum(["pending", "done"]).default("done"),
+  /**
+   * First run (/welcome): "pending" until it starts, then the step to resume at, then "done". Accounts
+   * from before first run existed have no value and read as "done". An unknown step (renamed in a
+   * later version) starts the flow again rather than breaking the rest of the prefs.
+   */
+  onboarding: z.enum(ONBOARDING_STATES).catch("pending").default("done"),
 
   shortcuts: z.boolean().default(true),
   filesView: z.enum(["list", "grid"]).default("list"),

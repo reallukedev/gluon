@@ -1,11 +1,17 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
+import { useSWRConfig } from "swr";
 import type { StatusPayload, StatusApp } from "@/server/status";
 import type { Finding } from "@/server/findings";
+import type { ChannelView } from "@/lib/alerts-types";
+import { activityHref, alertsHref } from "@/lib/settings-links";
 import { useApi } from "@/lib/client/api";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader, Panel } from "@/components/ui/Surface";
+import { Empty, Notice, Page, PageHeader, Panel } from "@/components/ui/Surface";
+import { LinkButton } from "@/components/ui/Button";
+import { QuietFindings } from "@/components/alerts/FindingsTabs";
+import { CHANNELS_URL, FINDINGS_URL } from "@/components/alerts/shared";
 import { instanceHints, sourceName } from "@/lib/app-names";
 import { StateLine } from "@/components/ui/StateLine";
 import type { SpectrumGroup } from "@/components/spectrum/Spectrum";
@@ -66,15 +72,31 @@ export function spectrumGroups(apps: StatusApp[], findings: Finding[], filesyste
   return groups;
 }
 
-export function StatusView({ initial }: { initial: StatusPayload }) {
+/**
+ * Status: is everything working? Members see a calm page of their apps. Admins see the verdict, what
+ * needs them (with remedies), the machine and the apps. Monitors, notifications, past problems and
+ * activity are in Settings (Keep watch).
+ */
+export function StatusView({ initial, allFindings }: { initial: StatusPayload; allFindings?: Finding[] }) {
   const { viewer } = usePrefs();
-  const fmt = useFormat();
-  const { data = initial, mutate } = useApi<StatusPayload>("/api/status", { refresh: 10_000, fallbackData: initial });
-  const refresh = React.useCallback(() => void mutate(), [mutate]);
+  if (viewer.role !== "admin") return <MemberView initial={initial} />;
+  return <AdminStatus initial={initial} allFindings={allFindings} />;
+}
 
-  if (viewer.role !== "admin") return <MemberStatus data={data} />;
+function MemberView({ initial }: { initial: StatusPayload }) {
+  const { data = initial } = useApi<StatusPayload>("/api/status", { refresh: 10_000, fallbackData: initial });
+  return <MemberStatus data={data} />;
+}
 
-  const attentionMounts = new Set(data.findings.map((f) => f.subject ?? ""));
+function AdminStatus({ initial, allFindings }: { initial: StatusPayload; allFindings?: Finding[] }) {
+  const { data = initial, mutate, error } = useApi<StatusPayload>("/api/status", { refresh: 10_000, fallbackData: initial });
+  const { mutate: globalMutate } = useSWRConfig();
+  // Everything that shows findings refreshes together: the verdict, the lists and the sidebar count.
+  const refresh = React.useCallback(() => {
+    void mutate();
+    void globalMutate(FINDINGS_URL);
+    void globalMutate("/api/shell");
+  }, [mutate, globalMutate]);
 
   return (
     <Page>
@@ -87,15 +109,72 @@ export function StatusView({ initial }: { initial: StatusPayload }) {
         }
         actions={<HeaderInstrument checkedAt={data.checkedAt} />}
       />
+      <div className={s.body}>
+        {error && (
+          <Notice tone="fault" title="Couldn't refresh">
+            {error.message} What you see may be out of date; Gluon keeps trying.
+          </Notice>
+        )}
+        <Overview data={data} allFindings={allFindings} refresh={refresh} />
+      </div>
+    </Page>
+  );
+}
 
-      <div className={s.cols}>
-        <Panel
-          title="Needs you"
-          meta={data.findings.length ? <span className="num">{data.findings.length} open</span> : undefined}
-          flush
+function Overview({ data, allFindings, refresh }: { data: StatusPayload; allFindings: Finding[] | undefined; refresh: () => void }) {
+  const fmt = useFormat();
+  const { data: all } = useApi<Finding[]>(FINDINGS_URL, { refresh: 15_000, fallbackData: allFindings });
+  const { data: channels } = useApi<ChannelView[]>(CHANNELS_URL, { refresh: 60_000 });
+  const unreachable = !!channels && !channels.some((c) => c.enabled);
+  const attentionMounts = new Set(data.findings.map((f) => f.subject ?? ""));
+
+  return (
+    <>
+      {unreachable && (
+        <Notice
+          title="Gluon can't reach you yet"
+          action={
+            <LinkButton href={alertsHref("notifications")} size="sm">
+              Set up a channel
+            </LinkButton>
+          }
         >
-          <NeedsYou findings={data.findings} onChange={refresh} checkedAt={data.checkedAt} />
-        </Panel>
+          Problems only show up on this page until you add somewhere to send them, like your phone or an inbox.
+        </Notice>
+      )}
+      {data.appsUnavailable && (
+        <Notice
+          tone="fault"
+          title="Docker isn't answering"
+          action={
+            <LinkButton href="/system?tab=services" size="sm">
+              Open services
+            </LinkButton>
+          }
+        >
+          Gluon checks again every few seconds. Until Docker answers, apps and their problems can&apos;t be listed here.
+        </Notice>
+      )}
+      <div className={s.cols}>
+        <div className={s.main}>
+          <Panel
+            title="Needs you"
+            meta={
+              <span className="num">
+                {data.findings.length > 0 && `${data.findings.length} open · `}
+                <Link href={alertsHref("history")}>Past problems</Link>
+              </span>
+            }
+            flush
+          >
+            {data.appsUnavailable && !data.findings.length ? (
+              <Empty title="Can't tell yet.">Disks, certificates and updates are fine. Apps get checked once Docker answers again.</Empty>
+            ) : (
+              <NeedsYou findings={data.findings} onChange={refresh} checkedAt={data.checkedAt} foot={null} />
+            )}
+          </Panel>
+          {all && <QuietFindings findings={all} onChange={refresh} />}
+        </div>
         <div className={s.side}>
           <Panel title="This machine" meta={data.uptime !== null ? <span>up {fmt.duration(data.uptime, 2)}</span> : undefined}>
             <MachineVitals />
@@ -112,7 +191,7 @@ export function StatusView({ initial }: { initial: StatusPayload }) {
       </Panel>
 
       {data.recent.length > 0 && (
-        <Panel title="Recently" meta={<Link href="/activity">All activity</Link>} className={s.recentPanel} flush>
+        <Panel title="Recently" meta={<Link href={activityHref()}>All activity</Link>} className={s.recentPanel} flush>
           <ul className={s.recent} role="list">
             {data.recent.map((e) => (
               <li key={e.id} className={s.recentRow} data-outcome={e.outcome}>
@@ -126,7 +205,7 @@ export function StatusView({ initial }: { initial: StatusPayload }) {
           </ul>
         </Panel>
       )}
-    </Page>
+    </>
   );
 }
 

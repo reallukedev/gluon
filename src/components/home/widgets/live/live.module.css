@@ -8,10 +8,11 @@
 .footPad { flex: none; margin: 0; padding: 0 var(--px, 16px) 10px; }
 
 /* States */
-.state { height: 100%; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 14px 18px; text-align: center; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
+.state { height: 100%; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 14px 18px calc(14px + var(--title-h, 0px)); text-align: center; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 .state > div { max-width: 34ch; }
 .state b { display: block; color: var(--ink); font-size: var(--text-md); font-weight: 600; margin-bottom: 3px; }
 .state .stateTitle { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.stateWhy { display: block; margin-top: 4px; font-size: var(--text-xs); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34ch; }
 .stale { position: absolute; right: 12px; bottom: 6px; font-size: var(--text-2xs); color: var(--muted); background: var(--panel); padding-left: 6px; pointer-events: auto; }
 
 /* Rows (now playing, transfers) */
@@ -181,43 +182,6 @@ a.cardLink:active { transform: scale(calc(1 - 0.03 * var(--motion, 1))); }
 @media (hover: hover) and (pointer: fine) { .place:hover { background: color-mix(in oklab, var(--ink) 5%, transparent); } }
 .placeNow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--text-sm); }
 .found { font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Catalog previews */
-.pvRow { display: flex; gap: 8px; align-items: center; width: 70%; }
-.pvPoster { width: 18px; height: 27px; border-radius: 3px; background: var(--line-strong); flex: none; }
-.pvSquare { width: 24px; height: 24px; border-radius: 4px; background: var(--line-strong); flex: none; }
-.pvLines { flex: 1; display: grid; gap: 5px; }
-.pvLines i { height: 6px; border-radius: 3px; background: var(--line-strong); }
-.pvLines i:nth-child(2) { width: 60%; }
-.pvLines .pvProgress { position: relative; height: 2px; }
-.pvLines .pvProgress::before { content: ""; position: absolute; inset: 0 45% 0 0; background: var(--ink-2); }
-.pvShelf { display: flex; gap: 6px; align-items: flex-end; }
-.pvStats { display: flex; gap: 16px; font-size: 1.5rem; font-weight: 520; font-family: var(--font-display); font-stretch: 78%; font-variant-numeric: tabular-nums; }
-.pvStats b { font-weight: inherit; }
-.pvStats b + b { color: var(--muted); }
-.pvGrid { display: grid; grid-template-columns: repeat(3, 16px); gap: 4px; }
-.pvGrid i { width: 16px; height: 16px; border-radius: 3px; background: var(--line-strong); }
-.pvBars { display: grid; gap: 7px; width: 70%; }
-.pvBars i { height: 2px; background: var(--ink-2); }
-.pvBars i[data-dashed] { background: repeating-linear-gradient(to right, var(--ink-2) 0 4px, transparent 4px 7px); width: 60% !important; }
-.pvTiles { display: grid; grid-template-columns: repeat(2, 28px); gap: 5px; }
-.pvTiles i { height: 20px; border-radius: 5px; border: 1px solid var(--line-strong); }
-.pvTiles i[data-on] { border-color: var(--ink-2); }
-.pvWeather { display: flex; align-items: center; gap: 10px; }
-.pvWeather b { font-size: 1.9rem; font-weight: 460; font-family: var(--font-display); font-stretch: 70%; line-height: 1; }
-.pvWeather svg { width: 60px; height: 20px; }
-.pvWeather polyline { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
-.pvAgenda { display: grid; gap: 5px; width: 64%; }
-.pvDay { width: 30%; height: 4px; border-radius: 2px; background: var(--muted); opacity: 0.6; }
-.pvAgenda > span { display: grid; grid-template-columns: 22% 1fr; gap: 6px; }
-.pvAgenda > span i { height: 6px; border-radius: 3px; background: var(--line-strong); }
-.pvFeed { display: grid; gap: 7px; width: 70%; }
-.pvFeed > span { display: grid; gap: 3px; }
-.pvFeed > span i:first-child { height: 6px; border-radius: 3px; background: var(--line-strong); }
-.pvFeed > span i:last-child { height: 3px; width: 40%; border-radius: 2px; background: var(--line); }
-.pvStatus { display: flex; align-items: center; gap: 10px; }
-.pvStatus i { width: 2px; height: 26px; background: var(--ink); }
-.pvStatus b { font-size: 1.4rem; font-weight: 520; font-family: var(--font-display); font-stretch: 80%; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 720px) {
   .col[data-split] { grid-template-columns: 1fr; }

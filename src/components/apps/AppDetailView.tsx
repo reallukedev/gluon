@@ -3,7 +3,8 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OpenNewWindow, Refresh, Play, Square, MoreHoriz, CloudDownload, Folder, Eye, EyeClosed, Trash } from "iconoir-react";
+import { OpenNewWindow, Refresh, Play, Square, MoreHoriz, CloudDownload, Folder, Eye, EyeClosed, Trash, Pin, PinSlash } from "iconoir-react";
+import { usePinToHome } from "@/components/home/pinned";
 import type { AppDetail } from "@/server/docker/detail";
 import type { AppSummary } from "@/server/docker/apps";
 import { api, useApi, streamPost, ApiError } from "@/lib/client/api";
@@ -51,6 +52,8 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
   const base = `/apps/${encodeURIComponent(app.id)}`;
   const apiBase = `/api/apps/${encodeURIComponent(app.id)}`;
   const open = viewer.zone === "home" ? (app.urls.home ?? app.urls.away) : (app.urls.away ?? app.urls.home);
+  const pinHome = usePinToHome();
+  const pinned = pinHome.isPinned(app.id);
 
   async function act(action: "start" | "stop" | "restart") {
     setBusy(action);
@@ -205,6 +208,11 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
         }
         actions={
           <>
+            {open && !app.copyOf && (
+              <IconButton label={pinned ? "Unpin from Home" : "Pin to Home"} variant="secondary" aria-pressed={pinned} onClick={() => void pinHome.toggle(app)}>
+                {pinned ? <PinSlash /> : <Pin />}
+              </IconButton>
+            )}
             {open && !app.copyOf && (
               <Button icon={<OpenNewWindow />} onClick={() => window.open(open, "_blank", "noopener")}>
                 Open

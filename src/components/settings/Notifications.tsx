@@ -14,6 +14,7 @@ import { StateLine } from "@/components/ui/StateLine";
 import { ChannelDialog, KIND_ICON } from "@/components/alerts/ChannelDialog";
 import { ChannelList } from "@/components/alerts/ChannelList";
 import { SentTab } from "@/components/alerts/SentTab";
+import { alertsHref } from "@/lib/settings-links";
 import s from "./notifications.module.css";
 
 const SUBS_URL = "/api/alerts/subscriptions";
@@ -68,7 +69,7 @@ export function Notifications() {
         ) : mine.length === 0 ? (
           <Empty title={admin ? "No personal channels" : "Nowhere to reach you yet"} action={<Button onClick={() => edit(null)}>Add a way to reach you</Button>}>
             {admin
-              ? "Server-wide channels (Alerts → Channels) are usually enough. Add one here for alerts only you should get, like your own phone."
+              ? "Server-wide channels (Settings → Alerts → Notifications) are usually enough. Add one here for alerts only you should get, like your own phone."
               : "Get a message on your phone (with the free ntfy app) or by email when one of your apps stops working, and when someone replies to a problem you reported."}
           </Empty>
         ) : (
@@ -121,7 +122,7 @@ function WhatYouGet({ data, onChange }: { data: SubscriptionsResponse; onChange:
     return admin ? (
       <Panel title="What you're told">
         <p className={s.hint}>
-          Add a channel first, here or in <Link href="/alerts?tab=channels">Alerts → Channels</Link>. Then choose here which alerts it sends you.
+          Add a channel first, here or in <Link href={alertsHref("notifications")}>Alerts → Notifications</Link>. Then choose here which alerts it sends you.
         </p>
       </Panel>
     ) : null;

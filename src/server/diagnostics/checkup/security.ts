@@ -7,6 +7,7 @@ import { getSetting } from "../../settings";
 import { all } from "../../db";
 import { plural, listJoin } from "@/lib/format";
 import type { ExposureReport } from "@/lib/network-types";
+import { activityHref } from "@/lib/settings-links";
 import { fail, go, kv, ok, skip, warn, type CheckCtx, type CheckSpec, type Outcome } from "./core";
 
 /** Security: sshd settings, what's reachable, and admins without two-step sign-in. */
@@ -165,7 +166,7 @@ export function gluonLoginsOutcome(): Outcome {
   const evidence = kv(rows.map((r) => [r.key.slice(3), `${r.n}${isPrivateIp(r.key.slice(3)) ? " (your network)" : ""}`]));
   if (!total) return ok("No failed sign-ins to Gluon in the last day", { evidence: null });
   const outsideN = outside.reduce((a, r) => a + r.n, 0);
-  if (outsideN >= 10) return warn(`${plural(outsideN, "failed sign-in")} to Gluon from the internet in the last day`, { detail: `From ${listJoin(outside.slice(0, 3).map((r) => r.key.slice(3)))}. Gluon slows these down automatically; two-step sign-in keeps accounts safe even if a password is guessed.`, evidence, fix: go("See activity", "/activity") });
+  if (outsideN >= 10) return warn(`${plural(outsideN, "failed sign-in")} to Gluon from the internet in the last day`, { detail: `From ${listJoin(outside.slice(0, 3).map((r) => r.key.slice(3)))}. Gluon slows these down automatically; two-step sign-in keeps accounts safe even if a password is guessed.`, evidence, fix: go("See activity", activityHref()) });
   return ok(`${plural(total, "failed sign-in")} to Gluon in the last day, ${outsideN ? `${outsideN} from outside` : "all from your network"}`, { evidence });
 }
 

@@ -15,6 +15,7 @@ import { StateLine, lineLabel } from "@/components/ui/StateLine";
 import { Skeleton } from "@/components/ui/Surface";
 import { toast } from "@/components/ui/Toast";
 import { instanceHints, shortName } from "@/lib/app-names";
+import { SetUp, WidgetState } from "./kit";
 import s from "./app.module.css";
 
 export interface AppConfig {
@@ -24,16 +25,16 @@ export interface AppConfig {
 }
 
 /** What /api/apps returns: admins get containers (for live stats); members get the trimmed view. */
-type ApiApp = HomeApp & {
+export type ApiApp = HomeApp & {
   source?: string;
   containers?: { name: string; state: string; status: string }[];
 };
 
 const HOST = /^https?:\/\/([^/]+)/i;
-const hostOf = (u: string | null) => (u ? (HOST.exec(u)?.[1] ?? u) : null);
+export const hostOf = (u: string | null) => (u ? (HOST.exec(u)?.[1] ?? u) : null);
 
 /** Docker's "Up 3 days (healthy)" → "3 days". */
-function uptimeOf(app: ApiApp): string | null {
+export function uptimeOf(app: ApiApp): string | null {
   const c = app.containers?.find((x) => x.state === "running");
   const m = c ? /^Up\s+(.+?)(\s*\(.*\))?$/i.exec(c.status) : null;
   if (!m) return null;
@@ -77,7 +78,7 @@ function Trace({ values, max, label }: { values: number[]; max: number; label: s
   );
 }
 
-function Vitals({ app, name }: { app: ApiApp; name: string }) {
+export function Vitals({ app, name }: { app: ApiApp; name: string }) {
   const fmt = useFormat();
   const series = useAppSeries((app.containers ?? []).map((c) => c.name));
   const last = series.at(-1);
@@ -119,7 +120,7 @@ function Vitals({ app, name }: { app: ApiApp; name: string }) {
   );
 }
 
-export function AppWidget({ item, size }: WidgetProps<AppConfig>) {
+export function AppWidget({ item, size, openSettings }: WidgetProps<AppConfig>) {
   const { data, error } = useApi<ApiApp[]>("/api/apps", { refresh: 20_000 });
   const { viewer, prefs, serverName } = usePrefs();
   const url = useSmartUrl();
@@ -129,19 +130,17 @@ export function AppWidget({ item, size }: WidgetProps<AppConfig>) {
 
   if (!appId) {
     return (
-      <div className={s.state}>
-        <b>Which app?</b>
-        Pick one in this widget&apos;s settings.
-      </div>
+      <WidgetState title="Which app?" action={<SetUp openSettings={openSettings}>Pick an app</SetUp>}>
+        This tile shows one app: whether it&apos;s running, and a button to open it.
+      </WidgetState>
     );
   }
   if (!data) {
     if (error) {
       return (
-        <div className={s.state} role="status">
-          <b>Can&apos;t load your apps</b>
-          {error.message}
-        </div>
+        <WidgetState line="unknown" title="Can't load your apps">
+          {admin ? error.message : "Gluon didn't answer just now. It tries again on its own."}
+        </WidgetState>
       );
     }
     return (
@@ -159,10 +158,9 @@ export function AppWidget({ item, size }: WidgetProps<AppConfig>) {
   const app = data.find((a) => a.id === appId);
   if (!app) {
     return (
-      <div className={s.state}>
-        <b>This app is gone</b>
-        {admin ? "It was removed from the server. Remove this widget, or pick another app in its settings." : "It was removed or isn't shared with you any more."}
-      </div>
+      <WidgetState title={item.config.name ? `${item.config.name} is gone` : "This app is gone"} action={<SetUp openSettings={openSettings}>Pick another app</SetUp>}>
+        {admin ? "It was removed from the server. Pick another app, or remove this tile." : "It was removed or isn't shared with you any more."}
+      </WidgetState>
     );
   }
   const hint = instanceHints(data).get(app.id);
@@ -274,14 +272,20 @@ export function AppSettings({ config, onChange }: SettingsProps<AppConfig>) {
   );
 }
 
-/** Catalog preview for the App tile: the real icon when the catalog knows the app. */
+/** Catalog preview for the App tile: the same miniature tile as every other preview, with the app's real icon. */
 export function AppPreview({ icon, name }: { icon?: string | null; name?: string }) {
   return (
     <span className={s.preview}>
-      <AppIcon src={icon ?? null} name={name ?? "App"} size={26} />
-      <span className={s.previewLine} />
-      <svg viewBox="0 0 60 20" aria-hidden>
-        <polyline points="0,15 8,14 16,15 24,11 32,12 40,8 48,10 56,9 60,9" />
+      <span className={s.previewHead}>
+        <AppIcon src={icon ?? null} name={name ?? "App"} size={18} />
+        <span className={s.previewWords}>
+          <i />
+          <i />
+        </span>
+      </span>
+      <svg viewBox="0 0 96 14" aria-hidden>
+        <polyline points="0,10 10,9.5 20,10 30,6.5 40,7.5 50,4 60,6 70,5 80,7 96,6" />
+        <line x1="95.5" x2="95.5" y1="0" y2="14" />
       </svg>
     </span>
   );

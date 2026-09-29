@@ -1,14 +1,20 @@
-import { requireAdmin } from "@/server/auth/session";
-import { listAllOpen } from "@/server/findings";
-import { AlertsView, type AlertsTab } from "@/components/alerts/AlertsView";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/server/auth/session";
+import { alertsHref, fromOldAlertsTab } from "@/lib/settings-links";
 
-export const metadata = { title: "Alerts" };
+type Search = Promise<Record<string, string | string[] | undefined>>;
+const str = (v: string | string[] | undefined, max: number) => (typeof v === "string" && v ? v.slice(0, max) : undefined);
 
-const TABS: AlertsTab[] = ["open", "history", "monitors", "channels", "sent"];
-
-export default async function AlertsPage({ searchParams }: { searchParams: Promise<{ tab?: string; monitor?: string; channel?: string }> }) {
-  await requireAdmin();
+/**
+ * Alerts moved. Open problems are on Status; monitors, notifications and past problems are in
+ * Settings → Alerts. Old links (bookmarks, emails, stored remedies) land in the right place with
+ * their monitor or channel; a #problem anchor survives the redirect.
+ */
+export default async function AlertsRedirect({ searchParams }: { searchParams: Search }) {
+  const { user } = await requireUser();
+  // Only admins keep watch; anyone else lands on their start page instead of a "not found".
+  if (user.role !== "admin") redirect("/");
   const sp = await searchParams;
-  const tab = TABS.includes(sp.tab as AlertsTab) ? (sp.tab as AlertsTab) : "open";
-  return <AlertsView tab={tab} initialFindings={listAllOpen()} monitorId={sp.monitor ?? null} channelId={sp.channel ?? null} />;
+  const to = fromOldAlertsTab(str(sp.tab, 40));
+  redirect(to === "status" ? "/status" : alertsHref(to, { monitor: str(sp.monitor, 200), channel: str(sp.channel, 200) }));
 }

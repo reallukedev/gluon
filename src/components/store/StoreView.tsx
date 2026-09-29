@@ -6,6 +6,7 @@ import type { AppSummary } from "@/server/docker/apps";
 import { ApiError, streamPost, useApi } from "@/lib/client/api";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Empty, Notice, Skeleton } from "@/components/ui/Surface";
+import { AppsSectionTabs } from "@/components/docker/AppsSectionTabs";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { toast } from "@/components/ui/Toast";
@@ -171,7 +172,8 @@ export function StoreView() {
   if (!data) {
     return (
       <Page>
-        <PageHeader back={{ href: "/apps", label: "Apps" }} title="App store" summary={error ? "The app store didn't load." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} />
+        <PageHeader title="Apps" summary={error ? "The app store didn't load." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} />
+        <AppsSectionTabs current="store" />
         {error ? (
           <Notice tone="fault" title="Couldn't load the app store" action={<Button size="sm" loading={isLoading} onClick={() => void mutate()}>Try again</Button>}>
             {error.message} Umbrel may be busy or restarting. Try again in a minute.
@@ -186,7 +188,8 @@ export function StoreView() {
   if (data.platform !== "umbrel") {
     return (
       <Page>
-        <PageHeader back={{ href: "/apps", label: "Apps" }} title="App store" summary={data.platform === "casaos" ? "Gluon is working with CasaOS, which has its own app store." : "Gluon isn't working with Umbrel, so there's no app store here."} />
+        <PageHeader title="Apps" summary={data.platform === "casaos" ? "Gluon is working with CasaOS, which has its own app store." : "Gluon isn't working with Umbrel, so there's no app store here."} />
+        <AppsSectionTabs current="store" />
         <Empty
           title="The app store needs Umbrel"
           action={
@@ -227,7 +230,8 @@ export function StoreView() {
 
   return (
     <Page>
-      <PageHeader back={{ href: "/apps", label: "Apps" }} title="App store" summary={summary} />
+      <PageHeader title="Apps" summary={summary} />
+      <AppsSectionTabs current="store" />
 
       {entries.length === 0 ? (
         <Empty title="No apps to show" action={<Button onClick={() => void mutate()}>Try again</Button>}>

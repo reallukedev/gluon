@@ -138,28 +138,6 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
         }
       />
 
-      {running && (
-        <div className={s.banner}>
-          <Notice
-            tone="neutral"
-            title={`${running.title} is in progress`}
-            action={
-              <Button size="sm" onClick={() => setJobOpen(running.id)}>
-                Watch
-              </Button>
-            }
-          >
-            Other changes to drives wait until it's done. Started <Time ts={running.startedAt} />.
-          </Notice>
-        </div>
-      )}
-
-      {storageFindings.length > 0 && (
-        <Panel title="Needs you" meta={<span className="num">{storageFindings.length} open</span>} flush className={s.needsPanel}>
-          <NeedsYou findings={storageFindings} onChange={refresh} checkedAt={inv.generatedAt} />
-        </Panel>
-      )}
-
       <Tabs
         value={tab}
         hrefFor={(v) => (v === "disks" ? "/storage" : `/storage?tab=${v}`)}
@@ -173,6 +151,28 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
       />
 
       <div className={s.tabBody}>
+        {running && (
+          <div className={s.banner}>
+            <Notice
+              tone="neutral"
+              title={`${running.title} is in progress`}
+              action={
+                <Button size="sm" onClick={() => setJobOpen(running.id)}>
+                  Watch
+                </Button>
+              }
+            >
+              Other changes to drives wait until it's done. Started <Time ts={running.startedAt} />.
+            </Notice>
+          </div>
+        )}
+
+        {storageFindings.length > 0 && (
+          <Panel title="Needs you" meta={<span className="num">{storageFindings.length} open</span>} flush className={s.needsPanel}>
+            <NeedsYou findings={storageFindings} onChange={refresh} checkedAt={inv.generatedAt} />
+          </Panel>
+        )}
+
         {tab === "disks" && (
           <div className={s.stack}>
             {inv.warnings.map((w) => (

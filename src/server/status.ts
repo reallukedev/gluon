@@ -28,6 +28,8 @@ export interface StatusPayload {
   uptime: number | null;
   recent: ActivityEntry[];
   announcements: { id: string; message: string; app_id: string | null }[];
+  /** Docker didn't answer, so `apps` is empty because Gluon couldn't look, not because there are none. */
+  appsUnavailable: boolean;
   checkedAt: number;
 }
 
@@ -43,6 +45,16 @@ const slim = (a: AppSummary): StatusApp => ({
   source: a.source,
   copyOf: a.copyOf,
 });
+
+function dockerDownVerdict(findings: Finding[], forMember: boolean): StatusPayload["verdict"] {
+  if (forMember) return { tone: "fault", headline: "Gluon can't see the apps right now.", detail: "The part of the server that runs them isn't answering. The people who look after the server can see this too." };
+  const others = findings.length;
+  return {
+    tone: "fault",
+    headline: "Docker isn't answering.",
+    detail: `Gluon can't see any apps until it does, so this page can't say whether they're running.${others ? ` ${others === 1 ? "1 other thing needs" : `${others} other things need`} you too.` : ""} It may be restarting; if it stays like this, restart Docker from System → Services.`,
+  };
+}
 
 function verdictFor(findings: Finding[], apps: StatusApp[], forMember: boolean): StatusPayload["verdict"] {
   const faults = findings.filter((f) => f.severity === "fault");
@@ -75,11 +87,20 @@ function verdictFor(findings: Finding[], apps: StatusApp[], forMember: boolean):
 
 export async function statusFor(user: User): Promise<StatusPayload> {
   const isAdmin = user.role === "admin";
-  const apps = (isAdmin ? (await listApps()).filter((a) => !a.hidden) : await appsForMember(user.id)).map(slim);
+  // Docker restarting (or its socket missing) mustn't take Status down with it: Status is where you'd
+  // go to find out. The page says what it couldn't see instead.
+  let apps: StatusApp[] = [];
+  let appsUnavailable = false;
+  try {
+    apps = (isAdmin ? (await listApps()).filter((a) => !a.hidden) : await appsForMember(user.id)).map(slim);
+  } catch {
+    appsUnavailable = true;
+  }
   const findings = isAdmin ? listOpen() : [];
   const h = latestHost();
   return {
-    verdict: verdictFor(findings, apps, !isAdmin),
+    verdict: appsUnavailable ? dockerDownVerdict(findings, !isAdmin) : verdictFor(findings, apps, !isAdmin),
+    appsUnavailable,
     findings,
     apps,
     filesystems: isAdmin ? filesystems() : [],

@@ -13,7 +13,7 @@ import s from "./home.module.css";
  * The start page's search: type to jump to an app, press Enter to search the web with your engine.
  * (⌘K still searches everything inside Gluon.)
  */
-export function StartSearch() {
+export function StartSearch({ className }: { className?: string } = {}) {
   const { prefs } = usePrefs();
   const url = useSmartUrl();
   const { data: apps } = useApi<HomeApp[]>("/api/apps");
@@ -70,7 +70,7 @@ export function StartSearch() {
 
   return (
     <form
-      className={s.search}
+      className={`${s.search} ${className ?? ""}`}
       role="search"
       onSubmit={(e) => {
         e.preventDefault();

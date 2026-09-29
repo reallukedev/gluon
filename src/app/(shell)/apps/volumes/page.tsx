@@ -3,7 +3,7 @@ import { listVolumes } from "@/server/dockerx/volumes";
 import { AppError } from "@/server/errors";
 import { VolumesView } from "@/components/docker/VolumesView";
 
-export const metadata = { title: "Volumes" };
+export const metadata = { title: "Docker volumes" };
 
 export default async function VolumesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireAdmin();

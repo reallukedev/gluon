@@ -18,4 +18,5 @@ import "./people";
 import "./storage";
 import "./updates";
 import "./appstore";
+import "./widgets";
 export {};

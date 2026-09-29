@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
 import type { AccessoryKind, HomebridgeAccessory, JsonFieldValue, SlskdTransfer } from "@/lib/widgets-types";
-import { Gate, IntegrationPicker, perSize, Quiet, RowsSkeleton, StatsSkeleton, useIntegrationWidget, useSource, useWidgetData } from "./shared";
+import { Gate, IntegrationPicker, perSize, Quiet, RowsSkeleton, StatsSkeleton, useIntegrationWidget, useSource, useWidgetData, WidgetState } from "./shared";
+import { SetUp } from "../kit";
 import { TitleField, type IntegrationConfig } from "./media";
 import l from "./live.module.css";
 
@@ -295,12 +296,15 @@ function FieldValue({ f }: { f: JsonFieldValue }) {
 }
 
 export function JsonFields({ item, size }: WidgetProps<IntegrationConfig>) {
+  const { viewer } = usePrefs();
   const q = useIntegrationWidget("generic-json", "json.fields", item.config.integration, {});
   return (
     <Gate kind="generic-json" source={q.source} q={q} skeleton={<StatsSkeleton n={size === "s" ? 2 : 4} />}>
       {(d) =>
         d.fields.length === 0 ? (
-          <Quiet title="No values set up">Add values to show in Settings → Connected apps.</Quiet>
+          <Quiet title="No values set up">
+            {viewer.role === "admin" ? "Choose which values to show in Settings → Connected apps." : "Whoever runs the server hasn't picked any values yet."}
+          </Quiet>
         ) : (
           <div className={l.stats} data-cols={size === "s" || size === "t" ? 2 : 4}>
             {d.fields.map((f, i) => (
@@ -333,13 +337,18 @@ function hostOf(url: string) {
   }
 }
 
-export function LinkStatus({ item, size }: WidgetProps<LinkStatusConfig>) {
+export function LinkStatus({ item, size, openSettings }: WidgetProps<LinkStatusConfig>) {
   const url = item.config.url;
   const q = useWidgetData("link.status", null, { url }, !!url);
   const { prefs } = usePrefs();
-  if (!url) return <Quiet title="Which address?">Add one in this widget's settings.</Quiet>;
+  if (!url)
+    return (
+      <WidgetState title="Which address?" action={<SetUp openSettings={openSettings}>Add an address</SetUp>}>
+        Gluon checks it every minute and says whether it answers.
+      </WidgetState>
+    );
   return (
-    <Gate q={q} subject={hostOf(url)} skeleton={<RowsSkeleton rows={1} />}>
+    <Gate q={q} subject={hostOf(url)} openSettings={openSettings} skeleton={<RowsSkeleton rows={1} />}>
       {(d) => (
         <div className={l.status} data-size={size}>
           <div className={l.statusHead}>

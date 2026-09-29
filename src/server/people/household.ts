@@ -8,6 +8,7 @@ import { findById, type User } from "../auth/users";
 import { appsForMember, listApps } from "../docker/apps";
 import { notifyReportReply } from "../notify/dispatcher";
 import type { Announcement, ProblemReport } from "@/lib/people-types";
+import { peopleHref } from "@/lib/settings-links";
 import { hasColumn } from "./users";
 
 async function appNames(): Promise<Map<string, string>> {
@@ -115,7 +116,7 @@ export async function createReport(user: User, input: { appId?: string | null; m
     title: appName ? `${user.displayName} says ${appName} isn't working` : `${user.displayName} reported a problem`,
     cause: `“${clip(message, 400)}”`,
     detail: { reportId: id, userId: user.id, appId },
-    remedy: { action: "", label: "Reply", href: `/people?tab=reports&report=${encodeURIComponent(id)}` },
+    remedy: { action: "", label: "Reply", href: peopleHref({ tab: "reports", report: id }) },
   });
   publish("reports", { id, change: "created" });
   return toReport(one<ReportRow>("SELECT * FROM reports WHERE id = ?", id)!, names);
@@ -178,7 +179,7 @@ export async function answerReport(admin: User, id: string, input: { reply?: str
       title: appName ? `${who} says ${appName} isn't working` : `${who} reported a problem`,
       cause: `“${clip(r.message, 400)}”`,
       detail: { reportId: id, userId: r.user_id, appId: r.app_id },
-      remedy: { action: "", label: "Reply", href: `/people?tab=reports&report=${encodeURIComponent(id)}` },
+      remedy: { action: "", label: "Reply", href: peopleHref({ tab: "reports", report: id }) },
     });
   }
   publish("reports", { id, change: "updated" });

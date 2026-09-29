@@ -24,6 +24,7 @@ const STALE_MS: Record<WidgetType, number> = {
   "jellyfin.libraries": 60 * 60_000,
   "immich.stats": 60 * 60_000,
   "immich.recent": 30 * 60_000,
+  "immich.onThisDay": 6 * 60 * 60_000,
   "subsonic.nowPlaying": 0,
   "subsonic.recent": 30 * 60_000,
   "slskd.transfers": 0,

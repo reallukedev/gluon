@@ -12,6 +12,7 @@
  */
 import { z } from "zod";
 import type { LineState } from "./types";
+import type { LocalWidgetAvailability } from "./home-widgets-types";
 
 // =====================================================================================================================
 // Integrations
@@ -143,6 +144,7 @@ export const WIDGET_TYPES = [
   "jellyfin.libraries",
   "immich.stats",
   "immich.recent",
+  "immich.onThisDay",
   "subsonic.nowPlaying",
   "subsonic.recent",
   "slskd.transfers",
@@ -162,6 +164,7 @@ export const WIDGET_SOURCE: Record<WidgetType, IntegrationKind | null> = {
   "jellyfin.libraries": "jellyfin",
   "immich.stats": "immich",
   "immich.recent": "immich",
+  "immich.onThisDay": "immich",
   "subsonic.nowPlaying": "subsonic",
   "subsonic.recent": "subsonic",
   "slskd.transfers": "slskd",
@@ -180,6 +183,7 @@ export const WIDGET_REFRESH_MS: Record<WidgetType, number> = {
   "jellyfin.libraries": 300_000,
   "immich.stats": 300_000,
   "immich.recent": 120_000,
+  "immich.onThisDay": 30 * 60_000,
   "subsonic.nowPlaying": 5_000,
   "subsonic.recent": 60_000,
   "slskd.transfers": 5_000,
@@ -234,6 +238,7 @@ export const widgetConfigSchemas = {
       show: z.enum(["all", "photos", "videos"]).default("all"),
     })
     .strip(),
+  "immich.onThisDay": z.object({}).strip(),
   "subsonic.nowPlaying": z.object({}).strip(),
   "subsonic.recent": z.object({ limit: z.coerce.number().int().min(1).max(30).default(12) }).strip(),
   "slskd.transfers": z.object({ limit: z.coerce.number().int().min(1).max(50).default(8) }).strip(),
@@ -380,6 +385,8 @@ export interface WidgetCatalog {
     /** false when an integration is needed and none is available to this person. */
     available: boolean;
   }[];
+  /** Home widgets that read this machine (Internet, Power…): whether they work here, and why not. */
+  local: LocalWidgetAvailability[];
 }
 
 /** GET /api/widgets/geocode?q=berlin */
@@ -495,6 +502,19 @@ export interface ImmichStatsData {
 export interface ImmichRecentData {
   items: { id: string; kind: "image" | "video"; image: string; takenAt: number | null }[];
   /** Why nothing could be shown although Immich answered (e.g. the key lacks a permission). */
+  note: string | null;
+}
+
+/** "On this day": photos taken on today's date in earlier years, one year per entry, newest year first. */
+export interface ImmichOnThisDayData {
+  years: {
+    id: string;
+    year: number;
+    /** How many years ago (from the server's date). */
+    yearsAgo: number;
+    photos: { id: string; kind: "image" | "video"; image: string; takenAt: number | null }[];
+  }[];
+  /** Why nothing could be shown although Immich answered (e.g. a missing permission, an old Immich). */
   note: string | null;
 }
 
@@ -735,6 +755,7 @@ export interface WidgetDataMap {
   "jellyfin.libraries": JellyfinLibrariesData;
   "immich.stats": ImmichStatsData;
   "immich.recent": ImmichRecentData;
+  "immich.onThisDay": ImmichOnThisDayData;
   "subsonic.nowPlaying": SubsonicNowPlayingData;
   "subsonic.recent": SubsonicRecentData;
   "slskd.transfers": SlskdTransfersData;
@@ -752,6 +773,7 @@ export const WIDGET_LABELS: Record<WidgetType, { label: string; description: str
   "jellyfin.libraries": { label: "Jellyfin libraries", description: "How much is in each library." },
   "immich.stats": { label: "Photos", description: "Photo and video counts from Immich, with optional memories." },
   "immich.recent": { label: "Latest photos", description: "The newest photos and videos in Immich." },
+  "immich.onThisDay": { label: "On this day", description: "Photos taken on this date in past years, from Immich." },
   "subsonic.nowPlaying": { label: "Now playing", description: "What people are listening to." },
   "subsonic.recent": { label: "New music", description: "Recently added albums." },
   "slskd.transfers": { label: "Soulseek transfers", description: "Downloads and uploads in progress." },

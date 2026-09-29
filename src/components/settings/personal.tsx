@@ -6,7 +6,8 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import { Drag } from "iconoir-react";
 import { SEARCH_ENGINES, type Prefs } from "@/lib/prefs";
-import { NAV, orderedNav } from "@/lib/nav";
+import { hintFor, orderedNav, SETTINGS_JUMPS, SETTINGS_KEY } from "@/lib/nav";
+import { useNavAccess } from "@/components/shell/Shell";
 import { formatBytes, formatDate, formatRate, formatTemp, formatTime } from "@/lib/format";
 import { usePrefs } from "@/components/PrefsProvider";
 import { Panel, Kbd, UsageBar } from "@/components/ui/Surface";
@@ -49,6 +50,56 @@ function useMedia(query: string) {
   return on;
 }
 
+const PLATES = {
+  light: { ground: "#f4f3ef", panel: "#fdfcfa", line: "#dddbd4", ink: "#18181a", faint: "#c7c4bb" },
+  dark: { ground: "#111214", panel: "#17181b", line: "#2c2d31", ink: "#ece7db", faint: "#4a4a4f" },
+};
+
+/** The theme cards draw Gluon itself in miniature: sidebar, a page title, a panel with one thing that needs you. */
+function MiniPlate({ p }: { p: (typeof PLATES)["light"] }) {
+  return (
+    <g>
+      <rect width="120" height="74" fill={p.ground} />
+      <path d="M31.5 0V74" stroke={p.line} />
+      <circle cx="8" cy="10" r="1.6" fill={p.ink} />
+      <path d="M9.6 10q2.2-4 3.2-1.2 1 2.8 3.2-.2 2.2-3 3.2-.2" stroke={p.ink} strokeWidth="1" fill="none" strokeLinecap="round" />
+      <rect x="5" y="20" width="22" height="6" rx="2" fill={p.panel} stroke={p.line} strokeWidth="0.6" />
+      <path d="M7 32h14M7 39h17M7 46h11" stroke={p.faint} strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M39 12h34" stroke={p.ink} strokeWidth="3.2" strokeLinecap="round" />
+      <path d="M39 19h52" stroke={p.faint} strokeWidth="1.4" strokeLinecap="round" />
+      <rect x="38.5" y="27.5" width="75" height="40" rx="4" fill={p.panel} stroke={p.line} />
+      <path d="M45 35v8M48 35v8" stroke="var(--swatch, var(--attn))" strokeWidth="1.6" />
+      <path d="M53 37h34M53 42h22" stroke={p.ink} strokeWidth="1.4" strokeLinecap="round" opacity="0.85" />
+      <path d="M38.5 50.5h75" stroke={p.line} />
+      <path d="M46.5 55v8" stroke={p.ink} strokeWidth="1.6" />
+      <path d="M53 57h28M53 62h16" stroke={p.faint} strokeWidth="1.4" strokeLinecap="round" />
+    </g>
+  );
+}
+
+function MiniApp({ mode }: { mode: "system" | "light" | "dark" }) {
+  const id = React.useId();
+  return (
+    <svg viewBox="0 0 120 74" preserveAspectRatio="xMinYMid slice" width="100%" height="100%">
+      {mode === "system" ? (
+        <>
+          <defs>
+            <clipPath id={id}>
+              <path d="M120 0V74H0z" />
+            </clipPath>
+          </defs>
+          <MiniPlate p={PLATES.light} />
+          <g clipPath={`url(#${id})`}>
+            <MiniPlate p={PLATES.dark} />
+          </g>
+        </>
+      ) : (
+        <MiniPlate p={PLATES[mode]} />
+      )}
+    </svg>
+  );
+}
+
 export function Appearance() {
   const { prefs } = usePrefs();
   const set = useSet();
@@ -63,14 +114,7 @@ export function Appearance() {
             {(["system", "light", "dark"] as const).map((m) => (
               <button key={m} type="button" className={s.choice} aria-pressed={prefs.theme === m} onClick={() => void set({ theme: m })}>
                 <span className={s.mini} data-mode={m} aria-hidden>
-                  <i />
-                  <i>
-                    <b />
-                    <b style={{ height: "40%" }} />
-                    <b />
-                    <b data-a="" />
-                    <b style={{ height: "55%" }} />
-                  </i>
+                  <MiniApp mode={m} />
                 </span>
                 <span className={s.choiceText}>
                   {m === "system" ? "Match my device" : m === "light" ? "Light" : "Dark"}
@@ -302,8 +346,12 @@ function SortRow({ id, label, hint, hidden, locked, onToggle }: { id: string; la
 
 export function Navigation() {
   const { prefs, viewer } = usePrefs();
+  const access = useNavAccess();
   const set = useSet();
-  const nav = orderedNav(viewer.role, prefs.sidebarOrder, prefs.sidebarHidden, { memberStatus: true, memberFiles: true }).all;
+  const nav = orderedNav(viewer.role, prefs.sidebarOrder, prefs.sidebarHidden, access).all;
+  // Old ids (like "alerts", now part of Status) don't count as a change.
+  const usual = orderedNav(viewer.role, [], [], access).all;
+  const customised = nav.some((n, i) => n.id !== usual[i]?.id || prefs.sidebarHidden.includes(n.id));
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const dndId = React.useId();
   const label = (id: string | number) => nav.find((n) => n.id === String(id))?.label ?? "Page";
@@ -319,7 +367,7 @@ export function Navigation() {
         title="Sidebar"
         flush
         meta={
-          prefs.sidebarOrder.length || prefs.sidebarHidden.length ? (
+          customised ? (
             <Button size="sm" variant="ghost" onClick={() => void set({ sidebarOrder: [], sidebarHidden: [] })}>
               Back to the usual order
             </Button>
@@ -353,7 +401,7 @@ export function Navigation() {
                     key={n.id}
                     id={n.id}
                     label={n.label}
-                    hint={n.id === "home" ? "Always shown" : n.hint}
+                    hint={n.id === "home" ? "Always shown" : hintFor(n, viewer.role)}
                     hidden={prefs.sidebarHidden.includes(n.id)}
                     locked={n.id === "home"}
                     onToggle={(v) => void set({ sidebarHidden: v ? prefs.sidebarHidden.filter((x) => x !== n.id) : [...prefs.sidebarHidden, n.id] })}
@@ -378,21 +426,19 @@ export function Navigation() {
             <Kbd>/</Kbd>
           </dt>
           <dd>Search (on Home: the web search box)</dd>
-          {NAV.filter((n) => !n.admin || viewer.role === "admin")
-            .slice(0, 9)
-            .map((n) => {
-              const key = { home: "h", status: "s", apps: "a", files: "f", network: "n", storage: "d", system: "y", diagnostics: "x", alerts: "l", people: "p" }[n.id];
-              if (!key) return null;
-              return (
-                <React.Fragment key={n.id}>
-                  <dt>
-                    <Kbd>g</Kbd>
-                    <Kbd>{key}</Kbd>
-                  </dt>
-                  <dd>Go to {n.label}</dd>
-                </React.Fragment>
-              );
-            })}
+          {[
+            ...nav.map((n) => ({ id: n.id, key: n.key, label: n.label })),
+            { id: "settings", key: SETTINGS_KEY, label: "Settings" },
+            ...(viewer.role === "admin" ? SETTINGS_JUMPS.map((j) => ({ id: j.href, key: j.key, label: `Settings → ${j.label}` })) : []),
+          ].map((n) => (
+            <React.Fragment key={n.id}>
+              <dt>
+                <Kbd>g</Kbd>
+                <Kbd>{n.key}</Kbd>
+              </dt>
+              <dd>Go to {n.label}</dd>
+            </React.Fragment>
+          ))}
         </dl>
       </Panel>
       <p className={s.hint}>

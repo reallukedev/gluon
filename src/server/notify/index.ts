@@ -2,6 +2,7 @@ import "server-only";
 import { onStart, every } from "../jobs";
 import { subscribe } from "../events";
 import { registerSearch } from "../search";
+import { alertsHref } from "@/lib/settings-links";
 import { followUps, kick, tick, TICK_MS } from "./dispatcher";
 import { allChannels, canSee } from "./channels";
 
@@ -36,7 +37,7 @@ registerSearch((user, q) => {
       id: `channel:${c.id}`,
       label: c.name,
       hint: `Notification channel · ${c.kind}`,
-      href: user.role === "admin" ? `/alerts?tab=channels&channel=${encodeURIComponent(c.id)}` : `/settings/notifications`,
+      href: user.role === "admin" ? alertsHref("notifications", { channel: c.id }) : `/settings/notifications`,
     }));
   return { name: "Notifications", items };
 });

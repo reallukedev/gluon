@@ -8,6 +8,7 @@ import { noteSignIn } from "@/server/auth/devices";
 import { audit } from "@/server/audit";
 import { raise, resolve } from "@/server/findings";
 import { getSetting } from "@/server/settings";
+import { peopleHref } from "@/lib/settings-links";
 import { now, run } from "@/server/db";
 import type { Zone } from "@/server/net-zone";
 
@@ -25,7 +26,7 @@ function noteThrottle(row: UserRow, failures: number, ip: string, zone: Zone) {
     title: `Sign-ins to ${row.display_name || row.username}'s account are being slowed down`,
     cause: `${failures} wrong passwords in a row, most recently from ${ip} (${zone === "home" ? "at home" : "outside home"}). Gluon now waits longer between each try. If it wasn't them, their password may be being guessed.`,
     detail: { userId: row.id, ip, zone, failures },
-    remedy: { action: "", label: "Review people", href: "/people" },
+    remedy: { action: "", label: "Review the account", href: peopleHref({ person: row.id }) },
   });
 }
 

@@ -21,7 +21,8 @@ import s from "./docker.module.css";
 
 type Filter = "all" | "custom" | "empty";
 
-const COLUMNS = "minmax(220px, 2fr) minmax(160px, 1.2fr) minmax(180px, 1.8fr) 68px";
+/** Loading placeholder columns: the table's proportions, allowed to shrink so they never overflow. */
+const COLUMNS = "minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.8fr) 68px";
 
 function flags(n: DockerNetwork): string {
   const out = [n.driver === "bridge" ? "Bridge" : n.driver === "host" ? "The server's own network" : n.driver === "null" ? "No network" : n.driver];
@@ -143,9 +144,8 @@ export function NetworksView({ initial, initialError, initialQuery }: { initial:
 
   return (
     <Page>
-      <AppsSectionTabs current="networks" />
       <PageHeader
-        title="Networks"
+        title="Apps"
         summary={summary}
         actions={
           <Button icon={<Plus />} onClick={() => setCreating(true)}>
@@ -153,6 +153,7 @@ export function NetworksView({ initial, initialError, initialQuery }: { initial:
           </Button>
         }
       />
+      <AppsSectionTabs current="docker" docker="networks" />
 
       {error && (
         <div style={{ marginBottom: 16 }}>

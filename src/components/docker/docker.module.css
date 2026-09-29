@@ -23,7 +23,9 @@
 .filter input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: var(--text-md); -webkit-appearance: none; appearance: none; }
 .filter input::placeholder { color: var(--faint); }
 .toolbarEnd { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-@media (min-width: 981px) { .sortSelect { display: none; } }
+/* Shown wherever the table head (and its sort buttons) can be hidden: the images and volumes tables restack
+   under 660px of their own width, i.e. a viewport under ~980px with the sidebar open (plus room for a scrollbar). */
+@media (min-width: 1001px) { .sortSelect { display: none; } }
 @media (max-width: 640px) {
   .filter { max-width: none; flex-basis: 100%; }
   .toolbarEnd { margin-left: 0; }
@@ -31,11 +33,16 @@
 
 /* ---------------------------------------------------------------- table */
 
+/* Sized by the table's own width (sidebar and density change it), not the viewport. overflow: hidden only
+   rounds the row fills into the corners; the tiers below keep every column inside.
+   Full widths — images: 18+240+170+104+112+68 + 5×18 + 32 = 834px; volumes: 18+220+170+96+112+68 + 5×18 + 32
+   = 806px; networks: 220+160+180+68 + 3×18 + 32 = 714px. */
 .table {
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background: var(--panel);
   overflow: hidden;
+  container: dtable / inline-size;
 }
 .headRow, .row {
   display: grid;
@@ -46,6 +53,20 @@
 .images .headRow, .images .row { grid-template-columns: 18px minmax(240px, 2.3fr) minmax(170px, 1.5fr) 104px 112px 68px; }
 .volumes .headRow, .volumes .row { grid-template-columns: 18px minmax(220px, 2.2fr) minmax(170px, 1.6fr) 96px 112px 68px; }
 .networks .headRow, .networks .row { grid-template-columns: minmax(220px, 2fr) minmax(160px, 1.2fr) minmax(180px, 1.8fr) 68px; }
+.row > * { min-width: 0; }
+/* Compact: narrower names and "used by", tighter gaps, the one-button actions column at 40px. Nothing dropped,
+   so every sort stays in the head. Images and volumes: 18+176+136+96+92+40 + 5×14 + 32 = 660px. */
+@container dtable (max-width: 833px) {
+  .images .headRow, .images .row { grid-template-columns: 18px minmax(176px, 2.3fr) minmax(136px, 1.5fr) 96px 92px 40px; gap: 14px; }
+  .images .numCell small { white-space: normal; }
+}
+@container dtable (max-width: 805px) {
+  .volumes .headRow, .volumes .row { grid-template-columns: 18px minmax(176px, 2.2fr) minmax(136px, 1.6fr) 96px 92px 40px; gap: 14px; }
+}
+/* Networks: 180+140+150+40 + 3×14 + 32 = 584px. */
+@container dtable (max-width: 713px) {
+  .networks .headRow, .networks .row { grid-template-columns: minmax(180px, 2fr) minmax(140px, 1.2fr) minmax(150px, 1.8fr) 40px; gap: 14px; }
+}
 
 .headRow {
   height: 38px;
@@ -134,7 +155,7 @@
 
 .numCell { text-align: right; font-variant-numeric: tabular-nums; font-size: var(--text-md); white-space: nowrap; }
 .numCell small { display: block; font-size: var(--text-xs); color: var(--muted); margin-top: 1px; }
-.dateCell { text-align: right; font-size: var(--text-sm); color: var(--ink-2); white-space: nowrap; }
+.dateCell { text-align: right; font-size: var(--text-sm); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .faint { color: var(--muted); }
 .actions { display: flex; justify-content: flex-end; gap: 2px; }
 
@@ -167,8 +188,10 @@
 .detailActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .detailNote { margin-top: 14px; }
 
-@media (max-width: 980px) {
-  .headRow { display: none; }
+/* Phones and narrow panes: stacked rows. Images and volumes restack under 660px, which (with the sidebar
+   open) is a viewport under ~980px, where the toolbar's sort menu takes over from the head. */
+@container dtable (max-width: 659px) {
+  .images .headRow, .volumes .headRow { display: none; }
   .images .row, .volumes .row {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     grid-template-areas: "check name name actions" ". use use use" ". size date date";
@@ -177,23 +200,32 @@
   }
   .images .check:not(:empty), .volumes .check:not(:empty) { margin-right: 12px; }
   .images .row > .dateCell, .volumes .row > .dateCell { padding-left: 12px; }
+  .images .check, .volumes .check { grid-area: check; align-self: start; margin-top: 13px; }
+  .images .nameCell, .volumes .nameCell { grid-area: name; padding: 0; align-self: center; }
+  .images .useCol, .volumes .useCol { grid-area: use; }
+  .images .row > .numCell, .volumes .row > .numCell { grid-area: size; text-align: left; }
+  .images .row > .dateCell, .volumes .row > .dateCell { grid-area: date; text-align: right; }
+  .images .actions, .volumes .actions { grid-area: actions; align-self: start; }
+  .images .numCell small, .volumes .numCell small { display: inline; margin: 0 0 0 6px; white-space: nowrap; }
+  .images .detail, .volumes .detail { padding: 4px 14px 16px 14px; }
+  .images .detailGrid, .volumes .detailGrid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .images .useCol, .volumes .useCol, .images .row > .numCell, .volumes .row > .numCell { padding-left: 0; }
+}
+/* Networks restack under 584px. */
+@container dtable (max-width: 583px) {
+  .networks .headRow { display: none; }
   .networks .row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: "name actions" "subnet subnet" "use use";
     gap: 6px 12px;
     padding: 12px 10px 14px 16px;
   }
-  .check { grid-area: check; align-self: start; margin-top: 13px; }
-  .nameCell { grid-area: name; padding: 0; align-self: center; }
-  .useCol { grid-area: use; }
-  .row > .numCell { grid-area: size; text-align: left; }
-  .row > .dateCell { grid-area: date; text-align: right; }
+  .networks .nameCell { grid-area: name; padding: 0; align-self: center; }
+  .networks .useCol { grid-area: use; }
   .networks .row > .subnetCell { grid-area: subnet; }
-  .actions { grid-area: actions; align-self: start; }
-  .numCell small { display: inline; margin: 0 0 0 6px; }
-  .detail, .networks .detail { padding: 4px 14px 16px 14px; }
-  .detailGrid { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .images .useCol, .volumes .useCol, .images .row > .numCell, .volumes .row > .numCell { padding-left: 0; }
+  .networks .actions { grid-area: actions; align-self: start; }
+  .networks .detail { padding: 4px 14px 16px 14px; }
+  .networks .detailGrid { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 @media (max-width: 720px) {
   .row { min-height: 48px; }
@@ -307,7 +339,8 @@
 .fsLine { font-size: var(--text-sm); color: var(--muted); }
 .fsLine .mono { color: var(--ink-2); }
 .meter { margin-top: 16px; }
-.kinds { margin: 0; padding: 0; list-style: none; }
+/* Disk use rows, sized by the list's own width. Full: 180 + figures + ~170 button + 2×24 + 36 ≈ 500px min. */
+.kinds { margin: 0; padding: 0; list-style: none; container: kinds / inline-size; }
 .kind { display: grid; grid-template-columns: minmax(180px, 1.3fr) minmax(0, 2fr) auto; align-items: center; gap: 12px 24px; padding: 16px 18px; border-top: 1px solid var(--line); }
 .kind:first-child { border-top: 0; }
 .kindName { display: grid; gap: 2px; min-width: 0; }
@@ -322,8 +355,16 @@
 .kindTrack > span { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 3px; background: var(--ink-2); }
 .kindTrack > span[data-free] { background: repeating-linear-gradient(90deg, var(--ink-2) 0 3px, transparent 3px 5px); opacity: 0.55; }
 .kindAction { display: flex; justify-content: flex-end; }
-@media (max-width: 760px) {
-  .kind { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px 16px; }
+/* The button moves up beside the name and the figures take the full second line. */
+@container kinds (max-width: 639px) {
+  .kind { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name action" "figures figures"; gap: 10px 16px; padding: 14px 16px; }
+  .kindName { grid-area: name; }
+  .kindFigures { grid-area: figures; }
+  .kindAction { grid-area: action; }
+}
+/* Phones: everything stacked. */
+@container kinds (max-width: 419px) {
+  .kind { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "figures" "action"; }
   .kindAction { justify-content: flex-start; }
 }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: var(--text-xs); color: var(--muted); }

@@ -4,6 +4,7 @@ import { publish } from "../events";
 import { conflict } from "../errors";
 import { getFinding, raise, resolve, type FindingInput } from "../findings";
 import { getApp, listApps, type AppSummary } from "../docker/apps";
+import { alertsHref } from "@/lib/settings-links";
 import { getMonitor, listMonitorRows, parseHostPort, type Monitor } from "./store";
 import { probeHttp, probeTcp, type ProbeResult } from "./probe";
 import { flips, lastCheck, recordCheck, trailingFailures, trailingSuccesses } from "./stats";
@@ -85,7 +86,7 @@ async function downFinding(m: Monitor, r: ProbeResult, since: number): Promise<F
   } else {
     title = `${m.name} is down`;
     cause = `${m.kind === "tcp" ? m.target : hostOf(m.target)} stopped answering (${r.error}).`;
-    remedy = { action: "", label: "See the check history", href: `/alerts?tab=monitors&monitor=${encodeURIComponent(m.id)}` };
+    remedy = { action: "", label: "See the check history", href: alertsHref("watching", { monitor: m.id }) };
   }
   return {
     id: downId(m.id),
@@ -128,7 +129,7 @@ async function evaluate(m: Monitor, r: ProbeResult, at: number) {
       title: `${m.name} keeps dropping out`,
       cause: "It has gone down and come back several times in the last hour. That usually means it's overloaded, restarting, or the network is unreliable.",
       detail: { monitorId: m.id, target: m.target },
-      remedy: { action: "", label: "See the check history", href: `/alerts?tab=monitors&monitor=${encodeURIComponent(m.id)}` },
+      remedy: { action: "", label: "See the check history", href: alertsHref("watching", { monitor: m.id }) },
     });
   } else if (flipCount <= 1) {
     resolve(flapId(m.id));

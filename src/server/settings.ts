@@ -2,6 +2,7 @@ import "server-only";
 import os from "node:os";
 import { z } from "zod";
 import { one, run } from "./db";
+import { normalizeChannel } from "@/lib/updates-types";
 
 /** Server-wide settings (admin). Each key has a schema and a default so reads never fail. */
 const schemas = {
@@ -34,15 +35,19 @@ const schemas = {
   /** Which home server OS Gluon works alongside: where apps are installed, updated and removed. */
   platform: z.enum(["auto", "umbrel", "casaos", "none"]).default("auto"),
   setupDone: z.boolean().default(false),
-  /** Settings → Updates: automatic updates and where they come from. */
+  /**
+   * Settings → Updates: the channel (Stable = tagged releases, Nightly = every commit on main), and
+   * automatic updates. Older copies stored the channel as "releases" / "main"; those still read.
+   */
   updates: z
     .object({
       auto: z.boolean(),
-      channel: z.enum(["releases", "main"]),
+      channel: z.preprocess(normalizeChannel, z.enum(["stable", "nightly"])),
       hour: z.number().int().min(0).max(23),
       method: z.enum(["github", "umbrel", "casaos"]),
+      nightlyTiming: z.enum(["asap", "hour"]).default("hour"),
     })
-    .default({ auto: false, channel: "releases", hour: 4, method: "github" }),
+    .default({ auto: false, channel: "stable", hour: 4, method: "github", nightlyTiming: "hour" }),
 } as const;
 
 export type SettingKey = keyof typeof schemas;

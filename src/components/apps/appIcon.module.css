@@ -9,11 +9,27 @@
 }
 .frame { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line); padding: calc(var(--size) * 0.12); }
 .frame img { width: 100%; height: 100%; object-fit: contain; }
+/* No icon: the initials, cut like a nameplate, inside a second hairline frame. */
 .tile {
-  background: var(--sunk);
-  box-shadow: inset 0 0 0 1px var(--line);
-  color: var(--ink-2);
-  font-weight: 650;
-  font-family: var(--font-display); font-stretch: 80%;
-  font-size: calc(var(--size) * 0.46);
+  position: relative;
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink);
+  font-weight: 560;
+  font-family: var(--font-display); font-stretch: 78%;
+  font-size: calc(var(--size) * 0.44);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums;
 }
+.tile[data-n="1"] { font-size: calc(var(--size) * 0.5); }
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: max(3px, calc(var(--size) * 0.09));
+  border: 1px solid var(--line);
+  border-radius: calc(var(--size) * 0.14);
+  pointer-events: none;
+}
+.tile[data-small]::after { display: none; }
+.tile[data-small] { font-size: calc(var(--size) * 0.5); }

@@ -59,6 +59,17 @@ export function RemedyButton({ remedy, findingId, variant = "secondary", onDone 
   );
 }
 
+/** Hours from now until 8 in the morning tomorrow (a "not now, first thing tomorrow" snooze). */
+export function hoursUntilMorning(): number {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(8, 0, 0, 0);
+  return Math.max(1, Math.round((d.getTime() - Date.now()) / 3_600_000));
+}
+
+/** How long a fixed item waits, settled, for the next check to confirm it before it asks again. */
+const CONFIRM_MS = 60_000;
+
 const SETTLE_MS = 250;
 const LEAVE_MS = 220;
 
@@ -120,17 +131,57 @@ function useFlip(list: React.RefObject<HTMLUListElement | null>, key: string) {
   }, [list, key]);
 }
 
-export function NeedsYou({ findings, onChange, checkedAt }: { findings: Finding[]; onChange: () => void; checkedAt: number }) {
+/**
+ * What needs the person now, worst first, each with its remedy and a way to put it off. `foot`
+ * replaces the link under the list (Status itself passes null; other pages link to Status).
+ */
+export function NeedsYou({
+  findings,
+  onChange,
+  checkedAt,
+  foot = <Link href="/status">Everything that needs you, on Status</Link>,
+}: {
+  findings: Finding[];
+  onChange: () => void;
+  checkedAt: number;
+  foot?: React.ReactNode;
+}) {
   const hiddenByMe = React.useRef(new Set<string>());
   const listRef = React.useRef<HTMLUListElement>(null);
   const rows = useLeaving(findings, hiddenByMe);
   useFlip(listRef, rows.map((r) => r.f.id + (r.leaving ? "~" : "")).join(","));
 
-  async function op(f: Finding, body: Record<string, unknown>, message: string) {
+  /** Fixed with their remedy: the doubled line settles while Gluon confirms on its next check. */
+  const [settled, setSettled] = React.useState<ReadonlySet<string>>(() => new Set());
+  const timers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  React.useEffect(() => {
+    const t = timers.current;
+    return () => t.forEach(clearTimeout);
+  }, []);
+  const settle = (id: string) => {
+    setSettled((cur) => new Set(cur).add(id));
+    onChange();
+    clearTimeout(timers.current.get(id));
+    timers.current.set(
+      id,
+      setTimeout(() => {
+        timers.current.delete(id);
+        setSettled((cur) => {
+          const n = new Set(cur);
+          n.delete(id);
+          return n;
+        });
+        onChange();
+      }, CONFIRM_MS),
+    );
+  };
+
+  async function op(f: Finding, body: Record<string, unknown>, message: string, description?: string) {
     hiddenByMe.current.add(f.id);
     try {
       await api.post(`/api/findings/${encodeURIComponent(f.id)}`, body);
       toast.info(message, {
+        description,
         action:
           body.op !== "restore"
             ? {
@@ -156,49 +207,78 @@ export function NeedsYou({ findings, onChange, checkedAt }: { findings: Finding[
 
   return (
     <ul className={s.needs} role="list" ref={listRef}>
-      {rows.map(({ f, leaving }) => (
-        <li
-          key={f.id}
-          className={s.need}
-          id={f.id}
-          data-id={f.id}
-          data-severity={f.severity}
-          data-resolved={leaving?.resolved ? "" : undefined}
-          data-leaving={leaving ? "" : undefined}
-          aria-hidden={leaving ? true : undefined}
-        >
-          <span className={s.needMark} role="img" aria-label={leaving?.resolved ? "Fixed" : f.severity === "fault" ? "Broken" : "Needs you"} />
-          <div className={s.needText}>
-            <p className={s.needTitle}>{f.title}</p>
-            {f.cause && <p className={s.needCause}>{f.cause}</p>}
-            <p className={s.needMeta}>
-              {f.subject && !/^(?=.*[A-Z])[A-Za-z0-9_-]{12}$/.test(f.subject) && <span className="mono">{f.subject}</span>}
-              <span>
-                First noticed <Time ts={f.firstSeen} />
-              </span>
-            </p>
-          </div>
-          <div className={s.needActions}>
-            {f.remedy && <RemedyButton remedy={f.remedy} findingId={f.id} onDone={onChange} />}
-            <Menu
-              trigger={
-                <IconButton label={`More options for “${f.title}”`} size="sm">
-                  <MoreHoriz />
-                </IconButton>
-              }
-              items={[
-                { label: "Remind me tomorrow", onSelect: () => void op(f, { op: "snooze", hours: 24 }, "Snoozed until tomorrow") },
-                { label: "Remind me next week", onSelect: () => void op(f, { op: "snooze", hours: 24 * 7 }, "Snoozed for a week") },
-                "separator",
-                { label: "This isn't a problem", description: "Hide it until it changes", onSelect: () => void op(f, { op: "dismiss" }, "Hidden") },
-              ]}
+      {rows.map(({ f, leaving }) => {
+        const done = settled.has(f.id);
+        const back = "It comes back then if it's still true.";
+        return (
+          <li
+            key={f.id}
+            className={s.need}
+            id={f.id}
+            data-id={f.id}
+            data-severity={f.severity}
+            data-settled={done && !leaving ? "" : undefined}
+            data-resolved={leaving?.resolved ? "" : undefined}
+            data-leaving={leaving ? "" : undefined}
+            aria-hidden={leaving ? true : undefined}
+          >
+            <span
+              className={s.needMark}
+              role="img"
+              aria-label={leaving?.resolved ? "Fixed" : done ? "Fixed, waiting to confirm" : f.severity === "fault" ? "Broken" : "Needs you"}
             />
-          </div>
+            <div className={s.needText}>
+              <p className={s.needTitle}>{f.title}</p>
+              {f.cause && <p className={s.needCause}>{f.cause}</p>}
+              <p className={s.needMeta}>
+                {done ? (
+                  <span className={s.needSettled}>Done. Gluon confirms it on its next check.</span>
+                ) : (
+                  <>
+                    {f.subject && !/^(?=.*[A-Z])[A-Za-z0-9_-]{12}$/.test(f.subject) && (
+                      <span className="mono truncate" title={f.subject}>
+                        {f.subject}
+                      </span>
+                    )}
+                    <span>
+                      First noticed <Time ts={f.firstSeen} />
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
+            {!done && (
+              <div className={s.needActions}>
+                {f.remedy && <RemedyButton remedy={f.remedy} findingId={f.id} onDone={() => settle(f.id)} />}
+                <Menu
+                  trigger={
+                    <IconButton label={`Snooze or hide “${f.title}”`} size="sm">
+                      <MoreHoriz />
+                    </IconButton>
+                  }
+                  items={[
+                    { kind: "label", label: "Snooze" },
+                    { label: "For an hour", description: "Hidden, and its alerts held", onSelect: () => void op(f, { op: "snooze", hours: 1 }, "Snoozed for an hour", back) },
+                    { label: "Until tomorrow morning", onSelect: () => void op(f, { op: "snooze", hours: hoursUntilMorning() }, "Snoozed until tomorrow morning", back) },
+                    { label: "For a week", onSelect: () => void op(f, { op: "snooze", hours: 24 * 7 }, "Snoozed for a week", back) },
+                    "separator",
+                    {
+                      label: "This isn't a problem",
+                      description: "Hidden until it clears. If it happens again, it's back.",
+                      onSelect: () => void op(f, { op: "dismiss" }, "Marked as not a problem", "If it clears and happens again, it's back on the list."),
+                    },
+                  ]}
+                />
+              </div>
+            )}
+          </li>
+        );
+      })}
+      {foot && (
+        <li className={s.needsFoot} data-id="__foot">
+          {foot}
         </li>
-      ))}
-      <li className={s.needsFoot} data-id="__foot">
-        <Link href="/alerts">All alerts and history</Link>
-      </li>
+      )}
     </ul>
   );
 }

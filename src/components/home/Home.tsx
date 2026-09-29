@@ -15,25 +15,27 @@ import {
   type Announcements,
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
-import { EditPencil, Plus, DragHandGesture, Settings, Trash, Check, MoreHoriz, ArrowLeft, ArrowRight } from "iconoir-react";
-import { SIZES, widgetId, type HomeLayout, type Size, type WidgetItem } from "@/lib/home";
+import { Check, DragHandGesture, MoreHoriz, ArrowLeft, ArrowRight, Settings, PinSlash, Pin, OpenNewWindow, Copy, ViewGrid } from "iconoir-react";
+import { SIZES, ALL_APPS, appInsertIndex, appItem, insertIndex, widgetId, type HomeLayout, type Size, type WidgetItem } from "@/lib/home";
 import { api } from "@/lib/client/api";
+import { copyText } from "@/lib/client/clipboard";
 import { usePrefs } from "@/components/PrefsProvider";
 import { Button, IconButton } from "@/components/ui/Button";
-import { Menu, type MenuEntry } from "@/components/ui/Menu";
+import { ContextMenu, Menu, type MenuEntry } from "@/components/ui/Menu";
 import { Dialog, useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { allWidgets, widgetDef } from "./registry";
-import { Catalog } from "./Catalog";
-import { StartSearch } from "./StartSearch";
-import { Greeting } from "./Greeting";
+import { Collection } from "./Collection";
 import { AppsHint } from "./AppsHint";
-import { Onboarding } from "./Onboarding";
+import { HOME_KEY, useHomeLayout, type HomeData } from "./pinned";
+import { HomeContext, type CollectionSection } from "./context";
+import type { WidgetDef } from "./types";
 import { prefersReducedMotion } from "@/lib/client/motion";
+import { mutate as mutateGlobal } from "swr";
 import s from "./home.module.css";
 
 interface Props {
-  initial: { layout: HomeLayout; personal: boolean };
+  initial: HomeData;
 }
 
 /*
@@ -90,25 +92,51 @@ function useFlip(container: React.RefObject<HTMLElement | null>, key: string) {
   return capture;
 }
 
+/** What a thing on Home is called in menus and announcements: its title, its label (an app's name), or its kind. */
+function nameFor(it: WidgetItem, d: WidgetDef | undefined): string {
+  if (!d) return "this";
+  return d.title?.(it.config as never) ?? d.label?.(it.config as never) ?? d.name;
+}
+
+const sizeLabel = (d: WidgetDef, z: Size) => d.sizeLabels?.[z] ?? SIZES[z].label;
+
+/** Good first things to pin, by role, for an empty Home. */
+const STARTERS: Record<"admin" | "member", { type: string; why: string }[]> = {
+  admin: [
+    { type: "status", why: "One sentence about the server" },
+    { type: "vitals", why: "Live processor and memory" },
+    { type: "household.internet", why: "Is it the internet or the server?" },
+    { type: "server.space", why: "Which disk fills up first" },
+  ],
+  member: [
+    { type: "search", why: "Jump to an app or search the web" },
+    { type: "clock", why: "The time and date" },
+    { type: "household.internet", why: "Is it the internet or the server?" },
+    { type: "weather", why: "Now and the next hours, where you are" },
+  ],
+};
+
 export function Home({ initial }: Props) {
   const router = useRouter();
   const params = useSearchParams();
   const { viewer, prefs } = usePrefs();
-  const [layout, setLayout] = React.useState(initial.layout);
-  const [personal, setPersonal] = React.useState(initial.personal);
-  const [editing, setEditing] = React.useState(params.get("edit") === "1");
+  const admin = viewer.role === "admin";
+  const { data } = useHomeLayout(initial);
+  const layout = data?.layout ?? initial.layout;
+  const personal = data?.personal ?? initial.personal;
+  const [arranging, setArranging] = React.useState(params.get("edit") === "1");
   const [activeId, setActiveId] = React.useState<string | null>(null);
-  // The widget just added from the catalog fades up once; everything else mounts still.
+  // The thing just pinned fades up once; everything else mounts still.
   const [freshId, setFreshId] = React.useState<string | null>(null);
-  // The edit bar stays mounted for one beat after Done so it can leave by the edge it came from.
-  const [barMounted, setBarMounted] = React.useState(editing);
-  if (editing && !barMounted) setBarMounted(true);
+  // The arrange bar stays mounted for one beat after Done so it can leave by the edge it came from.
+  const [barMounted, setBarMounted] = React.useState(arranging);
+  if (arranging && !barMounted) setBarMounted(true);
   React.useEffect(() => {
-    if (editing) return;
+    if (arranging) return;
     const t = setTimeout(() => setBarMounted(false), 220);
     return () => clearTimeout(t);
-  }, [editing]);
-  const [catalogOpen, setCatalogOpen] = React.useState(false);
+  }, [arranging]);
+  const [collection, setCollection] = React.useState<CollectionSection | "top" | null>(null);
   const [settingsFor, setSettingsFor] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
   const [confirm, confirmNode] = useConfirm();
@@ -119,10 +147,11 @@ export function Home({ initial }: Props) {
   latest.current = layout;
   const enter = useEntrance();
 
-  const items = layout.items.filter((i) => {
+  const visible = React.useCallback((i: WidgetItem) => {
     const d = widgetDef(i.type);
-    return d && (!d.adminOnly || viewer.role === "admin");
-  });
+    return !!d && i.type !== ALL_APPS && (!d.adminOnly || admin);
+  }, [admin]);
+  const items = layout.items.filter(visible);
 
   // Leave ?edit=1 out of the URL once consumed.
   React.useEffect(() => {
@@ -134,14 +163,11 @@ export function Home({ initial }: Props) {
     setSaving("saving");
     const go = async () => {
       try {
-        await api.put("/api/me/home", { layout: next });
-        setPersonal(true);
+        await api.put(HOME_KEY, { layout: next });
         setSaving("saved");
       } catch (e) {
         setSaving("error");
-        toast.error("Couldn't save your home page", {
-          description: e instanceof Error ? e.message : undefined,
-        });
+        toast.error("Couldn't save your Home", { description: e instanceof Error ? e.message : undefined });
       }
     };
     if (immediate) void go();
@@ -152,7 +178,8 @@ export function Home({ initial }: Props) {
     (fn: (items: WidgetItem[]) => WidgetItem[], opts: { animate?: boolean; immediate?: boolean } = {}) => {
       if (opts.animate !== false) capture();
       const next = { ...latest.current, items: fn(latest.current.items) };
-      setLayout(next);
+      latest.current = next;
+      void mutateGlobal<HomeData>(HOME_KEY, { layout: next, personal: true }, { revalidate: false });
       persist(next, opts.immediate);
     },
     [capture, persist],
@@ -163,20 +190,15 @@ export function Home({ initial }: Props) {
     [change],
   );
 
-  // ---- drag and drop
+  // ---- drag and drop (arrange mode)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 8 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const nameOf = (id: string | number) => {
     const it = layout.items.find((i) => i.id === id);
-    const d = it ? widgetDef(it.type) : undefined;
-    return (d && it && (d.title?.(it.config as never) ?? d.label?.(it.config as never) ?? d.name)) || "widget";
+    return it ? nameFor(it, widgetDef(it.type)) : "item";
   };
   const announcements: Announcements = {
     onDragStart: ({ active }) => `Picked up ${nameOf(active.id)}. Use the arrow keys to move it, space to drop.`,
@@ -188,281 +210,303 @@ export function Home({ initial }: Props) {
   const onDragOver = (e: DragOverEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    change(
-      (its) => {
-        const from = its.findIndex((i) => i.id === active.id);
-        const to = its.findIndex((i) => i.id === over.id);
-        return from < 0 || to < 0 ? its : arrayMove(its, from, to);
-      },
-      { animate: true },
-    );
+    change((its) => {
+      const from = its.findIndex((i) => i.id === active.id);
+      const to = its.findIndex((i) => i.id === over.id);
+      return from < 0 || to < 0 ? its : arrayMove(its, from, to);
+    });
   };
   const onDragEnd = () => setActiveId(null);
 
-  // ---- actions
-  function addWidget(type: string, config?: Record<string, unknown>) {
+  // ---- pin and unpin
+  function pin(type: string, config?: Record<string, unknown>) {
     const d = widgetDef(type);
     if (!d) return;
-    const item: WidgetItem = {
-      id: widgetId(),
-      type,
-      size: d.defaultSize,
-      config: {
-        ...(structuredClone(d.defaultConfig) as Record<string, unknown>),
-        ...(config ?? {}),
-      },
-    };
-    change((its) => [item, ...its], { immediate: true });
+    const item: WidgetItem =
+      type === "app" && config?.appId
+        ? appItem({ id: String(config.appId), name: String(config.name ?? config.appId) }, d.defaultSize)
+        : { id: widgetId(), type, size: d.defaultSize, config: { ...(structuredClone(d.defaultConfig) as Record<string, unknown>), ...(config ?? {}) } };
+    if (latest.current.items.some((i) => i.id === item.id)) return;
+    if (latest.current.items.length >= 80) {
+      toast.error("Your Home is full", { description: "Unpin a few things first." });
+      return;
+    }
+    change((its) => {
+      const at = type === "app" ? appInsertIndex(its) : insertIndex(its);
+      return [...its.slice(0, at), item, ...its.slice(at)];
+    }, { immediate: true });
     setFreshId(item.id);
-    setCatalogOpen(false);
-    setEditing(true);
-    toast.success(d.perApp ? "Added an app tile" : `Added ${d.name}`, {
-      description: "It's at the top. Drag it wherever you like.",
+    // Things that are empty until set up (a link, a place) open their settings straight away.
+    if (d.setupOnPin && d.Settings) {
+      setCollection(null);
+      setSettingsFor(item.id);
+    }
+  }
+
+  function unpin(ids: string[]) {
+    const before = latest.current.items;
+    const gone = before.filter((i) => ids.includes(i.id));
+    if (!gone.length) return;
+    change((its) => its.filter((i) => !ids.includes(i.id)), { immediate: true });
+    const first = gone[0]!;
+    const what = gone.length === 1 ? nameFor(first, widgetDef(first.type)) : `${gone.length} items`;
+    toast.info(`Unpinned ${what}`, {
+      action: {
+        label: "Undo",
+        // Put each back where it was, relative to what's there now.
+        onClick: () =>
+          change((its) => {
+            const copy = [...its];
+            for (const g of gone) {
+              if (copy.some((i) => i.id === g.id)) continue;
+              copy.splice(Math.min(before.indexOf(g), copy.length), 0, g);
+            }
+            return copy;
+          }, { immediate: true }),
+      },
     });
-    requestAnimationFrame(() => document.querySelector(`[data-widget="${item.id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }));
   }
 
   function moveWidget(id: string, by: -1 | 1) {
     change((its) => {
-      const visible = its.filter((i) => items.some((x) => x.id === i.id));
-      const at = visible.findIndex((i) => i.id === id);
-      const other = visible[at + by];
+      const vis = its.filter(visible);
+      const at = vis.findIndex((i) => i.id === id);
+      const other = vis[at + by];
       if (at < 0 || !other) return its;
-      return arrayMove(
-        its,
-        its.findIndex((i) => i.id === id),
-        its.findIndex((i) => i.id === other.id),
-      );
+      return arrayMove(its, its.findIndex((i) => i.id === id), its.findIndex((i) => i.id === other.id));
     });
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-widget="${id}"] [data-handle]`)?.focus());
   }
 
-  function removeWidget(id: string) {
-    const index = latest.current.items.findIndex((i) => i.id === id);
-    const removed = latest.current.items[index];
-    if (!removed) return;
-    change((its) => its.filter((i) => i.id !== id), { immediate: true });
-    toast.info(`Removed ${widgetDef(removed.type)?.name ?? "widget"}`, {
-      action: {
-        label: "Undo",
-        onClick: () =>
-          change(
-            (its) => {
-              const copy = [...its];
-              copy.splice(Math.min(index, copy.length), 0, removed);
-              return copy;
-            },
-            { immediate: true },
-          ),
-      },
-    });
-  }
-
   async function resetToDefault() {
-    const r = await api.del<{ layout: HomeLayout; personal: boolean }>("/api/me/home");
+    const r = await api.del<HomeData>(HOME_KEY);
     capture();
-    setLayout(r.layout);
-    setPersonal(r.personal);
-    toast.success("Back to the default home page");
+    latest.current = r.layout;
+    await mutateGlobal<HomeData>(HOME_KEY, r, { revalidate: false });
+    toast.success("Back to the default Home");
   }
 
   async function saveAsHouseholdDefault() {
     await api.put("/api/home/default", { layout: latest.current });
-    toast.success("Saved as the household's default", {
-      description: "New members start with this. People who've customised theirs keep their own.",
-    });
+    toast.success("Saved as the household's default", { description: "New members start with this. People who've changed theirs keep their own." });
   }
 
+  const openCollection = React.useCallback((section?: CollectionSection) => setCollection(section ?? "top"), []);
+  const ctx = React.useMemo(() => ({ openCollection, arranging }), [openCollection, arranging]);
   const active = activeId ? layout.items.find((i) => i.id === activeId) : null;
   const settingsItem = settingsFor ? layout.items.find((i) => i.id === settingsFor) : null;
   const settingsDef = settingsItem ? widgetDef(settingsItem.type) : null;
+  const collectionWidgets = allWidgets().filter((w) => !w.adminOnly || admin);
 
   return (
-    <div className={s.page} data-width={prefs.homeWidth}>
-      <header className={s.head}>
-        <Greeting />
-        <div className={s.headActions}>
-          {!editing && (
-            <Button variant="ghost" icon={<EditPencil />} onClick={() => setEditing(true)}>
-              Customise
-            </Button>
-          )}
-        </div>
-      </header>
-      {prefs.onboarding === "pending" && !editing && <Onboarding />}
-      <StartSearch />
-      {viewer.role === "admin" && !editing && (
-        <AppsHint
-          items={layout.items}
-          onOpen={() => {
-            setEditing(true);
-            setCatalogOpen(true);
-          }}
-        />
-      )}
-
-      {(editing || barMounted) && (
-        <div
-          className={s.editBar}
-          role="region"
-          aria-label="Customising your home page"
-          data-motion-gentle=""
-          data-leaving={editing ? undefined : ""}
-          inert={!editing || undefined}
-        >
-          <span className={s.editText}>
-            Drag a widget by its name to move it. Pick a shape to resize it, or use <MoreHoriz className={s.inlineIcon} aria-label="More" /> to move or remove it.
-            <span className={s.saveState} aria-live="polite">
-              {saving === "saving" ? "Saving…" : saving === "saved" ? "Saved" : saving === "error" ? "Not saved" : ""}
-            </span>
-          </span>
-          <div className={s.editActions}>
-            <Button icon={<Plus />} onClick={() => setCatalogOpen(true)}>
-              Add widget
-            </Button>
-            <Menu
-              trigger={
-                <Button variant="ghost" iconEnd={<MoreHoriz />}>
-                  More
+    <HomeContext.Provider value={ctx}>
+      <div className={s.page} data-width={prefs.homeWidth}>
+        <header className={s.toolbar}>
+          <h1 className="sr-only">Home</h1>
+          {!arranging && (
+            <div className={s.toolbarActions}>
+              {items.length > 0 && (
+                <Button variant="ghost" icon={<ViewGrid />} onClick={() => setArranging(true)}>
+                  Arrange
                 </Button>
-              }
-              items={[
-                ...(viewer.role === "admin"
-                  ? [
-                      {
-                        label: "Make this the household default",
-                        description: "What new members start with",
-                        onSelect: () =>
-                          confirm({
-                            title: "Use this layout for the household?",
-                            consequences: [
-                              "New household members will start with this home page.",
-                              "People who've already customised theirs keep their own.",
-                              "Admin-only widgets are hidden from members automatically.",
-                            ],
-                            confirmLabel: "Make it the default",
-                            variant: "primary",
-                            onConfirm: saveAsHouseholdDefault,
-                          }),
-                      } as MenuEntry,
-                    ]
-                  : []),
-                {
-                  label: "Reset to the default",
-                  disabled: !personal,
-                  onSelect: () =>
-                    confirm({
-                      title: "Reset your home page?",
-                      consequences: ["Your widgets, links and notes on this page will be replaced with the default layout."],
-                      confirmLabel: "Reset",
-                      onConfirm: resetToDefault,
-                    }),
-                },
-              ]}
-            />
-            <Button variant="primary" icon={<Check />} onClick={() => setEditing(false)}>
-              Done
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {items.length === 0 ? (
-        <div className={s.emptyHome}>
-          <p className={s.emptyTitle}>Your home page is empty</p>
-          <p className={s.emptyBody}>Add the things you check every day: your apps, the weather, what's playing, notes.</p>
-          <Button
-            variant="primary"
-            icon={<Plus />}
-            onClick={() => {
-              setEditing(true);
-              setCatalogOpen(true);
-            }}
-          >
-            Add a widget
-          </Button>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={onDragStart}
-          onDragOver={onDragOver}
-          onDragEnd={onDragEnd}
-          onDragCancel={onDragEnd}
-          accessibility={{ announcements }}
-        >
-          <SortableContext items={items.map((i) => i.id)} strategy={() => null}>
-            <div className={s.grid} ref={gridRef} data-editing={editing ? "" : undefined} data-enter={enter ? "" : undefined}>
-              {items.map((item, index) => (
-                <SortableWidget
-                  key={item.id}
-                  index={index}
-                  first={index === 0}
-                  last={index === items.length - 1}
-                  onMove={(by) => moveWidget(item.id, by)}
-                  fresh={freshId === item.id}
-                  item={item}
-                  editing={editing}
-                  dragging={activeId === item.id}
-                  onResize={(size) => change((its) => its.map((i) => (i.id === item.id ? { ...i, size } : i)))}
-                  onRemove={() => removeWidget(item.id)}
-                  onSettings={() => setSettingsFor(item.id)}
-                  update={(patch) => updateConfig(item.id, patch)}
-                />
-              ))}
+              )}
+              <Button icon={<Pin />} onClick={() => openCollection()}>
+                Collection
+              </Button>
             </div>
-          </SortableContext>
-          <DragOverlay
-            dropAnimation={{
-              duration: 200,
-              easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-            }}
+          )}
+        </header>
+
+        {admin && !arranging && items.length > 0 && <AppsHint items={layout.items} onOpen={() => openCollection("from-apps")} />}
+
+        {(arranging || barMounted) && (
+          <div className={s.editBar} role="region" aria-label="Arranging your Home" data-motion-gentle="" data-leaving={arranging ? undefined : ""} inert={!arranging || undefined}>
+            <span className={s.editText}>
+              Drag anything by its name to move it. Pick a shape to resize it, or use <MoreHoriz className={s.inlineIcon} aria-label="More" /> to move or unpin it.
+              <span className={s.saveState} aria-live="polite">
+                {saving === "saving" ? "Saving…" : saving === "saved" ? "Saved" : saving === "error" ? "Not saved" : ""}
+              </span>
+            </span>
+            <div className={s.editActions}>
+              <Button icon={<Pin />} onClick={() => openCollection()}>
+                Collection
+              </Button>
+              <Menu
+                trigger={
+                  <Button variant="ghost" iconEnd={<MoreHoriz />}>
+                    More
+                  </Button>
+                }
+                items={[
+                  ...(admin
+                    ? [
+                        {
+                          label: "Make this the household default",
+                          description: "What new members start with",
+                          onSelect: () =>
+                            confirm({
+                              title: "Use this Home for the household?",
+                              consequences: [
+                                "New household members start with this Home.",
+                                "People who've already changed theirs keep their own.",
+                                "Admin-only widgets are hidden from members, and so are apps that aren't shared with them.",
+                              ],
+                              confirmLabel: "Make it the default",
+                              variant: "primary",
+                              onConfirm: saveAsHouseholdDefault,
+                            }),
+                        } as MenuEntry,
+                      ]
+                    : []),
+                  {
+                    label: "Reset to the default",
+                    disabled: !personal,
+                    onSelect: () =>
+                      confirm({
+                        title: "Reset your Home?",
+                        consequences: ["Everything you pinned, and your notes and links on Home, are replaced with the default."],
+                        confirmLabel: "Reset",
+                        onConfirm: resetToDefault,
+                      }),
+                  },
+                ]}
+              />
+              <Button variant="primary" icon={<Check />} onClick={() => setArranging(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {items.length === 0 ? (
+          <EmptyHome role={admin ? "admin" : "member"} onPin={pin} onOpen={() => openCollection()} />
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            onDragCancel={onDragEnd}
+            accessibility={{ announcements }}
           >
-            {active ? <WidgetFrame item={active} editing overlay /> : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+            <SortableContext items={items.map((i) => i.id)} strategy={() => null}>
+              <div className={s.grid} ref={gridRef} data-editing={arranging ? "" : undefined} data-enter={enter ? "" : undefined}>
+                {items.map((item, index) => (
+                  <SortableWidget
+                    key={item.id}
+                    index={index}
+                    first={index === 0}
+                    last={index === items.length - 1}
+                    onMove={(by) => moveWidget(item.id, by)}
+                    fresh={freshId === item.id}
+                    item={item}
+                    editing={arranging}
+                    dragging={activeId === item.id}
+                    onResize={(size) => change((its) => its.map((i) => (i.id === item.id ? { ...i, size } : i)))}
+                    onUnpin={() => unpin([item.id])}
+                    onSettings={() => setSettingsFor(item.id)}
+                    update={(patch) => updateConfig(item.id, patch)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+            <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }}>{active ? <WidgetFrame item={active} editing overlay /> : null}</DragOverlay>
+          </DndContext>
+        )}
 
-      <Catalog
-        open={catalogOpen}
-        onOpenChange={setCatalogOpen}
-        onAdd={addWidget}
-        widgets={allWidgets().filter((w) => !w.adminOnly || viewer.role === "admin")}
-        existing={layout.items}
-      />
-
-      {settingsItem && settingsDef?.Settings && (
-        <WidgetSettingsDialog
-          item={settingsItem}
-          onClose={() => setSettingsFor(null)}
-          onSave={(config) => {
-            change((its) => its.map((i) => (i.id === settingsItem.id ? { ...i, config } : i)), { animate: false, immediate: true });
-            setSettingsFor(null);
-          }}
+        <Collection
+          open={collection !== null}
+          onOpenChange={(o) => !o && setCollection(null)}
+          section={collection === "top" ? null : collection}
+          widgets={collectionWidgets}
+          items={layout.items}
+          onPin={pin}
+          onUnpin={unpin}
         />
+
+        {settingsItem && settingsDef?.Settings && (
+          <WidgetSettingsDialog
+            item={settingsItem}
+            onClose={() => setSettingsFor(null)}
+            onSave={(config) => {
+              change((its) => its.map((i) => (i.id === settingsItem.id ? { ...i, config } : i)), { animate: false, immediate: true });
+              setSettingsFor(null);
+            }}
+          />
+        )}
+        {confirmNode}
+      </div>
+    </HomeContext.Provider>
+  );
+}
+
+/** Nothing pinned at all: a calm first screen that points at the Collection, with a few good starters. */
+function EmptyHome({ role, onPin, onOpen }: { role: "admin" | "member"; onPin: (type: string) => void; onOpen: () => void }) {
+  const starters = STARTERS[role].map((x) => ({ ...x, def: widgetDef(x.type) })).filter((x): x is typeof x & { def: WidgetDef } => !!x.def);
+  return (
+    <section className={s.emptyHome} aria-labelledby="empty-home-title">
+      <h2 id="empty-home-title" className={s.emptyTitle}>
+        Nothing is pinned to your Home
+      </h2>
+      <p className={s.emptyBody}>Everything here is something you pin: your apps, folders, the weather, notes. The Collection has all of it.</p>
+      <Button variant="primary" icon={<Pin />} onClick={onOpen}>
+        Open the Collection
+      </Button>
+      {starters.length > 0 && (
+        <div className={s.starters}>
+          <p className="label">Or start with</p>
+          <ul role="list">
+            {starters.map(({ type, why, def }) => (
+              <li key={type} className={s.starter}>
+                <span className={s.starterPreview} aria-hidden>
+                  {def.preview}
+                </span>
+                <span className={s.starterText}>
+                  <b>{def.name}</b>
+                  <span>{why}</span>
+                </span>
+                <Button size="sm" icon={<Pin />} onClick={() => onPin(type)} aria-label={`Pin ${def.name}`}>
+                  Pin
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-      {confirmNode}
-    </div>
+    </section>
   );
 }
 
 function WidgetSettingsDialog({ item, onClose, onSave }: { item: WidgetItem; onClose: () => void; onSave: (c: Record<string, unknown>) => void }) {
   const def = widgetDef(item.type)!;
   const [config, setConfig] = React.useState(item.config);
+  const [busy, setBusy] = React.useState(false);
   const S = def.Settings!;
+  // Some widgets keep their settings on the server (the guest network): save those first, then the layout.
+  const save = async () => {
+    if (!def.beforeSave) return onSave(config);
+    setBusy(true);
+    try {
+      onSave(await def.beforeSave(config));
+    } catch (e) {
+      toast.error("Couldn't save these settings", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <Dialog
       open
       onOpenChange={(o) => !o && onClose()}
-      title={`${def.name} settings`}
+      title={`${nameFor(item, def)} settings`}
       size="wide"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={() => onSave(config)}>
+          <Button variant="primary" loading={busy} onClick={() => void save()}>
             Save
           </Button>
         </>
@@ -483,32 +527,14 @@ interface SortableProps {
   editing: boolean;
   dragging: boolean;
   onResize: (s: Size) => void;
-  onRemove: () => void;
+  onUnpin: () => void;
   onSettings: () => void;
   update: (patch: Record<string, unknown>) => void;
 }
 
-function SortableWidget({ item, fresh, index, first, last, onMove, editing, dragging, onResize, onRemove, onSettings, update }: SortableProps) {
-  const { setNodeRef, attributes, listeners, setActivatorNodeRef } = useSortable({ id: item.id, disabled: !editing });
-  return (
-    <WidgetFrame
-      item={item}
-      fresh={fresh}
-      index={index}
-      first={first}
-      last={last}
-      onMove={onMove}
-      editing={editing}
-      dragging={dragging}
-      nodeRef={setNodeRef}
-      handleRef={setActivatorNodeRef}
-      handleProps={{ ...attributes, ...listeners }}
-      onResize={onResize}
-      onRemove={onRemove}
-      onSettings={onSettings}
-      update={update}
-    />
-  );
+function SortableWidget(props: SortableProps) {
+  const { setNodeRef, attributes, listeners, setActivatorNodeRef } = useSortable({ id: props.item.id, disabled: !props.editing });
+  return <WidgetFrame {...props} nodeRef={setNodeRef} handleRef={setActivatorNodeRef} handleProps={{ ...attributes, ...listeners }} />;
 }
 
 interface FrameProps {
@@ -525,12 +551,12 @@ interface FrameProps {
   handleRef?: (el: HTMLElement | null) => void;
   handleProps?: Record<string, unknown>;
   onResize?: (s: Size) => void;
-  onRemove?: () => void;
+  onUnpin?: () => void;
   onSettings?: () => void;
   update?: (patch: Record<string, unknown>) => void;
 }
 
-/** A widget size drawn as its own shape, so resizing reads as picking an outline. */
+/** A size drawn as its own shape, so resizing reads as picking an outline. */
 function SizeGlyph({ size }: { size: Size }) {
   const { cols, rows } = SIZES[size];
   const w = cols * 2 + 2;
@@ -541,6 +567,15 @@ function SizeGlyph({ size }: { size: Size }) {
     </svg>
   );
 }
+
+/** What right-click / long-press did land on: a link inside the item gets its own two entries. */
+function linkUnder(target: EventTarget | null): string | null {
+  const a = target instanceof Element ? target.closest<HTMLAnchorElement>("a[href]") : null;
+  if (!a) return null;
+  const href = a.getAttribute("href");
+  return href && href !== "#" ? a.href : null;
+}
+const nativeMenu = (target: EventTarget | null) => target instanceof Element && !!target.closest("input, textarea, select, [contenteditable='true']");
 
 const WidgetFrame = React.memo(function WidgetFrame({
   item,
@@ -556,17 +591,56 @@ const WidgetFrame = React.memo(function WidgetFrame({
   handleRef,
   handleProps,
   onResize,
-  onRemove,
+  onUnpin,
   onSettings,
   update,
 }: FrameProps) {
+  const [link, setLink] = React.useState<string | null>(null);
   const def = widgetDef(item.type);
   if (!def) return null;
   const title = def.title?.(item.config as never) ?? null;
   const C = def.Component;
-  const size = SIZES[item.size];
+  const size = SIZES[item.size] ?? SIZES[def.defaultSize];
   const showTitle = !!title && !editing;
-  const label = title ?? def.label?.(item.config as never) ?? def.name;
+  const label = nameFor(item, def);
+  const sizeItems = def.sizes.map((sz) => ({ kind: "check" as const, label: sizeLabel(def, sz), checked: item.size === sz, onChange: () => onResize?.(sz) }));
+  const extra = def.menu && update ? def.menu(item.config as never, update as never) : [];
+
+  // The in-place menu (hover/focus button, right-click, long-press): pin-level things only, no arrange mode needed.
+  const baseMenu: MenuEntry[] = [
+    ...(def.sizes.length > 1 ? ([{ kind: "sub", label: `Size: ${sizeLabel(def, item.size)}`, items: sizeItems }] as MenuEntry[]) : []),
+    ...extra,
+    ...(def.Settings ? ([{ label: "Settings…", icon: <Settings />, onSelect: () => onSettings?.() }] as MenuEntry[]) : []),
+    ...(def.sizes.length > 1 || extra.length || def.Settings ? (["separator"] as MenuEntry[]) : []),
+    { label: `Unpin ${label}`, icon: <PinSlash />, onSelect: () => onUnpin?.() },
+  ];
+  // Right-clicking a link inside keeps the two things the browser's own menu would have offered.
+  const contextMenu: MenuEntry[] = link
+    ? [
+        { label: "Open in a new tab", icon: <OpenNewWindow />, onSelect: () => window.open(link, "_blank", "noopener") },
+        { label: "Copy address", icon: <Copy />, onSelect: () => void copyText(link).then((ok) => (ok ? toast.success("Copied the address") : toast.error("Couldn't copy it"))) },
+        "separator",
+        ...baseMenu,
+      ]
+    : baseMenu;
+
+  const body = (
+    <div
+      className={s.body}
+      inert={editing || undefined}
+      onContextMenuCapture={(e) => {
+        if (nativeMenu(e.target)) e.stopPropagation();
+        else setLink(linkUnder(e.target));
+      }}
+      onTouchStartCapture={(e) => {
+        if (nativeMenu(e.target)) e.stopPropagation();
+        else setLink(null);
+      }}
+    >
+      <C item={item} size={item.size} editing={editing} update={update ?? (() => undefined)} openSettings={def.Settings && onSettings ? onSettings : undefined} />
+    </div>
+  );
+
   return (
     <section
       ref={nodeRef}
@@ -574,18 +648,13 @@ const WidgetFrame = React.memo(function WidgetFrame({
       className={s.widget}
       data-size={item.size}
       data-type={item.type}
+      data-bare={def.bare ? "" : undefined}
       data-titled={showTitle ? "" : undefined}
       data-fresh={fresh ? "" : undefined}
       data-motion-gentle=""
       data-dragging={dragging ? "" : undefined}
       data-overlay={overlay ? "" : undefined}
-      style={
-        {
-          "--cols": size.cols,
-          "--rows": size.rows,
-          "--i": Math.min(index, 10),
-        } as React.CSSProperties
-      }
+      style={{ "--cols": size.cols, "--rows": size.rows, "--i": Math.min(index, 10) } as React.CSSProperties}
       aria-label={label}
     >
       {editing && (
@@ -594,96 +663,47 @@ const WidgetFrame = React.memo(function WidgetFrame({
             <DragHandGesture />
             <span>{label}</span>
           </button>
-          {def.sizes.length > 1 && size.cols < 6 && (
+          {def.sizes.length > 1 && (
             <Menu
               trigger={
-                <button type="button" className={`${s.sizeBtn} ${s.sizeOne}`} aria-label={`Size: ${size.label}. Change size`} title="Change size">
+                <button type="button" className={`${s.sizeBtn} ${s.sizeOne}`} aria-label={`Size: ${sizeLabel(def, item.size)}. Change size`} title="Change size">
                   <SizeGlyph size={item.size} />
                 </button>
               }
-              items={def.sizes.map((sz) => ({
-                kind: "check" as const,
-                label: SIZES[sz].label,
-                checked: item.size === sz,
-                onChange: () => onResize?.(sz),
-              }))}
+              items={sizeItems}
             />
-          )}
-          {def.sizes.length > 1 && size.cols >= 6 && (
-            <div className={s.sizes} role="radiogroup" aria-label={`${def.name} size`}>
-              {def.sizes.map((sz) => (
-                <button
-                  key={sz}
-                  type="button"
-                  role="radio"
-                  aria-checked={item.size === sz}
-                  aria-label={SIZES[sz].label}
-                  title={SIZES[sz].label}
-                  className={s.sizeBtn}
-                  onClick={() => onResize?.(sz)}
-                >
-                  <SizeGlyph size={sz} />
-                </button>
-              ))}
-            </div>
           )}
           <Menu
             trigger={
-              <IconButton label={`${def.name} options`} size="sm" className={s.chromeBtn}>
+              <IconButton label={`${label} options`} size="sm" className={s.chromeBtn}>
                 <MoreHoriz />
               </IconButton>
             }
             items={[
-              ...(def.sizes.length > 1
-                ? [
-                    {
-                      kind: "sub" as const,
-                      label: `Size: ${size.label}`,
-                      items: def.sizes.map((sz) => ({
-                        kind: "check" as const,
-                        label: SIZES[sz].label,
-                        checked: item.size === sz,
-                        onChange: () => onResize?.(sz),
-                      })),
-                    },
-                  ]
-                : []),
-              {
-                label: "Move earlier",
-                icon: <ArrowLeft />,
-                disabled: first,
-                onSelect: () => onMove?.(-1),
-              },
-              {
-                label: "Move later",
-                icon: <ArrowRight />,
-                disabled: last,
-                onSelect: () => onMove?.(1),
-              },
+              { label: "Move earlier", icon: <ArrowLeft />, disabled: first, onSelect: () => onMove?.(-1) },
+              { label: "Move later", icon: <ArrowRight />, disabled: last, onSelect: () => onMove?.(1) },
               "separator",
-              ...(def.Settings
-                ? [
-                    {
-                      label: "Settings",
-                      icon: <Settings />,
-                      onSelect: () => onSettings?.(),
-                    },
-                  ]
-                : []),
-              {
-                label: "Remove",
-                icon: <Trash />,
-                danger: true,
-                onSelect: () => onRemove?.(),
-              },
+              ...extra,
+              ...(def.Settings ? ([{ label: "Settings…", icon: <Settings />, onSelect: () => onSettings?.() }] as MenuEntry[]) : []),
+              { label: `Unpin ${label}`, icon: <PinSlash />, danger: true, onSelect: () => onUnpin?.() },
             ]}
           />
         </div>
       )}
       {showTitle && <h2 className={s.widgetTitle}>{title}</h2>}
-      <div className={s.body} inert={editing || undefined}>
-        <C item={item} size={item.size} editing={editing} update={update ?? (() => undefined)} />
-      </div>
+      {editing || overlay ? body : <ContextMenu items={contextMenu}>{body}</ContextMenu>}
+      {!editing && !overlay && (
+        <div className={s.placeMenu}>
+          <Menu
+            trigger={
+              <IconButton label={`${label}: options`} size="sm" variant="secondary" className={s.placeBtn} tooltip={false}>
+                <MoreHoriz />
+              </IconButton>
+            }
+            items={baseMenu}
+          />
+        </div>
+      )}
     </section>
   );
 });

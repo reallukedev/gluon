@@ -33,3 +33,4 @@
 
 .net[data-size="s"] { --figure: 1.375rem; gap: 8px; }
 .net[data-size="s"] .figures { gap: 14px; }
+.waiting { height: 100%; display: grid; place-items: center; text-align: center; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }

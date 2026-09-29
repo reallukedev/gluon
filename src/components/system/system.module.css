@@ -130,7 +130,10 @@
 .filter input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: var(--text-md); }
 .filter input::placeholder { color: var(--faint); }
 
-.table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; }
+/* Services. Sized by the table's own width (sidebar and density change it), not the viewport.
+   Full: 220+130+110+90+76 + 4×16 gaps + 32 padding = 722px. overflow: hidden only rounds the hover
+   fill into the corners; the tiers below keep every column inside. */
+.table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; container: services / inline-size; }
 .svcHead, .svcRow {
   display: grid;
   grid-template-columns: minmax(220px, 2.4fr) minmax(130px, 1fr) 110px 90px 76px;
@@ -178,7 +181,27 @@
 .svcHead .num { font-size: inherit; }
 .actions { display: flex; justify-content: flex-end; gap: 2px; }
 
-@media (max-width: 980px) {
+.svcRow > * { min-width: 0; }
+/* "Starts" moves under the state line: 200+140+90+76 + 3×16 + 32 = 586px. */
+@container services (max-width: 721px) {
+  .svcHead, .svcRow {
+    grid-template-columns: minmax(200px, 2.4fr) minmax(140px, 1.2fr) 90px 76px;
+    grid-template-areas: "svc state mem actions" "svc boot mem actions";
+    column-gap: 16px;
+    row-gap: 2px;
+  }
+  .svcHead { grid-template-areas: "svc state mem actions"; }
+  .svcHead > :nth-child(3) { display: none; }
+  .svcRow > :nth-child(1), .svcHead > :nth-child(1) { grid-area: svc; }
+  .svcRow > :nth-child(2), .svcHead > :nth-child(2) { grid-area: state; }
+  .svcRow > :nth-child(3) { grid-area: boot; }
+  .svcRow > :nth-child(4), .svcHead > :nth-child(4) { grid-area: mem; }
+  .svcRow > :nth-child(5), .svcHead > :nth-child(5) { grid-area: actions; }
+  .svcRow > .svcState { align-self: end; }
+  .svcRow > .svcBoot { align-self: start; font-size: var(--text-xs); color: var(--muted); }
+}
+/* Phones and narrow panes: two-line rows. */
+@container services (max-width: 585px) {
   .svcHead { display: none; }
   .svcRow {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -186,10 +209,9 @@
     gap: 4px 12px;
     padding: 10px 12px 10px 16px;
   }
-  .svcCell { grid-area: svc; padding: 0; }
-  .svcState { grid-area: state; }
-  .svcRow > .svcBoot, .svcRow > .num { display: none; }
-  .actions { grid-area: actions; }
+  .svcCell { padding: 0; }
+  .svcRow > .svcState { align-self: auto; }
+  .svcRow > .svcBoot, .svcRow > .num, .svcRow > :nth-child(3), .svcRow > :nth-child(4) { display: none; }
 }
 
 .dialogState { display: inline-flex; margin-top: 2px; }

@@ -9,7 +9,8 @@ import { Checkbox, Field, Input, Segmented } from "@/components/ui/Field";
 import { Notice, Skeleton } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
 import type { CalendarEvent, GeocodeResult, WeatherData, WeatherIcon as WIcon } from "@/lib/widgets-types";
-import { Gate, perSize, Quiet, RowsSkeleton, useDebounced, useWidgetData } from "./shared";
+import { Gate, perSize, Quiet, RowsSkeleton, useDebounced, useWidgetData, WidgetState } from "./shared";
+import { SetUp } from "../kit";
 import l from "./live.module.css";
 
 // ---------------------------------------------------------------- weather
@@ -72,18 +73,24 @@ function TempLine({ hours, temp }: { hours: WeatherData["hours"]; temp: (c: numb
   );
 }
 
-export function WeatherWidget({ item, size }: WidgetProps<WeatherConfig>) {
+export function WeatherWidget({ item, size, openSettings }: WidgetProps<WeatherConfig>) {
   const fmt = useFormat();
   const { lat, lon, name } = item.config;
   const has = typeof lat === "number" && typeof lon === "number";
   const hours = perSize(size, { s: 1, m: 6, t: 8, l: 12, w: 12 }, 6);
   const q = useWidgetData("weather", null, { lat, lon, name: name ?? null, hours }, has);
-  if (!has) return <Quiet title="Where are you?">Pick a place in this widget's settings.</Quiet>;
+  if (!has)
+    return (
+      <WidgetState title="Where are you?" action={<SetUp openSettings={openSettings}>Choose a place</SetUp>}>
+        Pick a town or city and this shows its weather now and for the next hours.
+      </WidgetState>
+    );
   const temp = (c: number) => fmt.temp(c);
   return (
     <Gate
       q={q}
       subject="The weather"
+      openSettings={openSettings}
       skeleton={
         <div className={l.weather} data-size={size}>
           <div className={l.weatherNow}>
@@ -255,16 +262,21 @@ function useViewerTz() {
   return timeZone ?? (typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC");
 }
 
-export function CalendarWidget({ item, size }: WidgetProps<CalendarConfig>) {
+export function CalendarWidget({ item, size, openSettings }: WidgetProps<CalendarConfig>) {
   const fmt = useFormat();
   const tz = useViewerTz();
   const { url } = item.config;
   const days = item.config.days ?? 7;
   const limit = perSize(size, { m: 4, t: 8, l: 12 }, 8);
   const q = useWidgetData("calendar", null, { url, days, limit, tz }, !!url);
-  if (!url) return <Quiet title="Add a calendar">Paste your calendar's private link (ICS) in this widget's settings.</Quiet>;
+  if (!url)
+    return (
+      <WidgetState title="Add a calendar" action={<SetUp openSettings={openSettings}>Add a calendar</SetUp>}>
+        Paste your calendar&apos;s private link and your next events show up here.
+      </WidgetState>
+    );
   return (
-    <Gate q={q} subject="The calendar" skeleton={<RowsSkeleton rows={size === "m" ? 2 : 4} />}>
+    <Gate q={q} subject="The calendar" openSettings={openSettings} skeleton={<RowsSkeleton rows={size === "m" ? 2 : 4} />}>
       {(d) => {
         if (!d.events.length) return <Quiet title="Nothing coming up">{`No events in the next ${days === 3 ? "3 days" : days === 14 ? "2 weeks" : "week"}.`}</Quiet>;
         const today = dayKey(Date.now(), tz);
@@ -397,15 +409,20 @@ function host(u: string | null) {
   }
 }
 
-export function FeedWidget({ item, size }: WidgetProps<FeedConfig>) {
+export function FeedWidget({ item, size, openSettings }: WidgetProps<FeedConfig>) {
   const { prefs } = usePrefs();
   const { url } = item.config;
   const limit = perSize(size, { m: 3, t: 6, l: 7, w: 4 }, 5);
   const q = useWidgetData("feed", null, { url, limit }, !!url);
   const summaries = item.config.summaries !== false && (size === "t" || size === "l");
-  if (!url) return <Quiet title="Add a feed">Paste an RSS or Atom address in this widget's settings.</Quiet>;
+  if (!url)
+    return (
+      <WidgetState title="Add a feed" action={<SetUp openSettings={openSettings}>Add a feed</SetUp>}>
+        Follow a blog or news site: its newest posts show up here.
+      </WidgetState>
+    );
   return (
-    <Gate q={q} subject="The feed" skeleton={<RowsSkeleton rows={size === "m" || size === "w" ? 2 : 4} />}>
+    <Gate q={q} subject="The feed" openSettings={openSettings} skeleton={<RowsSkeleton rows={size === "m" || size === "w" ? 2 : 4} />}>
       {(d) =>
         d.items.length === 0 ? (
           <Quiet title="No posts yet">New posts from {d.title ?? "this feed"} appear here.</Quiet>

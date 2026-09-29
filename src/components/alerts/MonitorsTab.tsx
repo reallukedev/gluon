@@ -15,6 +15,7 @@ import { StateLine } from "@/components/ui/StateLine";
 import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { AppIcon } from "@/components/apps/AppIcon";
+import { alertsHref } from "@/lib/settings-links";
 import { MONITORS_URL, errorMessage } from "./shared";
 import { monitorLine, ms, pct, Trace, TraceLegend } from "./monitorBits";
 import { MonitorForm } from "./MonitorForm";
@@ -98,7 +99,7 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
 
   const openDetail = (id: string | null) => {
     setDetail(id);
-    router.replace(id ? `/alerts?tab=monitors&monitor=${encodeURIComponent(id)}` : "/alerts?tab=monitors", { scroll: false });
+    router.replace(alertsHref("watching", { monitor: id }), { scroll: false });
   };
   const edit = (m: MonitorView | null) => {
     setEditing(m);

@@ -42,63 +42,63 @@ colors:
   info-dark: "#8fb8de"
 typography:
   display:
-    fontFamily: "Hubot Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Special Gothic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "clamp(2rem, 3.4vw, 2.75rem)"
     fontWeight: 480
     lineHeight: 1.02
     letterSpacing: "-0.015em"
     fontVariation: "'wdth' 76"
   headline:
-    fontFamily: "Hubot Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Special Gothic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "2.125rem"
     fontWeight: 540
     lineHeight: 1.02
     letterSpacing: "-0.012em"
     fontVariation: "'wdth' 80"
   figure:
-    fontFamily: "Hubot Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Special Gothic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.75rem"
     fontWeight: 520
     lineHeight: 1.05
     fontFeature: "'tnum' 1"
     fontVariation: "'wdth' 80"
   title-section:
-    fontFamily: "Hubot Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Special Gothic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.0625rem"
     fontWeight: 600
     lineHeight: 1.3
     fontVariation: "'wdth' 90"
   title:
-    fontFamily: "Mona Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Radio Canada, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 620
     lineHeight: 1.3
   summary:
-    fontFamily: "Mona Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Radio Canada, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.9375rem"
     fontWeight: 400
     lineHeight: 1.5
     fontVariation: "'wdth' 96"
   body:
-    fontFamily: "Mona Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Radio Canada, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.45
     fontVariation: "'wdth' 96"
   body-sm:
-    fontFamily: "Mona Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Radio Canada, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.45
   label:
-    fontFamily: "Hubot Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Special Gothic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "0.16em"
     fontVariation: "'wdth' 85"
   mono:
-    fontFamily: "Martian Mono, ui-monospace, SF Mono, Menlo, monospace"
+    fontFamily: "Atkinson Hyperlegible Mono, ui-monospace, SF Mono, Menlo, monospace"
     fontSize: "0.92em"
     fontWeight: 400
 rounded:
@@ -253,15 +253,15 @@ components:
 
 Gluon is a traditional app shell (sidebar, pages, tables, panels) whose state is drawn the way a bench instrument draws a signal. Every container on the server is a 2px hairline in a live spectrum; whether it is healthy is carried by the form of that line, not by a coloured badge. The grounds are bone by day and graphite under a lamp by night, the ink is near-black or warm parchment, and one sodium-yellow colour is held back for a single meaning: something needs you.
 
-The system is quiet on purpose so that the one loud thing reads instantly. Hierarchy comes from the width axis of Mona Sans and Hubot Sans (condensed headings and figures, wide body), from tracked micro-caps labels, and from 1px rules, not from fills, gradients or shadows. Density is that of a working tool: 44px rows, 34px controls, a 40px gutter, with a compact mode for people who want more on screen. Every page opens with state in one plain sentence, then the cause, then the remedy one click away.
+The system is quiet on purpose so that the one loud thing reads instantly. Hierarchy comes from the width axis of Special Gothic and Radio Canada (condensed headings and figures, open body), from tracked micro-caps labels, and from 1px rules, not from fills, gradients or shadows. Density is that of a working tool: 44px rows, 34px controls, a 40px gutter, with a compact mode for people who want more on screen. Every page opens with state in one plain sentence, then the cause, then the remedy one click away.
 
 The build refuses the dark card-grid dashboard with coloured pill badges: no pills, no glass, no decorative gradients, no glowing accents.
 
 **Key Characteristics:**
 - Warm achromatic plate (bone or graphite) with hairline rules; colour is rationed by meaning.
 - State as line form: solid, dashed, short red, faint, doubled sodium.
-- Hubot Sans (engineered display cut) at 76–92% width for headings, figures and micro-caps labels; Mona Sans at 94–96% for body and buttons.
-- Tabular figures wherever a number updates; Martian Mono at 87.5% width for paths, ports and commands.
+- Special Gothic (a news gothic, cut like an engraved placard) at 76–92% width for headings, figures and micro-caps labels; Radio Canada (a humanist grotesque made for a public broadcaster) at 94–96% for body and buttons.
+- Tabular figures wherever a number updates; Atkinson Hyperlegible Mono for paths, ports and commands.
 - Flat panels; shadows only on things that float.
 - Short damped motion on `--ease-out`, 150–250 ms, with the command palette deliberately still.
 
@@ -296,11 +296,11 @@ A warm neutral plate in two themes, one attention colour that means only "needs 
 
 ## Typography
 
-**Display Font:** Hubot Sans, variable width axis (`--font-display`; applied wherever text is condensed to 92% or less)
-**Body Font:** Mona Sans at 96% width (`--font-sans`)
-**Mono Font:** Martian Mono at `--mono-stretch` (87.5%) and 0.88em (with ui-monospace, SF Mono, Menlo) for paths, ports, commands, keys and values
+**Display Font:** Special Gothic, variable width axis 75–125 (`--font-display`; applied wherever text is condensed to 92% or less)
+**Body Font:** Radio Canada at 96% width, variable width axis 75–100 (`--font-sans`)
+**Mono Font:** Atkinson Hyperlegible Mono at 0.93em (with ui-monospace, SF Mono, Menlo) for paths, ports, commands, keys and values
 
-**Character:** One grotesque stretched and squeezed along its width axis does all the work: condensed and slightly tight for titles and big figures, the plate-engraving micro-caps for labels, open and relaxed for reading. The mono face marks anything a person might type into a terminal.
+**Character:** Two grotesques that share a width axis do all the work: the gothic engraves, the humanist reads: condensed and slightly tight for titles and big figures, the plate-engraving micro-caps for labels, open and relaxed for reading. The mono face, drawn by the Braille Institute for legibility, marks anything a person might type into a terminal and keeps 0/O and 1/l/I apart. (Mona Sans, Hubot Sans and Martian Mono were retired in 1.2: too familiar from generated interfaces.)
 
 ### Hierarchy
 - **Display** (480, clamp(2rem, 3.4vw, 2.75rem), 1.02, 76% width): the Home greeting only. The Home clock goes further (68% width, up to 4.2rem, tabular).
@@ -346,10 +346,16 @@ Gluon is flat. Depth comes from the ground/plate/sunk tonal steps and 1px hairli
 
 Gently rounded rectangles with a strict radius ladder: 12px panels, tables and toasts; 14px dialogs and the command palette (16px top corners as a phone sheet); 10px menus, popovers and notices; 8px controls; 7px small controls and nav links; 6px menu items and segments; 5px keycaps. Full rounding is reserved for the switch, the avatar and scrollbar thumbs.
 
-Rules are 1px. State marks are 2px strokes. Keycaps get a 2px bottom border as their only relief. Empty states draw a small row of 2px hairlines instead of an illustration.
+Rules are 1px. State marks are 2px strokes. Keycaps get a 2px bottom border as their only relief. Empty states draw a small gluon line with one end held and the other open (nothing connected yet), in faint, instead of an illustration.
 
 ### Named Rules
 **The No Pills Rule.** Nothing that carries information is a pill. Counts are plain tabular figures (12px, 600, muted); a needs-you count gets the doubled sodium mark in front of it, a fault count a short red mark.
+
+## Brand mark and art
+
+The mark is the curly line a Feynman diagram draws for a gluon, the particle that holds the others together, joining two points: a two-loop trochoid (x = c·t − a·sin t, y = −a·cos t) that starts and ends at a trough, with a filled dot at each end. Geometry lives in `src/components/brand/mark.ts`; `GluonMark` draws it in currentColor at glyph size. The app icon puts the coil in sodium on a graphite tile with parchment dots (the one place sodium is a brand colour rather than a signal).
+
+Art is drawn in the same grammar, never illustrated: the sign-in plate (`BondField`) is a row of state lines held together by small gluon rungs that sketch themselves in once; the theme cards are Gluon in miniature; empty states are a gluon line with one open end. No clip art, no mascots, no gradients.
 
 ## Components
 
@@ -437,7 +443,7 @@ Time charts draw a 1.5px ink line with a 7% area, dashed hairline grid, tabular 
 - **Do** pair every use of fault red with a glyph or words.
 - **Do** write counts as plain tabular figures, with the doubled sodium mark in front when they need the person.
 - **Do** use tokens only: colours, `--radius-*`, `--control`, `--row`, `--text-*`, `--ease-out`, `--dur-*`.
-- **Do** set paths, ports, commands and keys in Martian Mono, and every changing number in tabular figures.
+- **Do** set paths, ports, commands and keys in Atkinson Hyperlegible Mono, and every changing number in tabular figures.
 - **Do** keep sticky bars solid (ground or panel) with a hairline.
 - **Do** put hover styles inside `(hover: hover) and (pointer: fine)` and keep transitions to 150–250 ms on `--ease-out`.
 

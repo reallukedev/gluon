@@ -2,7 +2,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHoriz, OpenNewWindow, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye } from "iconoir-react";
+import { MoreHoriz, OpenNewWindow, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye, Pin, PinSlash } from "iconoir-react";
+import { usePinToHome } from "@/components/home/pinned";
 import type { AppSummary } from "@/server/docker/apps";
 import type { Platform } from "@/server/platform";
 import { api, useApi, ApiError } from "@/lib/client/api";
@@ -35,6 +36,7 @@ const isProblem = (a: AppSummary) => !a.copyOf && (a.line === "unhealthy" || a.l
 
 export function AppsView({ initial, initialSort, initialFilter, platform }: { initial: AppSummary[]; initialSort: Sort; initialFilter: Filter; platform: Platform }) {
   const router = useRouter();
+  const pinHome = usePinToHome();
   const fmt = useFormat();
   const { viewer, serverName } = usePrefs();
   const { host } = useLive();
@@ -157,22 +159,11 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
 
   return (
     <Page>
+      <PageHeader title="Apps" summary={summary} />
       <AppsSectionTabs current="apps" />
-      <PageHeader
-        title="Apps"
-        summary={summary}
-        actions={
-          <>
-            <NewAppButton />
-            {platform === "umbrel" && (
-              <LinkButton href="/apps/store" icon={<Plus />}>
-                Get apps
-              </LinkButton>
-            )}
-          </>
-        }
-      />
 
+      {/* The table sizes its columns to this box, not the window, so the sidebar can't push it off the edge. */}
+      <div className={s.list}>
       <div className={s.toolbar}>
         <label className={s.filter}>
           <Search aria-hidden />
@@ -204,7 +195,30 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
       </div>
 
       {rows.length === 0 ? (
-        <Empty title={term ? `Nothing matches “${q.trim()}”` : filter === "problems" ? "No problems" : filter === "stopped" ? "Nothing is stopped" : filter === "public" ? "Nothing is public" : "No apps yet"}>
+        <Empty
+          title={term ? `Nothing matches “${q.trim()}”` : filter === "problems" ? "No problems" : filter === "stopped" ? "Nothing is stopped" : filter === "public" ? "Nothing is public" : "No apps yet"}
+          action={
+            !term && filter === "all" ? (
+              <>
+                {platform === "umbrel" && (
+                  <LinkButton href="/apps/store" variant="primary" icon={<Plus />}>
+                    Open the app store
+                  </LinkButton>
+                )}
+                <NewAppButton variant={platform === "umbrel" ? "secondary" : "primary"} />
+              </>
+            ) : (
+              <Button
+                onClick={() => {
+                  setQ("");
+                  setFilter("all");
+                }}
+              >
+                Show all apps
+              </Button>
+            )
+          }
+        >
           {term
             ? "Try the app's name, a container name or its image."
             : filter === "problems"
@@ -242,6 +256,13 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                 : { label: "Start", icon: <Play />, onSelect: () => void act(a, "start"), disabled: busyState },
               "separator",
               { label: "Logs", icon: <Journal />, onSelect: () => router.push(`${href}?tab=logs`) },
+              ...(open || a.urls.home || a.urls.away
+                ? [
+                    pinHome.isPinned(a.id)
+                      ? { label: "Unpin from Home", icon: <PinSlash />, onSelect: () => void pinHome.toggle(a) }
+                      : { label: "Pin to Home", icon: <Pin />, description: "Keep it on your Home page", onSelect: () => void pinHome.toggle(a) },
+                  ]
+                : []),
               a.hidden
                 ? { label: "Show in lists", icon: <Eye />, onSelect: () => void setHidden(a, false) }
                 : { label: "Hide from lists", icon: <EyeClosed />, description: "It keeps running", onSelect: () => void setHidden(a, true) },
@@ -292,10 +313,10 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                   )}
                 </span>
                 <span role="cell" className={s.meterCell}>
-                  <CpuMeter series={u?.cpuSeries ?? null} value={u?.cpu ?? null} name={a.name} />
+                  <CpuMeter series={u?.cpuSeries ?? null} value={u?.cpu ?? null} name={a.name} fit />
                 </span>
                 <span role="cell" className={s.meterCell}>
-                  <MemMeter value={u?.mem ?? null} scale={memScale} total={memTotal} name={a.name} />
+                  <MemMeter value={u?.mem ?? null} scale={memScale} total={memTotal} name={a.name} fit />
                 </span>
                 <span role="cell" className={s.addrCell}>
                   {a.copyOf ? (
@@ -324,6 +345,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
           })}
         </div>
       )}
+      </div>
       {confirmNode}
     </Page>
   );

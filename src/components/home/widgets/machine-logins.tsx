@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
 import { KIND_ORDER, KIND_WORDS, ZONE_WORDS } from "@/components/system/loginWords";
+import { WidgetState } from "./kit";
+import { Preview } from "../previews";
 import w from "@/components/system/loginsWidget.module.css";
 
 interface Person {
@@ -54,12 +56,9 @@ function MachineLogins({ size }: WidgetProps) {
   if (!data) {
     if (error) {
       return (
-        <div className={w.center}>
-          <div>
-            <b>Can't see who's connected</b>
-            {error.status === 403 ? "Only admins can see this." : "Gluon couldn't ask the machine just now."}
-          </div>
-        </div>
+        <WidgetState line={error.status === 403 ? undefined : "unknown"} title="Can't see who's connected">
+          {error.status === 403 ? "Only admins can see this." : "Gluon couldn't ask the machine just now. It tries again on its own."}
+        </WidgetState>
       );
     }
     return (
@@ -152,11 +151,5 @@ registerWidget({
   adminOnly: true,
   title: () => "Who's connected",
   Component: MachineLogins,
-  preview: (
-    <span className={w.preview} aria-hidden>
-      <i />
-      <i data-short="" />
-      <i data-away="" />
-    </span>
-  ),
+  preview: <Preview of="logins" />,
 });

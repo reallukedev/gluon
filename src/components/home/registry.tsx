@@ -5,8 +5,6 @@ import {
   ClockWidget,
   ClockSettings,
   StatusWidget,
-  AppsWidget,
-  AppsSettings,
   VitalsWidget,
   StorageWidget,
   SpectrumWidget,
@@ -15,26 +13,21 @@ import {
   NotesWidget,
   NotesSettings,
   type ClockConfig,
-  type AppsConfig,
   type BookmarksConfig,
   type NotesConfig,
 } from "./widgets/core";
 import { NetworkWidget } from "./widgets/network";
-import { AppWidget, AppSettings, AppPreview, type AppConfig } from "./widgets/app";
-import p from "./preview.module.css";
+import { AppSettings, type AppConfig } from "./widgets/app";
+import { AppCardPreview, AppCardWidget } from "./AppCard";
+import { ALL_APPS } from "@/lib/home";
+import { Preview } from "./previews";
 import { extraWidgets } from "./widgetStore";
+import "./widgets/start";
 import "./widgets/integrations";
+import "./widgets/household";
+import "./widgets/machine";
 import "./widgets/machine-logins";
 import "./widgets/server-watch";
-
-/* Catalog previews: tiny abstract drawings in the product's own line language, not screenshots. */
-const Lines = ({ pattern }: { pattern: string }) => (
-  <span className={p.lines}>
-    {pattern.split("").map((c, i) => (
-      <i key={i} data-k={c} />
-    ))}
-  </span>
-);
 
 const def = <C,>(d: WidgetDef<C>) => d as unknown as WidgetDef;
 
@@ -49,7 +42,7 @@ export const WIDGETS: WidgetDef[] = [
     defaultConfig: {},
     Component: ClockWidget,
     Settings: ClockSettings,
-    preview: <span className={p.clock}>9:41</span>,
+    preview: <Preview of="clock" />,
   }),
   def<BookmarksConfig>({
     type: "bookmarks",
@@ -59,16 +52,13 @@ export const WIDGETS: WidgetDef[] = [
     sizes: ["s", "m", "t", "l", "w"],
     defaultSize: "m",
     defaultConfig: { links: [] },
+    multiple: true,
+    setupOnPin: true,
+    keywords: "bookmarks sites",
     title: (c) => c.title || "Links",
     Component: BookmarksWidget,
     Settings: BookmarksSettings,
-    preview: (
-      <span className={p.rows}>
-        <i />
-        <i />
-        <i />
-      </span>
-    ),
+    preview: <Preview of="links" />,
   }),
   def<NotesConfig>({
     type: "notes",
@@ -78,46 +68,42 @@ export const WIDGETS: WidgetDef[] = [
     sizes: ["s", "m", "t", "l"],
     defaultSize: "s",
     defaultConfig: { text: "" },
+    multiple: true,
+    keywords: "note scratchpad memo text",
     title: (c) => c.title || "Notes",
     Component: NotesWidget,
     Settings: NotesSettings,
-    preview: <span className={p.ruled} />,
-  }),
-  def<AppsConfig>({
-    type: "apps",
-    name: "Apps",
-    description: "Open your apps. Uses the home address at home and the public one when you're out.",
-    category: "Apps",
-    sizes: ["m", "t", "l", "w", "x"],
-    defaultSize: "l",
-    defaultConfig: { show: "all", style: "tiles" },
-    title: () => "Apps",
-    Component: AppsWidget,
-    Settings: AppsSettings,
-    preview: (
-      <span className={p.tiles}>
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-      </span>
-    ),
+    preview: <Preview of="notes" />,
   }),
   def<AppConfig>({
     type: "app",
     name: "App",
-    description: "One app at a glance: whether it's running, live CPU and memory, and a button to open it.",
+    description: "One app on its own card: open it in a tap, see whether it's running, and in bigger sizes what it's doing.",
     category: "Apps",
-    sizes: ["s", "m", "t"],
-    defaultSize: "s",
+    sizes: ["i", "c", "s", "m"],
+    defaultSize: "i",
+    sizeLabels: { i: "Icon", c: "Row", s: "Card", m: "Wide" },
     defaultConfig: {},
     perApp: true,
-    label: (c) => (c.name || c.appId ? `${c.name ?? c.appId} tile` : null),
-    Component: AppWidget,
+    multiple: true,
+    label: (c) => (c.name || c.appId ? `${c.name ?? c.appId}` : null),
+    Component: AppCardWidget,
     Settings: AppSettings,
-    preview: <AppPreview />,
+    preview: <AppCardPreview />,
+  }),
+  // Default layouts use this as "every app this person can open, as cards, here"; the server expands it, so it
+  // never renders. Registered only so admin screens that list a layout can name it.
+  def({
+    type: ALL_APPS,
+    name: "Your apps",
+    description: "Every app the person can open, one card each.",
+    category: "Apps",
+    sizes: ["i"],
+    defaultSize: "i",
+    defaultConfig: {},
+    hidden: true,
+    Component: () => null,
+    preview: <Preview of="apps" />,
   }),
   def({
     type: "status",
@@ -128,7 +114,7 @@ export const WIDGETS: WidgetDef[] = [
     defaultSize: "m",
     defaultConfig: {},
     Component: StatusWidget,
-    preview: <Lines pattern="||:|||=|" />,
+    preview: <Preview of="status" />,
   }),
   def({
     type: "spectrum",
@@ -141,7 +127,7 @@ export const WIDGETS: WidgetDef[] = [
     adminOnly: true,
     title: () => "Everything on this server",
     Component: SpectrumWidget,
-    preview: <Lines pattern="|||:||.||=||||" />,
+    preview: <Preview of="spectrum" />,
   }),
   def({
     type: "vitals",
@@ -153,7 +139,7 @@ export const WIDGETS: WidgetDef[] = [
     defaultConfig: {},
     title: () => "This machine",
     Component: VitalsWidget,
-    preview: <span className={p.spark} />,
+    preview: <Preview of="vitals" />,
   }),
   def({
     type: "network",
@@ -165,7 +151,7 @@ export const WIDGETS: WidgetDef[] = [
     defaultConfig: {},
     title: () => "Network",
     Component: NetworkWidget,
-    preview: <span className={p.spark} data-two />,
+    preview: <Preview of="network" />,
   }),
   def({
     type: "storage",
@@ -178,13 +164,7 @@ export const WIDGETS: WidgetDef[] = [
     adminOnly: true,
     title: () => "Storage",
     Component: StorageWidget,
-    preview: (
-      <span className={p.bars}>
-        <i style={{ width: "82%" }} />
-        <i style={{ width: "34%" }} />
-        <i style={{ width: "58%" }} />
-      </span>
-    ),
+    preview: <Preview of="storage" />,
   }),
 ];
 

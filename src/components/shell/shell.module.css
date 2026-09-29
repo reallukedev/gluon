@@ -115,6 +115,7 @@
 .foot { border-top: 1px solid var(--line); padding: 10px 12px; display: flex; align-items: center; gap: 6px; }
 .me[data-popup-open] { background: color-mix(in oklab, var(--ink) 6%, transparent); }
 .me {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -235,5 +236,3 @@
 .drawerPopup[data-swiping] { transition-duration: 0ms; user-select: none; }
 
 /* While a new account picks its sections on Home, each one slides into the sidebar as it's added. */
-.scroll[data-onboarding] .link { transition: opacity var(--dur-base) var(--ease-out), translate var(--dur-base) var(--ease-out), background-color var(--dur-fast) ease; }
-@starting-style { .scroll[data-onboarding] .link { opacity: 0; translate: calc(-8px * var(--motion)) 0; } }

@@ -1,26 +1,15 @@
-import { requireAdmin } from "@/server/auth/session";
-import { listActivity } from "@/server/audit";
-import { listUsers } from "@/server/auth/users";
-import { ActivityView } from "@/components/activity/ActivityView";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/server/auth/session";
+import { activityHref } from "@/lib/settings-links";
 
-export const metadata = { title: "Activity" };
+type Search = Promise<Record<string, string | string[] | undefined>>;
+const str = (v: string | string[] | undefined, max: number) => (typeof v === "string" && v ? v.slice(0, max) : undefined);
 
-const PAGE = 60;
-
-export default async function ActivityPage({ searchParams }: { searchParams: Promise<{ target?: string; user?: string }> }) {
-  await requireAdmin();
+/** Activity is in Settings now. Old links keep their person and target filters. */
+export default async function ActivityRedirect({ searchParams }: { searchParams: Search }) {
+  const { user } = await requireUser();
+  // Only admins keep watch; anyone else lands on their start page instead of a "not found".
+  if (user.role !== "admin") redirect("/");
   const sp = await searchParams;
-  const target = sp.target?.slice(0, 500) || undefined;
-  const userId = sp.user?.slice(0, 64) || undefined;
-  const items = listActivity({ limit: PAGE + 1, target, userId });
-  const people = listUsers().map((u) => ({ id: u.id, name: u.displayName, username: u.username }));
-  return (
-    <ActivityView
-      initial={{ items: items.slice(0, PAGE), next: items.length > PAGE ? items[PAGE - 1]!.id : null }}
-      people={people}
-      initialTarget={target ?? ""}
-      initialUser={userId ?? ""}
-      pageSize={PAGE}
-    />
-  );
+  redirect(activityHref({ target: str(sp.target, 500), user: str(sp.user, 64) }));
 }

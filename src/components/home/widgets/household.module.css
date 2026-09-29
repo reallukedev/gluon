@@ -1,0 +1,92 @@
+/* Household widgets: Internet, Guest Wi-Fi, On this day. */
+
+/* ---------------------------------------------------------------- Internet */
+.net { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); overflow: hidden; }
+.netHead { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.netWords { flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.headMs { display: none; flex: none; font-size: var(--text-sm); color: var(--ink-2); }
+.netFigures { display: flex; align-items: baseline; gap: 6px 16px; flex-wrap: wrap; min-width: 0; }
+.figure { font-size: var(--figure, 1.625rem); font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.figure small { font-size: var(--text-sm); font-weight: 450; font-stretch: 96%; color: var(--muted); }
+.figure[data-muted] { font-size: var(--text-lg); color: var(--muted); font-stretch: 90%; }
+.reading { min-width: 0; font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.stripWrap { flex: none; display: grid; gap: 4px; min-width: 0; }
+.strip { position: relative; min-width: 0; }
+.stripSvg { display: block; overflow: visible; touch-action: pan-y; border-radius: 2px; }
+.stripSvg:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.rail { stroke: var(--line-strong); stroke-width: 1; }
+/* StateLine grammar: solid answered, dashed slow or unsteady, short red down, faint not measured. */
+.tick { stroke: var(--ink-2); stroke-width: 1.5; stroke-linecap: butt; transition: opacity var(--dur-fast) var(--ease-out); }
+.tick[data-c="s"], .tick[data-c="l"] { stroke-dasharray: 2 2; }
+.tick[data-c="d"], .tick[data-c="r"] { stroke: var(--fault); stroke-width: 2; }
+.tick[data-c="-"] { stroke: var(--faint); opacity: 0.35; stroke-dasharray: 1 2; }
+.stripSvg:has(.tick[data-on]) .tick:not([data-on]) { opacity: 0.4; }
+.tick[data-on] { stroke-width: 2.5; }
+.axis { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); }
+.learning { font-size: var(--text-xs); color: var(--muted); border-top: 1px dashed var(--line-strong); padding-top: 6px; }
+.sentence { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.foot { margin-top: auto; font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+
+.net[data-size="s"] { --figure: 1.375rem; gap: 6px; }
+.net[data-size="s"] .sentence { -webkit-line-clamp: 1; font-size: var(--text-xs); }
+/* Wide sizes: the figure and the sentence side by side, the strip underneath. */
+.net[data-size="m"], .net[data-size="w"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); grid-template-rows: auto auto 1fr; column-gap: 24px; row-gap: 6px; }
+.net[data-size="m"] .netHead, .net[data-size="w"] .netHead { grid-column: 1; }
+.net[data-size="m"] .netFigures, .net[data-size="w"] .netFigures { grid-column: 1; }
+.net[data-size="m"] .sentence, .net[data-size="w"] .sentence { grid-column: 2; grid-row: 1 / 3; align-self: center; -webkit-line-clamp: 3; }
+.net[data-size="m"] .stripWrap, .net[data-size="m"] .learning, .net[data-size="w"] .stripWrap, .net[data-size="w"] .learning { grid-column: 1 / -1; align-self: end; }
+/* Phones: wide tiles are short (two 64px rows), so one column with the essentials. */
+@media (max-width: 720px) {
+  .net[data-size="m"], .net[data-size="w"] { display: flex; gap: 6px; }
+  .net[data-size="m"] .axis, .net[data-size="w"] .axis, .net[data-size="m"] .netFigures, .net[data-size="w"] .netFigures { display: none; }
+  .net[data-size="m"] .headMs, .net[data-size="w"] .headMs { display: inline; }
+  .net[data-size="m"] .sentence, .net[data-size="w"] .sentence { -webkit-line-clamp: 1; font-size: var(--text-xs); }
+}
+
+/* ---------------------------------------------------------------- Guest Wi-Fi */
+.wifi { height: 100%; min-height: 0; display: flex; align-items: center; gap: 16px; padding: 12px var(--px, 16px); overflow: hidden; }
+.qr { flex: none; height: 100%; width: auto; aspect-ratio: 1; max-height: 156px; }
+.qrPlate { fill: var(--panel); stroke: var(--line); stroke-width: 0.12; }
+.qrDots { fill: var(--ink); }
+/* Dark themes: keep the code dark-on-light (a small light card), since some phone cameras won't read it inverted. */
+:global(:root[data-theme="dark"]) .qrPlate { fill: var(--ink); stroke: none; }
+:global(:root[data-theme="dark"]) .qrDots { fill: var(--inverse); }
+@media (prefers-color-scheme: dark) {
+  :global(:root[data-theme="system"]) .qrPlate { fill: var(--ink); stroke: none; }
+  :global(:root[data-theme="system"]) .qrDots { fill: var(--inverse); }
+}
+.wifiText { flex: 1; min-width: 0; display: grid; gap: 4px; align-content: center; }
+.ssid { font-size: var(--text-lg); font-weight: 620; line-height: 1.2; overflow-wrap: anywhere; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.password { display: flex; align-items: center; gap: 2px; min-width: 0; margin-left: -2px; }
+.secret { min-width: 0; padding-left: 2px; font-size: var(--text-md); color: var(--ink); letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wifiMeta { font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
+.wifi[data-size="s"] { gap: 12px; }
+.wifi[data-size="s"] .ssid { font-size: var(--text-md); }
+
+/* ---------------------------------------------------------------- On this day */
+.memory { position: relative; height: 100%; min-height: 0; overflow: hidden; background: var(--sunk); }
+.photoLink { position: absolute; inset: 0; display: block; }
+.photoLink:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; border-radius: 10px; }
+.photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity var(--dur-slow) var(--ease-out);
+  @starting-style { opacity: 0; }
+}
+.preload { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* Words over a photo sit on a solid plate (no gradients, no glass), so they read on any picture. */
+.plate { position: absolute; left: 10px; bottom: 10px; display: grid; gap: 1px; padding: 6px 10px 7px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); max-width: calc(100% - 20px); }
+.year { font-size: var(--text-xl); font-weight: 540; font-family: var(--font-display); font-stretch: 80%; line-height: 1; font-variant-numeric: tabular-nums; }
+.ago { font-size: var(--text-xs); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.steps { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 9px; background: var(--panel); border: 1px solid var(--line); }
+.count { min-width: 44px; text-align: center; font-size: var(--text-xs); color: var(--ink-2); }
+.photoSkel { height: 100%; background: var(--sunk); }
+.memory[data-size="s"] .ago, .memory[data-size="s"] .count { display: none; }
+.memory[data-size="s"] .year { font-size: var(--text-lg); }
+
+/* Settings */
+.form { display: grid; gap: 16px; }

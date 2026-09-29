@@ -21,10 +21,15 @@ together: one calm web app for everything running on the box, however it got the
 - **System.** OS updates, services, power, who's signed in over SSH, temperatures and memory by app.
 - **Diagnostics.** A checkup that runs 60+ checks in seconds, targeted checks for "an app won't open"
   or "the internet is slow", and live traffic, connections, requests, processes and logs.
-- **Home.** A start page for everyone in the house, with widgets for Jellyfin, Immich, Navidrome,
-  slskd, Homebridge and any app on the server.
+- **Home.** A start page for everyone in the house. Everything on it is pinned: each app is its own
+  card (icon, row, card or wide), and the Collection holds the rest: folders, links, notes, the
+  internet's health, a disk-full forecast, guest Wi-Fi, Immich's "on this day", processor power and
+  what the server does next, plus widgets for Jellyfin, Immich, Navidrome, slskd and Homebridge.
 - **Household.** Accounts with roles, invites with a QR code, a grid of who can open what, problem
-  reports, and an activity log of every change.
+  reports, and an activity log of every change. Alerts, Activity and People live in Settings → Keep
+  watch.
+- **First run.** Setup walks through what Gluon found on the server, updates, where alerts reach
+  you, inviting the household and two-step sign-in. Household members pick their apps.
 
 Built with Next.js, React and Base UI. Light and dark follow your device.
 
@@ -57,10 +62,12 @@ change is recorded. Set up two-step sign-in from home before publishing it.
 
 ## Updates
 
-Settings → Updates checks this repository for new releases (or, if you choose, every change on
-`main`). Updating downloads the new version, builds it on your server, swaps it in, and puts the
-previous version back if the new one doesn't come up healthy. Automatic updates can run in an hour
-you pick. Installs from Umbrel's app store can also update through Umbrel.
+Settings → Updates has two channels. **Stable** follows tagged releases. **Nightly** follows every
+change pushed to `main`: Gluon checks every half hour and can install each nightly as it lands, or
+once a day in an hour you pick. Updating downloads the new version, builds it on your server, swaps it
+in, and puts the previous version back if the new one doesn't come up healthy. Switching from Nightly
+back to Stable never downgrades on its own; Gluon offers to go back to the newest release when you
+want to. Installs from Umbrel's app store can also update through Umbrel.
 
 ## Development
 

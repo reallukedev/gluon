@@ -277,7 +277,7 @@ export async function testChannel(
   const m: OutMessage = {
     title: `Test from ${serverName}`,
     body: `If you can read this, ${existing ? `“${existing.name}”` : "this channel"} works. ${user.displayName} sent it from Gluon.`,
-    link: `${publicBaseUrl()}/alerts`,
+    link: `${publicBaseUrl()}/status`,
     linkLabel: "Open Gluon",
     level: "info",
     event: "test",

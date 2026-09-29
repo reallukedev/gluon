@@ -3,6 +3,7 @@ import type { User } from "../auth/users";
 import { appsForMember, listApps, type AppSummary } from "../docker/apps";
 import { listRecords, refOf, usableRecords, type IntegrationRecord } from "../integrations/store";
 import { installedApps } from "./installed";
+import { localAvailability } from "./local";
 import { WIDGET_LABELS, WIDGET_REFRESH_MS, WIDGET_SOURCE, WIDGET_TYPES, type IntegrationRef, type WidgetCatalog } from "@/lib/widgets-types";
 
 /** Integrations this person may use, with browser links and the state of the app they read from. */
@@ -39,5 +40,6 @@ export async function widgetCatalog(user: User): Promise<WidgetCatalog> {
         available: !source || integrations.length > 0,
       };
     }),
+    local: localAvailability(user),
   };
 }

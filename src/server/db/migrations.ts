@@ -408,4 +408,16 @@ export const migrations: string[] = [
     registered_url TEXT, registered_at INTEGER, created_at INTEGER NOT NULL
   );
   `,
+
+  /* 14 · Home widgets that read this machine: the internet probe's minutes (7 days) and the guest Wi-Fi network
+     (password encrypted). Idempotent: server/widgets/internet.ts and guest-wifi.ts create the same tables on first use. */ `
+  CREATE TABLE IF NOT EXISTS internet_minutes (
+    ts INTEGER PRIMARY KEY, rounds INTEGER NOT NULL, up INTEGER NOT NULL, router_down INTEGER NOT NULL,
+    lost INTEGER NOT NULL, probes INTEGER NOT NULL, ms_sum REAL NOT NULL, ms_n INTEGER NOT NULL, ms_max REAL
+  );
+  CREATE TABLE IF NOT EXISTS guest_wifi (
+    id INTEGER PRIMARY KEY CHECK (id = 1), ssid TEXT NOT NULL, security TEXT NOT NULL, secret TEXT,
+    hidden INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, updated_by TEXT
+  );
+  `,
 ];

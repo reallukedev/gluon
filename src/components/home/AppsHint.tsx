@@ -13,7 +13,7 @@ const KEY = "gluon.home.appsHint";
 
 /**
  * A quiet, dismissible line for admins: apps on this server that could show what they're doing on Home, but
- * have no widget here yet. It opens the catalog, where they lead.
+ * have no widget here yet. It opens the Collection at those apps.
  */
 export function AppsHint({ items, onOpen }: { items: WidgetItem[]; onOpen: () => void }) {
   const [dismissed, setDismissed] = React.useState<string | null>("pending");
@@ -27,8 +27,7 @@ export function AppsHint({ items, onOpen }: { items: WidgetItem[]; onOpen: () =>
   const { data } = useApi<WidgetCatalog>(dismissed !== "pending" ? "/api/widgets/catalog" : null, { revalidateOnFocus: false });
   if (!data || dismissed === "pending") return null;
   const kindsOnPage = new Set(items.map((i) => widgetDef(i.type)?.kind).filter(Boolean));
-  const appsOnPage = new Set(items.filter((i) => i.type === "app").map((i) => String(i.config.appId)));
-  const waiting = data.apps.filter((a) => !a.duplicate && a.services.length && !appsOnPage.has(a.appId) && !a.services.some((sv) => kindsOnPage.has(sv.kind)));
+  const waiting = data.apps.filter((a) => !a.duplicate && a.services.length && !a.services.some((sv) => kindsOnPage.has(sv.kind)));
   // Dismissal remembers which apps were offered; a newly installed app brings the line back.
   const signature = waiting
     .map((a) => a.appId)
@@ -48,7 +47,7 @@ export function AppsHint({ items, onOpen }: { items: WidgetItem[]; onOpen: () =>
         <b>{list}</b> can show what {names.length === 1 ? "it's" : "they're"} doing right here.
       </p>
       <Button size="sm" onClick={onOpen}>
-        Add their widgets
+        See their widgets
       </Button>
       <IconButton
         label="Not now"

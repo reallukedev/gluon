@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { MoreHoriz, EditPencil, Lock, ShieldCheck, Pause, Play, Trash, Refresh } from "iconoir-react";
 import type { FolderGrant, PersonSession, PersonView } from "@/lib/people-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
-import { Notice, Page, PageHeader, Panel, Skeleton } from "@/components/ui/Surface";
+import { Notice, PageHeader, Panel, Skeleton } from "@/components/ui/Surface";
+import { peopleHref } from "@/lib/settings-links";
 import { Button, IconButton } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Checkbox, Field, Input, Segmented } from "@/components/ui/Field";
@@ -96,7 +97,7 @@ export function PersonDetail({ initial }: { initial: PersonView }) {
       onConfirm: quiet(async () => {
         await api.del(url);
         toast.success(`Removed ${p.displayName}`);
-        router.push("/people");
+        router.push(peopleHref());
         router.refresh();
       }),
     });
@@ -118,9 +119,11 @@ export function PersonDetail({ initial }: { initial: PersonView }) {
   );
 
   return (
-    <Page>
+    // Opened from Settings → People: the header keeps its back link on every width (the wrapper
+    // stops the Settings rule that hides section back links on wide screens).
+    <div className={s.detail}>
       <PageHeader
-        back={{ href: "/people", label: "People" }}
+        back={{ href: peopleHref(), label: "People" }}
         title={
           <span className={s.title}>
             <Avatar name={p.displayName} size={40} off={p.disabled} />
@@ -217,7 +220,7 @@ export function PersonDetail({ initial }: { initial: PersonView }) {
       <PasswordDialog open={pwOpen} onOpenChange={setPwOpen} url={url} name={p.displayName} onDone={() => void mutate()} />
       <RenameDialog open={nameOpen} onOpenChange={setNameOpen} current={p.displayName} onSave={(name) => patch({ displayName: name }, "Renamed")} />
       {confirmNode}
-    </Page>
+    </div>
   );
 }
 

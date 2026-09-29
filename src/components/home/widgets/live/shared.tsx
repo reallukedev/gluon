@@ -240,7 +240,21 @@ export function AppStopped({ kind, source }: { kind: IntegrationKind; source: In
 }
 
 /** A failed fetch with no data to show: auth failed → reconnect; can't reach → retry; bad settings → fix them. */
-export function Problem({ error, kind, subject, source, retry }: { error: ApiError; kind?: IntegrationKind; subject?: string; source?: IntegrationRef; retry?: () => void }) {
+export function Problem({
+  error,
+  kind,
+  subject,
+  source,
+  retry,
+  openSettings,
+}: {
+  error: ApiError;
+  kind?: IntegrationKind;
+  subject?: string;
+  source?: IntegrationRef;
+  retry?: () => void;
+  openSettings?: () => void;
+}) {
   const { viewer } = usePrefs();
   const admin = viewer.role === "admin";
   const who = subject ?? (kind ? cap(KIND_NAME[kind]) : "This source");
@@ -248,14 +262,33 @@ export function Problem({ error, kind, subject, source, retry }: { error: ApiErr
   const auth = error.code === "upstream_auth" || error.code === "integration_broken";
   const unreachable = error.code === "unreachable" || error.code === "timeout";
   if (kind && auth) {
+    // Name the app the key belongs to, and where it's fixed, in the words of the Settings page.
+    const app = source?.name ?? cap(KIND_NAME[kind]);
     return (
-      <WidgetState line="unhealthy" title={`${who} stopped accepting Gluon`} action={admin ? <ConnectButton kind={kind} integrationId={source?.id} label="Reconnect" /> : undefined}>
-        {admin ? error.message : "Its connection needs attention. Whoever runs the server can reconnect it."}
+      <WidgetState
+        line="unhealthy"
+        title={`The key for ${app} stopped working`}
+        action={admin ? <ConnectButton kind={kind} integrationId={source?.id} label={`Reconnect ${app}`} /> : undefined}
+      >
+        {admin ? (
+          <>
+            Reconnect it here, or in Settings → Connected apps.
+            <span className={l.stateWhy} title={error.message}>
+              {error.message}
+            </span>
+          </>
+        ) : (
+          `${app} needs reconnecting. Whoever runs the server can do it in a minute.`
+        )}
       </WidgetState>
     );
   }
   if (configProblem) {
-    return <WidgetState title="Check this widget's settings">{error.message}</WidgetState>;
+    return (
+      <WidgetState title="Check this widget's settings" action={openSettings ? <Button size="sm" onClick={openSettings}>Open settings</Button> : undefined}>
+        {error.message}
+      </WidgetState>
+    );
   }
   if (error.code === "rate_limited") return <WidgetState title="Catching up">{error.message}</WidgetState>;
   // Members get a calm sentence; admins get the exact reason.
@@ -443,6 +476,7 @@ export function Gate<T>({
   q,
   skeleton,
   subject,
+  openSettings,
   children,
 }: {
   kind?: IntegrationKind;
@@ -450,6 +484,7 @@ export function Gate<T>({
   q: Query<T>;
   skeleton: React.ReactNode;
   subject?: string;
+  openSettings?: () => void;
   children: (data: T) => React.ReactNode;
 }) {
   if (source?.state === "loading") return <>{skeleton}</>;
@@ -458,7 +493,7 @@ export function Gate<T>({
   // A stopped app can't answer: say that, instead of a network error or a stale answer.
   if (kind && ref?.appLine === "stopped") return <AppStopped kind={kind} source={ref} />;
   if (!q.data) {
-    if (q.error) return <Problem error={q.error} kind={kind} subject={subject} source={ref} retry={q.retry} />;
+    if (q.error) return <Problem error={q.error} kind={kind} subject={subject} source={ref} retry={q.retry} openSettings={openSettings} />;
     return <>{skeleton}</>;
   }
   return (

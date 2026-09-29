@@ -152,13 +152,13 @@ export function TrafficTab() {
                   <AppIcon src={app?.icon} name={app?.name ?? c.name} size={24} />
                   <span className={s.whoText}>
                     {app ? (
-                      <Link href={`/apps/${encodeURIComponent(app.id)}`} className={s.whoName}>
+                      <Link href={`/apps/${encodeURIComponent(app.id)}`} className={s.whoName} title={app.name}>
                         {app.name}
                       </Link>
                     ) : (
-                      <span className={s.whoName}>{c.name}</span>
+                      <span className={s.whoName} title={c.name}>{c.name}</span>
                     )}
-                    {app && app.name !== c.name && <span className={`${s.whoSub} mono`}>{c.name}</span>}
+                    {app && app.name !== c.name && <span className={`${s.whoSub} mono`} title={c.name}>{c.name}</span>}
                   </span>
                 </span>
                 {c.rx === null && c.tx === null ? (

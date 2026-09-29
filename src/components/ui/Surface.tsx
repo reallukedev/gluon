@@ -78,12 +78,13 @@ export function Section({ title, meta, children, id }: { title: React.ReactNode;
 export function Empty({ title, children, action, center }: { title: string; children?: React.ReactNode; action?: React.ReactNode; center?: boolean }) {
   return (
     <div className={`${s.empty} ${center ? s.emptyCenter : ""}`}>
-      <div className={s.emptyGlyph} aria-hidden>
-        <i style={{ height: "100%" }} />
-        <i style={{ height: "60%" }} />
-        <i style={{ height: "85%", opacity: 0.4 }} />
-        <i style={{ height: "40%" }} />
-      </div>
+      <svg className={s.emptyGlyph} viewBox="0 0 44 20" fill="none" aria-hidden>
+        {/* One end held, the other still open: nothing here yet. */}
+        <circle cx="3" cy="14" r="2.4" fill="currentColor" />
+        <path d="M3 14L4.5 13.9L5.8 13.4L7.1 12.8L8.1 11.9L8.9 10.9L9.4 9.8L9.7 8.7L9.6 7.7L9.3 6.8L8.8 6.2L8.2 5.7L7.5 5.6L6.8 5.7L6.2 6.2L5.7 6.8L5.4 7.7L5.3 8.7L5.5 9.8L6.1 10.9L6.9 11.9L7.9 12.8L9.2 13.4L10.5 13.9L12 14L13.5 13.9L14.8 13.4L16.1 12.8L17.1 11.9L17.9 10.9L18.4 9.8L18.7 8.7L18.6 7.7L18.3 6.8L17.9 6.2L17.2 5.7L16.5 5.6L15.8 5.7L15.2 6.2L14.7 6.8L14.4 7.7L14.3 8.7L14.6 9.8L15.1 10.9L15.9 11.9L16.9 12.8L18.1 13.4L19.5 13.9L21 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M24 14H37.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="0.1 3.2" />
+        <circle cx="41" cy="14" r="2.4" stroke="currentColor" strokeWidth="1.3" strokeDasharray="1.6 1.4" />
+      </svg>
       <p className={s.emptyTitle}>{title}</p>
       {children && <div className={s.emptyBody}>{children}</div>}
       {action && <div className={s.emptyAction}>{action}</div>}

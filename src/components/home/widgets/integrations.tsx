@@ -21,33 +21,7 @@ import {
 } from "./live/media";
 import { HomebridgeAccessories, HomebridgeSettings, JsonFields, LinkStatus, LinkStatusSettings, SlskdTransfers, type HomebridgeConfig, type LinkStatusConfig } from "./live/services";
 import { CalendarSettings, CalendarWidget, FeedSettings, FeedWidget, WeatherSettings, WeatherWidget, type CalendarConfig, type FeedConfig, type WeatherConfig } from "./live/personal";
-import p from "./live/live.module.css";
-
-/* Catalog previews: abstract drawings in the product's line language. */
-const PvRow = ({ square }: { square?: boolean }) => (
-  <span className={p.pvRow}>
-    <i className={square ? p.pvSquare : p.pvPoster} />
-    <span className={p.pvLines}>
-      <i />
-      <i />
-      <i className={p.pvProgress} />
-    </span>
-  </span>
-);
-const PvShelf = ({ square }: { square?: boolean }) => (
-  <span className={p.pvShelf}>
-    {[0, 1, 2, 3, 4].map((i) => (
-      <i key={i} className={square ? p.pvSquare : p.pvPoster} />
-    ))}
-  </span>
-);
-const PvStats = ({ values }: { values: string[] }) => (
-  <span className={p.pvStats}>
-    {values.map((v) => (
-      <b key={v}>{v}</b>
-    ))}
-  </span>
-);
+import { Preview } from "../previews";
 
 registerWidget<IntegrationConfig>({
   type: "jellyfin.now-playing",
@@ -61,7 +35,7 @@ registerWidget<IntegrationConfig>({
   title: (c) => c.title || "Now watching",
   Component: JellyfinNowPlaying,
   Settings: IntegrationSettingsFor("jellyfin", "Now watching"),
-  preview: <PvRow />,
+  preview: <Preview of="now-playing" />,
 });
 
 registerWidget<RecentConfig>({
@@ -76,7 +50,7 @@ registerWidget<RecentConfig>({
   title: (c) => c.title || "New on Jellyfin",
   Component: JellyfinRecent,
   Settings: JellyfinRecentSettings,
-  preview: <PvShelf />,
+  preview: <Preview of="shelf" />,
 });
 
 registerWidget<IntegrationConfig>({
@@ -91,7 +65,7 @@ registerWidget<IntegrationConfig>({
   title: (c) => c.title || "Libraries",
   Component: JellyfinLibraries,
   Settings: IntegrationSettingsFor("jellyfin", "Libraries"),
-  preview: <PvStats values={["412", "86"]} />,
+  preview: <Preview of="counts" />,
 });
 
 registerWidget<ImmichConfig>({
@@ -106,13 +80,7 @@ registerWidget<ImmichConfig>({
   title: (c) => c.title || "Photos",
   Component: ImmichStats,
   Settings: ImmichSettings,
-  preview: (
-    <span className={p.pvGrid}>
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <i key={i} />
-      ))}
-    </span>
-  ),
+  preview: <Preview of="photos" />,
 });
 
 registerWidget<ImmichRecentConfig>({
@@ -127,13 +95,7 @@ registerWidget<ImmichRecentConfig>({
   title: (c) => c.title || "Latest photos",
   Component: ImmichRecent,
   Settings: ImmichRecentSettings,
-  preview: (
-    <span className={p.pvGrid}>
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <i key={i} />
-      ))}
-    </span>
-  ),
+  preview: <Preview of="wall" />,
 });
 
 registerWidget<IntegrationConfig>({
@@ -148,7 +110,7 @@ registerWidget<IntegrationConfig>({
   title: (c) => c.title || "Now playing",
   Component: SubsonicNowPlaying,
   Settings: IntegrationSettingsFor("subsonic", "Now playing"),
-  preview: <PvRow square />,
+  preview: <Preview of="music-now" />,
 });
 
 registerWidget<IntegrationConfig>({
@@ -163,7 +125,7 @@ registerWidget<IntegrationConfig>({
   title: (c) => c.title || "New music",
   Component: SubsonicRecent,
   Settings: IntegrationSettingsFor("subsonic", "New music"),
-  preview: <PvShelf square />,
+  preview: <Preview of="music-shelf" />,
 });
 
 registerWidget<IntegrationConfig>({
@@ -178,13 +140,7 @@ registerWidget<IntegrationConfig>({
   title: (c) => c.title || "Transfers",
   Component: SlskdTransfers,
   Settings: IntegrationSettingsFor("slskd", "Transfers"),
-  preview: (
-    <span className={p.pvBars}>
-      <i style={{ width: "76%" }} />
-      <i style={{ width: "38%" }} />
-      <i style={{ width: "12%" }} data-dashed="" />
-    </span>
-  ),
+  preview: <Preview of="transfers" />,
 });
 
 registerWidget<HomebridgeConfig>({
@@ -199,14 +155,7 @@ registerWidget<HomebridgeConfig>({
   title: (c) => c.title || "Home",
   Component: HomebridgeAccessories,
   Settings: HomebridgeSettings,
-  preview: (
-    <span className={p.pvTiles}>
-      <i data-on="" />
-      <i />
-      <i />
-      <i data-on="" />
-    </span>
-  ),
+  preview: <Preview of="accessories" />,
 });
 
 registerWidget<IntegrationConfig>({
@@ -221,7 +170,7 @@ registerWidget<IntegrationConfig>({
   title: (c) => c.title || "Values",
   Component: JsonFields,
   Settings: IntegrationSettingsFor("generic-json", "Values"),
-  preview: <PvStats values={["42", "7d"]} />,
+  preview: <Preview of="values" />,
 });
 
 registerWidget<WeatherConfig>({
@@ -231,18 +180,13 @@ registerWidget<WeatherConfig>({
   category: "For you",
   sizes: ["s", "m", "t", "l", "w"],
   defaultSize: "m",
+  multiple: true,
+  setupOnPin: true,
   defaultConfig: {},
   title: (c) => c.title || c.name || "Weather",
   Component: WeatherWidget,
   Settings: WeatherSettings,
-  preview: (
-    <span className={p.pvWeather}>
-      <b>18°</b>
-      <svg viewBox="0 0 60 20" aria-hidden>
-        <polyline points="0,14 10,12 20,8 30,6 40,9 50,13 60,15" />
-      </svg>
-    </span>
-  ),
+  preview: <Preview of="weather" />,
 });
 
 registerWidget<CalendarConfig>({
@@ -252,21 +196,13 @@ registerWidget<CalendarConfig>({
   category: "For you",
   sizes: ["m", "t", "l"],
   defaultSize: "t",
+  multiple: true,
+  setupOnPin: true,
   defaultConfig: { days: 7 },
   title: (c) => c.title || c.calName || "Calendar",
   Component: CalendarWidget,
   Settings: CalendarSettings,
-  preview: (
-    <span className={p.pvAgenda}>
-      <i className={p.pvDay} />
-      {[0, 1, 2].map((i) => (
-        <span key={i}>
-          <i />
-          <i />
-        </span>
-      ))}
-    </span>
-  ),
+  preview: <Preview of="calendar" />,
 });
 
 registerWidget<FeedConfig>({
@@ -276,20 +212,13 @@ registerWidget<FeedConfig>({
   category: "For you",
   sizes: ["m", "t", "l", "w"],
   defaultSize: "t",
+  multiple: true,
+  setupOnPin: true,
   defaultConfig: {},
   title: (c) => c.title || c.feedTitle || "News",
   Component: FeedWidget,
   Settings: FeedSettings,
-  preview: (
-    <span className={p.pvFeed}>
-      {[0, 1, 2].map((i) => (
-        <span key={i}>
-          <i />
-          <i />
-        </span>
-      ))}
-    </span>
-  ),
+  preview: <Preview of="feed" />,
 });
 
 registerWidget<LinkStatusConfig>({
@@ -299,15 +228,12 @@ registerWidget<LinkStatusConfig>({
   category: "For you",
   sizes: ["s", "m"],
   defaultSize: "s",
+  multiple: true,
+  setupOnPin: true,
   defaultConfig: {},
   Component: LinkStatus,
   Settings: LinkStatusSettings,
-  preview: (
-    <span className={p.pvStatus}>
-      <i />
-      <b>42 ms</b>
-    </span>
-  ),
+  preview: <Preview of="link-status" />,
 });
 
 export {};

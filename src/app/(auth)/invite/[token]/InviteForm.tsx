@@ -40,7 +40,7 @@ export function InviteForm({ token, displayName, role, serverName, mustEnrol, re
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
 
   const finish = React.useCallback(() => {
-    router.replace("/?welcome=1");
+    router.replace("/welcome");
     router.refresh();
   }, [router]);
 

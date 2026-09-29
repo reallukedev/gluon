@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Drawer } from "@base-ui/react/drawer";
-import { Menu as MenuIcon, Search, SidebarCollapse, SidebarExpand, LogOut, Settings, HalfMoon, SunLight, Pin, Xmark } from "iconoir-react";
-import { orderedNav } from "@/lib/nav";
+import { Menu as MenuIcon, Search, SidebarCollapse, SidebarExpand, LogOut, Settings, HalfMoon, SunLight, Pin, Xmark, ChatBubbleWarning } from "iconoir-react";
+import { orderedNav, SETTINGS_JUMPS, SETTINGS_KEY } from "@/lib/nav";
 import { api, useApi } from "@/lib/client/api";
+import { peopleHref } from "@/lib/settings-links";
 import { usePrefs } from "@/components/PrefsProvider";
 import { IconButton } from "@/components/ui/Button";
 import { Menu } from "@/components/ui/Menu";
@@ -35,6 +36,10 @@ export interface ShellProps {
   memberFiles: boolean;
   initial: ShellData;
 }
+
+/** Which pages a household member may open beyond their own (admins: all). Settings reads it to list the right pages. */
+const NavAccess = React.createContext<{ memberStatus: boolean; memberFiles: boolean }>({ memberStatus: true, memberFiles: true });
+export const useNavAccess = () => React.useContext(NavAccess);
 
 const noop = () => () => {};
 function useIsMac() {
@@ -88,8 +93,18 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
   };
   const announcements = data.announcements.filter((a) => !dismissed.includes(a.id));
 
-  const nav = orderedNav(viewer.role, prefs.sidebarOrder, prefs.sidebarHidden, { memberStatus, memberFiles });
+  const access = React.useMemo(() => ({ memberStatus, memberFiles }), [memberStatus, memberFiles]);
+  const nav = orderedNav(viewer.role, prefs.sidebarOrder, prefs.sidebarHidden, access);
   const collapsed = prefs.sidebarCollapsed;
+  // "g" then a letter jumps to any page this person can open, shown in the sidebar or not.
+  const chordKey = nav.all.map((n) => `${n.key}${n.href}`).join(" ");
+  const isAdmin = viewer.role === "admin";
+  const chords = React.useMemo(() => {
+    const map = new Map<string, string>([[SETTINGS_KEY, "/settings"]]);
+    if (isAdmin) for (const j of SETTINGS_JUMPS) map.set(j.key, j.href);
+    for (const pair of chordKey.split(" ")) if (pair) map.set(pair[0]!, pair.slice(1));
+    return map;
+  }, [chordKey, isAdmin]);
 
   // Close the mobile drawer on navigation.
   React.useEffect(() => setDrawerOpen(false), [pathname]);
@@ -101,7 +116,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
     return () => window.removeEventListener("gluon:palette", open);
   }, []);
 
-  // ⌘K / Ctrl+K opens the palette. "g h/s/a/f…" style chords jump to sections.
+  // ⌘K / Ctrl+K opens the palette. "g h/s/a/f…" style chords jump to sections (keys in lib/nav).
   React.useEffect(() => {
     let chord: string | null = null;
     let chordTimer: ReturnType<typeof setTimeout> | undefined;
@@ -120,8 +135,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
         return;
       }
       if (chord === "g") {
-        const map: Record<string, string> = { h: "/", s: "/status", a: "/apps", f: "/files", n: "/network", d: "/storage", y: "/system", x: "/diagnostics", l: "/alerts", p: "/people", c: "/settings" };
-        const href = map[e.key.toLowerCase()];
+        const href = chords.get(e.key.toLowerCase());
         chord = null;
         if (href) {
           e.preventDefault();
@@ -137,27 +151,26 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [prefs.shortcuts, router]);
+  }, [prefs.shortcuts, router, chords]);
 
-  const badgeFor = (id: string) => {
+  /** The one problems count lives on Status. (Household problem reports show on the account button: they're in Settings → People.) */
+  const badgeFor = (id: string): { node: React.ReactNode; text: string } | null => {
     if (viewer.role !== "admin") return null;
-    if (id === "status" || id === "alerts") {
+    if (id === "status") {
       const n = data.fault + data.attention;
       if (!n) return null;
-      return (
-        <span className={s.badge} aria-label={`${n} need you`}>
-          <i className={s.badgeMark} data-fault={data.fault > 0 ? "" : undefined} aria-hidden />
-          <span>{n}</span>
-        </span>
-      );
-    }
-    if (id === "people" && data.reports) {
-      return (
-        <span className={s.badge} aria-label={`${data.reports} problem reports`}>
-          <i className={s.badgeMark} aria-hidden />
-          <span>{data.reports}</span>
-        </span>
-      );
+      const text = data.fault ? `${n} need${n === 1 ? "s" : ""} you, ${data.fault} broken` : `${n} need${n === 1 ? "s" : ""} you`;
+      return {
+        text,
+        node: (
+          <span className={s.badge} role="img" aria-label={text}>
+            <i className={s.badgeMark} data-fault={data.fault > 0 ? "" : undefined} aria-hidden />
+            <span aria-hidden className="num">
+              {n}
+            </span>
+          </span>
+        ),
+      };
     }
     return null;
   };
@@ -167,6 +180,9 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
     router.replace("/login");
     router.refresh();
   }
+
+  // Household problem reports wait in Settings → People; the account button (Settings' door) carries their count.
+  const reportsText = viewer.role === "admin" && data.reports ? `${data.reports} problem report${data.reports === 1 ? "" : "s"} waiting` : null;
 
   const isMac = useIsMac();
   const systemDark = useMediaQuery("(prefers-color-scheme: dark)");
@@ -203,24 +219,24 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
           </Tooltip>
         </div>
       )}
-      <nav className={s.scroll} aria-label="Main" data-onboarding={prefs.onboarding === "pending" ? "" : undefined}>
+      <nav className={s.scroll} aria-label="Main">
         <div className={s.group}>
-          {nav.visible
-            .filter((n) => n.group === "main")
-            .map((n) => (
-              <NavLink key={n.id} href={n.href} label={n.label} id={n.id} active={isActive(pathname, n.href)} badge={badgeFor(n.id)} collapsed={collapsed && !inDrawer} />
-            ))}
+          {nav.visible.map((n) => {
+            const badge = badgeFor(n.id);
+            return (
+              <NavLink
+                key={n.id}
+                href={n.href}
+                label={n.label}
+                id={n.id}
+                active={isActive(pathname, n.href)}
+                badge={badge?.node}
+                tooltip={badge ? `${n.label} · ${badge.text}` : undefined}
+                collapsed={collapsed && !inDrawer}
+              />
+            );
+          })}
         </div>
-        {nav.visible.some((n) => n.group === "watch") && (
-          <div className={s.group}>
-            <div className={`label ${s.groupLabel}`}>Keep watch</div>
-            {nav.visible
-              .filter((n) => n.group === "watch")
-              .map((n) => (
-                <NavLink key={n.id} href={n.href} label={n.label} id={n.id} active={isActive(pathname, n.href)} badge={badgeFor(n.id)} collapsed={collapsed && !inDrawer} />
-              ))}
-          </div>
-        )}
         {data.pins.length > 0 && (
           <div className={s.group}>
             <div className={`label ${s.groupLabel}`}>Pinned</div>
@@ -247,7 +263,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
           side="top"
           align="start"
           trigger={
-            <button type="button" className={s.me} aria-label={`Account: ${viewer.displayName}`}>
+            <button type="button" className={s.me} aria-label={`Account: ${viewer.displayName}${reportsText ? `. ${reportsText}` : ""}`}>
               <span className={s.avatar} aria-hidden>
                 {initials(viewer.displayName)}
               </span>
@@ -255,10 +271,17 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
                 <span className={s.meName}>{viewer.displayName}</span>
                 <span className={s.meRole}>{viewer.role === "admin" ? "Admin" : "Household"}</span>
               </span>
+              {reportsText && (
+                <span className={s.badge} aria-hidden title={reportsText}>
+                  <i className={s.badgeMark} />
+                  <span className="num">{data.reports}</span>
+                </span>
+              )}
             </button>
           }
           items={[
-            { label: "Settings", icon: <Settings />, onSelect: () => router.push("/settings"), hint: "g c" },
+            ...(reportsText ? [{ label: reportsText, description: "Settings → People → Problem reports", icon: <ChatBubbleWarning />, onSelect: () => router.push(peopleHref({ tab: "reports" })) }, "separator" as const] : []),
+            { label: "Settings", icon: <Settings />, onSelect: () => router.push("/settings"), hint: prefs.shortcuts ? `g ${SETTINGS_KEY}` : undefined },
             {
               label: effectiveDark ? "Use light theme" : "Use dark theme",
               icon: effectiveDark ? <SunLight /> : <HalfMoon />,
@@ -279,6 +302,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
   );
 
   return (
+    <NavAccess.Provider value={access}>
     <div className={s.frame} data-collapsed={collapsed ? "" : undefined}>
       <a href="#main" className={s.skip}>
         Skip to content
@@ -333,6 +357,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
       {!pathname.startsWith("/files") && <UploadsElsewhere />}
       {viewer.mustChangePassword && <ForcePasswordChange />}
     </div>
+    </NavAccess.Provider>
   );
 }
 
@@ -342,6 +367,7 @@ function NavLink({
   id,
   active,
   badge,
+  tooltip,
   collapsed,
   external,
 }: {
@@ -350,6 +376,8 @@ function NavLink({
   id: string;
   active: boolean;
   badge?: React.ReactNode;
+  /** Rail tooltip, when it should say more than the label (the count is hidden on the rail). */
+  tooltip?: string;
   collapsed: boolean;
   external?: boolean;
 }) {
@@ -358,6 +386,8 @@ function NavLink({
       href={href}
       className={s.link}
       aria-current={active ? "page" : undefined}
+      // On the icon rail the label is hidden, so the link carries its name (and count) itself.
+      aria-label={collapsed ? (tooltip ?? label) : undefined}
       prefetch={false}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
@@ -368,7 +398,7 @@ function NavLink({
     </Link>
   );
   return collapsed ? (
-    <Tooltip content={label} side="right">
+    <Tooltip content={tooltip ?? label} side="right">
       {link}
     </Tooltip>
   ) : (

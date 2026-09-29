@@ -14,6 +14,7 @@ import { AppIcon } from "@/components/apps/AppIcon";
 import { shortName } from "@/lib/app-names";
 import { ShareFolderDialog } from "./FolderGrants";
 import { Avatar, errorMessage } from "./bits";
+import { peopleHref } from "@/lib/settings-links";
 import s from "./access.module.css";
 
 const APPS_URL = "/api/people/apps";
@@ -162,7 +163,7 @@ export function AccessMap({ memberId }: { memberId?: string }) {
                     {single ? (
                       <span className={s.everyone}>{m.displayName}</span>
                     ) : (
-                      <Link href={`/people?person=${encodeURIComponent(m.id)}`} className={s.person} title={`${m.displayName} (${m.username})`}>
+                      <Link href={peopleHref({ person: m.id })} className={s.person} title={`${m.displayName} (${m.username})`}>
                         <Avatar name={m.displayName} size={26} />
                         <span className="truncate">{m.displayName}</span>
                       </Link>

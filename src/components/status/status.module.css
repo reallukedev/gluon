@@ -57,11 +57,11 @@
 .fsVal { color: var(--muted); }
 .fsVal[data-attn] { color: var(--ink); font-weight: 600; }
 
-/* Apps */
-.appsPanel { margin-top: 20px; }
+/* Apps (spacing comes from the tab body's gap) */
+.appsPanel { min-width: 0; }
 
 /* Recently */
-.recentPanel { margin-top: 20px; }
+.recentPanel { min-width: 0; }
 .recent { margin: 0; padding: 0; list-style: none; }
 .recentRow { display: grid; grid-template-columns: 140px 1fr; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
 .recentRow:first-child { border-top: 0; }
@@ -87,3 +87,15 @@
 /* Header: the tracked date line across from the verdict. */
 .dateLine { font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 @media (max-width: 720px) { .dateLine { display: none; } }
+
+/* Fixed with its remedy: the doubled line settles into one while Gluon confirms on its next check. */
+.need[data-settled] .needMark { background: var(--ink); }
+.need[data-settled] .needMark::after { transform: scaleY(0); opacity: 0; }
+.need[data-severity="fault"][data-settled] .needMark { transform: none; background: var(--ink); }
+.need[data-settled] .needTitle { color: var(--ink-2); }
+.needSettled { color: var(--ink-2); }
+.needMeta :global(.truncate) { max-width: 32ch; }
+
+/* Admin page body: panels 20px apart. */
+.body { display: grid; gap: 20px; min-width: 0; }
+.main { display: grid; gap: 20px; min-width: 0; }

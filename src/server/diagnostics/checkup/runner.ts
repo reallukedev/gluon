@@ -94,7 +94,7 @@ function broadcast(a: Active, e: CheckupEvent) {
   }
 }
 
-/** Offer the same fix the Alerts page shows when an open finding matches. */
+/** Offer the same fix Status shows when an open finding matches. */
 function finalize(spec: CheckSpec, out: Outcome, took: number): CheckResult {
   const { findings, ...rest } = out;
   let fix = rest.fix ?? null;

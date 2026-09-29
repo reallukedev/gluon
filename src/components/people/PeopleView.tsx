@@ -6,7 +6,10 @@ import { NavArrowRight, UserPlus, Trash } from "iconoir-react";
 import type { InviteView, PersonView, ProblemReport } from "@/lib/people-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Empty, Page, PageHeader, Panel, Skeleton } from "@/components/ui/Surface";
+import { Empty, Panel, Skeleton } from "@/components/ui/Surface";
+import { SectionHeader } from "@/components/settings/SectionHeader";
+import { Household } from "@/components/settings/Household";
+import { peopleHref, type PeopleTab } from "@/lib/settings-links";
 import { Button, IconButton } from "@/components/ui/Button";
 import { StateLine } from "@/components/ui/StateLine";
 import { Tabs } from "@/components/ui/Tabs";
@@ -17,12 +20,22 @@ import { InviteDialog } from "./InviteDialog";
 import { REPORTS_URL, ReportsTab } from "./ReportsTab";
 import { AccessMap } from "./AccessMap";
 import { AnnouncementsTab } from "./AnnouncementsTab";
+import { PersonDetail } from "./PersonDetail";
 import { Avatar, reportStage, roleLabel } from "./bits";
 import s from "./people.module.css";
 
-export type PeopleTab = "people" | "access" | "reports" | "announcements";
+export type { PeopleTab };
 
-export function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; initialPeople: PersonView[]; reportId: string | null }) {
+/**
+ * Settings → People: everyone who can sign in (and invites), who can open what, the household's
+ * problem reports, announcements, and what new members start with. `person` opens one person.
+ */
+export function PeopleSettings({ tab, initialPeople, person, reportId }: { tab: PeopleTab; initialPeople: PersonView[]; person: PersonView | null; reportId: string | null }) {
+  if (person) return <PersonDetail initial={person} />;
+  return <PeopleView tab={tab} initialPeople={initialPeople} reportId={reportId} />;
+}
+
+function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; initialPeople: PersonView[]; reportId: string | null }) {
   const fmt = useFormat();
   const { data: people = initialPeople, mutate } = useApi<PersonView[]>("/api/people", { refresh: 30_000, fallbackData: initialPeople });
   const { data: invites, mutate: mutateInvites } = useApi<InviteView[]>("/api/people/invites", { refresh: 60_000 });
@@ -36,16 +49,15 @@ export function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; i
   const summary = (
     <>
       {newReports > 0 && <b>{fmt.plural(newReports, "new problem report")} from the household. </b>}
-      {fmt.plural(people.length - members, "admin")} and {fmt.plural(members, "household member")}
+      {people.length === 1 ? "Just you so far" : members === 0 ? `${fmt.plural(people.length, "admin")}, no household members yet` : `${fmt.plural(people.length - members, "admin")} and ${fmt.plural(members, "household member")}`}
       {off ? `, ${off} turned off` : ""}.{invites?.length ? ` ${fmt.plural(invites.length, "invite")} waiting to be used.` : ""}
-      {weakAdmins ? ` ${weakAdmins === 1 ? "One admin has" : `${weakAdmins} admins have`} no two-step verification.` : ""}
+      {weakAdmins ? (people.length === 1 ? " Two-step verification isn't on yet." : ` ${weakAdmins === 1 ? "One admin has" : `${weakAdmins} admins have`} no two-step verification.`) : ""}
     </>
   );
 
   return (
-    <Page>
-      <PageHeader
-        title="People"
+    <>
+      <SectionHeader
         summary={summary}
         actions={
           <Button variant="primary" icon={<UserPlus />} onClick={() => setInviting(true)}>
@@ -55,12 +67,13 @@ export function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; i
       />
       <Tabs
         value={tab}
-        hrefFor={(v) => (v === "people" ? "/people" : `/people?tab=${v}`)}
+        hrefFor={(v) => peopleHref({ tab: v })}
         items={[
           { value: "people", label: "People", count: people.length },
           { value: "access", label: "Who can open what" },
           { value: "reports", label: "Problem reports", count: newReports || undefined, attention: newReports > 0 },
           { value: "announcements", label: "Announcements" },
+          { value: "defaults", label: "New members" },
         ]}
         aria-label="People sections"
       />
@@ -69,6 +82,7 @@ export function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; i
         {tab === "access" && <AccessMap />}
         {tab === "reports" && <ReportsTab focus={reportId} />}
         {tab === "announcements" && <AnnouncementsTab />}
+        {tab === "defaults" && <Household />}
       </div>
       <InviteDialog
         open={inviting}
@@ -78,7 +92,7 @@ export function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; i
           void mutate();
         }}
       />
-    </Page>
+    </>
   );
 }
 
@@ -115,7 +129,7 @@ function PeopleList({ people, invites, onInvitesChange, onInvite }: { people: Pe
           <span role="columnheader" className="sr-only">Open</span>
         </div>
         {people.map((p) => {
-          const href = `/people?person=${encodeURIComponent(p.id)}`;
+          const href = peopleHref({ person: p.id });
           return (
             <div
               key={p.id}

@@ -1,3 +1,5 @@
+/* Settings → Activity: the timeline and its filters. */
+.view { min-width: 0; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
 .filter {
   flex: 1 1 220px;

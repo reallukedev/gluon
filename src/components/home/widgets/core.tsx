@@ -1,5 +1,4 @@
 "use client";
-import { instanceHints, shortName } from "@/lib/app-names";
 import * as React from "react";
 import Link from "next/link";
 import { Plus, Trash } from "iconoir-react";
@@ -8,12 +7,11 @@ import { useApi } from "@/lib/client/api";
 import { useLive } from "@/lib/client/live";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
 import { StateLine } from "@/components/ui/StateLine";
-import { AppIcon } from "@/components/apps/AppIcon";
 import { TimeChart } from "@/components/charts/TimeChart";
 import { UsageBar, Skeleton } from "@/components/ui/Surface";
 import { Field, Input, Checkbox } from "@/components/ui/Field";
-import { Segmented } from "@/components/ui/Field";
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button, IconButton, LinkButton } from "@/components/ui/Button";
+import { Age, SetUp, WidgetState, useDriveNames, useFit } from "./kit";
 import { Spectrum } from "@/components/spectrum/Spectrum";
 import { spectrumGroups } from "@/components/status/StatusView";
 import type { StatusPayload } from "@/server/status";
@@ -106,9 +104,9 @@ export function ClockWidget({ item, size }: WidgetProps<ClockConfig>) {
         <div className={s.clockDate}>{mounted ? fmt.date(now, { weekday: true, year: size !== "s" }) : "\u00a0"}</div>
         {!!item.config.zones?.length && (
           <div className={s.zones}>
-            {item.config.zones.map((z) => (
-              <span key={z.tz} suppressHydrationWarning>
-                {z.label}
+            {item.config.zones.slice(0, size === "s" ? 1 : size === "m" ? 3 : 4).map((z, i) => (
+              <span key={`${z.tz}:${i}`} suppressHydrationWarning title={z.tz}>
+                <span className={s.zoneLabel}>{z.label}</span>
                 <b>
                   {new Intl.DateTimeFormat(undefined, {
                     hour: "numeric",
@@ -197,200 +195,75 @@ export function ClockSettings({ config, onChange }: SettingsProps<ClockConfig>) 
 
 export function StatusWidget({ size }: WidgetProps) {
   const { viewer } = usePrefs();
-  const { data } = useApi<StatusPayload>("/api/status", { refresh: 15_000 });
+  const admin = viewer.role === "admin";
+  const { data, error, mutate } = useApi<StatusPayload>("/api/status", { refresh: 15_000 });
+  const findings = admin && size !== "s" ? (data?.findings ?? []) : [];
+  // Only rows that fit whole are shown; the link below counts the rest, so the headline's number always adds up.
+  const [listRef, fit] = useFit<HTMLUListElement>(findings.length);
   if (!data) {
+    if (error?.status === 403) {
+      return (
+        <WidgetState title="Status is for admins here">Whoever runs the server hasn&apos;t shared it with the household.</WidgetState>
+      );
+    }
+    if (error) {
+      return (
+        <WidgetState
+          line="unknown"
+          title="Can't check the server"
+          action={
+            <Button size="sm" variant="ghost" onClick={() => void mutate()}>
+              Try again
+            </Button>
+          }
+        >
+          {admin ? error.message : "Gluon didn't answer just now. It tries again on its own."}
+        </WidgetState>
+      );
+    }
     return (
-      <div className={s.status}>
-        <Skeleton width="70%" height={20} />
-        <Skeleton width="50%" height={12} />
+      <div className={s.status} aria-busy="true" aria-label="Checking the server">
+        <div className={s.statusHead}>
+          <Skeleton width={2} height={22} radius={0} />
+          <div style={{ flex: 1, display: "grid", gap: 7 }}>
+            <Skeleton width="70%" height={18} />
+            <Skeleton width="45%" height={12} />
+          </div>
+        </div>
       </div>
     );
   }
-  const items = data.findings.slice(0, size === "s" ? 0 : size === "m" || size === "w" ? 3 : 6);
-  // Rows that don't fit are clipped whole, so the count always has a way to the full list.
-  const showAll = viewer.role === "admin" && data.findings.length > 1;
+  const total = admin ? data.findings.length : 0;
+  const hidden = total - (size === "s" ? 0 : fit);
   return (
     <div className={s.status}>
       <div className={s.statusHead}>
         <span className={s.statusMark} data-tone={data.verdict.tone} aria-hidden />
-        <div>
+        <div className={s.statusWords}>
           <p className={s.statusText}>{data.verdict.headline}</p>
-          <p className={s.statusDetail}>{data.verdict.detail}</p>
+          <p className={s.statusDetail}>
+            {data.verdict.detail}
+            <Age at={data.checkedAt} expectMs={60_000} className={s.statusAge} />
+          </p>
         </div>
       </div>
-      {viewer.role === "admin" && items.length > 0 && (
-        <ul className={s.statusItems} role="list">
-          {items.map((f) => (
-            <li key={f.id} className={s.statusItem}>
-              <Link href={`/status#${encodeURIComponent(f.id)}`}>
-                <span>{f.title}</span>
-                <span>{f.remedy?.label}</span>
+      {findings.length > 0 && (
+        <ul className={s.statusItems} role="list" ref={listRef}>
+          {findings.map((f, i) => (
+            <li key={f.id} className={s.statusItem} aria-hidden={i >= fit || undefined}>
+              <Link href={`/status#${encodeURIComponent(f.id)}`} tabIndex={i >= fit ? -1 : undefined}>
+                <StateLine state={f.severity === "fault" ? "unhealthy" : f.severity === "attention" ? "attention" : "unknown"} size={11} />
+                <span title={f.title}>{f.title}</span>
+                {f.remedy?.label && <span>{f.remedy.label}</span>}
               </Link>
             </li>
           ))}
         </ul>
       )}
-      {showAll && (
+      {admin && total > 0 && (hidden > 0 || size === "s") && (
         <Link href="/status" className={s.statusAll}>
-          All {data.findings.length} on Status
+          {hidden === total ? `See ${total === 1 ? "it" : `all ${total}`} on Status` : `${hidden} more on Status`}
         </Link>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- apps
-
-export interface AppsConfig {
-  show?: "all" | "selected";
-  ids?: string[];
-  style?: "tiles" | "list";
-}
-
-export function AppsWidget({ item, size }: WidgetProps<AppsConfig>) {
-  const { data } = useApi<HomeApp[]>("/api/apps", { refresh: 20_000 });
-  const { prefs, serverName } = usePrefs();
-  const url = useSmartUrl();
-  const cfg = item.config;
-  if (!data) {
-    return (
-      <div className={s.apps}>
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className={s.app}>
-            <Skeleton width={40} height={40} radius={10} />
-            <Skeleton width={56} height={10} />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  let apps = data.filter((a) => a.urls.home || a.urls.away);
-  if (cfg.show === "selected" && cfg.ids?.length) {
-    const order = new Map(cfg.ids.map((id, i) => [id, i]));
-    apps = apps.filter((a) => order.has(a.id)).sort((a, b) => order.get(a.id)! - order.get(b.id)!);
-  } else apps = [...apps].sort((a, b) => Number(a.line === "stopped") - Number(b.line === "stopped"));
-  if (!apps.length) {
-    return (
-      <div className={s.center}>
-        <div>
-          <b>No apps to show yet</b>
-          Apps with a web page appear here once they're shared with you.
-        </div>
-      </div>
-    );
-  }
-  const target = prefs.openLinks === "new" ? "_blank" : undefined;
-  const hints = instanceHints(apps);
-  if (cfg.style === "list") {
-    return (
-      <ul className={s.appsList} role="list">
-        {apps.map((a) => {
-          const href = url(a.urls);
-          return (
-            <li key={a.id}>
-              <a href={href ?? "#"} target={target} rel="noopener noreferrer">
-                <AppIcon src={a.icon} name={a.name} size={30} />
-                <span className={s.appsListText}>
-                  {hints.get(a.id) ? `${shortName(a.name, serverName)} · ${hints.get(a.id)}` : shortName(a.name, serverName)}
-                  <span>{a.line === "running" ? (a.description ?? "Running") : a.summary}</span>
-                </span>
-                <StateLine state={a.line} size={12} />
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    );
-  }
-  // A few apps in a big widget get bigger icons, centred, instead of a corner of a mostly empty grid.
-  const roomy = apps.length <= (size === "x" ? 10 : size === "l" || size === "t" ? 6 : 0);
-  return (
-    <div className={s.apps} data-roomy={roomy ? "" : undefined}>
-      {apps.map((a) => {
-        const href = url(a.urls);
-        const down = a.line === "stopped";
-        const hint = hints.get(a.id);
-        const note = down ? "Stopped" : a.line === "unhealthy" ? "Not working" : a.line === "starting" ? "Starting" : hint;
-        return (
-          <a
-            key={a.id}
-            href={href ?? "#"}
-            className={s.app}
-            target={target}
-            rel="noopener noreferrer"
-            data-down={down ? "" : undefined}
-            data-line={a.line}
-            title={a.line !== "running" ? `${a.name}${hint ? ` · ${hint}` : ""}: ${a.summary}` : hint ? `${a.name} · ${hint}` : a.name}
-          >
-            <span className={s.appIconWrap}>
-              <AppIcon src={a.icon} name={a.name} size={roomy ? 56 : 40} />
-            </span>
-            <span className={s.appName}>{shortName(a.name, serverName)}</span>
-            {note && (
-              <span className={s.appHint}>
-                {a.line !== "running" && <StateLine state={a.line} size={9} />}
-                {note}
-              </span>
-            )}
-          </a>
-        );
-      })}
-    </div>
-  );
-}
-
-export function AppsSettings({ config, onChange }: SettingsProps<AppsConfig>) {
-  const { data } = useApi<HomeApp[]>("/api/apps");
-  const ids = config.ids ?? [];
-  return (
-    <div className={s.form}>
-      <Field label="Look">
-        <Segmented
-          aria-label="Look"
-          value={config.style ?? "tiles"}
-          onChange={(v) => onChange({ ...config, style: v })}
-          options={[
-            { value: "tiles", label: "Icons" },
-            { value: "list", label: "List" },
-          ]}
-        />
-      </Field>
-      <Field label="Which apps">
-        <Segmented
-          aria-label="Which apps"
-          value={config.show ?? "all"}
-          onChange={(v) =>
-            onChange({
-              ...config,
-              show: v,
-              ids: v === "selected" && !ids.length ? (data ?? []).map((a) => a.id) : ids,
-            })
-          }
-          options={[
-            { value: "all", label: "All my apps" },
-            { value: "selected", label: "Only these" },
-          ]}
-        />
-      </Field>
-      {config.show === "selected" && (
-        <div className={s.pickGrid}>
-          {(data ?? [])
-            .filter((a) => a.urls.home || a.urls.away)
-            .map((a) => (
-              <Checkbox
-                key={a.id}
-                checked={ids.includes(a.id)}
-                onChange={(v) =>
-                  onChange({
-                    ...config,
-                    ids: v ? [...ids, a.id] : ids.filter((x) => x !== a.id),
-                  })
-                }
-              >
-                {a.name}
-              </Checkbox>
-            ))}
-        </div>
       )}
     </div>
   );
@@ -399,15 +272,29 @@ export function AppsSettings({ config, onChange }: SettingsProps<AppsConfig>) {
 // ---------------------------------------------------------------- machine
 
 export function VitalsWidget({ size }: WidgetProps) {
-  const { host } = useLive();
+  const { host, status } = useLive();
+  const { viewer } = usePrefs();
   const fmt = useFormat();
   const last = host.at(-1);
   const many = size === "t" || size === "l" || size === "m" || size === "w" || size === "x";
+  const cols = size === "m" || size === "w" ? 4 : 2;
   if (!last) {
+    if (status === "offline") {
+      return (
+        <WidgetState line="unknown" title="Waiting for the server">
+          Live readings stopped. They pick up again as soon as Gluon answers.
+        </WidgetState>
+      );
+    }
     return (
-      <div className={s.vitals}>
-        <Skeleton height={60} />
-        <Skeleton height={60} />
+      <div className={s.vitals} style={{ "--cols": cols } as React.CSSProperties} aria-busy="true" aria-label="Loading live readings">
+        {Array.from({ length: many ? 4 : 2 }, (_, i) => (
+          <div key={i} className={s.vital}>
+            <Skeleton width={48} height={10} />
+            <Skeleton width={56} height={24} />
+            <Skeleton height={30} />
+          </div>
+        ))}
       </div>
     );
   }
@@ -431,16 +318,10 @@ export function VitalsWidget({ size }: WidgetProps) {
     </div>
   );
   return (
-    <div
-      className={s.vitals}
-      style={
-        {
-          "--cols": size === "m" || size === "w" ? 4 : 2,
-        } as React.CSSProperties
-      }
-    >
+    <div className={s.vitals} style={{ "--cols": cols } as React.CSSProperties} data-offline={status === "offline" ? "" : undefined}>
+      {status === "offline" && <Age at={last.t} expectMs={10_000} className={s.vitalsAge} />}
       {tile(
-        "CPU",
+        viewer.role === "admin" ? "CPU" : "Processor",
         <>
           {Math.round(last.cpu)}
           <small>%</small>
@@ -485,56 +366,109 @@ export function VitalsWidget({ size }: WidgetProps) {
   );
 }
 
-export function StorageWidget() {
-  const { data } = useApi<StatusPayload>("/api/status", { refresh: 30_000 });
-  // Drives mounted under /mnt or /media read better by what they are ("2.0 TB hard drive") than by
-  // a folder named after a serial number; system paths (/, /var, /srv) stay as paths.
-  const { data: places } = useApi<{ places: { label: string; path: string; section?: string }[] }>("/api/files/places", { refresh: 300_000 });
-  const driveNames = React.useMemo(
-    () => new Map((places?.places ?? []).filter((p) => p.section === "drives" && /^\/(mnt|media)\//.test(p.path)).map((p) => [p.path, p.label] as const)),
-    [places],
-  );
+export function StorageWidget({ size }: WidgetProps) {
+  const { data, error, mutate } = useApi<StatusPayload>("/api/status", { refresh: 30_000 });
+  const driveNames = useDriveNames();
   const fmt = useFormat();
-  if (!data)
+  const rows = (data?.filesystems ?? []).filter((f) => f.size > 512 * 1024 * 1024);
+  const [listRef, fit] = useFit<HTMLDivElement>(rows.length);
+  if (!data) {
+    if (error) {
+      return (
+        <WidgetState
+          line="unknown"
+          title="Can't read the disks"
+          action={
+            <Button size="sm" variant="ghost" onClick={() => void mutate()}>
+              Try again
+            </Button>
+          }
+        >
+          {error.message}
+        </WidgetState>
+      );
+    }
     return (
-      <div className={s.storage}>
-        <Skeleton height={30} />
-        <Skeleton height={30} />
+      <div className={s.storage} aria-busy="true" aria-label="Loading disks">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className={s.fsRow}>
+            <div className={s.fsHead}>
+              <Skeleton width={`${46 - i * 8}%`} height={11} />
+              <Skeleton width={56} height={11} />
+            </div>
+            <Skeleton height={6} radius={3} />
+          </div>
+        ))}
       </div>
     );
-  const rows = data.filesystems.filter((f) => f.size > 512 * 1024 * 1024);
+  }
+  if (!rows.length) {
+    return <WidgetState title="No disks to show">Gluon hasn&apos;t measured any disks yet. They appear here a minute after it starts.</WidgetState>;
+  }
+  const hidden = rows.length - fit;
   return (
-    <div className={s.storage}>
-      {rows.map((f) => (
-        <div key={f.mount} className={s.fsRow}>
-          <div className={s.fsHead}>
-            {driveNames.get(f.mount) ? (
-              <span className="truncate" title={f.mount}>
-                {driveNames.get(f.mount)}
-              </span>
-            ) : (
-              <span className="mono truncate" title={f.mount}>
-                {f.mount}
-              </span>
-            )}
-            <span>{fmt.bytes(f.avail)} free</span>
-          </div>
-          <UsageBar value={f.pct} attention={85} fault={95} label={`${f.mount} ${Math.round(f.pct)}% used`} />
-        </div>
-      ))}
+    <div className={s.storageWrap}>
+      <div className={s.storage} ref={listRef}>
+        {rows.map((f, i) => {
+          const name = driveNames.get(f.mount);
+          return (
+            <div key={f.mount} className={s.fsRow} aria-hidden={i >= fit || undefined}>
+              <div className={s.fsHead}>
+                {name ? (
+                  <span className="truncate" title={f.mount}>
+                    {name}
+                  </span>
+                ) : (
+                  <span className="mono truncate" title={f.mount}>
+                    {f.mount}
+                  </span>
+                )}
+                <span>
+                  {fmt.bytes(f.avail)} free{size !== "s" && <span className={s.fsOf}> of {fmt.bytes(f.size)}</span>}
+                </span>
+              </div>
+              <UsageBar value={f.pct} attention={85} fault={95} label={`${name ?? f.mount}: ${Math.round(f.pct)}% used`} />
+            </div>
+          );
+        })}
+      </div>
+      {hidden > 0 && (
+        <Link href="/storage" className={s.moreLink}>
+          {hidden} more in Storage
+        </Link>
+      )}
     </div>
   );
 }
 
 export function SpectrumWidget() {
-  const { data } = useApi<StatusPayload>("/api/status", { refresh: 15_000 });
+  const { data, error } = useApi<StatusPayload>("/api/status", { refresh: 15_000 });
   const fmt = useFormat();
+  if (!data && error) return <WidgetState line="unknown" title="Can't draw the server right now">{error.message}</WidgetState>;
   if (!data)
     return (
-      <div className={s.pad}>
-        <Skeleton height={80} />
+      <div className={s.pad} aria-busy="true" aria-label="Loading">
+        <div className={s.spectrumSkel}>
+          {Array.from({ length: 28 }, (_, i) => (
+            <i key={i} style={{ height: `${55 + ((i * 37) % 45)}%` }} />
+          ))}
+        </div>
       </div>
     );
+  if (!data.apps.length && !data.filesystems.length) {
+    return (
+      <WidgetState
+        title="Nothing running yet"
+        action={
+          <LinkButton href="/apps" size="sm">
+            Open Apps
+          </LinkButton>
+        }
+      >
+        Every app and disk on the server shows up here as a line.
+      </WidgetState>
+    );
+  }
   return (
     <div className={s.pad}>
       <Spectrum groups={spectrumGroups(data.apps, data.findings, data.filesystems, (n) => fmt.bytes(n))} height={64} labelRows={2} legend />
@@ -557,17 +491,14 @@ function hostOf(url: string) {
   }
 }
 
-export function BookmarksWidget({ item, editing }: WidgetProps<BookmarksConfig>) {
+export function BookmarksWidget({ item, openSettings }: WidgetProps<BookmarksConfig>) {
   const { prefs } = usePrefs();
   const links = item.config.links ?? [];
   if (!links.length) {
     return (
-      <div className={s.center}>
-        <div>
-          <b>Your links</b>
-          {editing ? "Open this widget's settings to add some." : "Add the sites you open every day. Customise your home page to add them."}
-        </div>
-      </div>
+      <WidgetState title="No links yet" action={<SetUp openSettings={openSettings}>Add links</SetUp>}>
+        Keep the sites you open every day one click away.
+      </WidgetState>
     );
   }
   return (
@@ -578,7 +509,9 @@ export function BookmarksWidget({ item, editing }: WidgetProps<BookmarksConfig>)
             <Favicon url={l.url} fallback={(l.title[0] ?? "?").toUpperCase()} />
           </span>
           <span className={s.linkText}>
-            <span className={s.linkTitle}>{l.title}</span>
+            <span className={s.linkTitle} title={l.title}>
+              {l.title}
+            </span>
             <span className={s.linkHost}>{hostOf(l.url)}</span>
           </span>
         </a>

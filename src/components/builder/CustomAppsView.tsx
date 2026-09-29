@@ -32,8 +32,8 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
   if (!data) {
     return (
       <Page>
+        <PageHeader title="Apps" summary={error ? "The apps you made didn't load." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} actions={<NewAppButton variant="primary" />} />
         <AppsSectionTabs current="custom" />
-        <PageHeader title="Your apps" summary={error ? "Your apps didn't load." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} actions={<NewAppButton variant="primary" />} />
         {error ? (
           <Notice tone="fault" title="Couldn't load your apps" action={<Button size="sm" loading={isLoading} onClick={() => void mutate()}>Try again</Button>}>
             {error.message}
@@ -72,8 +72,12 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
         ? "Make your own apps and install them in Umbrel like any other."
         : "Make your own apps from images, compose files or repositories."
       : [
-          published.length ? `${published.length === 1 ? "1 app" : `${published.length} apps`} published${runningCount === published.length ? `, all running ${where}` : `, ${runningCount} running ${where}`}.` : null,
-          drafts ? `${drafts === 1 ? "1 draft" : `${drafts} drafts`}.` : null,
+          published.length === 1
+            ? `You've published 1 app${runningCount ? `, running ${where}` : ", not running right now"}.`
+            : published.length
+              ? `You've published ${published.length} apps${runningCount === published.length ? `, all running ${where}` : `, ${runningCount} running ${where}`}.`
+              : null,
+          drafts ? `${drafts === 1 ? "1 draft" : `${drafts} drafts`} in progress.` : null,
         ]
           .filter(Boolean)
           .join(" ");
@@ -93,8 +97,8 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
 
   return (
     <Page>
+      <PageHeader title="Apps" summary={summary} actions={<NewAppButton variant="primary" />} />
       <AppsSectionTabs current="custom" />
-      <PageHeader title="Your apps" summary={summary} actions={<NewAppButton variant="primary" />} />
 
       <StoreNotice store={store} hasApps={apps.length > 0} hasPublished={published.some((a) => a.target === "umbrel")} onSetUp={() => setStoreOpen(true)} />
 

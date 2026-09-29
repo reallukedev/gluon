@@ -1,4 +1,5 @@
 import * as React from "react";
+import { GluonMark } from "@/components/brand/GluonMark";
 import {
   HomeSimpleDoor,
   Activity,
@@ -8,8 +9,6 @@ import {
   HardDrive,
   Cpu,
   AntennaSignal,
-  WarningTriangle,
-  Journal,
   Community,
   Settings,
   Link as LinkIcon,
@@ -25,8 +24,6 @@ const MAP: Record<string, React.ComponentType<{ strokeWidth?: number }>> = {
   storage: HardDrive,
   system: Cpu,
   diagnostics: AntennaSignal,
-  alerts: WarningTriangle,
-  activity: Journal,
   people: Community,
   settings: Settings,
   link: LinkIcon,
@@ -40,10 +37,5 @@ export function NavIcon({ id }: { id: string }) {
 }
 
 export function HostMark({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path d="M3.5 2.5v15M7.5 6v11.5M16.5 2.5v15" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M11 2.5v15M13.5 2.5v15" stroke="var(--attn)" strokeWidth="1.6" />
-    </svg>
-  );
+  return <GluonMark className={className} />;
 }

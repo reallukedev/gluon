@@ -3,7 +3,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@base-ui/react/dialog";
 import { Search, NavArrowRight } from "iconoir-react";
-import type { NavItem } from "@/lib/nav";
+import { hintFor, type NavItem } from "@/lib/nav";
+import { activityHref, alertsHref, peopleHref } from "@/lib/settings-links";
 import { api } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
 import { NavIcon } from "./NavIcon";
@@ -33,6 +34,27 @@ const SETTINGS: [string, string, string][] = [
   ["formats", "Clock, dates and units", "time 24 hour date bytes gib temperature fahrenheit bits"],
   ["notifications", "Notifications", "alerts ntfy pushover email push phone"],
   ["security", "Security", "password two-step 2fa totp sessions devices sign out"],
+];
+
+/**
+ * Places inside a page, found by typing (they don't crowd the list before you type). Old names are
+ * keywords, so "alerts" still finds monitors and channels in Settings.
+ */
+const SECTIONS: { id: string; parent: string; label: string; hint: string; keywords: string; href: string; icon: string }[] = [
+  { id: "status:now", parent: "status", label: "Problems", hint: "Status · what needs you now", keywords: "alerts needs you open snoozed dismissed", href: "/status", icon: "status" },
+  { id: "alerts:watching", parent: "settings", label: "Monitors", hint: "Settings · Alerts", keywords: "alerts uptime checks http tcp ping watching", href: alertsHref("watching"), icon: "settings" },
+  { id: "alerts:notifications", parent: "settings", label: "Notification channels", hint: "Settings · Alerts", keywords: "alerts ntfy pushover email webhook discord sent log deliveries", href: alertsHref("notifications"), icon: "settings" },
+  { id: "alerts:history", parent: "settings", label: "Past problems", hint: "Settings · Alerts", keywords: "alerts history cleared resolved", href: alertsHref("history"), icon: "settings" },
+  { id: "people:reports", parent: "settings", label: "Problem reports", hint: "Settings · People", keywords: "household report broken reply", href: peopleHref({ tab: "reports" }), icon: "settings" },
+  { id: "people:access", parent: "settings", label: "Who can open what", hint: "Settings · People", keywords: "access grants folders apps permissions share", href: peopleHref({ tab: "access" }), icon: "settings" },
+  { id: "people:announcements", parent: "settings", label: "Announcements", hint: "Settings · People", keywords: "message banner household maintenance", href: peopleHref({ tab: "announcements" }), icon: "settings" },
+  { id: "people:defaults", parent: "settings", label: "Home page for new members", hint: "Settings · People", keywords: "household defaults default layout widgets", href: peopleHref({ tab: "defaults" }), icon: "settings" },
+  { id: "apps:store", parent: "apps", label: "App store", hint: "Apps · get new apps", keywords: "install umbrel get apps", href: "/apps/store", icon: "apps" },
+  { id: "apps:custom", parent: "apps", label: "Your apps", hint: "Apps · apps you made", keywords: "make an app builder custom compose", href: "/apps/custom", icon: "apps" },
+  { id: "apps:images", parent: "apps", label: "Docker images", hint: "Apps · Docker", keywords: "docker images pull prune", href: "/apps/images", icon: "apps" },
+  { id: "apps:volumes", parent: "apps", label: "Docker volumes", hint: "Apps · Docker", keywords: "docker volumes", href: "/apps/volumes", icon: "apps" },
+  { id: "apps:networks", parent: "apps", label: "Docker networks", hint: "Apps · Docker", keywords: "docker networks bridge", href: "/apps/networks", icon: "apps" },
+  { id: "apps:disk", parent: "apps", label: "Docker disk use", hint: "Apps · Docker", keywords: "docker disk space usage cleanup prune", href: "/apps/disk", icon: "apps" },
 ];
 
 function score(item: PaletteItem, q: string): number {
@@ -96,12 +118,21 @@ export function CommandPalette({ open, onOpenChange, nav, pins }: { open: boolea
   }, [q, open]);
 
   const staticItems = React.useMemo<PaletteItem[]>(() => {
-    const items: PaletteItem[] = nav.map((n) => ({ id: `nav:${n.id}`, group: "Go to", label: n.label, hint: n.hint, icon: n.id, href: n.href }));
+    const items: PaletteItem[] = nav.map((n) => ({ id: `nav:${n.id}`, group: "Go to", label: n.label, hint: hintFor(n, viewer.role), icon: n.id, href: n.href }));
+    if (viewer.role === "admin") {
+      for (const x of SECTIONS) if (x.parent === "settings" || nav.some((n) => n.id === x.parent)) items.push({ id: x.id, group: "Sections", label: x.label, hint: x.hint, keywords: x.keywords, icon: x.icon, href: x.href });
+    }
     items.push({ id: "nav:settings", group: "Go to", label: "Settings", hint: "Your preferences", icon: "settings", href: "/settings" });
     for (const [id, label, kw] of SETTINGS) {
       items.push({ id: `settings:${id}`, group: "Settings", label, keywords: kw, icon: "settings", href: `/settings/${id}` });
     }
     if (viewer.role === "admin") {
+      // Keep watch: in Settings, but places admins go often, so they're also in "Go to".
+      items.push(
+        { id: "nav:alerts", group: "Go to", label: "Alerts", hint: "Settings · monitors, channels, past problems", keywords: "monitors uptime notifications channels", icon: "settings", href: alertsHref() },
+        { id: "nav:activity", group: "Go to", label: "Activity", hint: "Settings · who changed what, and when", keywords: "audit log timeline events history", icon: "settings", href: activityHref() },
+        { id: "nav:people", group: "Go to", label: "People", hint: "Settings · accounts, access, invites", keywords: "users household members invite accounts", icon: "settings", href: peopleHref() },
+      );
       items.push({ id: "settings:server", group: "Settings", label: "Server settings", keywords: "name network home public address integrations connected apps", icon: "settings", href: "/settings/server" });
     }
     for (const p of pins) {
@@ -135,7 +166,7 @@ export function CommandPalette({ open, onOpenChange, nav, pins }: { open: boolea
     const others = fresh.filter((it) => !it.label.toLowerCase().startsWith(term));
     const top = scored.filter((it) => score(it, term) >= 60);
     const rest = scored.filter((it) => score(it, term) < 60);
-    const combined = term ? [...top.slice(0, 6), ...exact, ...others, ...rest.slice(0, 6)] : staticItems.filter((i) => i.group !== "Settings");
+    const combined = term ? [...top.slice(0, 6), ...exact, ...others, ...rest.slice(0, 6)] : staticItems.filter((i) => i.group !== "Settings" && i.group !== "Sections");
     // Group in first-seen order.
     const groups: { name: string; items: PaletteItem[] }[] = [];
     for (const it of combined) {
@@ -272,9 +303,15 @@ export function CommandPalette({ open, onOpenChange, nav, pins }: { open: boolea
             <span>
               <kbd>↵</kbd> open
             </span>
-            {prefs.shortcuts && (
+            {prefs.shortcuts && nav.length > 1 && (
               <span>
-                <kbd>g</kbd> then a letter jumps: <kbd>h</kbd> home, <kbd>s</kbd> status, <kbd>f</kbd> files
+                <kbd>g</kbd> then a letter jumps:{" "}
+                {nav.slice(0, 3).map((n, i) => (
+                  <React.Fragment key={n.id}>
+                    {i > 0 && ", "}
+                    <kbd>{n.key}</kbd> {n.label.toLowerCase()}
+                  </React.Fragment>
+                ))}
               </span>
             )}
           </div>
