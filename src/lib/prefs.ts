@@ -28,6 +28,8 @@ export const prefsSchema = z.object({
   sidebarOrder: z.array(z.string().max(40)).max(40).default([]),
   sidebarHidden: z.array(z.string().max(40)).max(40).default([]),
   sidebarCollapsed: z.boolean().default(false),
+  /** "pending" for accounts made since onboarding existed: they start with only Home and choose the rest. */
+  onboarding: z.enum(["pending", "done"]).default("done"),
 
   shortcuts: z.boolean().default(true),
   filesView: z.enum(["list", "grid"]).default("list"),

@@ -12,6 +12,7 @@ const query = z.object({
   hidden: flag,
   foldersFirst: z.enum(["0", "1", "true", "false"]).optional(),
   filter: z.string().max(200).optional(),
+  only: z.enum(["dirs"]).optional(),
 });
 
 export const GET = route({ auth: "user", query }, ({ user, query }) =>
@@ -23,6 +24,7 @@ export const GET = route({ auth: "user", query }, ({ user, query }) =>
     limit: query.limit,
     hidden: query.hidden,
     filter: query.filter,
-    foldersFirst: query.foldersFirst === undefined ? true : query.foldersFirst === "1" || query.foldersFirst === "true",
+    foldersFirst: query.foldersFirst === undefined ? undefined : query.foldersFirst === "1" || query.foldersFirst === "true",
+    only: query.only,
   }),
 );

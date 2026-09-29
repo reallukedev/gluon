@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { CSPProvider } from "@base-ui/react/csp-provider";
 import { Hubot_Sans, Martian_Mono, Mona_Sans } from "next/font/google";
 import { decodeUiCookie, htmlAttrs, UI_COOKIE } from "@/lib/prefs";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -32,12 +33,16 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const bits = decodeUiCookie((await cookies()).get(UI_COOKIE)?.value);
+  // Base UI's few inline scripts (the tab indicator placing itself before hydration) need the page's nonce.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en" {...htmlAttrs(bits)} className={`${sans.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
-        <TooltipProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </TooltipProvider>
+        <CSPProvider nonce={nonce}>
+          <TooltipProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </TooltipProvider>
+        </CSPProvider>
       </body>
     </html>
   );

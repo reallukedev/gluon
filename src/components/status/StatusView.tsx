@@ -8,9 +8,11 @@ import { usePrefs, useFormat } from "@/components/PrefsProvider";
 import { Page, PageHeader, Panel } from "@/components/ui/Surface";
 import { instanceHints, sourceName } from "@/lib/app-names";
 import { StateLine } from "@/components/ui/StateLine";
-import { Spectrum, type SpectrumGroup } from "@/components/spectrum/Spectrum";
+import type { SpectrumGroup } from "@/components/spectrum/Spectrum";
 import { NeedsYou } from "./NeedsYou";
 import { MachineVitals, StorageBars } from "./Machine";
+import { AppRoster } from "./AppRoster";
+import { Console } from "./Console";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { ReportProblem } from "./ReportProblem";
 import { MyReports } from "@/components/people/MyReports";
@@ -72,12 +74,7 @@ export function StatusView({ initial }: { initial: StatusPayload }) {
 
   if (viewer.role !== "admin") return <MemberStatus data={data} />;
 
-  const groups = spectrumGroups(data.apps, data.findings, data.filesystems, (n) => fmt.bytes(n));
   const attentionMounts = new Set(data.findings.map((f) => f.subject ?? ""));
-  const containerCount = data.apps.reduce((a, x) => a + x.containers.length, 0);
-  const running = data.apps.reduce((a, x) => a + x.containers.filter((c) => c.line === "running").length, 0);
-  const appCount = data.apps.filter((a) => !a.copyOf).length;
-  const copyCount = data.apps.length - appCount;
 
   return (
     <Page>
@@ -90,18 +87,6 @@ export function StatusView({ initial }: { initial: StatusPayload }) {
         }
         actions={<HeaderInstrument checkedAt={data.checkedAt} />}
       />
-
-      <Panel
-        title="Everything on this server"
-        meta={
-          <span className="num">
-            {running} of {containerCount} running · {fmt.plural(appCount, "app")}
-            {copyCount > 0 && `, ${copyCount === 1 ? "1 old copy" : `${copyCount} old copies`}`}
-          </span>
-        }
-      >
-        <Spectrum groups={groups} />
-      </Panel>
 
       <div className={s.cols}>
         <Panel
@@ -120,6 +105,11 @@ export function StatusView({ initial }: { initial: StatusPayload }) {
           </Panel>
         </div>
       </div>
+
+      <Panel title="Apps" meta={<AppsMeta apps={data.apps} />} className={s.appsPanel} flush>
+        <Console apps={data.apps} findings={data.findings} />
+        <AppRoster apps={data.apps} findings={data.findings} />
+      </Panel>
 
       {data.recent.length > 0 && (
         <Panel title="Recently" meta={<Link href="/activity">All activity</Link>} className={s.recentPanel} flush>
@@ -140,6 +130,19 @@ export function StatusView({ initial }: { initial: StatusPayload }) {
   );
 }
 
+/** "11 running · 2 stopped", counting apps (not their containers), old copies left out. */
+function AppsMeta({ apps }: { apps: StatusApp[] }) {
+  const ids = new Set(apps.map((a) => a.id));
+  const current = apps.filter((a) => !(a.copyOf && ids.has(a.copyOf.id)));
+  const running = current.filter((a) => a.line !== "stopped").length;
+  const stopped = current.length - running;
+  return (
+    <span className="num">
+      {running} running{stopped > 0 && ` · ${stopped} stopped`} · <Link href="/apps">Manage</Link>
+    </span>
+  );
+}
+
 function MemberStatus({ data }: { data: StatusPayload }) {
   return (
     <Page narrow>
@@ -151,21 +154,22 @@ function MemberStatus({ data }: { data: StatusPayload }) {
           ))}
         </div>
       )}
-      <Panel flush>
-        <ul className={s.memberApps} role="list">
-          {data.apps.map((a) => (
-            <li key={a.id} className={s.memberApp}>
-              <AppIcon src={a.icon} name={a.name} size={36} />
-              <div className={s.memberAppText}>
-                <span className={s.memberAppName}>{a.name}</span>
-                <StateLine state={a.line} label={a.line === "running" ? "Working" : a.line === "starting" ? "Starting up" : "Not working"} />
-              </div>
-              {a.line === "running" && (a.urls.home || a.urls.away) && <OpenLink urls={a.urls} />}
-            </li>
-          ))}
-          {data.apps.length === 0 && <li className={s.memberEmpty}>No apps have been shared with you yet.</li>}
-        </ul>
-      </Panel>
+      {data.apps.length > 0 && (
+        <Panel flush>
+          <ul className={s.memberApps} role="list">
+            {data.apps.map((a) => (
+              <li key={a.id} className={s.memberApp}>
+                <AppIcon src={a.icon} name={a.name} size={36} />
+                <div className={s.memberAppText}>
+                  <span className={s.memberAppName}>{a.name}</span>
+                  <StateLine state={a.line} label={a.line === "running" ? "Working" : a.line === "starting" ? "Starting up" : "Not working"} />
+                </div>
+                {a.line === "running" && (a.urls.home || a.urls.away) && <OpenLink urls={a.urls} />}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
       <MyReports />
       <p className={s.memberFoot}>
         Checked at <Time ts={data.checkedAt} kind="time" />. This page keeps itself up to date.

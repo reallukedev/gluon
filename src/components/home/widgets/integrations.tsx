@@ -3,6 +3,8 @@
 // widget store. Each reads its data through one batched POST to /api/widgets/data.
 import { registerWidget } from "../widgetStore";
 import {
+  ImmichRecent,
+  ImmichRecentSettings,
   ImmichSettings,
   ImmichStats,
   IntegrationSettingsFor,
@@ -13,6 +15,7 @@ import {
   SubsonicNowPlaying,
   SubsonicRecent,
   type ImmichConfig,
+  type ImmichRecentConfig,
   type IntegrationConfig,
   type RecentConfig,
 } from "./live/media";
@@ -103,6 +106,27 @@ registerWidget<ImmichConfig>({
   title: (c) => c.title || "Photos",
   Component: ImmichStats,
   Settings: ImmichSettings,
+  preview: (
+    <span className={p.pvGrid}>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <i key={i} />
+      ))}
+    </span>
+  ),
+});
+
+registerWidget<ImmichRecentConfig>({
+  type: "immich.recent",
+  kind: "immich",
+  name: "Latest photos",
+  description: "The newest photos and videos in Immich, as a wall that fills the widget.",
+  category: "Media & services",
+  sizes: ["s", "m", "t", "l", "w", "x"],
+  defaultSize: "w",
+  defaultConfig: { show: "all" },
+  title: (c) => c.title || "Latest photos",
+  Component: ImmichRecent,
+  Settings: ImmichRecentSettings,
   preview: (
     <span className={p.pvGrid}>
       {[0, 1, 2, 3, 4, 5].map((i) => (

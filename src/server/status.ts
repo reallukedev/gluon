@@ -49,6 +49,7 @@ function verdictFor(findings: Finding[], apps: StatusApp[], forMember: boolean):
   const attention = findings.filter((f) => f.severity === "attention");
   const down = apps.filter((a) => a.line === "unhealthy" || a.line === "stopped");
   if (forMember) {
+    if (!apps.length) return { tone: "ok", headline: "The server is up.", detail: "No apps have been shared with you yet. Ask whoever runs it to share the ones you use." };
     if (down.length) {
       return { tone: "fault", headline: `${listJoin(down.map((a) => a.name))} ${down.length === 1 ? "isn't" : "aren't"} working right now.`, detail: "The people who look after the server have been told." };
     }

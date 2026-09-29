@@ -1,6 +1,6 @@
 node_modules
 .next
-data
+/data/
 *.tsbuildinfo
 .env*
 .dev-credentials
@@ -13,3 +13,4 @@ AGENTS-BRIEF.md
 UI-BRIEF.md
 PLAN.md
 PRODUCT.md
+.devtools/

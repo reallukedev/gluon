@@ -127,13 +127,38 @@
 .crumb[aria-current] { color: var(--ink); font-weight: 600; cursor: default; max-width: 56ch; flex: 0 1 auto; min-width: 0; }
 .crumb[data-drop] { background: color-mix(in oklab, var(--ink) 10%, transparent); box-shadow: inset 0 0 0 1px var(--ink-2); }
 .crumbSep { flex: none; width: 13px; height: 13px; color: var(--faint); }
+/* The chevron between crumbs is a small button: it lists the folders beside the next step. */
+.crumbSepBtn { flex: none; display: grid; place-items: center; width: 18px; height: 26px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--faint); cursor: pointer; }
+.crumbSepBtn svg { width: 13px; height: 13px; }
+.crumbSepBtn[data-popup-open] { color: var(--ink); background: color-mix(in oklab, var(--ink) 6%, transparent); }
+.crumbSepBtn[data-popup-open] svg { transform: rotate(90deg); }
+@media (hover: hover) and (pointer: fine) { .crumbSepBtn:hover { color: var(--ink); background: color-mix(in oklab, var(--ink) 6%, transparent); } }
 .pathEdit { margin-left: auto; flex: none; display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 5px; background: none; color: var(--faint); cursor: pointer; }
 .pathEdit svg { width: 15px; height: 15px; }
 @media (hover: hover) and (pointer: fine) {
   .crumb:not([aria-current]):hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); }
   .pathEdit:hover { color: var(--ink); }
 }
-.pathForm { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.pathForm { position: relative; flex: 1; min-width: 0; display: grid; gap: 4px; }
+.pathHints {
+  position: absolute;
+  top: calc(var(--control) + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+}
+.pathHint { display: flex; align-items: center; gap: 9px; min-height: 32px; padding: 0 9px; border-radius: 6px; font-size: var(--text-md); color: var(--ink); cursor: pointer; }
+.pathHint svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
+.pathHint[aria-selected="true"] { background: color-mix(in oklab, var(--ink) 7%, transparent); }
+.pathHintFoot { padding: 6px 9px 3px; border-top: 1px solid var(--line); margin-top: 4px; font-size: var(--text-xs); color: var(--muted); }
+.errorMark { display: inline-block; width: 5px; height: 5px; margin-right: 7px; vertical-align: 2px; background: var(--fault); transform: rotate(45deg); }
 .pathInput {
   width: 100%;
   height: var(--control);
@@ -146,7 +171,7 @@
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent);
 }
 .pathInput[aria-invalid="true"] { border-color: var(--fault); }
-.pathError { font-size: var(--text-sm); color: var(--fault); }
+.pathError { font-size: var(--text-sm); color: var(--ink-2); }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .filter {
@@ -178,19 +203,11 @@
   .sortText { display: none; }
 }
 
-/* ------------------------------------------------------------ page title for named places */
-.titleBlock { display: grid; gap: 6px; }
-.titlePath {
-  font-size: var(--text-sm);
-  font-weight: 400;
-  font-stretch: 100%;
-  letter-spacing: 0;
-  line-height: 1.3;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ------------------------------------------------------------ page header */
+/* One line, always: a long folder name ellipsizes instead of pushing the page down. */
+.title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Holds the summary line's height while a folder loads, so the page doesn't jump. */
+.summarySkeleton { display: flex; align-items: center; height: 1.5em; }
 
 /* ------------------------------------------------------------ floating selection bar */
 .floatBar {
@@ -210,15 +227,35 @@
   box-shadow: var(--shadow-pop);
   font-size: var(--text-sm);
 }
-.floatCount { font-weight: 600; white-space: nowrap; padding-right: 8px; }
+.floatCount { display: inline-flex; align-items: baseline; gap: 8px; font-weight: 600; white-space: nowrap; padding-right: 8px; }
+.floatSize { font-weight: 400; color: var(--muted); }
 .floatRule { flex: none; width: 1px; height: 20px; margin: 0 4px; background: var(--line); }
-@media (max-width: 560px) {
-  .floatBar { justify-self: stretch; max-width: none; padding-left: 10px; }
-  .floatBar :global(svg) + span { display: none; }
-  .floatCount { padding-right: 2px; }
+/* Phones: a solid toolbar along the bottom edge, labels under the icons, thumb-sized. */
+.phoneBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  padding: 0 8px env(safe-area-inset-bottom);
+  border-top: 1px solid var(--line-strong);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
+  @starting-style { transform: translateY(calc(100% * var(--motion))); opacity: 0; }
 }
+.phoneBarHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 40px; padding: 0 8px; font-size: var(--text-sm); border-bottom: 1px solid var(--line); }
+.phoneBarHead b { font-weight: 620; }
+.phoneBarDone { height: 32px; padding: 0 8px; margin-right: -8px; border: 0; background: none; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; }
+.phoneBarActions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.phoneAction { display: grid; justify-items: center; gap: 3px; padding: 8px 4px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; font-size: var(--text-xs); cursor: pointer; }
+.phoneAction svg { width: 22px; height: 22px; }
+.phoneAction:active { background: color-mix(in oklab, var(--ink) 6%, transparent); }
+/* Room under the list so the last rows can scroll clear of the toolbar. */
+.layout[data-selecting] .main:has(.phoneBar) { padding-bottom: 120px; }
 /* The tasks tray steps up out of the way while the selection bar is showing. */
 .layout[data-selecting] ~ .tray { translate: 0 -60px; }
+@media (max-width: 900px) { .layout[data-selecting] ~ .tray { translate: 0 -118px; } }
 
 /* ------------------------------------------------------------ listing (list) */
 .listing {
@@ -227,7 +264,6 @@
   border-radius: var(--radius-panel);
   background: var(--panel);
   outline: 0;
-  min-height: 120px;
 }
 .listing:focus-visible { box-shadow: 0 0 0 2px color-mix(in oklab, var(--ink) 30%, transparent); }
 .headRow, .row {
@@ -266,6 +302,9 @@
   cursor: pointer;
 }
 .sortBtn[data-active] { color: var(--ink); }
+/* Every head cell speaks the same micro-caps; the column classes only set alignment here. */
+.headRow .sizeCol, .headRow .dateCol, .headRow .ownerCol { font: inherit; letter-spacing: inherit; color: inherit; }
+.headRow .sizeCol { display: flex; justify-content: flex-end; }
 .sortBtn svg { width: 13px; height: 13px; }
 .vrow { position: absolute; top: 0; left: 0; width: 100%; }
 .row {
@@ -273,8 +312,13 @@
   border-top: 1px solid var(--line);
   cursor: default;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition: background-color var(--dur-fast) ease;
 }
+.row[data-cut] .nameCell, .row[data-cut] .sizeCol, .row[data-cut] .dateCol, .tile[data-cut] { opacity: 0.5; }
+.skeletonLine { height: calc(var(--row) + 2px); }
+.skeletonLine:first-of-type .row { border-top-color: transparent; }
 .vrow:first-child .row { border-top-color: transparent; }
 .row[aria-selected="true"] { background: color-mix(in oklab, var(--ink) 7%, transparent); }
 .listing:focus-visible .row[data-focused] { box-shadow: inset 2px 0 0 var(--ink); }
@@ -287,14 +331,30 @@
 .nameCell[data-hidden] .nameText { color: var(--muted); }
 .kindIcon { flex: none; width: 18px; height: 18px; color: var(--muted); }
 .row[aria-selected="true"] .kindIcon { color: var(--ink); }
-.nameText { min-width: 0; display: flex; align-items: baseline; gap: 10px; font-size: var(--text-md); color: var(--ink); }
-.linkNote { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-xs); color: var(--muted); }
-.linkNote[data-broken] { color: var(--fault); }
+.nameText { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 10px; font-size: var(--text-md); color: var(--ink); }
+.nameLabel { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The link note gives way first, but never below a readable stub. */
+.linkNote { flex: 0 1000 auto; min-width: 7ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-xs); color: var(--muted); }
+.linkNote[data-path] { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 11px; }
+.linkNote[data-broken] { display: inline-flex; align-items: baseline; gap: 6px; flex-shrink: 0; min-width: 0; font-size: var(--text-sm); color: var(--fault); }
+.brokenMark { flex: none; align-self: center; width: 2px; height: 7px; margin-top: 3px; background: var(--fault); }
+.faintDash { color: var(--faint); }
+/* A folder being measured: a short dashed hairline where its size will appear (same width, no shift). */
+.measuring {
+  display: inline-block;
+  width: 34px;
+  height: 2px;
+  vertical-align: middle;
+  background: repeating-linear-gradient(90deg, var(--line-strong) 0 4px, transparent 4px 7px);
+  animation: files-breathe 1.6s var(--ease-in-out) infinite alternate;
+}
+@keyframes files-breathe { from { opacity: 0.35; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .measuring { animation: none; } }
+:global(:root[data-motion="reduce"]) .measuring { animation: none; }
 .mobileMeta { display: none; }
 .sizeCol { text-align: right; font-size: var(--text-md); color: var(--ink-2); }
 .dateCol { font-size: var(--text-md); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ownerCol { font-size: var(--text-sm); color: var(--muted); font-family: var(--font-mono); font-stretch: var(--mono-stretch); }
-.headRow .ownerCol { font-family: inherit; font-size: inherit; }
+.ownerCol { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); color: var(--muted); }
 .rowActions { display: flex; justify-content: flex-end; }
 .calc { display: inline-grid; justify-items: end; padding: 0; border: 0; background: none; font: inherit; color: var(--faint); cursor: pointer; }
 .calc > * { grid-area: 1 / 1; }
@@ -333,12 +393,15 @@
   .nameCell { display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 10px; row-gap: 1px; }
   .nameCell .kindIcon { grid-row: span 2; }
   .mobileMeta { display: block; font-size: var(--text-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .linkNote { display: none; }
+  .linkNote, .linkNote[data-broken] { display: none; }
 }
 
 /* ------------------------------------------------------------ listing (grid) */
 .listing:has(.vgrid) { border: 0; background: transparent; }
 .vgrid { position: absolute; top: 0; left: 0; width: 100%; display: grid; }
+.gridSkeleton { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; }
+.gridSkeleton .tile .thumb { flex: none; aspect-ratio: 1 / 0.72; }
+.gridSkeleton .tileText { gap: 6px; padding-top: 10px; }
 .tile {
   display: flex;
   flex-direction: column;
@@ -349,6 +412,8 @@
   overflow: hidden;
   cursor: default;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease;
 }
 .tile[aria-selected="true"] { border-color: var(--ink-2); background: color-mix(in oklab, var(--ink) 5%, var(--panel)); }
@@ -535,9 +600,13 @@
 .previewFallbackTitle { font-weight: 620; font-size: var(--text-base); }
 .previewFallbackActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
 .previewNav { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); }
+.previewPhoneFoot { display: flex; align-items: center; gap: 8px; }
+.previewPhoneFoot > :nth-child(2) { flex: 1; }
 .textPreview { display: grid; gap: 10px; }
 .textBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--text-sm); }
 .textPreview > :last-child { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.textPreview > .readPane { max-height: min(62dvh, 680px); overflow-y: auto; padding: 18px 22px; background: var(--panel); }
+@media (max-width: 640px) { .textPreview > .readPane { padding: 14px 14px; } }
 
 /* ------------------------------------------------------------ dialogs */
 .conflictCard { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
@@ -598,3 +667,11 @@
 .ownerList li { display: flex; justify-content: space-between; gap: 12px; }
 .details summary { cursor: pointer; font-size: var(--text-sm); color: var(--ink-2); }
 .sampleList { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: var(--text-sm); color: var(--ink-2); }
+
+/* ------------------------------------------------------------ keyboard shortcuts */
+.keys { display: grid; gap: 18px; }
+.keysLabel { margin-bottom: 8px; }
+.keys dl { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 18px; margin: 0; align-items: baseline; font-size: var(--text-md); }
+.keys dt { display: flex; align-items: center; gap: 4px; white-space: nowrap; color: var(--muted); font-size: var(--text-sm); }
+.keys dd { margin: 0; color: var(--ink); }
+@media (max-width: 480px) { .keys dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } .keys dd { margin-bottom: 8px; } }

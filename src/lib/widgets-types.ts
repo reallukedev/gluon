@@ -142,6 +142,7 @@ export const WIDGET_TYPES = [
   "jellyfin.recent",
   "jellyfin.libraries",
   "immich.stats",
+  "immich.recent",
   "subsonic.nowPlaying",
   "subsonic.recent",
   "slskd.transfers",
@@ -160,6 +161,7 @@ export const WIDGET_SOURCE: Record<WidgetType, IntegrationKind | null> = {
   "jellyfin.recent": "jellyfin",
   "jellyfin.libraries": "jellyfin",
   "immich.stats": "immich",
+  "immich.recent": "immich",
   "subsonic.nowPlaying": "subsonic",
   "subsonic.recent": "subsonic",
   "slskd.transfers": "slskd",
@@ -177,6 +179,7 @@ export const WIDGET_REFRESH_MS: Record<WidgetType, number> = {
   "jellyfin.recent": 60_000,
   "jellyfin.libraries": 300_000,
   "immich.stats": 300_000,
+  "immich.recent": 120_000,
   "subsonic.nowPlaying": 5_000,
   "subsonic.recent": 60_000,
   "slskd.transfers": 5_000,
@@ -225,6 +228,12 @@ export const widgetConfigSchemas = {
     .strip(),
   "jellyfin.libraries": z.object({}).strip(),
   "immich.stats": z.object({ memories: bool(false) }).strip(),
+  "immich.recent": z
+    .object({
+      limit: z.coerce.number().int().min(1).max(48).default(24),
+      show: z.enum(["all", "photos", "videos"]).default("all"),
+    })
+    .strip(),
   "subsonic.nowPlaying": z.object({}).strip(),
   "subsonic.recent": z.object({ limit: z.coerce.number().int().min(1).max(30).default(12) }).strip(),
   "slskd.transfers": z.object({ limit: z.coerce.number().int().min(1).max(50).default(8) }).strip(),
@@ -463,6 +472,8 @@ export interface JellyfinLibrariesData {
     books: number;
   };
   activeStreams: number;
+  /** Something about Jellyfin itself that makes these numbers misleading, with what to do about it. */
+  note?: string | null;
 }
 
 // ------------------------------------------------------------------ Immich
@@ -479,6 +490,12 @@ export interface ImmichStatsData {
   memories: ImmichMemory[] | null;
   /** Why memories are null although requested (e.g. missing permission). */
   memoriesNote: string | null;
+}
+
+export interface ImmichRecentData {
+  items: { id: string; kind: "image" | "video"; image: string; takenAt: number | null }[];
+  /** Why nothing could be shown although Immich answered (e.g. the key lacks a permission). */
+  note: string | null;
 }
 
 export interface ImmichMemory {
@@ -717,6 +734,7 @@ export interface WidgetDataMap {
   "jellyfin.recent": JellyfinRecentData;
   "jellyfin.libraries": JellyfinLibrariesData;
   "immich.stats": ImmichStatsData;
+  "immich.recent": ImmichRecentData;
   "subsonic.nowPlaying": SubsonicNowPlayingData;
   "subsonic.recent": SubsonicRecentData;
   "slskd.transfers": SlskdTransfersData;
@@ -733,6 +751,7 @@ export const WIDGET_LABELS: Record<WidgetType, { label: string; description: str
   "jellyfin.recent": { label: "New on Jellyfin", description: "Recently added movies, episodes and albums." },
   "jellyfin.libraries": { label: "Jellyfin libraries", description: "How much is in each library." },
   "immich.stats": { label: "Photos", description: "Photo and video counts from Immich, with optional memories." },
+  "immich.recent": { label: "Latest photos", description: "The newest photos and videos in Immich." },
   "subsonic.nowPlaying": { label: "Now playing", description: "What people are listening to." },
   "subsonic.recent": { label: "New music", description: "Recently added albums." },
   "slskd.transfers": { label: "Soulseek transfers", description: "Downloads and uploads in progress." },

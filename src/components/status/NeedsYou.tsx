@@ -172,9 +172,9 @@ export function NeedsYou({ findings, onChange, checkedAt }: { findings: Finding[
             <p className={s.needTitle}>{f.title}</p>
             {f.cause && <p className={s.needCause}>{f.cause}</p>}
             <p className={s.needMeta}>
-              {f.subject && <span className="mono">{f.subject}</span>}
+              {f.subject && !/^(?=.*[A-Z])[A-Za-z0-9_-]{12}$/.test(f.subject) && <span className="mono">{f.subject}</span>}
               <span>
-                since <Time ts={f.firstSeen} />
+                First noticed <Time ts={f.firstSeen} />
               </span>
             </p>
           </div>

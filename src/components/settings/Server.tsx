@@ -103,8 +103,8 @@ export function Server() {
         <ul className={s.sortList} role="list">
           {[...data.detectedPrefixes.map((p) => ({ v: p, auto: true })), ...f.homeNetworks.map((v) => ({ v, auto: false }))].map((n) => (
             <li key={n.v} className={s.sortItem}>
-              <span className={`${s.sortLabel} mono`}>
-                {n.v}
+              <span className={s.sortLabel}>
+                <span className="mono">{n.v}</span>
                 <small>{n.auto ? "Detected from this server's network" : "Added by you"}</small>
               </span>
               {!n.auto && (

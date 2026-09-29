@@ -1,10 +1,10 @@
 "use client";
 import * as React from "react";
-import { Pause } from "iconoir-react";
+import { Pause, Play } from "iconoir-react";
 import type { SettingsProps, WidgetProps } from "../../types";
 import { useSmartUrl } from "../core";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
-import { Checkbox, Field, Input } from "@/components/ui/Field";
+import { Checkbox, Field, Input, Segmented } from "@/components/ui/Field";
 import { UsageBar } from "@/components/ui/Surface";
 import type { IntegrationRef, NowPlayingSession, RecentMediaItem } from "@/lib/widgets-types";
 import { Gate, IntegrationPicker, perSize, Poster, Quiet, RowsSkeleton, ShelfSkeleton, StatsSkeleton, useIntegrationWidget } from "./shared";
@@ -233,6 +233,7 @@ const COUNT_LABELS: [keyof import("@/lib/widgets-types").JellyfinLibrariesData["
 
 export function JellyfinLibraries({ item, size }: WidgetProps<IntegrationConfig>) {
   const fmt = useFormat();
+  const { viewer } = usePrefs();
   const q = useIntegrationWidget("jellyfin", "jellyfin.libraries", item.config.integration, {});
   const max = perSize(size, { s: 2, m: 4, t: 4 }, 4);
   return (
@@ -263,6 +264,11 @@ export function JellyfinLibraries({ item, size }: WidgetProps<IntegrationConfig>
               </ul>
             )}
             {d.activeStreams > 0 && size !== "s" && <p className={l.foot}>{fmt.plural(d.activeStreams, "person", "people")} watching now</p>}
+            {d.note && viewer.role === "admin" && size !== "s" && (
+              <p className={l.foot} title={d.note}>
+                Jellyfin needs a library scan: its apps see these libraries as empty.
+              </p>
+            )}
           </div>
         );
       }}
@@ -426,3 +432,60 @@ export function SubsonicRecent({ item, size }: WidgetProps<IntegrationConfig>) {
   );
 }
 
+
+// ---------------------------------------------------------------- Immich: latest photos
+
+export interface ImmichRecentConfig extends IntegrationConfig {
+  show?: "all" | "photos" | "videos";
+}
+
+/** The newest photos as an even wall of squares that fills the widget; videos carry a play mark. */
+export function ImmichRecent({ item, size }: WidgetProps<ImmichRecentConfig>) {
+  const fmt = useFormat();
+  const limit = perSize(size, { s: 4, m: 8, t: 12, l: 24, w: 16, x: 40 }, 16);
+  const q = useIntegrationWidget("immich", "immich.recent", item.config.integration, { limit, show: item.config.show ?? "all" });
+  const src = q.source.state === "ok" ? q.source.ref : null;
+  return (
+    <Gate kind="immich" source={q.source} q={q} skeleton={<ShelfSkeleton square />}>
+      {(d) =>
+        d.note ? (
+          <Quiet title="Can't show photos">{d.note}</Quiet>
+        ) : d.items.length === 0 ? (
+          <Quiet title="No photos yet">Photos backed up to Immich appear here, newest first.</Quiet>
+        ) : (
+          <ul className={l.wall} role="list" data-size={size}>
+            {d.items.map((it) => (
+              <li key={it.id}>
+                <AppLink src={src} className={l.wallLink} title={it.takenAt ? fmt.dateTime(it.takenAt) : undefined}>
+                  <Poster src={it.image} title={it.kind === "video" ? "Video" : "Photo"} square />
+                  {it.kind === "video" && <Play className={l.wallPlay} aria-label="Video" />}
+                </AppLink>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </Gate>
+  );
+}
+
+export function ImmichRecentSettings({ config, onChange }: SettingsProps<ImmichRecentConfig>) {
+  return (
+    <div className={l.form}>
+      <IntegrationPicker kind="immich" value={config.integration} onChange={(integration) => onChange({ ...config, integration })} />
+      <Field label="Show">
+        <Segmented
+          aria-label="Show"
+          value={config.show ?? "all"}
+          onChange={(show) => onChange({ ...config, show })}
+          options={[
+            { value: "all", label: "Everything" },
+            { value: "photos", label: "Photos" },
+            { value: "videos", label: "Videos" },
+          ] as const}
+        />
+      </Field>
+      <TitleField config={config} onChange={onChange} placeholder="Latest photos" />
+    </div>
+  );
+}

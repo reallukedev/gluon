@@ -10,8 +10,10 @@ import { Notice, Skeleton } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
 import { CodeEditor } from "@/components/code/CodeEditor";
+import { Segmented } from "@/components/ui/Field";
+import { Markdown } from "./Markdown";
 import type { CodeLanguage } from "@/components/code/languages";
-import { KIND_LABEL, KindIcon, THUMBABLE, downloadUrl, isArchive, rawUrl, thumbUrl } from "./lib";
+import { KIND_LABEL, KindIcon, THUMBABLE, downloadUrl, isArchive, rawUrl, thumbUrl, useMediaQuery } from "./lib";
 import s from "./files.module.css";
 
 interface Props {
@@ -56,19 +58,35 @@ export function Preview({ entry, siblings, onNavigate, onClose, canWrite, onExtr
     [discard, onNavigate],
   );
 
+  const close = React.useCallback(() => discard(onClose), [discard, onClose]);
+
+  // Quick Look keys: ← and → step through the folder, Space closes (as it opened). Not while typing,
+  // in the text editor, or on a player's own controls.
   React.useEffect(() => {
-    if (!entry || entry.preview === "text") return;
+    if (!entry) return;
     const onKey = (ev: KeyboardEvent) => {
-      if ((ev.target as HTMLElement)?.closest("input,textarea,video,audio,[contenteditable]")) return;
+      if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      if ((ev.target as HTMLElement)?.closest("input,textarea,select,video,audio,button,[contenteditable],[role=menu]")) return;
       if (ev.key === "ArrowLeft") go(prev);
-      if (ev.key === "ArrowRight") go(next);
+      else if (ev.key === "ArrowRight") go(next);
+      else if (ev.key === " ") close();
+      else return;
+      ev.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entry, prev, next, go]);
+  }, [entry, prev, next, go, close]);
+
+  const phone = useMediaQuery("(max-width: 640px)");
+  const swipe = React.useRef<{ x: number; y: number } | null>(null);
 
   if (!entry) return null;
-  const close = () => discard(onClose);
+  const nav = siblings.length > 1 && idx >= 0;
+  const download = (
+    <Button icon={<Download />} onClick={() => downloadUrl(rawUrl(entry.path, true))}>
+      Download
+    </Button>
+  );
 
   return (
     <Dialog
@@ -98,12 +116,39 @@ export function Preview({ entry, siblings, onNavigate, onClose, canWrite, onExtr
         ) : undefined
       }
       footer={
-        <Button icon={<Download />} onClick={() => downloadUrl(rawUrl(entry.path, true))}>
-          Download
-        </Button>
+        phone && nav ? (
+          // Phones hide the footer's left side, so the arrows sit either side of Download.
+          <span className={s.previewPhoneFoot}>
+            <IconButton label="Previous" disabled={!prev} onClick={() => go(prev)}>
+              <NavArrowLeft />
+            </IconButton>
+            {download}
+            <IconButton label="Next" disabled={!next} onClick={() => go(next)}>
+              <NavArrowRight />
+            </IconButton>
+          </span>
+        ) : (
+          download
+        )
       }
     >
-      <div className={s.previewBody} key={entry.path}>
+      <div
+        className={s.previewBody}
+        key={entry.path}
+        // Swipe sideways through photos and videos on a touch screen.
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          swipe.current = entry.preview === "text" || e.touches.length > 1 || !t ? null : { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={(e) => {
+          const st = swipe.current;
+          const t = e.changedTouches[0];
+          swipe.current = null;
+          if (!st || !t) return;
+          const dx = t.clientX - st.x;
+          if (Math.abs(dx) > 60 && Math.abs(t.clientY - st.y) < 50) go(dx < 0 ? next : prev);
+        }}
+      >
         {entry.preview === "image" && <ImagePreview entry={entry} />}
         {entry.preview === "video" && (
           <video className={s.previewMedia} src={rawUrl(entry.path)} controls autoPlay playsInline preload="metadata">
@@ -212,6 +257,8 @@ function TextPreview({ entry, canWrite, onDirty, onSaved, confirm }: { entry: Fi
   const [draft, setDraft] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [conflict, setConflict] = React.useState<{ mtime: number } | null>(null);
+  const isMarkdown = data?.language === "markdown" || /\.(md|markdown|mdown)$/i.test(entry.name);
+  const [mode, setMode] = React.useState<"read" | "source">("read");
   const dirty = editing && draft !== (data?.content ?? "");
   React.useEffect(() => onDirty(dirty), [dirty, onDirty]);
 
@@ -250,9 +297,24 @@ function TextPreview({ entry, canWrite, onDirty, onSaved, confirm }: { entry: Fi
       </div>
     );
   }
+  const reading = isMarkdown && mode === "read" && !editing;
+  // Fit short files instead of framing three lines in a tall empty box.
+  const lines = (editing ? draft : (data.content ?? "")).split("\n").length;
+  const height = `min(62dvh, ${Math.max(6, Math.min(lines, 40)) * 19 + 18}px)`;
   return (
     <div className={s.textPreview}>
       <div className={s.textBar}>
+        {isMarkdown && !editing && (
+          <Segmented
+            aria-label="Show as"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "read", label: "Formatted" },
+              { value: "source", label: "Source" },
+            ]}
+          />
+        )}
         <span className="muted num">
           {data.encoding.toUpperCase()}
           {data.truncated && ` · showing the first ${fmt.bytes(1024 * 1024)}`}
@@ -288,6 +350,7 @@ function TextPreview({ entry, canWrite, onDirty, onSaved, confirm }: { entry: Fi
               onClick={() => {
                 setDraft(data.content ?? "");
                 setEditing(true);
+                setMode("source");
               }}
             >
               Edit
@@ -320,15 +383,21 @@ function TextPreview({ entry, canWrite, onDirty, onSaved, confirm }: { entry: Fi
           It was changed <Time ts={conflict.mtime} /> — after you opened it. Saving yours replaces those changes.
         </Notice>
       )}
-      <CodeEditor
-        key={`${editing}`}
-        label={`Contents of ${entry.name}`}
-        value={editing ? draft : (data.content ?? "")}
-        onChange={editing ? setDraft : undefined}
-        readOnly={!editing}
-        language={langOf(data)}
-        height="min(62dvh, 640px)"
-      />
+      {reading ? (
+        <div className={s.readPane}>
+          <Markdown source={data.content ?? ""} />
+        </div>
+      ) : (
+        <CodeEditor
+          key={`${editing}`}
+          label={`Contents of ${entry.name}`}
+          value={editing ? draft : (data.content ?? "")}
+          onChange={editing ? setDraft : undefined}
+          readOnly={!editing}
+          language={langOf(data)}
+          height={height}
+        />
+      )}
     </div>
   );
 }

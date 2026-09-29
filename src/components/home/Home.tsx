@@ -28,6 +28,7 @@ import { Catalog } from "./Catalog";
 import { StartSearch } from "./StartSearch";
 import { Greeting } from "./Greeting";
 import { AppsHint } from "./AppsHint";
+import { Onboarding } from "./Onboarding";
 import { prefersReducedMotion } from "@/lib/client/motion";
 import s from "./home.module.css";
 
@@ -288,6 +289,7 @@ export function Home({ initial }: Props) {
           )}
         </div>
       </header>
+      {prefs.onboarding === "pending" && !editing && <Onboarding />}
       <StartSearch />
       {viewer.role === "admin" && !editing && (
         <AppsHint

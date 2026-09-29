@@ -12,6 +12,8 @@ import { Time } from "@/components/ui/Time";
 import { DRAG_MIME, FolderGlyph, KindIcon, POSTERABLE, THUMBABLE, isDirLike, rawUrl, thumbUrl, useDropTarget, useVideoPoster } from "./lib";
 import s from "./files.module.css";
 
+export type ClipOp = "copy" | "cut" | "paste" | "duplicate";
+
 export interface ListingHandlers {
   onOpen: (e: FileEntry) => void;
   onPreview: (e: FileEntry) => void;
@@ -25,6 +27,8 @@ export interface ListingHandlers {
   menuFor: (entries: FileEntry[]) => MenuEntry[];
   backgroundMenu: MenuEntry[];
   onSelectAll: () => void;
+  /** ⌘C, ⌘X, ⌘V and ⌘D inside the listing. */
+  onClipboard: (op: ClipOp) => void;
 }
 
 interface Props extends ListingHandlers {
@@ -39,16 +43,25 @@ interface Props extends ListingHandlers {
   setSelected: (next: Set<string>) => void;
   writable: boolean;
   renaming: string | null;
-  /** Scroll to and focus this path once it's loaded (after create/rename/upload). */
+  /** What the rename field starts with, when a rename failed and is being retried. */
+  renameDraft?: string | null;
+  /** Scroll to and focus this path once it's loaded (after create/rename/upload, or coming back up). */
   reveal: string | null;
   /** Folder that files dragged in from the computer would be uploaded into (highlighted). */
   dropPath?: string | null;
   /** The Owner column (the Linux user): admins only; it means nothing to a household member. */
   showOwner?: boolean;
+  /** Folder sizes are being measured right now: unmeasured folders show that instead of a dash. */
+  measuring?: boolean;
+  /** Items cut to the Files clipboard (drawn faded until pasted). */
+  cutPaths?: Set<string> | null;
+  /** A touch screen: long-press selects, there is no right-click menu. */
+  touch?: boolean;
 }
 
 const GRID_MIN = 156;
 const GRID_GAP = 12;
+const LONG_PRESS_MS = 450;
 
 function cssPx(name: string, fallback: number) {
   if (typeof window === "undefined") return fallback;
@@ -58,8 +71,8 @@ function cssPx(name: string, fallback: number) {
 
 /**
  * The folder contents: a virtualised list or grid over the window scroll, with multi-select
- * (click, ⇧-click ranges, ⌘/Ctrl-click, checkboxes), keyboard navigation, a context menu, and
- * dragging items onto folders to move them.
+ * (click, ⇧-click ranges, ⌘/Ctrl-click, checkboxes, long-press on touch), keyboard navigation,
+ * a context menu, and dragging items onto folders to move them.
  */
 export function Listing(props: Props) {
   const { rows, total, ensure, view, selected, setSelected, writable, renaming, reveal, dropPath } = props;
@@ -124,6 +137,13 @@ export function Listing(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reveal, rows]);
 
+  // When a rename ends (saved or cancelled) the field goes away: give the keyboard back to the list.
+  const wasRenaming = React.useRef(renaming);
+  React.useEffect(() => {
+    if (wasRenaming.current && !renaming && (!document.activeElement || document.activeElement === document.body)) wrap.current?.focus({ preventScroll: true });
+    wasRenaming.current = renaming;
+  }, [renaming]);
+
   const entriesOf = (set: Set<string>) => rows.filter((r): r is FileEntry => !!r && set.has(r.path));
 
   const selectIndex = (i: number, ev: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
@@ -162,6 +182,7 @@ export function Listing(props: Props) {
   };
 
   const moveFocus = (to: number, extend: boolean) => {
+    if (!total) return;
     const i = Math.max(0, Math.min(total - 1, to));
     if (extend) selectIndex(i, { shiftKey: true, metaKey: false, ctrlKey: false });
     else {
@@ -175,7 +196,7 @@ export function Listing(props: Props) {
   };
 
   const onKeyDown = (ev: React.KeyboardEvent) => {
-    if (renaming || (ev.target as HTMLElement).closest("input,button,[role=menuitem]")) return;
+    if (renaming || (ev.target as HTMLElement).closest("input,button,[role=menuitem],[role=checkbox]")) return;
     const mod = ev.metaKey || ev.ctrlKey;
     const cur = rows[focus];
     const step = view === "grid" ? cols : 1;
@@ -185,7 +206,7 @@ export function Listing(props: Props) {
         else moveFocus(focus + step, ev.shiftKey);
         break;
       case "ArrowUp":
-        if (mod) props.onUp();
+        if (mod || ev.altKey) props.onUp();
         else moveFocus(focus - step, ev.shiftKey);
         break;
       case "ArrowRight":
@@ -202,11 +223,18 @@ export function Listing(props: Props) {
       case "End":
         moveFocus(total - 1, ev.shiftKey);
         break;
+      case "PageDown":
+      case "PageUp": {
+        const page = Math.max(1, Math.floor(window.innerHeight / lineH) - 1) * step;
+        moveFocus(focus + (ev.key === "PageDown" ? page : -page), ev.shiftKey);
+        break;
+      }
       case "Enter":
         if (cur) props.onOpen(cur);
         break;
       case " ":
         if (cur && !isDirLike(cur)) props.onPreview(cur);
+        else if (cur) toggle(focus);
         break;
       case "Backspace":
         if (mod && writable && selected.size) props.onTrash(entriesOf(selected));
@@ -218,16 +246,21 @@ export function Listing(props: Props) {
       case "F2":
         if (writable && cur) props.onRename(cur);
         break;
-      case "a":
-      case "A":
-        if (!mod) return;
-        props.onSelectAll();
-        break;
       case "Escape":
         if (!selected.size) return;
         setSelected(new Set());
         break;
       default: {
+        if (mod && !ev.altKey && !ev.shiftKey) {
+          const k = ev.key.toLowerCase();
+          if (k === "a") props.onSelectAll();
+          else if (k === "c" && selected.size) props.onClipboard("copy");
+          else if (k === "x" && selected.size && writable) props.onClipboard("cut");
+          else if (k === "v" && writable) props.onClipboard("paste");
+          else if (k === "d" && selected.size && writable) props.onClipboard("duplicate");
+          else return;
+          break;
+        }
         // Type the start of a name to jump to it, like a desktop file manager.
         if (mod || ev.altKey || ev.key.length !== 1 || ev.key === " ") return;
         const now = Date.now();
@@ -279,16 +312,28 @@ export function Listing(props: Props) {
     menuFor: props.menuFor,
     backgroundMenu: props.backgroundMenu,
     onSelectAll: props.onSelectAll,
+    onClipboard: props.onClipboard,
   };
   const loadedCount = rows.filter(Boolean).length;
   const allSelected = loadedCount > 0 && selected.size >= loadedCount;
   const active = rows[focus];
+  const itemCommon = {
+    renameDraft: props.renameDraft ?? null,
+    writable,
+    selectedPaths: selected,
+    measuring: !!props.measuring,
+    touch: !!props.touch,
+    onSelect: selectIndex,
+    onToggle: toggle,
+    ...handlers,
+  };
 
   const body = (
     <div
       ref={wrap}
       className={s.listing}
       data-owner={props.showOwner ? "" : undefined}
+      data-view={view}
       role="grid"
       aria-multiselectable
       aria-rowcount={total}
@@ -333,18 +378,12 @@ export function Listing(props: Props) {
                     selected={selected.has(e.path)}
                     focused={focus === it.index}
                     renaming={renaming === e.path}
-                    writable={writable}
-                    selectedPaths={selected}
                     osDrop={dropPath === e.path}
-                    onSelect={selectIndex}
-                    onToggle={toggle}
-                    {...handlers}
+                    cut={!!props.cutPaths?.has(e.path)}
+                    {...itemCommon}
                   />
                 ) : (
-                  <div className={s.row} aria-hidden>
-                    <span />
-                    <Skeleton width={`${30 + ((it.index * 37) % 50)}%`} />
-                  </div>
+                  <SkeletonRow i={it.index} />
                 )}
               </div>
             );
@@ -364,16 +403,13 @@ export function Listing(props: Props) {
                     selected={selected.has(e.path)}
                     focused={focus === i}
                     renaming={renaming === e.path}
-                    writable={writable}
-                    selectedPaths={selected}
                     osDrop={dropPath === e.path}
-                    onSelect={selectIndex}
-                    onToggle={toggle}
+                    cut={!!props.cutPaths?.has(e.path)}
                     height={lineH - GRID_GAP}
-                    {...handlers}
+                    {...itemCommon}
                   />
                 ) : (
-                  <Skeleton key={c} height={lineH - GRID_GAP} radius={10} />
+                  <Skeleton key={c} height={lineH - GRID_GAP} radius={12} />
                 );
               })}
             </div>
@@ -383,7 +419,69 @@ export function Listing(props: Props) {
     </div>
   );
 
-  return <ContextMenu items={ctxItems}>{body}</ContextMenu>;
+  return (
+    <ContextMenu items={ctxItems} disabled={props.touch}>
+      {body}
+    </ContextMenu>
+  );
+}
+
+function SkeletonRow({ i }: { i: number }) {
+  return (
+    <div className={s.row} aria-hidden data-skeleton="">
+      <span />
+      <span className={s.nameCell}>
+        <Skeleton width={18} height={18} radius={4} />
+        <Skeleton width={`${26 + ((i * 37) % 44)}%`} />
+      </span>
+      <span className={s.sizeCol}>
+        <Skeleton width={44} />
+      </span>
+      <span className={s.dateCol}>
+        <Skeleton width={78} />
+      </span>
+      <span className={s.ownerCol}>
+        <Skeleton width={36} />
+      </span>
+      <span />
+    </div>
+  );
+}
+
+/** A folder that hasn't loaded yet, shaped like the list or grid that will replace it. */
+export function ListingSkeleton({ view, showOwner }: { view: "list" | "grid"; showOwner?: boolean }) {
+  if (view === "grid") {
+    return (
+      <div className={s.gridSkeleton} aria-busy aria-label="Loading this folder">
+        {Array.from({ length: 10 }, (_, i) => (
+          <div key={i} className={s.tile} data-skeleton="">
+            <div className={s.thumb} />
+            <div className={s.tileText}>
+              <Skeleton width={`${50 + ((i * 29) % 40)}%`} height={12} />
+              <Skeleton width="45%" height={10} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className={s.listing} data-owner={showOwner ? "" : undefined} aria-busy aria-label="Loading this folder">
+      <div className={s.headRow} aria-hidden>
+        <span />
+        <span>Name</span>
+        <span className={s.sizeCol}>Size</span>
+        <span className={s.dateCol}>Modified</span>
+        <span className={s.ownerCol}>Owner</span>
+        <span />
+      </div>
+      {Array.from({ length: 8 }, (_, i) => (
+        <div key={i} className={s.skeletonLine}>
+          <SkeletonRow i={i} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function SortHeader({ label, k, sort, order, onSort, className }: { label: string; k: SortKey; sort: SortKey; order: "asc" | "desc"; onSort: (k: SortKey) => void; className?: string }) {
@@ -408,6 +506,10 @@ interface ItemProps extends ListingHandlers {
   renaming: boolean;
   writable: boolean;
   selectedPaths: Set<string>;
+  renameDraft: string | null;
+  measuring: boolean;
+  cut: boolean;
+  touch: boolean;
   onSelect: (i: number, ev: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => void;
   onToggle: (i: number) => void;
 }
@@ -415,28 +517,55 @@ interface ItemProps extends ListingHandlers {
 function useItem(p: ItemProps) {
   const dir = isDirLike(p.entry);
   const drop = useDropTarget(dir && !p.entry.link?.outside ? p.entry.path : null, p.onDropItems, p.writable);
+  // Long-press on a touch screen selects (the way phone file apps do); the tap that ends it is eaten.
+  const press = React.useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  const cancelPress = () => {
+    if (press.current) clearTimeout(press.current.timer);
+    if (press.current && !press.current.fired) press.current = null;
+  };
   const common = {
     id: `row-${p.index}`,
     "data-index": p.index,
     "aria-selected": p.selected,
     "data-focused": p.focused ? "" : undefined,
     "data-drop": drop.over || p.osDrop ? "" : undefined,
-    draggable: p.writable && !p.renaming,
+    "data-cut": p.cut ? "" : undefined,
+    draggable: p.writable && !p.renaming && !p.touch,
     onDragStart: (ev: React.DragEvent) => {
       const paths = p.selectedPaths.has(p.entry.path) ? [...p.selectedPaths] : [p.entry.path];
       ev.dataTransfer.setData(DRAG_MIME, JSON.stringify(paths));
       ev.dataTransfer.effectAllowed = "copyMove";
     },
+    onPointerDown: (ev: React.PointerEvent) => {
+      if (ev.pointerType !== "touch" || (ev.target as HTMLElement).closest("button,input,a,[role=checkbox]")) return;
+      const timer = window.setTimeout(() => {
+        if (!press.current) return;
+        press.current.fired = true;
+        if (!p.selected) p.onToggle(p.index);
+        navigator.vibrate?.(8);
+      }, LONG_PRESS_MS);
+      press.current = { timer, x: ev.clientX, y: ev.clientY, fired: false };
+    },
+    onPointerMove: (ev: React.PointerEvent) => {
+      const c = press.current;
+      if (c && !c.fired && Math.hypot(ev.clientX - c.x, ev.clientY - c.y) > 8) cancelPress();
+    },
+    onPointerUp: cancelPress,
+    onPointerCancel: cancelPress,
     onClick: (ev: React.MouseEvent) => {
+      if (press.current?.fired) {
+        press.current = null;
+        return;
+      }
       if ((ev.target as HTMLElement).closest("button,input,a,[role=checkbox]")) return;
       // On touch screens a tap opens (like a phone's file app) unless you're selecting.
-      const touch = (ev.nativeEvent as PointerEvent).pointerType === "touch";
+      const touch = p.touch || (ev.nativeEvent as PointerEvent).pointerType === "touch";
       if (touch && !p.selectedPaths.size) return p.onOpen(p.entry);
       if (touch) return p.onToggle(p.index);
       p.onSelect(p.index, ev);
     },
     onDoubleClick: (ev: React.MouseEvent) => {
-      if ((ev.target as HTMLElement).closest("button,input,[role=checkbox]")) return;
+      if (p.touch || (ev.target as HTMLElement).closest("button,input,[role=checkbox]")) return;
       p.onOpen(p.entry);
     },
     ...drop.props,
@@ -457,8 +586,41 @@ function RowMenu(p: ItemProps) {
   );
 }
 
-const Row = React.memo(function Row(p: ItemProps) {
+/** A link's note after its name: where it points, or that it's broken (a short red mark and words). */
+function LinkNote({ entry: e }: { entry: FileEntry }) {
+  if (!e.link) return null;
+  if (e.link.broken) {
+    return (
+      <span className={s.linkNote} data-broken="" title={`Points to ${e.link.target}, which doesn't exist`}>
+        <i className={s.brokenMark} aria-hidden />
+        broken link
+      </span>
+    );
+  }
+  return (
+    <span className={s.linkNote} data-path="" title={`Link to ${e.link.resolved ?? e.link.target}`}>
+      → {e.link.target}
+    </span>
+  );
+}
+
+/** Size of a row: bytes for files, the measured total for folders, a measuring line, or a dash. */
+function SizeValue({ p, dir, compact }: { p: ItemProps; dir: boolean; compact?: boolean }) {
   const fmt = useFormat();
+  const e = p.entry;
+  if (!dir) return e.link?.broken ? <span className={s.faintDash}>—</span> : <>{fmt.bytes(e.size)}</>;
+  if (e.dirSize) return <span title={`Measured ${fmt.relative(e.dirSize.computedAt)}`}>{fmt.bytes(e.dirSize.bytes)}</span>;
+  if (compact) return <>{e.link ? "Link to a folder" : "Folder"}</>;
+  if (p.measuring && !e.link) return <span className={s.measuring} role="img" aria-label="Measuring" />;
+  return (
+    <button type="button" className={s.calc} onClick={() => p.onCalculate(e)} aria-label={`Calculate the size of ${e.name}`}>
+      <span className={s.calcDash}>—</span>
+      <span className={s.calcLabel}>Calculate</span>
+    </button>
+  );
+}
+
+const Row = React.memo(function Row(p: ItemProps) {
   const { dir, common } = useItem(p);
   const e = p.entry;
   return (
@@ -471,39 +633,32 @@ const Row = React.memo(function Row(p: ItemProps) {
       <span role="gridcell" className={s.nameCell} data-hidden={e.hidden ? "" : undefined}>
         <KindIcon kind={e.kind} type={e.type} className={s.kindIcon} />
         {p.renaming ? (
-          <RenameInput entry={e} onCommit={p.onRenameCommit} onCancel={p.onRenameCancel} />
+          <RenameInput entry={e} initial={p.renameDraft} onCommit={p.onRenameCommit} onCancel={p.onRenameCancel} />
         ) : (
           <span className={s.nameText}>
-            <span className="truncate" title={e.name}>
+            <span className={s.nameLabel} title={e.name}>
               {e.name}
             </span>
-            {e.link && (
-              <span className={s.linkNote} title={`Link to ${e.link.target}`} data-broken={e.link.broken ? "" : undefined}>
-                {e.link.broken ? "broken link" : `→ ${e.link.target}`}
-              </span>
-            )}
+            <LinkNote entry={e} />
           </span>
         )}
         <span className={`${s.mobileMeta} num`}>
-          {dir ? (e.dirSize ? fmt.bytes(e.dirSize.bytes) : "Folder") : fmt.bytes(e.size)} · <Time ts={e.mtime} />
+          {e.link?.broken ? (
+            "Broken link"
+          ) : (
+            <>
+              <SizeValue p={p} dir={dir} compact /> · <Time ts={e.mtime} />
+            </>
+          )}
         </span>
       </span>
       <span role="gridcell" className={`${s.sizeCol} num`}>
-        {!dir ? (
-          fmt.bytes(e.size)
-        ) : e.dirSize ? (
-          <span title={`Measured ${fmt.relative(e.dirSize.computedAt)}`}>{fmt.bytes(e.dirSize.bytes)}</span>
-        ) : (
-          <button type="button" className={s.calc} onClick={() => p.onCalculate(e)} aria-label={`Calculate the size of ${e.name}`}>
-            <span className={s.calcDash}>—</span>
-            <span className={s.calcLabel}>Calculate</span>
-          </button>
-        )}
+        <SizeValue p={p} dir={dir} />
       </span>
       <span role="gridcell" className={`${s.dateCol} num`}>
         <Time ts={e.mtime} />
       </span>
-      <span role="gridcell" className={`${s.ownerCol} truncate`} title={`${e.owner ?? e.uid}:${e.group ?? e.gid} ${e.mode}`}>
+      <span role="gridcell" className={s.ownerCol} title={`Owner ${e.owner ?? e.uid}, group ${e.group ?? e.gid}, ${e.mode}`}>
         {e.owner ?? e.uid}
       </span>
       <span role="gridcell" className={s.rowActions}>
@@ -536,11 +691,13 @@ function TileFace({ entry: e }: { entry: FileEntry }) {
     );
   }
   if (image && !failed) {
+    // eslint-disable-next-line @next/next/no-img-element
     return <img className={s.faceImg} data-loaded={loaded ? "" : undefined} src={thumbUrl(e)} alt="" loading="lazy" decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />;
   }
   if (video && poster) {
     return (
       <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className={s.faceImg} data-loaded="" src={poster} alt="" />
         <span className={s.faceBadge} aria-hidden>
           <MediaVideo />
@@ -558,7 +715,6 @@ function TileFace({ entry: e }: { entry: FileEntry }) {
 }
 
 const Tile = React.memo(function Tile(p: ItemProps & { height: number }) {
-  const fmt = useFormat();
   const { dir, common } = useItem(p);
   const e = p.entry;
   return (
@@ -573,24 +729,31 @@ const Tile = React.memo(function Tile(p: ItemProps & { height: number }) {
       </div>
       <div className={s.tileText}>
         {p.renaming ? (
-          <RenameInput entry={e} onCommit={p.onRenameCommit} onCancel={p.onRenameCancel} />
+          <RenameInput entry={e} initial={p.renameDraft} onCommit={p.onRenameCommit} onCancel={p.onRenameCancel} />
         ) : (
           <span className={s.tileName} title={e.name} data-hidden={e.hidden ? "" : undefined}>
             {e.name}
           </span>
         )}
         <span className={`${s.tileSub} num`}>
-          {dir ? (e.dirSize ? fmt.bytes(e.dirSize.bytes) : e.link ? "Link to a folder" : "Folder") : fmt.bytes(e.size)}
-          {" · "}
-          <Time ts={e.mtime} />
+          {e.link?.broken ? (
+            "Broken link"
+          ) : (
+            <>
+              <SizeValue p={p} dir={dir} compact />
+              {" · "}
+              <Time ts={e.mtime} />
+            </>
+          )}
         </span>
       </div>
     </div>
   );
 });
 
-function RenameInput({ entry, onCommit, onCancel }: { entry: FileEntry; onCommit: (e: FileEntry, name: string) => void; onCancel: () => void }) {
-  const [value, setValue] = React.useState(entry.name);
+/** Rename in place. The name is selected without its extension, so typing replaces just the name. */
+function RenameInput({ entry, initial, onCommit, onCancel }: { entry: FileEntry; initial?: string | null; onCommit: (e: FileEntry, name: string) => void; onCancel: () => void }) {
+  const [value, setValue] = React.useState(initial || entry.name);
   const done = React.useRef(false);
   const commit = () => {
     if (done.current) return;
@@ -606,9 +769,14 @@ function RenameInput({ entry, onCommit, onCancel }: { entry: FileEntry; onCommit
       value={value}
       aria-label={`New name for ${entry.name}`}
       spellCheck={false}
+      autoCapitalize="off"
+      autoCorrect="off"
+      enterKeyHint="done"
+      maxLength={255}
       onFocus={(ev) => {
-        const dot = entry.name.lastIndexOf(".");
-        ev.currentTarget.setSelectionRange(0, dot > 0 && !isDirLike(entry) ? dot : entry.name.length);
+        const name = initial || entry.name;
+        const m = isDirLike(entry) || name.startsWith(".") ? null : name.match(/((?:\.tar)?\.[A-Za-z0-9]{1,8})$/);
+        ev.currentTarget.setSelectionRange(0, m ? name.length - m[1]!.length : name.length);
       }}
       onChange={(ev) => setValue(ev.target.value)}
       onKeyDown={(ev) => {
@@ -621,6 +789,8 @@ function RenameInput({ entry, onCommit, onCancel }: { entry: FileEntry; onCommit
       }}
       onBlur={commit}
       onClick={(ev) => ev.stopPropagation()}
+      onPointerDown={(ev) => ev.stopPropagation()}
+      onDoubleClick={(ev) => ev.stopPropagation()}
     />
   );
 }

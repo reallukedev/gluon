@@ -1,8 +1,8 @@
 import "server-only";
 import { z } from "zod";
-import { arr, client, num, obj, ok, runTest, str, UpstreamError, type KindContext, type KindDef } from "./base";
+import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef } from "./base";
 import { imageUrl } from "../image-refs";
-import type { ImmichMemory, ImmichStatsData } from "@/lib/widgets-types";
+import type { ImmichMemory, ImmichRecentData, ImmichStatsData } from "@/lib/widgets-types";
 
 const schema = z.object({
   apiKey: z.string().trim().min(20, "Paste the whole API key from Immich.").max(200),
@@ -93,6 +93,27 @@ async function stats(ctx: KindContext<Config>, params: Record<string, unknown>):
   return { scope: "user", photos: num(mine.images) ?? 0, videos: num(mine.videos) ?? 0, usageBytes: null, users: [], ...base };
 }
 
+/** The newest photos and videos by when they were taken, as Immich's own timeline orders them. */
+async function recent(ctx: KindContext<Config>, params: Record<string, unknown>): Promise<ImmichRecentData> {
+  const limit = Math.min(48, Math.max(1, Number(params.limit ?? 24)));
+  const type = params.show === "photos" ? "IMAGE" : params.show === "videos" ? "VIDEO" : undefined;
+  const res = obj(
+    await http(ctx).json<unknown>("/api/search/metadata", {
+      method: "POST",
+      body: { size: limit, order: "desc", ...(type ? { type } : {}), withDeleted: false, visibility: "timeline" },
+      allow: [400, 403],
+    }),
+  );
+  const status = num(res.__status);
+  if (status === 403) return { items: [], note: "This API key can't list photos (it needs the asset.read and asset.view permissions)." };
+  if (status === 400) return { items: [], note: "This version of Immich doesn't offer photo search to other apps." };
+  const items = arr<Record<string, unknown>>(obj(res.assets).items)
+    .filter((a) => typeof a.id === "string" && !a.isTrashed)
+    .map((a) => ({ id: String(a.id), kind: a.type === "VIDEO" ? ("video" as const) : ("image" as const), image: thumb(ctx, String(a.id)), takenAt: time(a.localDateTime ?? a.fileCreatedAt) }))
+    .filter((a): a is ImmichRecentData["items"][number] => !!a.image);
+  return { items, note: null };
+}
+
 export const def: KindDef<Config> = {
   kind: "immich",
   label: "Immich",
@@ -107,7 +128,7 @@ export const def: KindDef<Config> = {
   ],
   schema,
   secretKeys: ["apiKey"],
-  widgets: ["immich.stats"],
+  widgets: ["immich.stats", "immich.recent"],
   insecureTls: (c) => c.allowSelfSigned,
   authorize(ctx, req) {
     req.headers["x-api-key"] = ctx.config.apiKey;
@@ -128,6 +149,7 @@ export const def: KindDef<Config> = {
     }),
   data: {
     "immich.stats": (ctx, p) => stats(ctx, p),
+    "immich.recent": (ctx, p) => recent(ctx, p),
   },
   image: {
     schema: z.object({

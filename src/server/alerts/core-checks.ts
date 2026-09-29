@@ -94,7 +94,9 @@ registerCheck("disk-space", 60_000, async () => {
     if (days !== null) cause += ` At the current rate it fills ${humanDays(days)}.`;
     let remedy: Parameters<typeof raise>[0]["remedy"] = { action: "", label: "See what's using it", href: `/storage?usage=${encodeURIComponent(f.mount)}` };
 
-    if (f.mount === "/var" || f.mount === "/") {
+    // The old copies live under /var: they only help the filesystem that actually holds /var.
+    const varFs = filesystems().some((x) => x.mount === "/var") ? "/var" : "/";
+    if (f.mount === varFs) {
       const leftovers = await findLeftovers();
       const total = leftovers.reduce((a, l) => a + l.bytes, 0);
       if (total > 100 * 1024 * 1024) {

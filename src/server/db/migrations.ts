@@ -382,4 +382,30 @@ export const migrations: string[] = [
   );
   CREATE INDEX IF NOT EXISTS self_updates_started ON self_updates(started_at);
   `,
+
+  /* 13 · app builder: custom apps, their published versions and builds, and Gluon's Umbrel app store.
+     Idempotent: server/appstore/db.ts runs the same SQL on first use. */ `
+  CREATE TABLE IF NOT EXISTS custom_apps (
+    id TEXT PRIMARY KEY, source TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', target TEXT, app_id TEXT UNIQUE,
+    slug TEXT NOT NULL, name TEXT NOT NULL, spec TEXT NOT NULL, secrets TEXT, github TEXT, rev INTEGER NOT NULL DEFAULT 1,
+    published_version TEXT, published_revision INTEGER NOT NULL DEFAULT 0, published_at INTEGER, published_spec TEXT,
+    created_by TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS custom_apps_updated ON custom_apps(updated_at);
+  CREATE TABLE IF NOT EXISTS custom_app_versions (
+    app TEXT NOT NULL REFERENCES custom_apps(id) ON DELETE CASCADE, revision INTEGER NOT NULL, version TEXT NOT NULL,
+    files TEXT NOT NULL, store_commit TEXT, source_commit TEXT, images TEXT, published_at INTEGER NOT NULL,
+    user_id TEXT, username TEXT, PRIMARY KEY (app, revision)
+  ) WITHOUT ROWID;
+  CREATE TABLE IF NOT EXISTS custom_app_builds (
+    id TEXT PRIMARY KEY, app TEXT NOT NULL REFERENCES custom_apps(id) ON DELETE CASCADE, status TEXT NOT NULL,
+    commit_sha TEXT, images TEXT NOT NULL DEFAULT '{}', started_at INTEGER NOT NULL, finished_at INTEGER,
+    log TEXT NOT NULL DEFAULT '', error TEXT, user_id TEXT, username TEXT
+  );
+  CREATE INDEX IF NOT EXISTS custom_app_builds_app ON custom_app_builds(app, started_at);
+  CREATE TABLE IF NOT EXISTS custom_app_store (
+    id INTEGER PRIMARY KEY CHECK (id = 1), store_id TEXT NOT NULL, token TEXT NOT NULL,
+    registered_url TEXT, registered_at INTEGER, created_at INTEGER NOT NULL
+  );
+  `,
 ];

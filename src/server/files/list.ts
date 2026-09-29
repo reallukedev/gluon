@@ -10,7 +10,7 @@ import type { FileEntry, Listing, SortKey } from "@/lib/files-types";
 import { authorize, canSee, isTrashDirName, protectionReason, resolveHost, type Scope, type Target } from "./paths";
 import { groupName, modeString, userName } from "./ids";
 import { kindOf, mimeOf, previewOf } from "./kinds";
-import { fsInfo } from "./mounts";
+import { fsInfo, hostMounts, isVirtualFs } from "./mounts";
 
 const MAX_ENTRIES = 250_000;
 /** Above this many entries, size/date sorting (which needs a stat per entry) falls back to name. */
@@ -157,6 +157,14 @@ async function statAll(dirReal: string, key: string, names: string[]): Promise<M
   return stats;
 }
 
+async function isDirLink(real: string): Promise<boolean> {
+  try {
+    return (await fs.promises.stat(hostPath(real))).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 export interface ListOptions {
   path: string;
   sort?: SortKey;
@@ -165,7 +173,10 @@ export interface ListOptions {
   limit?: number;
   hidden?: boolean;
   filter?: string;
+  /** Folders first (the default), except when sorting by size, where folders compete by their measured size. */
   foldersFirst?: boolean;
+  /** Only folders (and links to folders): for path completion and the breadcrumb menus. */
+  only?: "dirs";
 }
 
 /** Keep the member's view anchored at their share even when they arrived through a link. */
@@ -206,7 +217,7 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
   const offset = Math.max(0, o.offset ?? 0);
   const limit = Math.min(Math.max(1, o.limit ?? 200), 1000);
   const showHidden = o.hidden ?? false;
-  const foldersFirst = o.foldersFirst ?? true;
+  const foldersFirst = o.foldersFirst ?? sort !== "size";
   const filter = o.filter?.trim().toLowerCase() || null;
 
   // Read names only (cheap even for 100k entries); stat just the page.
@@ -233,6 +244,7 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
       if (hidden && !showHidden) continue;
       if (filter && !d.name.toLowerCase().includes(filter)) continue;
       const r: Raw = { name: d.name, dir: d.isDirectory(), link: d.isSymbolicLink(), other: !d.isDirectory() && !d.isFile() && !d.isSymbolicLink() };
+      if (o.only === "dirs" && !r.dir && !(r.link && (await isDirLink(path.posix.join(t.real, d.name))))) continue;
       if (r.dir) counts.dirs++;
       else if (r.link) counts.links++;
       else if (r.other) counts.other++;
@@ -250,13 +262,31 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
 
   let sortLimited = false;
   let stats: Map<string, StatLite> | null = null;
+  // Folders sort by their last measured size (from the dir_sizes cache), so the biggest things in a
+  // full drive come first whether they are files or folders. Unmeasured folders sort as empty.
+  let dirBytes: Map<string, { bytes: number }> | null = null;
   if ((sort === "size" || sort === "mtime") && raws.length > 0) {
     if (raws.length <= STAT_ALL_LIMIT) {
       stats = await statAll(t.real, `${t.real}:${t.stat.mtimeMs}:${t.stat.ino}:${showHidden}`, raws.map((r) => r.name));
+      if (sort === "size") dirBytes = cachedSizes(raws.filter((r) => r.dir).map((r) => path.posix.join(t.real, r.name)));
     } else {
       sortLimited = true;
     }
   }
+  // A drive mounted inside this folder counts as what's used on that drive: du stays on one
+  // filesystem, so it would otherwise read as a few kilobytes.
+  const mountPoints = new Set(hostMounts().filter((m) => !isVirtualFs(m.fstype)).map((m) => m.mount));
+  const mountUsed = new Map<string, number | null>();
+  const usedOn = (real: string): number | null => {
+    if (!mountPoints.has(real)) return null;
+    if (!mountUsed.has(real)) mountUsed.set(real, fsInfo(real)?.used ?? null);
+    return mountUsed.get(real)!;
+  };
+  const sizeOf = (r: Raw) => {
+    if (!r.dir) return stats!.get(r.name)?.size ?? -1;
+    const real = path.posix.join(t.real, r.name);
+    return usedOn(real) ?? dirBytes?.get(real)?.bytes ?? -1;
+  };
   const effective: SortKey = sortLimited ? "name" : sort;
   const dirRank = (r: Raw) => (r.dir ? 0 : 1);
   const kindCache = new Map<string, string>();
@@ -277,7 +307,7 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
     let c = 0;
     switch (effective) {
       case "size":
-        c = (stats!.get(a.name)?.size ?? -1) - (stats!.get(b.name)?.size ?? -1);
+        c = sizeOf(a) - sizeOf(b);
         break;
       case "mtime":
         c = (stats!.get(a.name)?.mtime ?? 0) - (stats!.get(b.name)?.mtime ?? 0);
@@ -312,6 +342,12 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
       }
     })
   ).filter((e): e is FileEntry => !!e);
+
+  for (const e of entries) {
+    if (e.type !== "dir") continue;
+    const used = usedOn(path.posix.join(t.real, e.name));
+    if (used !== null) e.dirSize = { bytes: used, computedAt: Date.now() };
+  }
 
   const self = await toEntry(ctx, shown, t.real, t.stat);
   if (offset === 0) rememberVisit(user.id, shown);

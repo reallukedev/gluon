@@ -73,7 +73,7 @@ a.cardLink:active { transform: scale(calc(1 - 0.03 * var(--motion, 1))); }
 .cardSub { font-size: var(--text-2xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Stats */
-.stats { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 12px 16px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); align-content: start; }
+.stats { display: grid; /* the column count is a target: narrow widgets wrap rather than squeeze labels together */ grid-template-columns: repeat(auto-fit, minmax(max(76px, calc(100% / var(--cols, 2) - 16px)), 1fr)); gap: 12px 16px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); align-content: start; }
 .col > .stats { padding: 0; }
 .stats[data-cols="3"] { --cols: 3; }
 .stats[data-cols="4"] { --cols: 4; }
@@ -225,3 +225,24 @@ a.cardLink:active { transform: scale(calc(1 - 0.03 * var(--motion, 1))); }
   .weather { flex-direction: column; gap: 10px; }
   .hours { margin: 0; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); }
 }
+
+/* Latest photos: an even wall of squares that fills the widget, clipped at the bottom edge. */
+.wall {
+  list-style: none;
+  margin: 0;
+  padding: var(--pt, 16px) var(--px, 16px) 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  grid-auto-rows: min-content;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  align-content: start;
+}
+.wall[data-size="s"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wallLink { position: relative; display: block; border-radius: 6px; transition: transform var(--dur-press) var(--ease-out); }
+a.wallLink:active { transform: scale(calc(1 - 0.03 * var(--motion, 1))); }
+.wallLink .poster { border-radius: 6px; }
+.wallPlay { position: absolute; right: 5px; bottom: 5px; width: 16px; height: 16px; padding: 2px; border-radius: 4px; color: #fff; background: rgb(0 0 0 / 0.45); }
+@media (hover: hover) and (pointer: fine) { a.wallLink:hover .poster { box-shadow: inset 0 0 0 1px var(--line), 0 0 0 1px var(--ink-2); } }

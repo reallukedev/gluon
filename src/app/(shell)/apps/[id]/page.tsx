@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/server/auth/session";
 import { appDetail } from "@/server/docker/detail";
+import { getApp } from "@/server/docker/apps";
 import { listUsers } from "@/server/auth/users";
 import { AppDetailView } from "@/components/apps/AppDetailView";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  return { title: decodeURIComponent((await params).id) };
+  const id = decodeURIComponent((await params).id);
+  const app = await getApp(id).catch(() => null);
+  return { title: app?.name ?? id };
 }
 
 export default async function AppPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; container?: string }> }) {

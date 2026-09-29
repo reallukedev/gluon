@@ -25,6 +25,7 @@ import p from "./preview.module.css";
 import { extraWidgets } from "./widgetStore";
 import "./widgets/integrations";
 import "./widgets/machine-logins";
+import "./widgets/server-watch";
 
 /* Catalog previews: tiny abstract drawings in the product's own line language, not screenshots. */
 const Lines = ({ pattern }: { pattern: string }) => (

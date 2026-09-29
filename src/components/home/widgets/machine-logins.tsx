@@ -125,7 +125,7 @@ function MachineLogins({ size }: WidgetProps) {
                   </span>
                 </span>
                 <span className={w.rowMeta}>
-                  {doing(p.lead)} · since <Time ts={p.since} />
+                  {doing(p.lead)} · signed in <Time ts={p.since} />
                 </span>
               </span>
             </li>

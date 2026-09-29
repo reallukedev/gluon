@@ -1,6 +1,6 @@
 import "server-only";
 import path from "node:path";
-import { all, now, one, run } from "../db";
+import { all, now, one, run, tx } from "../db";
 import { AppError } from "../errors";
 import { HOST_ROOT, hostPath } from "../host/paths";
 import { localSpawn } from "../host/exec";
@@ -95,8 +95,11 @@ function save(real: string, m: Measure) {
   const t = now();
   try {
     const up = "INSERT INTO dir_sizes (path, bytes, partial, computed_at, took_ms) VALUES (?, ?, ?, ?, ?) ON CONFLICT(path) DO UPDATE SET bytes = excluded.bytes, partial = excluded.partial, computed_at = excluded.computed_at, took_ms = excluded.took_ms";
-    run(up, real, m.bytes, m.partial ? 1 : 0, t, m.tookMs);
-    for (const c of m.children) run(up, c.path, c.bytes, m.partial ? 1 : 0, t, m.tookMs);
+    // One transaction: a folder with thousands of sub-folders is thousands of rows.
+    tx(() => {
+      run(up, real, m.bytes, m.partial ? 1 : 0, t, m.tookMs);
+      for (const c of m.children) run(up, c.path, c.bytes, m.partial ? 1 : 0, t, m.tookMs);
+    });
   } catch (e) {
     console.error("[gluon] dir_sizes write failed", (e as Error).message);
   }

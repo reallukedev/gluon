@@ -203,7 +203,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
           </Tooltip>
         </div>
       )}
-      <nav className={s.scroll} aria-label="Main">
+      <nav className={s.scroll} aria-label="Main" data-onboarding={prefs.onboarding === "pending" ? "" : undefined}>
         <div className={s.group}>
           {nav.visible
             .filter((n) => n.group === "main")

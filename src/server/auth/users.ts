@@ -1,4 +1,6 @@
 import "server-only";
+import { updatePrefs } from "../prefs";
+import { NAV } from "@/lib/nav";
 import { hash, verify } from "@node-rs/argon2";
 import { all, now, one, run } from "../db";
 import { hmac, id as newId, sha256 } from "../crypto";
@@ -130,6 +132,8 @@ export async function createUser(input: { username: string; displayName: string;
     t,
     t,
   );
+  // New accounts start with just Home in the sidebar; the welcome on Home lets them add the rest.
+  updatePrefs(id, { onboarding: "pending", sidebarHidden: NAV.filter((n) => n.id !== "home").map((n) => n.id) });
   return toUser(findById(id)!);
 }
 

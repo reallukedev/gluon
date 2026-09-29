@@ -9,6 +9,8 @@ import { api, useApi, ApiError } from "@/lib/client/api";
 import { useLive } from "@/lib/client/live";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Empty } from "@/components/ui/Surface";
+import { AppsSectionTabs } from "@/components/docker/AppsSectionTabs";
+import { NewAppButton } from "@/components/builder/NewAppButton";
 import { StateLine } from "@/components/ui/StateLine";
 import { Segmented } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
@@ -155,15 +157,19 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
 
   return (
     <Page>
+      <AppsSectionTabs current="apps" />
       <PageHeader
         title="Apps"
         summary={summary}
         actions={
-          platform === "umbrel" ? (
-            <LinkButton href="/apps/store" icon={<Plus />}>
-              Get apps
-            </LinkButton>
-          ) : undefined
+          <>
+            <NewAppButton />
+            {platform === "umbrel" && (
+              <LinkButton href="/apps/store" icon={<Plus />}>
+                Get apps
+              </LinkButton>
+            )}
+          </>
         }
       />
 

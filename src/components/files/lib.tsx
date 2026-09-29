@@ -289,3 +289,9 @@ export function useVideoPoster(key: string | null, url: string): string | null {
   }, [key, url]);
   return src;
 }
+
+/** "⌘" on Apple devices, "Ctrl+" elsewhere, for shortcut hints in menus (menus render on the client only). */
+export function modKey(): string {
+  if (typeof navigator === "undefined") return "Ctrl+";
+  return /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl+";
+}

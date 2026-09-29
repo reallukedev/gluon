@@ -77,18 +77,13 @@ function http(ctx: KindContext<Config>) {
   );
 }
 
-// Default user for per-user endpoints when none is configured: the first administrator.
-const defaultUsers = new Map<string, { at: number; id: string | null }>();
-async function userId(ctx: KindContext<Config>): Promise<string | null> {
-  if (ctx.config.userId) return ctx.config.userId;
-  const key = `${ctx.id ?? ctx.baseUrl}:${ctx.version}`;
-  const hit = defaultUsers.get(key);
-  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.id;
-  const users = arr<Item>(await http(ctx).json("/Users"));
-  const admin = users.find((u) => obj(u.Policy).IsAdministrator === true && obj(u.Policy).IsDisabled !== true) ?? users[0];
-  const id = str(admin?.Id);
-  defaultUsers.set(key, { at: Date.now(), id });
-  return id;
+/**
+ * The person whose view "recently added" and library counts follow. None chosen means the API key's own view,
+ * which sees every library: picking "the first admin" by default hid everything whenever that account had
+ * no library access (or Jellyfin's library folders had drifted from its items).
+ */
+function userId(ctx: KindContext<Config>): string | null {
+  return ctx.config.userId ?? null;
 }
 
 async function sessions(ctx: KindContext<Config>): Promise<Item[]> {
@@ -140,25 +135,36 @@ const TYPE_FOR: Record<string, string> = { movie: "Movie", episode: "Episode", a
 async function recent(ctx: KindContext<Config>, params: Record<string, unknown>): Promise<JellyfinRecentData> {
   const limit = Math.min(30, Math.max(1, Number(params.limit ?? 12)));
   const include = (Array.isArray(params.include) ? params.include : ["movie", "episode"]) as string[];
-  const uid = await userId(ctx);
-  const data = obj(
-    await http(ctx).json("/Items", {
-      query: {
-        userId: uid ?? undefined,
-        SortBy: "DateCreated,SortName",
-        SortOrder: "Descending",
-        Recursive: true,
-        IncludeItemTypes: include.map((k) => TYPE_FOR[k]).filter(Boolean).join(","),
-        Limit: Math.min(100, limit * 5),
-        Fields: "DateCreated,ProductionYear",
-        EnableImageTypes: "Primary",
-        ImageTypeLimit: 1,
-        EnableTotalRecordCount: false,
-        IsMissing: false,
-        EnableUserData: false,
-      },
-    }),
+  const uid = userId(ctx);
+  // One query per kind: in one shared window a busy show's episodes crowd out every movie and album.
+  // Episodes get a wider window since they collapse into one entry per show.
+  const lists = await Promise.all(
+    include
+      .filter((k) => TYPE_FOR[k])
+      .map(async (k) =>
+        arr<Item>(
+          obj(
+            await http(ctx).json("/Items", {
+              query: {
+                userId: uid ?? undefined,
+                SortBy: "DateCreated,SortName",
+                SortOrder: "Descending",
+                Recursive: true,
+                IncludeItemTypes: TYPE_FOR[k],
+                Limit: k === "episode" ? Math.min(300, limit * 12) : limit,
+                Fields: "DateCreated,ProductionYear",
+                EnableImageTypes: "Primary",
+                ImageTypeLimit: 1,
+                EnableTotalRecordCount: false,
+                IsMissing: false,
+                EnableUserData: false,
+              },
+            }),
+          ).Items,
+        ),
+      ),
   );
+  const data = { Items: lists.flat().sort((a, b) => (time(b.DateCreated) ?? 0) - (time(a.DateCreated) ?? 0)) };
   const items: RecentMediaItem[] = [];
   const bySeries = new Map<string, RecentMediaItem>();
   for (const it of arr<Item>(data.Items)) {
@@ -215,9 +221,19 @@ const MAIN_TYPES: Record<string, string> = {
 };
 const LIB_KINDS = new Set(["movies", "tvshows", "music", "musicvideos", "homevideos", "boxsets", "books", "mixed"]);
 
+/** Global counter for each library kind, used when a library's own count can't be trusted. */
+const KIND_COUNT: Record<string, string> = {
+  movies: "MovieCount",
+  tvshows: "SeriesCount",
+  music: "AlbumCount",
+  musicvideos: "MusicVideoCount",
+  books: "BookCount",
+  boxsets: "BoxSetCount",
+};
+
 async function libraries(ctx: KindContext<Config>): Promise<JellyfinLibrariesData> {
   const h = http(ctx);
-  const uid = await userId(ctx).catch(() => null);
+  const uid = userId(ctx);
   const [folders, counts, sess] = await Promise.all([
     h.json<unknown>("/Library/VirtualFolders"),
     h.json<unknown>("/Items/Counts", { query: { userId: uid ?? undefined } }),
@@ -242,14 +258,27 @@ async function libraries(ctx: KindContext<Config>): Promise<JellyfinLibrariesDat
   );
   const c = obj(counts);
   const n = (k: string) => num(c[k]) ?? 0;
+  const kinds = libs.map((l) => String(l.CollectionType ?? ""));
+  // Jellyfin says it has movies and shows, yet none of its libraries contain them: its library folders no longer
+  // match where the items were filed (after moving media or re-adding a library). A scan fixes it; until then
+  // Jellyfin's own apps show empty libraries too, so say so instead of showing zeros.
+  const total = n("MovieCount") + n("SeriesCount") + n("AlbumCount") + n("MusicVideoCount") + n("BookCount");
+  const drifted = total > 0 && libs.length > 0 && perLib.every((x) => !x);
+  const countFor = (i: number): number | null => {
+    const own = perLib[i] ?? null;
+    if (!drifted) return own;
+    const key = KIND_COUNT[kinds[i]!];
+    // The server-wide count stands in only when this library is the one library of its kind.
+    return key && kinds.filter((k) => k === kinds[i]).length === 1 ? n(key) : own;
+  };
   return {
     libraries: libs.map((l, i) => {
-      const ct = String(l.CollectionType ?? "");
+      const ct = kinds[i]!;
       return {
         id: String(l.ItemId ?? l.Name),
         name: str(l.Name) ?? "Library",
         kind: (LIB_KINDS.has(ct) ? ct : "other") as JellyfinLibrariesData["libraries"][number]["kind"],
-        count: perLib[i] ?? null,
+        count: countFor(i),
         image: img(ctx, l.PrimaryImageItemId ?? l.ItemId, null, 320),
       };
     }),
@@ -264,7 +293,36 @@ async function libraries(ctx: KindContext<Config>): Promise<JellyfinLibrariesDat
       books: n("BookCount"),
     },
     activeStreams: sess.length,
+    note: drifted ? DRIFT_NOTE : null,
   };
+}
+
+const DRIFT_NOTE =
+  "Jellyfin's libraries look empty to its apps: its items aren't filed under the library folders any more. In Jellyfin, open Dashboard → Libraries and choose Scan All Libraries.";
+
+/** What the chosen person (or the key) can see, compared with everything Jellyfin holds. */
+async function visibility(ctx: KindContext<Config>): Promise<string | null> {
+  const h = http(ctx);
+  const everything = obj(await h.json("/Items/Counts"));
+  const all = ["MovieCount", "SeriesCount", "AlbumCount", "MusicVideoCount", "BookCount"].reduce((a, k) => a + (num(everything[k]) ?? 0), 0);
+  if (!all) return null;
+  const folders = arr<Item>(await h.json("/Library/VirtualFolders"));
+  const counts = await Promise.all(
+    folders.slice(0, 16).map(async (l) => {
+      const type = MAIN_TYPES[String(l.CollectionType ?? "mixed")];
+      if (!type || !str(l.ItemId)) return 0;
+      const r = obj(await h.json("/Items", { query: { ParentId: String(l.ItemId), Recursive: true, Limit: 0, IncludeItemTypes: type, EnableTotalRecordCount: true, EnableImages: false } }));
+      return num(r.TotalRecordCount) ?? 0;
+    }),
+  );
+  if (folders.length && counts.every((x) => !x)) return DRIFT_NOTE;
+  if (ctx.config.userId) {
+    const mine = obj(await h.json("/Items", { query: { userId: ctx.config.userId, Recursive: true, Limit: 0, IncludeItemTypes: "Movie,Series,MusicAlbum", EnableTotalRecordCount: true, EnableImages: false } }));
+    if (!num(mine.TotalRecordCount)) {
+      return "The person chosen for “recently added” can't see any of Jellyfin's libraries. Give them access in Jellyfin (Dashboard → Users → Access), or leave the choice empty to show everything.";
+    }
+  }
+  return null;
 }
 
 export const def: KindDef<Config> = {
@@ -283,7 +341,7 @@ export const def: KindDef<Config> = {
       type: "select",
       required: false,
       secret: false,
-      help: "Pick a person to respect their library access and parental limits. Test the connection to load the list. Empty = the first admin.",
+      help: "Pick a person to respect their library access and parental limits. Test the connection to load the list. Empty shows everything.",
     },
     { key: "allowSelfSigned", label: "Allow self-signed certificate", type: "boolean", required: false, secret: false },
   ],
@@ -318,6 +376,8 @@ export const def: KindDef<Config> = {
       let detail: string | null = null;
       if (ctx.config.userId && !users.some((u) => u.id === ctx.config.userId)) {
         detail = "The person chosen for “recently added” no longer exists in Jellyfin; pick another.";
+      } else {
+        detail = await visibility(ctx).catch(() => null);
       }
       return ok(`Connected to Jellyfin${version ? ` ${version}` : ""}${name ? ` as “${name}”` : ""}.`, {
         version,

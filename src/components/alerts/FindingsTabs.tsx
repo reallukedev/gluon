@@ -197,7 +197,7 @@ function FindingList({
                       </span>
                     )}
                     <span>
-                      since <Time ts={f.firstSeen} />
+                      First noticed <Time ts={f.firstSeen} />
                     </span>
                     {note && <span>{note(f)}</span>}
                   </>

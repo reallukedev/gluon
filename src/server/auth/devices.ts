@@ -121,7 +121,7 @@ export function noteSignIn(row: Pick<UserRow, "id" | "username" | "display_name"
     id: newDeviceFindingId(row.id, sessionHash),
     kind: "signin.new_device",
     severity: "attention",
-    subject: row.id,
+    subject: row.username,
     title: `${row.display_name || row.username} signed in as an admin from a new device outside home`,
     cause: `${what} at ${where.ip}. If this wasn't them, sign that device out and change the password.`,
     detail: { userId: row.id, ip: where.ip, userAgent: where.userAgent },

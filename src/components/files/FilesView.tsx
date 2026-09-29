@@ -29,18 +29,22 @@ import {
   Xmark,
   DataTransferBoth,
   Refresh,
+  Scissor,
+  PasteClipboard,
+  MultiplePages,
+  PagePlus,
 } from "iconoir-react";
-import type { FileEntry, FileJob, Listing as ListingT, Places, SearchHit, TrashSummary, UploadSession, ZipEstimate } from "@/lib/files-types";
+import type { FileEntry, FileJob, FolderSize, Listing as ListingT, Places, SearchHit, TrashSummary, UploadSession, ZipEstimate } from "@/lib/files-types";
 import { api, ApiError, useApi, useStream } from "@/lib/client/api";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Empty, Notice, Skeleton } from "@/components/ui/Surface";
 import { Button, IconButton } from "@/components/ui/Button";
-import { Segmented, Field, Input } from "@/components/ui/Field";
+import { Segmented } from "@/components/ui/Field";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
 import { Dialog, useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { useListing } from "./useListing";
-import { Listing } from "./Listing";
+import { Listing, ListingSkeleton, type ClipOp } from "./Listing";
 import { Rail } from "./Rail";
 import { PathBar } from "./PathBar";
 import { Preview } from "./Preview";
@@ -48,12 +52,14 @@ import { Properties, copyText } from "./Properties";
 import { Ownership } from "./Ownership";
 import { FolderPicker } from "./FolderPicker";
 import { Tray } from "./Tray";
+import { Shortcuts } from "./Shortcuts";
 import { TrashView } from "./TrashView";
 import { SearchResults } from "./SearchResults";
 import { useConflicts } from "./Conflicts";
 import { uploads } from "./uploads";
 import { readDrop, fromInput, type Incoming } from "./drop";
-import { baseName, downloadUrl, filesHref, isArchive, isDirLike, joinPath, parentOf, prefFromSort, rawUrl, sortFromPref, useMediaQuery } from "./lib";
+import { clip, useClip } from "./clip";
+import { baseName, downloadUrl, filesHref, isArchive, isDirLike, joinPath, modKey, parentOf, prefFromSort, rawUrl, sortFromPref, useMediaQuery } from "./lib";
 import s from "./files.module.css";
 
 type Where = { path: string; view: "files" | "trash" };
@@ -64,6 +70,65 @@ function readLocation(fallback: string): Where {
   return { path: q.get("path") || fallback, view: q.get("view") === "trash" ? "trash" : "files" };
 }
 
+const SIZE_STALE_MS = 60 * 60_000;
+/** Focused things that use the keyboard themselves; anywhere else, Files keys go to the list. */
+const KEY_OWNERS = "input,textarea,select,[contenteditable],[role=menu],[role=menuitem],[role=dialog],[role=alertdialog],[role=listbox],[role=option],[role=combobox],[role=radiogroup],[role=radio],[role=tablist],[role=tab],[role=slider],[role=grid]";
+
+/** Don't re-measure a folder that was measured this recently, however much changes. */
+const SIZE_REST_MS = 30_000;
+
+/** A measured size is out of date when the folder itself changed after it (something added or removed). */
+const staleSize = (e: FileEntry) => !!e.dirSize && e.mtime > e.dirSize.computedAt + 1000;
+
+/**
+ * Folder sizes, filled in without being asked: when a folder opens with sub-folders whose size isn't
+ * known (or its own measurement is over an hour old), the server measures it once (du, one level
+ * deep, so every sub-folder's size comes from the same pass, at most two at a time) and the list
+ * refreshes when it's done. `measuring` drives the placeholder in the Size column.
+ */
+function useFolderSizes(listing: ListingT | undefined, onDone: () => void) {
+  const [measuring, setMeasuring] = React.useState(false);
+  const done = React.useRef(onDone);
+  done.current = onDone;
+  const path = listing?.path ?? null;
+  const self = listing?.self;
+  const changed = !!listing && (!self?.dirSize || staleSize(self) || listing.entries.some((e) => e.type === "dir" && (!e.dirSize || staleSize(e))));
+  const needs = !!listing && listing.counts.dirs > 0 && (changed || Date.now() - (self?.dirSize?.computedAt ?? 0) > SIZE_STALE_MS);
+  const before = self?.dirSize?.computedAt ?? 0;
+  React.useEffect(() => {
+    setMeasuring(false);
+    if (!path || !needs) return;
+    let live = true;
+    const url = `/api/files/size?path=${encodeURIComponent(path)}`;
+    // Something inside changed since the last measurement: measure again (unless that was moments ago).
+    const again = changed && Date.now() - before > SIZE_REST_MS;
+    void (async () => {
+      let r = await api.get<FolderSize>(again ? `${url}&refresh=1` : url);
+      if (!live) return;
+      if (!r.running) {
+        if ((r.computedAt ?? 0) > before) done.current();
+        return;
+      }
+      setMeasuring(true);
+      // Poll gently: often seconds, sometimes minutes on a big media drive (du stops at 20 min).
+      for (let i = 0; live && r.running && i < 400; i++) {
+        await new Promise((ok) => setTimeout(ok, Math.min(1200 + i * 400, 5000)));
+        if (!live) return;
+        r = await api.get<FolderSize>(url);
+      }
+      if (!live) return;
+      setMeasuring(false);
+      done.current();
+    })().catch(() => live && setMeasuring(false));
+    return () => {
+      live = false;
+    };
+    // Once per folder visit; the refresh that follows must not start another round.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, needs]);
+  return measuring;
+}
+
 export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Places | null; defaultPath: string }) {
   const fmt = useFormat();
   const { prefs, setPrefs, viewer } = usePrefs();
@@ -72,6 +137,8 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
   const path = search.get("path") || defaultPath;
   const view: Where["view"] = search.get("view") === "trash" ? "trash" : "files";
   const phone = useMediaQuery("(max-width: 900px)");
+  const touch = useMediaQuery("(hover: none) and (pointer: coarse)");
+  const mod = React.useMemo(() => (typeof window === "undefined" ? "Ctrl+" : modKey()), []);
 
   // ---- preferences
   const natural = sortFromPref(prefs.filesSort);
@@ -92,17 +159,31 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
   const listing = L.listing;
   const trash = useApi<TrashSummary>(view === "trash" ? "/api/files/trash" : null);
   const writable = !!listing && listing.access === "write" && !listing.protectedReason;
+  // While the next folder loads, keep the toolbar and path as they were (disabled), so nothing jumps.
+  const lastWritable = React.useRef(false);
+  const lastCrumbs = React.useRef<ListingT["breadcrumbs"]>([]);
+  // The header describes the whole folder, even while a filter narrows the list.
+  const unfiltered = React.useRef<{ path: string; counts: ListingT["counts"] } | null>(null);
+  if (listing) {
+    lastWritable.current = writable;
+    lastCrumbs.current = listing.breadcrumbs;
+    if (!filter) unfiltered.current = { path: listing.path, counts: listing.counts };
+  }
+  const showWrite = listing ? writable : lastWritable.current && !L.error;
+  const measuring = useFolderSizes(view === "files" && !filter ? listing : undefined, () => void L.refresh());
+  const clipboard = useClip();
 
   // ---- selection & dialogs
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [renaming, setRenaming] = React.useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = React.useState<string | null>(null);
   const [reveal, setReveal] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<FileEntry | null>(null);
   const [props, setProps] = React.useState<{ path: string; focus?: "apps" | "size" } | null>(null);
   const [ownershipPath, setOwnershipPath] = React.useState<string | null>(null);
   const [picker, setPicker] = React.useState<{ mode: "copy" | "move"; sources: string[] } | null>(null);
-  const [newFolder, setNewFolder] = React.useState(false);
   const [railSheet, setRailSheet] = React.useState(false);
+  const [keysOpen, setKeysOpen] = React.useState(false);
   const [railHidden, setRailHidden] = React.useState(false);
   const [dropping, setDropping] = React.useState(false);
   /** A folder row under the pointer while files from the computer are dragged in (upload goes there). */
@@ -114,6 +195,8 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
   const folderInput = React.useRef<HTMLInputElement>(null);
   const mainRef = React.useRef<HTMLDivElement>(null);
   const keepFocus = React.useRef(false);
+  /** Going up a level lands on the folder you came from, like a desktop file manager. */
+  const revealNext = React.useRef<string | null>(null);
   const lastFilesPath = React.useRef(path);
   if (view === "files") lastFilesPath.current = path;
 
@@ -128,6 +211,8 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
   React.useEffect(() => {
     setSelected(new Set());
     setRenaming(null);
+    setReveal(revealNext.current);
+    revealNext.current = null;
     setDeepQuery(null);
     setFilterText("");
     setFilter("");
@@ -140,13 +225,19 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
     }
   }, [listing?.path]);
 
-  const navigate = React.useCallback((p: string, v: Where["view"] = "files") => {
-    keepFocus.current = !!document.activeElement?.closest("[role=grid]");
-    const url = v === "trash" ? "/files?view=trash" : filesHref(p);
-    window.history.pushState(null, "", url);
-    setRailSheet(false);
-    window.scrollTo({ top: 0 });
-  }, []);
+  const navigate = React.useCallback(
+    (p: string, v: Where["view"] = "files") => {
+      const active = document.activeElement;
+      keepFocus.current = !!active?.closest("[role=grid]") || active === document.body;
+      const from = readLocation(defaultPath).path;
+      revealNext.current = v === "files" && p !== from && from.startsWith(p === "/" ? "/" : `${p}/`) ? joinPath(p, from.slice(p === "/" ? 1 : p.length + 1).split("/")[0]!) : null;
+      const url = v === "trash" ? "/files?view=trash" : filesHref(p);
+      window.history.pushState(null, "", url);
+      setRailSheet(false);
+      window.scrollTo({ top: 0 });
+    },
+    [defaultPath],
+  );
 
   const refreshAll = React.useCallback(() => {
     void L.refresh();
@@ -197,25 +288,13 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
 
   const jobList = [...jobs.values()].sort((a, b) => b.createdAt - a.createdAt);
 
-  // Esc clears a selection from anywhere on the page (the floating bar says so), unless a dialog or field has it.
-  const hasSelection = selected.size > 0;
-  React.useEffect(() => {
-    if (!hasSelection) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      const t = e.target as HTMLElement | null;
-      if (t?.closest("input,textarea,select,[role=dialog],[role=menu],[contenteditable]")) return;
-      setSelected(new Set());
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [hasSelection]);
-
   // ---- helpers
   const selectedEntries = React.useMemo(() => L.rows.filter((r): r is FileEntry => !!r && selected.has(r.path)), [L.rows, selected]);
   const fail = (title: string) => (e: unknown) => toast.error(title, { description: e instanceof Error ? e.message : undefined });
+  const nameOf = (entries: { name: string }[]) => (entries.length === 1 ? entries[0]!.name : fmt.plural(entries.length, "item"));
 
   async function download(entries: FileEntry[]) {
+    if (!entries.length) return;
     if (entries.length === 1 && !isDirLike(entries[0]!)) return downloadUrl(rawUrl(entries[0]!.path, true));
     try {
       const est = await api.post<ZipEstimate>("/api/files/zip", { paths: entries.map((e) => e.path) });
@@ -241,14 +320,19 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
       setSelected(new Set());
       void L.refresh();
       const ids = r.items.map((i) => i.id);
-      toast.success(r.items.length === 1 ? `Moved ${r.items[0]!.name} to the trash` : `Moved ${fmt.plural(r.items.length, "item")} to the trash`, {
+      const t = toast.success(`Moved ${nameOf(r.items)} to the trash`, {
         action: {
           label: "Undo",
-          onClick: () =>
+          onClick: () => {
+            toast.dismiss(t);
             void api
               .post("/api/files/trash/restore", { ids, conflict: "rename" })
-              .then(() => void L.refresh())
-              .catch(fail("Couldn't put it back")),
+              .then(() => {
+                void L.refresh();
+                toast.success(`Put ${nameOf(r.items)} back`);
+              })
+              .catch(fail("Couldn't put it back"));
+          },
         },
       });
     } catch (e) {
@@ -256,7 +340,21 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
     }
   }
 
-  async function transfer(sources: string[], dest: string, mode: "copy" | "move") {
+  /** Move instant renames back where they came from (the undo on a move toast). */
+  async function undoMove(moved: { from: string; to: string }[]) {
+    try {
+      const back = new Map<string, string[]>();
+      for (const m of moved) back.set(parentOf(m.from), [...(back.get(parentOf(m.from)) ?? []), m.to]);
+      for (const [dest, sources] of back) await api.post("/api/files/move", { sources, dest, conflict: "rename" });
+      refreshAll();
+      toast.success(moved.length === 1 ? `Moved ${baseName(moved[0]!.from)} back` : `Moved ${fmt.plural(moved.length, "item")} back`);
+    } catch (e) {
+      fail("Couldn't move it back")(e);
+    }
+  }
+
+  /** Copy or move, asking about name clashes first. Resolves true when it went ahead. */
+  async function transfer(sources: string[], dest: string, mode: "copy" | "move"): Promise<boolean> {
     try {
       const { conflicts } = await api.post<{ conflicts: { name: string; source: string; existing: FileEntry }[] }>("/api/files/conflicts", { sources, dest });
       const answers = await askConflicts(
@@ -264,30 +362,72 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
         dest,
         mode,
       );
-      if (!answers) return;
+      if (!answers) return false;
       const groups = new Map<"rename" | "overwrite", string[]>();
       for (const src of sources) {
         const pol = answers.get(baseName(src)) ?? "rename";
         if (pol === "skip") continue;
         groups.set(pol, [...(groups.get(pol) ?? []), src]);
       }
-      if (!groups.size) return toast.info("Nothing to do — everything was skipped.");
-      let moved = 0;
+      if (!groups.size) {
+        toast.info("Nothing to do — everything was skipped.");
+        return false;
+      }
+      const moved: { from: string; to: string }[] = [];
+      let started = false;
       for (const [conflict, list] of groups) {
-        const r = await api.post<{ job: FileJob | null; moved?: unknown[]; skipped: string[] }>(`/api/files/${mode}`, { sources: list, dest, conflict });
-        if (r.job) upsertJob(r.job);
-        moved += r.moved?.length ?? 0;
+        const r = await api.post<{ job: FileJob | null; moved?: { from: string; to: string }[]; skipped: string[] }>(`/api/files/${mode}`, { sources: list, dest, conflict });
+        if (r.job) {
+          upsertJob(r.job);
+          started = true;
+        }
+        moved.push(...(r.moved ?? []));
       }
       setSelected(new Set());
-      if (moved) toast.success(`Moved ${fmt.plural(moved, "item")} to ${baseName(dest) || "/"}`, { action: { label: "Show", onClick: () => navigate(dest) } });
-      else toast.info(`${mode === "copy" ? "Copying" : "Moving"} in the background`, { description: "Progress is in the tasks tray." });
+      const where = dest === listing?.path ? "here" : `to ${baseName(dest) === "/" ? "Computer" : baseName(dest)}`;
+      if (moved.length) {
+        const t = toast.success(`Moved ${moved.length === 1 ? baseName(moved[0]!.to) : fmt.plural(moved.length, "item")} ${where}`, {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              toast.dismiss(t);
+              void undoMove(moved);
+            },
+          },
+        });
+      }
+      else if (started) toast.info(`${mode === "copy" ? "Copying" : "Moving"} ${where}`, { description: "Progress is in the tasks tray; you can keep working." });
       void L.refresh();
       void places.mutate();
+      return true;
     } catch (e) {
       fail(mode === "copy" ? "Couldn't copy" : "Couldn't move")(e);
+      return false;
     }
   }
   const onDropItems = (sources: string[], dest: string, copy: boolean) => void transfer(sources, dest, copy ? "copy" : "move");
+
+  // ---- the Files clipboard
+  function clipboardOp(op: ClipOp, targets: FileEntry[] = selectedEntries) {
+    if (!listing) return;
+    if (op === "paste") return void paste(listing.path);
+    if (!targets.length) return;
+    if (op === "duplicate") return void transfer(targets.map((t) => t.path), listing.path, "copy");
+    clip.set({ mode: op, paths: targets.map((t) => t.path), first: targets[0]!.name, from: listing.path });
+    toast.info(op === "cut" ? `Cut ${nameOf(targets)}` : `Copied ${nameOf(targets)}`, { description: `Open another folder and paste with ${mod}V.`, timeout: 2600 });
+  }
+
+  async function paste(dest: string) {
+    const c = clip.get();
+    if (!c) return toast.info("Nothing to paste", { description: `Copy (${mod}C) or cut (${mod}X) something first.` });
+    if (c.mode === "cut" && c.from === dest) {
+      clip.set(null);
+      return toast.info("They're already in this folder");
+    }
+    if (c.paths.some((p) => dest === p || dest.startsWith(`${p}/`))) return toast.error("A folder can't go inside itself", { description: "Open a different folder, then paste." });
+    const ok = await transfer(c.paths, dest, c.mode === "cut" ? "move" : "copy");
+    if (ok && c.mode === "cut") clip.set(null);
+  }
 
   async function togglePin(e: { path: string; name: string; pinned: FileEntry["pinned"] }) {
     try {
@@ -331,15 +471,52 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
 
   async function renameCommit(e: FileEntry, name: string) {
     setRenaming(null);
+    setRenameDraft(null);
     try {
       const r = await api.post<FileEntry>("/api/files/rename", { path: e.path, name });
       await L.refresh();
       setReveal(r.path);
       setSelected(new Set([r.path]));
       if (e.pinned) void globalMutate("/api/shell");
+      if (clip.get()?.paths.includes(e.path)) clip.set(null);
     } catch (err) {
       fail(`Couldn't rename ${e.name}`)(err);
+      // Back into the field with what they typed, so they can fix it rather than start again.
+      setRenameDraft(name);
+      setRenaming(e.path);
     }
+  }
+
+  /**
+   * New folder / new text file, made right away with a free name and then renamed in place (the
+   * name is already selected, so typing replaces it; Esc keeps the suggested name).
+   */
+  async function createInline(kind: "folder" | "file") {
+    if (!listing || !writable) return;
+    if (filter || filterText) {
+      setFilterText("");
+      setFilter("");
+    }
+    const taken = new Set(L.rows.filter((r): r is FileEntry => !!r).map((r) => r.name.toLowerCase()));
+    for (let i = 1; i < 60; i++) {
+      const name = kind === "folder" ? (i === 1 ? "New folder" : `New folder ${i}`) : i === 1 ? "New text file.txt" : `New text file ${i}.txt`;
+      if (taken.has(name.toLowerCase())) continue;
+      try {
+        const made =
+          kind === "folder"
+            ? await api.post<FileEntry>("/api/files/mkdir", { path: listing.path, name })
+            : await api.put<{ path: string }>("/api/files/text", { path: joinPath(listing.path, name), content: "", expectedMtime: null, create: true });
+        await L.refresh();
+        setSelected(new Set([made.path]));
+        setReveal(made.path);
+        setRenaming(made.path);
+        return;
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "conflict") continue;
+        return fail(kind === "folder" ? "Couldn't make a folder here" : "Couldn't make a file here")(e);
+      }
+    }
+    toast.error("Couldn't find a free name", { description: "Rename some of the new folders here first." });
   }
 
   function open(e: FileEntry) {
@@ -347,6 +524,8 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
       if (e.link?.outside) return toast.error(`${e.name} points outside your shared folders`);
       if (e.link?.broken) return toast.error(`${e.name} is a broken link`, { description: `It points to ${e.link.target}, which doesn't exist.` });
       navigate(e.path);
+    } else if (e.link?.broken) {
+      toast.error(`${e.name} is a broken link`, { description: `It points to ${e.link.target}, which doesn't exist.` });
     } else setPreview(e);
   }
 
@@ -434,16 +613,20 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
     const one = targets.length === 1 ? targets[0]! : null;
     const dir = one ? isDirLike(one) : false;
     const items: MenuEntry[] = [];
-    if (one) items.push({ label: dir ? "Open" : one.preview ? "Preview" : "Open", icon: <OpenInWindow />, hint: "↵", onSelect: () => open(one) });
+    if (one) items.push({ label: dir ? "Open" : one.preview ? "Preview" : "Open", icon: <OpenInWindow />, hint: dir ? "↵" : "Space", onSelect: () => open(one) });
     items.push({ label: targets.length > 1 || dir ? "Download as zip" : "Download", icon: <Download />, onSelect: () => void download(targets) });
     items.push("separator");
     if (writable && one) items.push({ label: "Rename", icon: <EditPencil />, hint: "F2", onSelect: () => setRenaming(one.path) });
+    if (writable) items.push({ label: "Cut", icon: <Scissor />, hint: `${mod}X`, onSelect: () => clipboardOp("cut", targets) });
+    items.push({ label: "Copy", icon: <Copy />, hint: `${mod}C`, onSelect: () => clipboardOp("copy", targets) });
+    if (one && dir && writable && clipboard && !clipboard.paths.includes(one.path)) items.push({ label: `Paste into ${one.name}`, icon: <PasteClipboard />, onSelect: () => void paste(one.path) });
+    if (writable) items.push({ label: "Duplicate", icon: <MultiplePages />, hint: `${mod}D`, onSelect: () => clipboardOp("duplicate", targets) });
     items.push({ label: "Copy to…", icon: <Copy />, onSelect: () => setPicker({ mode: "copy", sources: targets.map((t) => t.path) }) });
     if (writable) items.push({ label: "Move to…", icon: <DataTransferBoth />, onSelect: () => setPicker({ mode: "move", sources: targets.map((t) => t.path) }) });
     if (one && dir) {
       items.push("separator");
       items.push({ label: one.pinned ? "Unpin folder" : "Pin folder", icon: one.pinned ? <PinSlash /> : <Pin />, onSelect: () => void togglePin(one) });
-      items.push({ label: "Folder size", onSelect: () => void measure(one) });
+      items.push({ label: one.dirSize ? "Measure again" : "Folder size", icon: <Refresh />, onSelect: () => void measure(one) });
       if (isAdmin) {
         items.push({ label: "Used by apps", onSelect: () => setProps({ path: one.path, focus: "apps" }) });
         items.push({ label: "Fix ownership for an app…", icon: <UserCrown />, onSelect: () => setOwnershipPath(one.path) });
@@ -457,7 +640,7 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
     }
     if (writable) {
       items.push("separator");
-      items.push({ label: targets.length > 1 ? `Move ${targets.length} items to trash` : "Move to trash", icon: <Trash />, hint: "Del", danger: true, onSelect: () => void trashEntries(targets) });
+      items.push({ label: targets.length > 1 ? `Move ${targets.length} items to the trash` : "Move to the trash", icon: <Trash />, hint: "Del", danger: true, onSelect: () => void trashEntries(targets) });
     }
     return items;
   };
@@ -468,19 +651,61 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
     if (L.total > 20_000) toast.info(`Selected the first ${(20_000).toLocaleString()} items`);
   };
 
+  const pasteLabel = clipboard ? `Paste ${clipboard.paths.length === 1 ? clipboard.first : fmt.plural(clipboard.paths.length, "item")}` : "Paste";
   const backgroundMenu: MenuEntry[] = [
     ...(writable
       ? ([
-          { label: "New folder", icon: <FolderPlus />, onSelect: () => setNewFolder(true) },
+          { label: "New folder", icon: <FolderPlus />, hint: `${mod}⇧N`, onSelect: () => void createInline("folder") },
+          { label: "New text file", icon: <PagePlus />, onSelect: () => void createInline("file") },
+          { label: pasteLabel, icon: <PasteClipboard />, hint: `${mod}V`, disabled: !clipboard, onSelect: () => listing && void paste(listing.path) },
+          "separator",
           { label: "Upload files…", icon: <Upload />, onSelect: () => fileInput.current?.click() },
           { label: "Upload a folder…", icon: <Upload />, onSelect: () => folderInput.current?.click() },
           "separator",
         ] as MenuEntry[])
       : []),
-    { label: "Select all", hint: "⌘A", onSelect: () => void selectAll() },
+    { label: "Select all", hint: `${mod}A`, onSelect: () => void selectAll() },
     { kind: "check", label: "Show hidden files", checked: prefs.filesShowHidden, onChange: (v) => void setPrefs({ filesShowHidden: v }) },
-    ...(listing ? ([{ label: "Calculate folder sizes", onSelect: () => void measure({ path: listing.path, name: listing.name }, true) }, { label: "Properties", icon: <InfoCircle />, onSelect: () => setProps({ path: listing.path }) }] as MenuEntry[]) : []),
+    ...(listing ? ([{ label: "Measure folder sizes again", onSelect: () => void measure({ path: listing.path, name: listing.name }, true) }, { label: "Properties", icon: <InfoCircle />, onSelect: () => setProps({ path: listing.path }) }] as MenuEntry[]) : []),
   ];
+
+  // Shortcuts that work anywhere on the page (not only with the list focused): Esc clears a
+  // selection, ⌘V pastes, ⌘⇧N makes a folder. Never while typing, or with a dialog or menu open.
+  const hasSelection = selected.size > 0;
+  const keys = React.useRef({ createInline, paste, listing, writable, hasSelection });
+  keys.current = { createInline, paste, listing, writable, hasSelection };
+  React.useEffect(() => {
+    if (view !== "files") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input,textarea,select,[role=dialog],[role=menu],[contenteditable]")) return;
+      const k = keys.current;
+      const m = e.metaKey || e.ctrlKey;
+      const grid = mainRef.current?.querySelector<HTMLElement>("[role=grid]");
+      // Nothing has focus (after a click on the page, a rename, or arriving in a folder): the list
+      // takes the key, so arrows, F2, Delete, ⌘A, ⌘C and typing a name work without clicking first.
+      const onControl = !!t?.closest("button,a,summary,[role=checkbox]");
+      const free = !t || t === document.body || !t.closest(KEY_OWNERS);
+      if (grid && free && e.key !== "Tab" && e.key !== "?" && !(m && e.shiftKey) && !(onControl && (e.key === "Enter" || e.key === " "))) {
+        grid.focus({ preventScroll: true });
+        const again = new KeyboardEvent("keydown", { key: e.key, code: e.code, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, bubbles: true, cancelable: true });
+        grid.dispatchEvent(again);
+        if (again.defaultPrevented) e.preventDefault();
+        return;
+      }
+      if (e.key === "Escape" && k.hasSelection) setSelected(new Set());
+      else if (((e.altKey || m) && e.key === "ArrowUp") || (e.key === "Backspace" && !m && free)) {
+        if (k.listing?.parent) navigate(k.listing.parent);
+      } else if (m && !e.shiftKey && e.key.toLowerCase() === "v" && k.writable && k.listing && clip.get()) void k.paste(k.listing.path);
+      else if (m && e.shiftKey && e.key.toLowerCase() === "n" && k.writable) void k.createInline("folder");
+      else if (e.key === "?" && !m) setKeysOpen(true);
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [view, navigate]);
 
   // ---- desktop drops: the whole folder is the target, or the sub-folder under the pointer
   const dragHasFiles = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
@@ -524,7 +749,7 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
     },
   };
 
-  // ---- header: a drive or shared folder is called by its human name, with its path underneath
+  // ---- header: the folder's name (a drive or shared folder by its human name) and one sentence of state
   const pinned = listing?.self.pinned ?? null;
   const allPlaces = places.data?.places ?? [];
   const here = listing ? allPlaces.find((p) => p.path === listing.path) : undefined;
@@ -533,39 +758,34 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
   let summary: React.ReactNode = null;
   if (view === "trash") {
     const t = trash.data;
-    summary = t ? (t.items.length ? `${fmt.plural(t.items.length, "item")} using ${fmt.bytes(t.byFilesystem.reduce((a, f) => a + f.bytes, 0))}. Deleted things stay here until ${isAdmin ? "you empty the trash" : "an admin empties the trash"}.` : "Nothing in the trash.") : "Loading…";
+    summary = t ? (t.items.length ? `${fmt.plural(t.items.length, "item")} using ${fmt.bytes(t.byFilesystem.reduce((a, f) => a + f.bytes, 0))}. Deleted things stay here until ${isAdmin ? "you empty the trash" : "an admin empties the trash"}.` : "Nothing in the trash.") : <SummarySkeleton />;
   } else if (listing) {
-    const c = listing.counts;
+    const c = filter && unfiltered.current?.path === listing.path ? unfiltered.current.counts : listing.counts;
     const parts = [c.dirs ? fmt.plural(c.dirs, "folder") : null, c.files + c.links + c.other ? fmt.plural(c.files + c.links + c.other, "file") : null].filter(Boolean);
     // "on the 2.0 TB hard drive" reads better than a mount path, when the drive has a name of its own.
     const onDrive = fsPlace && fsPlace.path !== listing.path && fsPlace.kind === "drive" && fsPlace.label !== baseName(fsPlace.path) ? ` on the ${fsPlace.label}` : "";
     summary = (
-      <>
-        {parts.length ? parts.join(" and ") : "Empty"}
-        {listing.self.dirSize ? `, ${fmt.bytes(listing.self.dirSize.bytes)} in total` : ""}.{" "}
+      <span className="num">
+        {parts.length ? parts.join(" and ") : c.hidden ? `Only ${fmt.plural(c.hidden, "hidden item")}` : "Empty"}
+        {listing.self.dirSize && parts.length ? `, ${fmt.bytes(listing.self.dirSize.bytes)} in all` : ""}
+.{" "}
         {listing.fs && (
-          <span className="num">
+          <>
             {fmt.bytes(listing.fs.avail)} free
-            {!isAdmin ? "" : fsPlace && fsPlace.path === listing.path ? ` of ${fmt.bytes(listing.fs.size)}` : onDrive || (listing.fs.mount === "/" ? " on the system drive" : <> on <span className="mono">{listing.fs.mount}</span></>)}.
-          </span>
-        )}{" "}
-        {listing.access === "read" ? "Shared with you to view." : listing.protectedReason ? "View only." : ""}
-      </>
+            {!isAdmin ? "" : fsPlace && fsPlace.path === listing.path ? ` of ${fmt.bytes(listing.fs.size)}` : onDrive || (listing.fs.mount === "/" ? " on the system drive" : <> on <span className="mono">{listing.fs.mount}</span></>)}.{" "}
+          </>
+        )}
+      </span>
     );
   } else if (L.error) summary = "This folder can't be shown.";
+  else summary = <SummarySkeleton />;
 
-  const titleText = view === "trash" ? "Trash" : (friendly ?? listing?.name ?? (L.error ? "Files" : baseName(path) || "Computer"));
-  const title =
-    friendly && listing ? (
-      <span className={s.titleBlock}>
-        {friendly}
-        <span className={`${s.titlePath} mono`} title={listing.path}>
-          {listing.path}
-        </span>
-      </span>
-    ) : (
-      titleText
-    );
+  const titleText = view === "trash" ? "Trash" : (friendly ?? listing?.name ?? (L.error ? "Files" : baseName(path) === "/" ? "Computer" : baseName(path)));
+  const title = (
+    <span className={s.title} title={listing?.path ?? path}>
+      {titleText}
+    </span>
+  );
 
   const rail = (
     <Rail
@@ -583,13 +803,14 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
     />
   );
 
-  const siblings = React.useMemo(() => L.rows.filter((r): r is FileEntry => !!r && !isDirLike(r)), [L.rows]);
+  const siblings = React.useMemo(() => L.rows.filter((r): r is FileEntry => !!r && !isDirLike(r) && !r.link?.broken), [L.rows]);
+  const cutPaths = React.useMemo(() => (clipboard?.mode === "cut" ? new Set(clipboard.paths) : null), [clipboard]);
 
   // A member nobody has shared a folder with has nothing to browse; say so plainly instead of an empty file manager.
   if (!isAdmin && places.data && places.data.places.length === 0 && places.data.pins.length === 0 && view === "files") {
     return (
       <Page narrow>
-        <PageHeader title="Files" />
+        <PageHeader title="Files" summary="Nothing has been shared with you yet." />
         <Empty title="No folders shared with you yet">
           When an admin shares a folder with you, like the family photos or the movie library, it shows up here and you can open, upload and download from any device.
         </Empty>
@@ -655,7 +876,16 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
                 Back to files
               </Button>
             ) : (
-              <PathBar crumbs={listing?.breadcrumbs ?? [{ name: baseName(path) || "Computer", path }]} path={listing?.path ?? path} canDrop onNavigate={(p) => navigate(p)} onDropItems={onDropItems} />
+              <PathBar
+                crumbs={listing?.breadcrumbs ?? guessCrumbs(lastCrumbs.current, path)}
+                path={listing?.path ?? path}
+                places={isAdmin ? allPlaces : undefined}
+                compact={phone}
+                hidden={prefs.filesShowHidden}
+                canDrop
+                onNavigate={(p) => navigate(p)}
+                onDropItems={onDropItems}
+              />
             )}
           </div>
 
@@ -670,7 +900,23 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
                 }}
               >
                 <Search aria-hidden />
-                <input value={filterText} onChange={(e) => setFilterText(e.target.value)} placeholder={phone ? "Filter" : "Filter this folder"} aria-label="Filter this folder, or press Enter to search every folder inside" spellCheck={false} enterKeyHint="search" />
+                <input
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape" && filterText) {
+                      e.preventDefault();
+                      setFilterText("");
+                    } else if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      mainRef.current?.querySelector<HTMLElement>("[role=grid]")?.focus();
+                    }
+                  }}
+                  placeholder={phone ? "Filter" : "Filter this folder"}
+                  aria-label="Filter this folder, or press Enter to search every folder inside"
+                  spellCheck={false}
+                  enterKeyHint="search"
+                />
                 {filterText ? (
                   <button type="button" className={s.filterClear} onClick={() => setFilterText("")} aria-label="Clear the filter">
                     <Xmark />
@@ -707,22 +953,30 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
                 }
                 items={[
                   ...(phone && listing && listing.self.type !== "file" ? ([{ label: pinned ? "Unpin this folder" : "Pin this folder", icon: pinned ? <PinSlash /> : <Pin />, onSelect: () => void togglePin({ path: listing.path, name: friendly ?? listing.name, pinned }) }] as MenuEntry[]) : []),
-                  ...(writable ? ([{ label: "Upload a whole folder…", icon: <Upload />, onSelect: () => folderInput.current?.click() }, "separator"] as MenuEntry[]) : []),
+                  ...(writable
+                    ? ([
+                        { label: "New text file", icon: <PagePlus />, onSelect: () => void createInline("file") },
+                        ...(clipboard ? [{ label: pasteLabel, icon: <PasteClipboard />, hint: `${mod}V`, onSelect: () => listing && void paste(listing.path) }] : []),
+                        { label: "Upload a whole folder…", icon: <Upload />, onSelect: () => folderInput.current?.click() },
+                        "separator",
+                      ] as MenuEntry[])
+                    : []),
                   { label: prefs.filesShowHidden ? "Hide hidden files" : "Show hidden files", icon: prefs.filesShowHidden ? <EyeClosed /> : <Eye />, onSelect: () => void setPrefs({ filesShowHidden: !prefs.filesShowHidden }) },
-                  ...(listing ? ([{ label: "Calculate folder sizes", icon: <Refresh />, onSelect: () => void measure({ path: listing.path, name: listing.name }, true) }] as MenuEntry[]) : []),
-                  { label: "Select all", hint: "⌘A", onSelect: () => void selectAll() },
+                  ...(listing ? ([{ label: "Measure folder sizes again", icon: <Refresh />, onSelect: () => void measure({ path: listing.path, name: listing.name }, true) }] as MenuEntry[]) : []),
+                  { label: "Select all", hint: `${mod}A`, onSelect: () => void selectAll() },
                   "separator",
                   ...(listing ? ([{ label: "Copy path", icon: <Copy />, onSelect: () => copyText(listing.path) }, { label: "Properties", icon: <InfoCircle />, onSelect: () => setProps({ path: listing.path }) }] as MenuEntry[]) : []),
                   ...(isAdmin && listing ? ([{ label: "Used by apps", onSelect: () => setProps({ path: listing.path, focus: "apps" }) }] as MenuEntry[]) : []),
                   { label: "Trash", icon: <Trash />, onSelect: () => navigate("", "trash") },
+                  ...(touch ? [] : (["separator", { label: "Keyboard shortcuts", hint: "?", onSelect: () => setKeysOpen(true) }] as MenuEntry[])),
                 ]}
               />
-              {writable && (
+              {showWrite && (
                 <>
-                  <IconButton label="New folder" onClick={() => setNewFolder(true)}>
+                  <IconButton label="New folder" shortcut={`${mod}⇧N`} disabled={!writable} onClick={() => void createInline("folder")}>
                     <FolderPlus />
                   </IconButton>
-                  <Button icon={<Upload />} variant="primary" onClick={() => fileInput.current?.click()}>
+                  <Button icon={<Upload />} variant="primary" disabled={!writable} onClick={() => fileInput.current?.click()}>
                     Upload
                   </Button>
                 </>
@@ -740,14 +994,19 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
               path={path}
               writable={writable}
               filter={filter}
+              view={prefs.filesView}
+              showOwner={isAdmin}
               onNavigate={navigate}
               onUpload={() => fileInput.current?.click()}
-              onNewFolder={() => setNewFolder(true)}
+              onNewFolder={() => void createInline("folder")}
               onDeepSearch={() => setDeepQuery(filter)}
+              onShowHidden={() => void setPrefs({ filesShowHidden: true })}
+              paste={clipboard && writable && listing && clipboard.from !== listing.path ? { label: pasteLabel, run: () => void paste(listing.path) } : null}
               firstPlace={places.data?.places[0]?.path ?? null}
             >
               {listing && (
                 <Listing
+                  key={listing.path}
                   rows={L.rows}
                   total={L.total}
                   ensure={L.ensure}
@@ -765,21 +1024,29 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
                   setSelected={setSelected}
                   writable={writable}
                   renaming={renaming}
+                  renameDraft={renameDraft}
                   reveal={reveal}
                   onOpen={open}
-                  onPreview={(e) => setPreview(e)}
+                  onPreview={(e) => (e.link?.broken ? open(e) : setPreview(e))}
                   onUp={() => listing.parent && navigate(listing.parent)}
                   onTrash={(es) => void trashEntries(es)}
                   onRename={(e) => setRenaming(e.path)}
                   onRenameCommit={(e, n) => void renameCommit(e, n)}
-                  onRenameCancel={() => setRenaming(null)}
+                  onRenameCancel={() => {
+                    setRenaming(null);
+                    setRenameDraft(null);
+                  }}
                   onCalculate={(e) => void measure(e)}
                   onDropItems={onDropItems}
                   menuFor={menuFor}
                   backgroundMenu={backgroundMenu}
                   onSelectAll={() => void selectAll()}
+                  onClipboard={(op) => clipboardOp(op)}
                   dropPath={dropInto?.path ?? null}
                   showOwner={isAdmin}
+                  measuring={measuring}
+                  cutPaths={cutPaths}
+                  touch={touch}
                 />
               )}
             </FolderBody>
@@ -804,30 +1071,18 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
           )}
 
           {view === "files" && selected.size > 0 && (
-            <div className={s.floatBar} role="toolbar" aria-label={`${fmt.plural(selected.size, "item")} selected`}>
-              <span className={`${s.floatCount} num`}>{fmt.plural(selected.size, "item")}</span>
-              <span className={s.floatRule} aria-hidden />
-              <Button size="sm" variant="ghost" icon={<Download />} onClick={() => void download(selectedEntries)}>
-                {phone ? "Get" : "Download"}
-              </Button>
-              <Button size="sm" variant="ghost" icon={<Copy />} onClick={() => setPicker({ mode: "copy", sources: [...selected] })}>
-                {phone ? "Copy" : "Copy to…"}
-              </Button>
-              {writable && (
-                <>
-                  <Button size="sm" variant="ghost" icon={<DataTransferBoth />} onClick={() => setPicker({ mode: "move", sources: [...selected] })}>
-                    {phone ? "Move" : "Move to…"}
-                  </Button>
-                  <Button size="sm" variant="ghost" icon={<Trash />} onClick={() => void trashEntries(selectedEntries)}>
-                    Trash
-                  </Button>
-                </>
-              )}
-              <span className={s.floatRule} aria-hidden />
-              <IconButton label="Clear selection" size="sm" shortcut="Esc" onClick={() => setSelected(new Set())}>
-                <Xmark />
-              </IconButton>
-            </div>
+            <SelectionBar
+              entries={selectedEntries}
+              count={selected.size}
+              writable={writable}
+              phone={phone}
+              onDownload={() => void download(selectedEntries)}
+              onCopy={() => setPicker({ mode: "copy", sources: [...selected] })}
+              onMove={() => setPicker({ mode: "move", sources: [...selected] })}
+              onTrash={() => void trashEntries(selectedEntries)}
+              onClear={() => setSelected(new Set())}
+              menu={menuFor(selectedEntries)}
+            />
           )}
         </div>
       </div>
@@ -862,18 +1117,20 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
         </Dialog>
       )}
 
-      <NewFolderDialog
-        open={newFolder}
-        dir={listing?.path ?? path}
-        onClose={() => setNewFolder(false)}
-        onCreated={async (p) => {
-          await L.refresh();
-          setReveal(p);
-          setSelected(new Set([p]));
-        }}
-      />
       <Preview entry={preview} siblings={siblings} onNavigate={setPreview} onClose={() => setPreview(null)} canWrite={writable} onExtract={(e) => void extract(e)} onSaved={() => void L.refresh()} />
-      <Properties path={props?.path ?? null} focus={props?.focus} onClose={() => setProps(null)} onFixOwnership={isAdmin ? (p) => { setProps(null); setOwnershipPath(p); } : undefined} />
+      <Properties
+        path={props?.path ?? null}
+        focus={props?.focus}
+        onClose={() => setProps(null)}
+        onFixOwnership={
+          isAdmin
+            ? (p) => {
+                setProps(null);
+                setOwnershipPath(p);
+              }
+            : undefined
+        }
+      />
       {isAdmin && <Ownership path={ownershipPath} onClose={() => setOwnershipPath(null)} onStarted={upsertJob} />}
       <FolderPicker
         open={!!picker}
@@ -895,9 +1152,130 @@ export function FilesView({ initialPlaces, defaultPath }: { initialPlaces: Place
             .catch(fail("Couldn't undo"))
         }
       />
+      <Shortcuts open={keysOpen} onClose={() => setKeysOpen(false)} mod={mod} />
       {conflictNode}
       {confirmNode}
     </Page>
+  );
+}
+
+/** Breadcrumbs for a folder that's still loading, from the last ones shown (so the bar doesn't flash). */
+function guessCrumbs(prev: ListingT["breadcrumbs"], path: string): ListingT["breadcrumbs"] {
+  const within = (c: { path: string }) => c.path === path || c.path === "/" || path.startsWith(`${c.path}/`);
+  const kept = prev.filter(within);
+  if (!kept.length) return [{ name: baseName(path) === "/" ? "Computer" : baseName(path), path }];
+  const last = kept[kept.length - 1]!;
+  const rest = last.path === path ? [] : path.slice(last.path === "/" ? 1 : last.path.length + 1).split("/").filter(Boolean);
+  let acc = last.path;
+  return [...kept, ...rest.map((name) => ({ name, path: (acc = joinPath(acc, name)) }))];
+}
+
+function SummarySkeleton() {
+  return (
+    <span className={s.summarySkeleton} aria-label="Loading">
+      <Skeleton width={260} height={12} />
+    </span>
+  );
+}
+
+/**
+ * What's selected and what you can do with it. Floats over the bottom of the list on a computer;
+ * on a phone it becomes a toolbar along the bottom edge with labels under the icons.
+ */
+function SelectionBar({
+  entries,
+  count,
+  writable,
+  phone,
+  onDownload,
+  onCopy,
+  onMove,
+  onTrash,
+  onClear,
+  menu,
+}: {
+  entries: FileEntry[];
+  count: number;
+  writable: boolean;
+  phone: boolean;
+  onDownload: () => void;
+  onCopy: () => void;
+  onMove: () => void;
+  onTrash: () => void;
+  onClear: () => void;
+  menu: MenuEntry[];
+}) {
+  const fmt = useFormat();
+  let bytes = 0;
+  let unknown = 0;
+  for (const e of entries) {
+    if (isDirLike(e)) {
+      if (e.dirSize) bytes += e.dirSize.bytes;
+      else unknown++;
+    } else bytes += e.size ?? 0;
+  }
+  const size = unknown === entries.length ? null : `${unknown ? "at least " : ""}${fmt.bytes(bytes)}`;
+  const label = `${fmt.plural(count, "item")} selected${size ? `, ${size}` : ""}`;
+
+  if (phone) {
+    return (
+      <div className={s.phoneBar} role="toolbar" aria-label={label}>
+        <div className={s.phoneBarHead}>
+          <span className="num">
+            <b>{fmt.plural(count, "item")}</b>
+            {size && <span className="muted"> · {size}</span>}
+          </span>
+          <button type="button" className={s.phoneBarDone} onClick={onClear}>
+            Done
+          </button>
+        </div>
+        <div className={s.phoneBarActions}>
+          <PhoneAction icon={<Download />} label="Download" onClick={onDownload} />
+          {writable ? <PhoneAction icon={<DataTransferBoth />} label="Move" onClick={onMove} /> : <PhoneAction icon={<Copy />} label="Copy" onClick={onCopy} />}
+          {writable && <PhoneAction icon={<Trash />} label="Trash" onClick={onTrash} />}
+          <Menu side="top" trigger={<button type="button" className={s.phoneAction}><MoreHoriz /><span>More</span></button>} items={menu} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={s.floatBar} role="toolbar" aria-label={label}>
+      <span className={`${s.floatCount} num`}>
+        {fmt.plural(count, "item")}
+        {size && <span className={s.floatSize}>{size}</span>}
+      </span>
+      <span className={s.floatRule} aria-hidden />
+      <Button size="sm" variant="ghost" icon={<Download />} onClick={onDownload}>
+        Download
+      </Button>
+      <Button size="sm" variant="ghost" icon={<Copy />} onClick={onCopy}>
+        Copy to…
+      </Button>
+      {writable && (
+        <>
+          <Button size="sm" variant="ghost" icon={<DataTransferBoth />} onClick={onMove}>
+            Move to…
+          </Button>
+          <Button size="sm" variant="ghost" icon={<Trash />} onClick={onTrash}>
+            Trash
+          </Button>
+        </>
+      )}
+      <span className={s.floatRule} aria-hidden />
+      <IconButton label="Clear selection" size="sm" shortcut="Esc" onClick={onClear}>
+        <Xmark />
+      </IconButton>
+    </div>
+  );
+}
+
+function PhoneAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button type="button" className={s.phoneAction} onClick={onClick}>
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -906,10 +1284,14 @@ function FolderBody({
   path,
   writable,
   filter,
+  view,
+  showOwner,
   onNavigate,
   onUpload,
   onNewFolder,
   onDeepSearch,
+  onShowHidden,
+  paste,
   firstPlace,
   children,
 }: {
@@ -917,10 +1299,15 @@ function FolderBody({
   path: string;
   writable: boolean;
   filter: string;
+  view: "list" | "grid";
+  showOwner: boolean;
   onNavigate: (p: string) => void;
   onUpload: () => void;
   onNewFolder: () => void;
   onDeepSearch: () => void;
+  onShowHidden: () => void;
+  /** Something is on the Files clipboard: an empty folder offers to paste it. */
+  paste: { label: string; run: () => void } | null;
   firstPlace: string | null;
   children: React.ReactNode;
 }) {
@@ -929,8 +1316,8 @@ function FolderBody({
   if (error) {
     if (error.code === "not_found") {
       return (
-        <Notice title="This folder doesn't exist any more" action={path !== "/" ? <Button size="sm" onClick={() => onNavigate(parentOf(path))}>Go up</Button> : undefined}>
-          <span className="mono">{path}</span> may have been moved, renamed or deleted, or its drive isn't mounted.
+        <Notice title="This folder isn't there any more" action={path !== "/" ? <Button size="sm" onClick={() => onNavigate(parentOf(path))}>Go up a level</Button> : undefined}>
+          <span className="mono">{path}</span> may have been moved, renamed or deleted, or the drive it's on isn't mounted.
         </Notice>
       );
     }
@@ -954,22 +1341,7 @@ function FolderBody({
       </Notice>
     );
   }
-  if (!listing) {
-    return (
-      <div className={s.listing} aria-busy>
-        {Array.from({ length: 9 }, (_, i) => (
-          <div key={i} className={s.row}>
-            <span />
-            <span className={s.nameCell}>
-              <Skeleton width={18} height={18} radius={4} />
-              <Skeleton width={`${28 + ((i * 23) % 45)}%`} />
-            </span>
-            <Skeleton width={56} />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (!listing) return <ListingSkeleton view={view} showOwner={showOwner} />;
   const notices: React.ReactNode[] = [];
   if (listing.access === "read") notices.push(<Notice key="ro" title="View only">This folder is shared with you to view. You can open and download files here, but not change them.</Notice>);
   else if (listing.protectedReason) notices.push(<Notice key="prot" title="View only here">{listing.protectedReason}</Notice>);
@@ -987,7 +1359,7 @@ function FolderBody({
     } else if (writable) {
       content = (
         <Empty
-          title="This folder is empty"
+          title={listing.counts.hidden > 0 ? "Only hidden items here" : "This folder is empty"}
           action={
             <>
               <Button variant="primary" icon={<Upload />} onClick={onUpload}>
@@ -996,15 +1368,37 @@ function FolderBody({
               <Button icon={<FolderPlus />} onClick={onNewFolder}>
                 New folder
               </Button>
+              {paste && (
+                <Button icon={<PasteClipboard />} onClick={paste.run}>
+                  {paste.label}
+                </Button>
+              )}
+              {listing.counts.hidden > 0 && (
+                <Button variant="ghost" icon={<Eye />} onClick={onShowHidden}>
+                  Show {fmt.plural(listing.counts.hidden, "hidden item")}
+                </Button>
+              )}
             </>
           }
         >
           Drag files or whole folders here from your computer to upload them. Big uploads carry on where they stopped if the connection drops.
-          {listing.counts.hidden > 0 && ` There ${listing.counts.hidden === 1 ? "is" : "are"} also ${fmt.plural(listing.counts.hidden, "hidden item")}.`}
         </Empty>
       );
     } else {
-      content = <Empty title="This folder is empty">{listing.counts.hidden > 0 ? `It only has ${fmt.plural(listing.counts.hidden, "hidden item")}. Turn on “Show hidden files” to see them.` : "Nothing has been put here yet."}</Empty>;
+      content = (
+        <Empty
+          title={listing.counts.hidden > 0 ? "Only hidden items here" : "This folder is empty"}
+          action={
+            listing.counts.hidden > 0 ? (
+              <Button icon={<Eye />} onClick={onShowHidden}>
+                Show {fmt.plural(listing.counts.hidden, "hidden item")}
+              </Button>
+            ) : undefined
+          }
+        >
+          {listing.counts.hidden > 0 ? "It only has hidden items, like settings files." : "Nothing has been put here yet."}
+        </Empty>
+      );
     }
   }
   return (
@@ -1012,63 +1406,5 @@ function FolderBody({
       {notices.length > 0 && <div className={s.notices}>{notices}</div>}
       {content}
     </>
-  );
-}
-
-function NewFolderDialog({ open, dir, onClose, onCreated }: { open: boolean; dir: string; onClose: () => void; onCreated: (path: string) => void }) {
-  const [name, setName] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
-  const [busy, setBusy] = React.useState(false);
-  React.useEffect(() => {
-    if (open) {
-      setName("");
-      setError(null);
-    }
-  }, [open]);
-  const create = async () => {
-    if (!name.trim()) return;
-    setBusy(true);
-    try {
-      const e = await api.post<FileEntry>("/api/files/mkdir", { path: dir, name: name.trim() });
-      onClose();
-      onCreated(e.path);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't create the folder.");
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => !o && onClose()}
-      title="New folder"
-      description={
-        <>
-          In <span className="mono">{dir}</span>
-        </>
-      }
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" loading={busy} disabled={!name.trim()} onClick={() => void create()}>
-            Create folder
-          </Button>
-        </>
-      }
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void create();
-        }}
-      >
-        <Field label="Name" error={error}>
-          <Input autoFocus value={name} onChange={(e) => (setName(e.target.value), setError(null))} maxLength={255} />
-        </Field>
-      </form>
-    </Dialog>
   );
 }

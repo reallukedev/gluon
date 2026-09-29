@@ -1,0 +1,62 @@
+/* Server widgets on Home (server-watch.tsx): a state headline, then hairline-divided rows. */
+.body { height: 100%; display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); }
+.center { display: grid; place-items: center; height: 100%; text-align: center; padding: 16px; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
+.center b { display: block; margin-bottom: 4px; font-size: var(--text-md); color: var(--ink); }
+.headline { display: flex; align-items: center; gap: 10px; margin: 0; font-size: var(--text-lg); font-weight: 620; line-height: 1.25; }
+.sub { margin: 0; font-size: var(--text-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subWrap { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 44ch; }
+
+.list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; align-content: start; min-height: 0; overflow: hidden; }
+.list[data-flush] { margin-top: 0; }
+.row { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0; border-top: 1px solid var(--line); }
+.list[data-flush] > .row:first-child, .list[data-flush] > .appRow:first-child { border-top: 0; padding-top: 0; }
+.row > :first-child { padding-top: 3px; }
+.row[data-trace] { padding-bottom: 9px; }
+/* Wide sizes: monitors side by side, each a name, its uptime and a 24-hour trace. */
+.cells { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); grid-auto-rows: min-content; gap: 0 24px; min-height: 0; overflow: hidden; }
+.cell { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0 9px; border-top: 1px solid var(--line); }
+.cell > :first-child { padding-top: 3px; }
+.rowText { display: grid; gap: 2px; min-width: 0; }
+.rowSplit { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.rowTitle, .rowMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rowTitle { font-size: var(--text-md); }
+.rowTitle b { font-weight: 600; }
+.rowMeta { font-size: var(--text-sm); color: var(--ink-2); }
+.row[data-failed] .rowTitle { color: var(--fault); }
+.rowFig { flex: none; font-size: var(--text-sm); color: var(--ink-2); }
+
+.appRow {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-areas: "icon name fig" "icon bar bar";
+  gap: 3px 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.appRow > :first-child { grid-area: icon; }
+.appName { grid-area: name; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-md); color: var(--ink); text-decoration: none; }
+.appRow .rowFig { grid-area: fig; }
+.bar { grid-area: bar; position: relative; height: 3px; border-radius: 3px; background: var(--sunk); overflow: hidden; }
+.bar > span { position: absolute; inset: 0; background: var(--ink-2); transform-origin: left; transition: transform var(--dur-slow) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .appName:hover { text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 2px; }
+}
+
+.more { margin-top: auto; align-self: flex-start; font-size: var(--text-sm); color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) {
+  .more:hover { color: var(--ink); text-decoration-color: currentColor; }
+}
+
+/* Catalog previews, drawn as hairlines. */
+.preview { display: grid; gap: 9px; width: 70%; }
+.preview i { display: block; height: 2px; width: 80%; background: var(--ink-2); }
+.preview i[data-short] { width: 45%; }
+.preview i[data-bad] { width: 20%; background: var(--fault); }
+.previewBars { display: grid; gap: 8px; width: 70%; }
+.previewBars i { display: block; height: 3px; border-radius: 3px; background: var(--ink-2); }
+
+/* Phones stack widgets at their natural height: keep the wide uptime grid to a screenful. */
+@media (max-width: 640px) {
+  .cells > li:nth-child(n + 7) { display: none; }
+}

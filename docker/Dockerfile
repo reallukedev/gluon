@@ -18,7 +18,7 @@ RUN mkdir -p public && npm run build
 FROM node:24-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
       util-linux smartmontools iproute2 procps unzip 7zip xz-utils bzip2 zstd tar libarchive-tools \
-      dnsutils iputils-ping ca-certificates curl tini \
+      dnsutils iputils-ping ca-certificates curl tini git \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=8130 HOSTNAME=0.0.0.0 GLUON_DATA=/data
