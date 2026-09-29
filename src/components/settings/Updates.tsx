@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { Markdown } from "@/components/files/Markdown";
 import { Refresh, OpenNewWindow } from "iconoir-react";
 import { api, useApi, ApiError } from "@/lib/client/api";
 import type { Install, UpdateLog, UpdateMethod, UpdateRun, UpdateSettings, UpdatesStatus } from "@/lib/updates-types";
@@ -189,7 +190,9 @@ function Available({ data, onStarted }: { data: UpdatesStatus; onStarted: () => 
     <Panel title={chosen?.method === "github" && latest ? latest.title : "An update is ready"} meta={latest ? <Time ts={latest.publishedAt} kind="date" /> : undefined}>
       {chosen?.method === "github" && latest?.notes ? (
         <Disclosure summary="What's new" defaultOpen>
-          <div className={s.notes}>{latest.notes}</div>
+          <div className={s.notes}>
+            <Markdown source={latest.notes} />
+          </div>
         </Disclosure>
       ) : null}
       {usable.length > 1 && (

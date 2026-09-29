@@ -93,12 +93,16 @@ if [ "$mode" = umbrel ]; then
     fi
   }
   [ -n "$NEW" ] || fail "Umbrel updates come from its app store; use \"Update through Umbrel\"."
-  prev=$(head -n1 "$appdata/Dockerfile")
+  # Umbrel renders every *.template in the app's folder each time it starts the app (then runs
+  # `compose up --build`), so the new base image has to go into Dockerfile.template as well:
+  # writing only Dockerfile is undone by the restart.
+  files=("$appdata/Dockerfile")
+  [ -f "$appdata/Dockerfile.template" ] && files+=("$appdata/Dockerfile.template")
+  prev=$(head -n1 "${files[-1]}")
   tag="$app:${NEW#gluon:}"
   stage apply "Handing Gluon $tag to Umbrel…"
   docker tag "$NEW" "$tag"
-  newid=$(docker image inspect -f '{{.Id}}' "$tag")
-  printf 'FROM %s\n' "$tag" > "$appdata/Dockerfile"
+  for f in "${files[@]}"; do printf 'FROM %s\n' "$tag" > "$f"; done
   umbreld apps.restart.mutate --appId "$app" >/dev/null
   stage verify "Waiting for Gluon to come back…"
   # Umbrel rebuilds a thin image on top of the new one, so the image id differs; the build's own
@@ -108,8 +112,8 @@ if [ "$mode" = umbrel ]; then
     printf '::done ok %s\n' "Gluon ${NEW#gluon:} is running."
     exit 0
   fi
-  say "Gluon didn't come back healthy; going back to ${prev#FROM }."
-  printf '%s\n' "$prev" > "$appdata/Dockerfile"
+  say "Gluon didn't come back on the new version; going back to ${prev#FROM }."
+  for f in "${files[@]}"; do printf '%s\n' "$prev" > "$f"; done
   umbreld apps.restart.mutate --appId "$app" >/dev/null || true
   fail "The new version didn't start, so Gluon went back to the previous one."
 fi

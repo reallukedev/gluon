@@ -18,7 +18,7 @@
 .gap { flex: 1; }
 .railNote { position: relative; z-index: 1; background: var(--panel); padding: 0 10px; margin-bottom: 4px; font-size: var(--text-sm); color: var(--muted); }
 
-.notes { white-space: pre-wrap; font-size: var(--text-sm); line-height: 1.55; color: var(--ink-2); max-height: 320px; overflow: auto; padding: 4px 0 8px; max-width: 72ch; }
+.notes { font-size: var(--text-sm); line-height: 1.55; color: var(--ink-2); max-height: 320px; overflow: auto; padding: 4px 0 8px; max-width: 72ch; }
 
 .methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
 .method {
