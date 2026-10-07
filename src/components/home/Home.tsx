@@ -347,21 +347,7 @@ export function Home({ initial }: Props) {
   return (
     <HomeContext.Provider value={ctx}>
       <div className={s.page} data-width={prefs.homeWidth}>
-        <header className={s.toolbar}>
-          <h1 className="sr-only">Home</h1>
-          {!arranging && (
-            <div className={s.toolbarActions}>
-              {items.length > 0 && (
-                <Button variant="ghost" icon={<ViewGrid />} onClick={() => setArranging(true)}>
-                  Arrange
-                </Button>
-              )}
-              <Button icon={<Pin />} onClick={() => openCollection()} onPointerEnter={preloadCollection} onFocus={preloadCollection}>
-                Collection
-              </Button>
-            </div>
-          )}
-        </header>
+        <h1 className="sr-only">Home</h1>
 
         {admin && !arranging && items.length > 0 && <AppsHint items={layout.items} onOpen={() => openCollection("from-apps")} />}
 
@@ -455,6 +441,19 @@ export function Home({ initial }: Props) {
             </SortableContext>
             <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }}>{active ? <WidgetFrame item={active} editing overlay /> : null}</DragOverlay>
           </DndContext>
+        )}
+
+        {!arranging && (
+          <div className={s.foot} role="group" aria-label="Home actions">
+            {items.length > 0 && (
+              <Button variant="ghost" icon={<ViewGrid />} onClick={() => setArranging(true)}>
+                Arrange
+              </Button>
+            )}
+            <Button icon={<Pin />} onClick={() => openCollection()} onPointerEnter={preloadCollection} onFocus={preloadCollection}>
+              Collection
+            </Button>
+          </div>
         )}
 
         {CollectionView && (

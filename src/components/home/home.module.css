@@ -2,9 +2,8 @@
 .page[data-width="comfortable"] { max-width: 1120px; }
 .page[data-width="full"] { max-width: none; }
 
-/* The only fixed thing on Home: two buttons. Everything under them is pinned. */
-.toolbar { display: flex; justify-content: flex-end; min-height: 34px; margin-bottom: 14px; }
-.toolbarActions { display: flex; gap: 6px; }
+/* The only fixed thing on Home: two buttons at the very bottom, after everything pinned. */
+.foot { display: flex; justify-content: center; gap: 6px; margin-top: 32px; }
 .greeting {
   font-size: clamp(2rem, 3.4vw, 2.75rem);
   font-weight: 480;
@@ -251,7 +250,6 @@
   .widget { grid-column: span 12; }
   .widget[data-size="s"], .widget[data-size="t"], .widget[data-size="c"] { grid-column: span 6; }
   .widget[data-size="i"] { grid-column: span 4; }
-  .toolbar { margin-bottom: 10px; }
 }
 /* Small phones: small and tall widgets take the full width; icons and short cards keep sharing a row. */
 @media (max-width: 480px) {

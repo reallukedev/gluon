@@ -132,6 +132,8 @@ export const Browser = React.memo(function Browser() {
     // Going up lands on the folder you came from.
     if (came) {
       revealRef.current = came;
+      // On a phone it's only scrolled to: a selection there would bring up the action bar.
+      revealQuiet.current = phone;
       tryReveal(path);
     }
     setRenaming(null);
@@ -210,7 +212,7 @@ export const Browser = React.memo(function Browser() {
       if (e.link?.broken) return toast.error(`${e.name} is a broken link`, { description: `It points to ${e.link.target}, which doesn't exist.` });
       if (e.link?.outside) return toast.error(`${e.name} points outside your shared folders`);
       f.go(e.path);
-      wantFirst.current = single ? null : col + 1;
+      wantFirst.current = single || phone ? null : col + 1;
       if (!single) focusCol(col + 1);
       return;
     }
@@ -219,9 +221,10 @@ export const Browser = React.memo(function Browser() {
   };
 
   const back = (col: number) => {
-    if (single || col === shownFrom) {
+    // A phone shows one folder at a time, so going back goes up a folder, as in a list.
+    if (single || col === shownFrom || phone) {
       if (phone && col === 0 && !single) return setOnPlaces(true);
-      const parent = listings.current.get(folders[col]!)?.parent;
+      const parent = phone && !single ? folders[col - 1] : listings.current.get(folders[col]!)?.parent;
       if (parent) f.go(parent);
       return;
     }
@@ -282,6 +285,7 @@ export const Browser = React.memo(function Browser() {
 
   // Landing on a named item: ?select=, a search result, a new folder, or the folder you came up from.
   const revealRef = React.useRef<string | null>(null);
+  const revealQuiet = React.useRef(false);
   const ensures = React.useRef(new Map<string, (i: number) => void>());
   const tryReveal = (folder: string) => {
     const want = revealRef.current;
@@ -293,7 +297,8 @@ export const Browser = React.memo(function Browser() {
     if (i >= 0) {
       revealRef.current = null;
       f.doneReveal();
-      setSel({ col, paths: new Set([want]), focus: i, anchor: i });
+      setSel({ col, paths: revealQuiet.current ? new Set() : new Set([want]), focus: i, anchor: i });
+      revealQuiet.current = false;
       focusCol(col);
     } else if (rows.filter(Boolean).length < listing.total) {
       // Not loaded yet in a big folder: load the rest (up to 20,000) and look again.
@@ -301,6 +306,7 @@ export const Browser = React.memo(function Browser() {
       for (let k = 0; ensure && k < Math.min(listing.total, 20_000); k += 500) ensure(k);
     } else {
       revealRef.current = null;
+      revealQuiet.current = false;
       f.doneReveal();
       toast.info(`${baseName(want)} isn't in this folder any more`);
     }
@@ -611,6 +617,9 @@ export const Browser = React.memo(function Browser() {
                 order: order.order,
                 hidden: prefs.filesShowHidden,
                 touch,
+                // Columns on a wider screen show a tapped folder beside it; a phone shows one column at a time.
+                tapOpensFolders: single || phone,
+                phone,
                 renaming,
                 writable: writableAt(col),
                 cutPaths,
@@ -942,6 +951,8 @@ interface FolderProps extends ColumnHandlers {
   order: "asc" | "desc";
   hidden: boolean;
   touch: boolean;
+  tapOpensFolders: boolean;
+  phone: boolean;
   renaming: { path: string; draft?: string } | null;
   writable: boolean;
   cutPaths: Set<string> | null;
@@ -1054,6 +1065,8 @@ function FolderColumn(p: FolderProps & { open: string | null; active: boolean })
                         renaming={p.renaming?.path === e.path ? p.renaming : null}
                         writable={p.writable}
                         touch={p.touch}
+                        tapOpensFolders={p.tapOpensFolders}
+                        phone={p.phone}
                         cut={!!p.cutPaths?.has(e.path)}
                         dragFrom={p.dragFrom}
                         selecting={!!p.sel && p.sel.paths.size > 1}
@@ -1095,6 +1108,10 @@ interface RowProps {
   renaming: { path: string; draft?: string } | null;
   writable: boolean;
   touch: boolean;
+  /** A tap on a folder opens it (a list, a grid, or columns on a phone), rather than showing it beside. */
+  tapOpensFolders: boolean;
+  /** The phone layout shows one folder at a time, so any click on a folder opens it. */
+  phone: boolean;
   cut: boolean;
   selecting: boolean;
   dragFrom: (path: string) => string[];
@@ -1157,7 +1174,8 @@ function useItem(p: RowProps) {
       // On touch screens a tap opens, unless you're picking several.
       const touch = p.touch || (ev.nativeEvent as PointerEvent).pointerType === "touch";
       if (touch && p.selecting) return p.onToggle(p.index);
-      if (touch && !dir) return p.onOpen(p.index);
+      if (touch && (!dir || p.tapOpensFolders)) return p.onOpen(p.index);
+      if (p.phone && dir && !p.selecting) return p.onOpen(p.index);
       p.onChoose(p.index, ev);
     },
     onDoubleClick: (ev: React.MouseEvent) => {
@@ -1251,6 +1269,8 @@ function FolderPane(p: FolderProps & { view: "list" | "grid"; admin: boolean; ac
     renaming: p.renaming?.path === e.path ? p.renaming : null,
     writable: p.writable,
     touch: p.touch,
+    tapOpensFolders: p.tapOpensFolders,
+    phone: p.phone,
     cut: !!p.cutPaths?.has(e.path),
     selecting: !!p.sel && p.sel.paths.size > 0,
     dragFrom: p.dragFrom,
