@@ -828,7 +828,7 @@ async function drivePlan(diskId: string): Promise<Plan> {
 async function safetyPlan(): Promise<Plan> {
   const specs: CheckSpec[] = [];
   const cfg = tryReadConfig();
-  const entries = cfg ? [{ id: FALLBACK_ID, label: cfg.base_domain }, ...cfg.routes.filter((r) => r.enabled !== false && r.type !== "redirect").map((r) => ({ id: r.id, label: displayUrl(routeUrl(cfg, r)) }))] : [];
+  const entries = cfg ? [{ id: FALLBACK_ID, label: cfg.base_domain }, ...cfg.routes.filter((r) => r.enabled !== false && !isRedirect(r)).map((r) => ({ id: r.id, label: displayUrl(routeUrl(cfg, r)) }))] : [];
   for (const e of entries) {
     specs.push({
       id: `safety.public:${e.id}`,

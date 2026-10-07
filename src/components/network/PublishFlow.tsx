@@ -15,7 +15,7 @@ import { Disclosure } from "@/components/ui/Disclosure";
 import { toast } from "@/components/ui/Toast";
 import { AppIcon } from "@/components/apps/AppIcon";
 import type { Commit } from "./NetworkView";
-import { suggestLabel, newRouteId, bare, tcpPorts, THIS_SERVER } from "./shared";
+import { suggestLabel, newRouteId, bare, tcpPorts, isRedirectRoute, THIS_SERVER } from "./shared";
 import f from "./flow.module.css";
 
 /**
@@ -295,7 +295,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
   const checkingLogin = !exposure && !declared;
   const exposed = mode === "app" && localBackend && port > 0 && !(direct && form.scope === "some");
   const noLogin = exposed && loginVerdict === "none";
-  const already = mode === "app" && !existing && app ? cfg.routes.find((r) => r.type !== "redirect" && (r.app === app.id || data.apps[r.id]?.appId === app.id)) : undefined;
+  const already = mode === "app" && !existing && app ? cfg.routes.find((r) => !isRedirectRoute(r) && (r.app === app.id || data.apps[r.id]?.appId === app.id)) : undefined;
 
   async function markLogin(v: "yes" | "no") {
     if (!app) return;

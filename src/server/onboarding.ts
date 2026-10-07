@@ -6,7 +6,7 @@ import { findById, type User } from "./auth/users";
 import { listApps } from "./docker/apps";
 import { activePlatform, PLATFORM_NAME } from "./platform";
 import { getInventory } from "./storage/inventory";
-import { tryReadConfig, routeUrl, THIS_SERVER, type RoutesConfig } from "./caddy/routes";
+import { tryReadConfig, routeUrl, isRedirect, THIS_SERVER, type Backend, type RoutesConfig } from "./caddy/routes";
 import { counts, listOpen } from "./findings";
 import { listSubscriptions } from "./notify/subscriptions";
 import { NAV } from "@/lib/nav";
@@ -48,8 +48,10 @@ export function gluonPublicAddress(routes?: RoutesConfig | null): string | null 
   const cfg = routes === undefined ? tryReadConfig() : routes;
   if (!cfg) return null;
   const local = new Set([THIS_SERVER, "localhost", "127.0.0.1", "::1"]);
-  const r = cfg.routes.find((x) => x.enabled && x.type !== "redirect" && local.has(x.backend.host) && x.backend.port === GLUON_PORT);
-  return r ? routeUrl(cfg, r).replace(/^https?:\/\//, "") : null;
+  const isGluon = (b: Backend) => local.has(b.host) && b.port === GLUON_PORT;
+  const r = cfg.routes.find((x) => x.enabled && !isRedirect(x) && isGluon(x.backend));
+  if (r) return routeUrl(cfg, r).replace(/^https?:\/\//, "");
+  return isGluon(cfg.fallback.backend) ? cfg.base_domain : null;
 }
 
 const updatesTouched = () => !!one<{ key: string }>("SELECT key FROM settings WHERE key = 'updates'");

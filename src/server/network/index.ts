@@ -20,12 +20,13 @@ registerSearch((user, q) => {
   }
   for (const r of cfg.routes) {
     const url = routeUrl(cfg, r);
-    const hay = [r.name, r.app ?? "", url, r.type === "redirect" ? r.target : `${r.backend.host}:${r.backend.port}`, r.note ?? ""].join(" ").toLowerCase();
+    const to = r.type === "redirect" ? r.target : r.type === "subdomain" ? r.redirect_to : undefined;
+    const hay = [r.name, r.app ?? "", url, to ?? (r.type === "redirect" ? "" : `${r.backend.host}:${r.backend.port}`), r.note ?? ""].join(" ").toLowerCase();
     if (!hay.includes(term)) continue;
     items.push({
       id: `route:${r.id}`,
       label: r.name,
-      hint: `${url.replace(/^https:\/\//, "")}${r.enabled === false ? " · off" : r.type === "redirect" ? ` → ${r.target.replace(/^https?:\/\//, "")}` : ""}`,
+      hint: `${url.replace(/^https:\/\//, "")}${r.enabled === false ? " · off" : to ? ` → ${to.replace(/^https?:\/\//, "")}` : ""}`,
       icon: "globe",
       href: `/network?route=${encodeURIComponent(r.id)}`,
     });
