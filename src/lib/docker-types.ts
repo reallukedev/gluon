@@ -4,7 +4,7 @@
  */
 import type { LineState } from "./types";
 
-export type AppSource = "casaos" | "umbrel" | "compose" | "docker";
+export type AppSource = "gluon" | "casaos" | "umbrel" | "compose" | "docker";
 
 /** The app a container (or a resource through its containers) belongs to, as Apps shows it. */
 export interface AppRef {

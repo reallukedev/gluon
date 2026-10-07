@@ -86,7 +86,7 @@
 .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .whoText { min-width: 0; display: grid; gap: 1px; }
 .whoName { font-weight: 600; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.whoName:is(a):hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .whoName:is(a):hover { text-decoration: underline; } }
 .whoSub { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .spark { min-width: 0; }
 /* The sparkline goes first, then the figures narrow: 0+84+84 + 2×14 + 32. */

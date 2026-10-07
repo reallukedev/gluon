@@ -1,21 +1,23 @@
 "use client";
 import * as React from "react";
-import { MoreHoriz, Copy, OpenNewWindow, EditPencil, Trash, AppWindow } from "iconoir-react";
-import type { RouteStatus } from "@/lib/network-types";
+import { MoreHoriz, Copy, OpenNewWindow, EditPencil, Trash, AppWindow, ChatBubble } from "iconoir-react";
+import type { RouteStatus, XmppStatus } from "@/lib/network-types";
+import { api } from "@/lib/client/api";
 import type { LineState } from "@/lib/types";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button, IconButton, LinkButton } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Field";
 import { Menu } from "@/components/ui/Menu";
-import { Skeleton } from "@/components/ui/Surface";
+import { Notice, Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { LoginCell } from "./AppList";
 import { healthOf, type Address, type AppEntry } from "./model";
-import { bare, copyText } from "./shared";
+import { bare, copyText, THIS_SERVER, XMPP_CLIENT_PORTS } from "./shared";
 import s from "./network.module.css";
+import c from "./chat.module.css";
 
 /**
  * One app's place on the internet: the chain a visit takes (DNS, certificate, web server, app) with
@@ -32,6 +34,8 @@ interface Props {
   checkedAt: number | null;
   onEdit: (routeId: string) => void;
   onEditFallback: () => void;
+  onSetUpChat: (routeId: string) => void;
+  onRecheck: () => void;
   onToggleAddress: (a: Address, on: boolean) => void;
   onRemoveAddress: (a: Address) => void;
   onRemoveApp: (e: AppEntry) => void;
@@ -48,22 +52,46 @@ const ROLE: Record<Address["role"], string> = {
   redirect: "Short link",
 };
 
-function chain(st: RouteStatus | undefined, redirect: boolean): { name: string; state: LineState; label: string; title: string }[] | null {
+type Link = { name: string; state: LineState; label: string; title: string };
+
+function dnsLink(d: RouteStatus["dns"]): Link {
+  return !d
+    ? { name: "DNS", state: "unknown", label: "Not checked", title: "" }
+    : d.status === "ok"
+      ? { name: "DNS", state: "running", label: d.proxied ? "Through Cloudflare" : "Points to your router", title: d.message }
+      : d.status === "missing"
+        ? { name: "DNS", state: "unhealthy", label: "No record", title: d.message }
+        : d.status === "mismatch"
+          ? { name: "DNS", state: "attention", label: "Points elsewhere", title: d.message }
+          : { name: "DNS", state: "unknown", label: "Lookup failed", title: d.message };
+}
+
+/** A port on the chat server: does it answer, and is the certificate it presents good. */
+function portLink(name: string, p: XmppStatus["c2s"]): Link {
+  if (!p.reachable) return { name, state: "unhealthy", label: `Not answering on :${p.port}`, title: p.error ?? "" };
+  if (p.error) return { name, state: "unhealthy", label: "Refuses chat apps", title: p.error };
+  const t = p.tls;
+  if (!t) return { name, state: "unknown", label: `Answers on :${p.port}`, title: "" };
+  if (t.status === "ok") return { name, state: "running", label: `:${p.port}, ${t.daysLeft} days left`, title: t.message };
+  if (t.status === "expiring") return { name, state: "attention", label: `Certificate ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`, title: t.message };
+  return { name, state: "unhealthy", label: t.status === "expired" ? "Certificate expired" : "Certificate not trusted", title: t.message };
+}
+
+/** How a chat app reaches the server: the name, the sign-in port, and other servers. */
+function chatChain(st: RouteStatus | undefined): Link[] | null {
+  if (!st?.enabled || !st.xmpp) return null;
+  const x = st.xmpp;
+  const out = [dnsLink(st.dns), portLink("Sign-in", x.c2s)];
+  if (x.s2s) out.push(portLink("Other servers", x.s2s));
+  if (x.certSync) out.push({ name: "Certificate copy", state: x.certSync.ok ? "running" : "attention", label: x.certSync.ok ? "Up to date" : "Needs a look", title: x.certSync.message });
+  return out;
+}
+
+function chain(st: RouteStatus | undefined, redirect: boolean): Link[] | null {
   if (!st) return null;
   if (!st.enabled) return null;
-  const out: { name: string; state: LineState; label: string; title: string }[] = [];
-  const d = st.dns;
-  out.push(
-    !d
-      ? { name: "DNS", state: "unknown", label: "Not checked", title: "" }
-      : d.status === "ok"
-        ? { name: "DNS", state: "running", label: d.proxied ? "Through Cloudflare" : "Points to your router", title: d.message }
-        : d.status === "missing"
-          ? { name: "DNS", state: "unhealthy", label: "No record", title: d.message }
-          : d.status === "mismatch"
-            ? { name: "DNS", state: "attention", label: "Points elsewhere", title: d.message }
-            : { name: "DNS", state: "unknown", label: "Lookup failed", title: d.message },
-  );
+  const out: Link[] = [];
+  out.push(dnsLink(st.dns));
   const t = st.tls;
   out.push(
     !t
@@ -71,7 +99,7 @@ function chain(st: RouteStatus | undefined, redirect: boolean): { name: string; 
       : t.status === "ok"
         ? { name: "Certificate", state: "running", label: `${t.daysLeft} days left`, title: `${t.message}${t.issuer ? ` (${t.issuer})` : ""}` }
         : t.status === "expiring"
-          ? { name: "Certificate", state: "attention", label: `Ends in ${t.daysLeft} d`, title: t.message }
+          ? { name: "Certificate", state: "attention", label: `Ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`, title: t.message }
           : t.status === "expired"
             ? { name: "Certificate", state: "unhealthy", label: "Expired", title: t.message }
             : t.status === "pending"
@@ -105,9 +133,28 @@ function chain(st: RouteStatus | undefined, redirect: boolean): { name: string; 
   return out;
 }
 
-export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, statusLoading, checkedAt, onEdit, onEditFallback, onToggleAddress, onRemoveAddress, onRemoveApp, onMarkLogin, onHomeOnly }: Props) {
+export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, statusLoading, checkedAt, onEdit, onEditFallback, onSetUpChat, onRecheck, onToggleAddress, onRemoveAddress, onRemoveApp, onMarkLogin, onHomeOnly }: Props) {
   const main = e.main;
-  const links = chain(main.status, main.route?.type === "redirect");
+  const route = main.route?.type === "subdomain" ? main.route : null;
+  const isChat = !!route?.xmpp;
+  // A chat server published like a web app: Caddy sends browsers to a port that only speaks XMPP.
+  const chatAsWeb = !!route && !route.xmpp && route.backend.host === THIS_SERVER && XMPP_CLIENT_PORTS.has(route.backend.port);
+  const links = isChat ? chatChain(main.status) : chain(main.status, main.route?.type === "redirect");
+  const [syncing, setSyncing] = React.useState(false);
+  async function checkCertificate() {
+    setSyncing(true);
+    try {
+      const r = await api.post<{ sync: Record<string, { ok: boolean; message: string }> }>("/api/network/xmpp", {});
+      const st = r.sync[main.id];
+      if (st?.ok) toast.success("Certificate checked", { description: st.message });
+      else toast.error("The certificate needs a look", { description: st?.message });
+      onRecheck();
+    } catch (err) {
+      toast.error("Couldn't check the certificate", { description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setSyncing(false);
+    }
+  }
   const addresses = [main, ...e.also];
   const note = main.route?.note;
   const copy = (url: string) => void copyText(url).then((ok) => (ok ? toast.success("Copied", { description: url }) : toast.error("Couldn't copy", { description: url })));
@@ -138,10 +185,23 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
       }
     >
       <div className={s.dBody}>
+        {chatAsWeb && (
+          <Notice
+            tone="attention"
+            title="This is a chat server set up as a web app"
+            action={
+              <Button size="sm" icon={<ChatBubble />} onClick={() => onSetUpChat(main.id)}>
+                Set up as a chat server
+              </Button>
+            }
+          >
+            Browsers that open {bare(main.url)} are sent to port {route!.backend.port}, which only chat apps understand, so they get an error. Gluon can publish it the way XMPP expects and keep its certificate current.
+          </Notice>
+        )}
         {e.on && (
-          <section className={s.dSection} aria-label="How a visit gets there">
+          <section className={s.dSection} aria-label={isChat ? "How chat apps connect" : "How a visit gets there"}>
             <div className={s.dHead}>
-              <h3 className={s.dSub}>How a visit gets there</h3>
+              <h3 className={s.dSub}>{isChat ? "How chat apps connect" : "How a visit gets there"}</h3>
               {checkedAt && (
                 <span className={s.faint}>
                   Checked <Time ts={checkedAt} />
@@ -167,6 +227,8 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
             {e.health.state && e.health.state !== "running" && e.health.sentence && <p className={s.dSentence}>{e.health.sentence}</p>}
           </section>
         )}
+
+        {isChat && e.on && main.status?.xmpp && <ChatFacts x={main.status.xmpp} syncing={syncing} onCheck={() => void checkCertificate()} />}
 
         <section className={s.dSection}>
           <h3 className={s.dSub}>Addresses</h3>
@@ -230,7 +292,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
           </ul>
         </section>
 
-        {!e.isRedirect && (
+        {!e.isRedirect && !isChat && (
           <section className={s.dSection}>
             <h3 className={s.dSub}>Login</h3>
             <div className={s.dLogin}>
@@ -281,5 +343,82 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
         )}
       </div>
     </Dialog>
+  );
+}
+
+function ChatFacts({ x, syncing, onCheck }: { x: XmppStatus; syncing: boolean; onCheck: () => void }) {
+  const srv = [x.srv.client, x.srv.server].filter((r): r is NonNullable<typeof r> => !!r);
+  const ports = [x.c2s.port, ...(x.s2s ? [x.s2s.port] : [])];
+  // Unset records on the standard ports are normal; one sentence says so instead of one per record.
+  const allFallback = srv.every((r) => r.status === "missing");
+  return (
+    <section className={s.dSection}>
+      <h3 className={s.dSub}>Chat server</h3>
+      <dl className={c.facts}>
+        <div className={c.fact}>
+          <dt>Sign in as</dt>
+          <dd>
+            <span className="mono">name@{x.domain}</span>
+          </dd>
+        </div>
+        <div className={c.fact}>
+          <dt>New accounts</dt>
+          <dd>
+            {x.openRegistration === null ? (
+              <span className={c.factNote}>Couldn&rsquo;t tell</span>
+            ) : x.openRegistration ? (
+              <>
+                <StateLine state="attention" label="Anyone can sign up" />
+                <span className={c.factNote}>Strangers can create accounts from any chat app. Turn off allow_registration in the chat server&rsquo;s config unless that&rsquo;s the plan.</span>
+              </>
+            ) : (
+              <StateLine state="running" label="Only accounts you create" />
+            )}
+          </dd>
+        </div>
+        <div className={c.fact}>
+          <dt>DNS (SRV)</dt>
+          <dd>
+            {allFallback ? (
+              <span className={c.factNote}>
+                Not set, which is fine: apps{x.s2s ? " and other servers" : ""} find {x.domain} on port{ports.length > 1 ? "s" : ""} {ports.join(" and ")} by themselves.
+              </span>
+            ) : (
+              srv.map((r) => (
+                <span key={r.name} className={c.factNote}>
+                  {r.message}
+                </span>
+              ))
+            )}
+          </dd>
+        </div>
+        {x.web && (
+          <div className={c.fact}>
+            <dt>Web chat</dt>
+            <dd>
+              <StateLine state={x.web.reachable ? "running" : "attention"} label={x.web.reachable ? `Answering on :${x.web.port}` : `Not answering on :${x.web.port}`} />
+            </dd>
+          </div>
+        )}
+        {x.certSync && (
+          <div className={c.fact}>
+            <dt>Certificate copy</dt>
+            <dd>
+              <span className={c.factNote}>{x.certSync.message}</span>
+              <span className={c.syncRow}>
+                {x.certSync.checkedAt && (
+                  <span className={c.factNote}>
+                    Checked <Time ts={x.certSync.checkedAt} />
+                  </span>
+                )}
+                <Button size="sm" loading={syncing} onClick={onCheck}>
+                  Check now
+                </Button>
+              </span>
+            </dd>
+          </div>
+        )}
+      </dl>
+    </section>
   );
 }

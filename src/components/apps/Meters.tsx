@@ -48,8 +48,8 @@ export function CpuMeter({ series, value, name, fit }: { series: number[] | null
   const fmt = useFormat();
   if (value === null)
     return (
-      <span className={s.none} aria-label="Not running" data-fit={fit ? "" : undefined}>
-        —
+      <span className={s.none} data-fit={fit ? "" : undefined}>
+        No reading
       </span>
     );
   const peak = Math.max(...(series ?? [value]));
@@ -76,8 +76,8 @@ export function MemMeter({ value, scale, total, name, fit }: { value: number | n
   const fmt = useFormat();
   if (value === null)
     return (
-      <span className={s.none} aria-label="Not running" data-fit={fit ? "" : undefined}>
-        —
+      <span className={s.none} data-fit={fit ? "" : undefined}>
+        No reading
       </span>
     );
   const share = scale > 0 ? Math.min(1, value / scale) : 0;

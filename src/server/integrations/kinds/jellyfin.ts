@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
-import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef } from "./base";
+import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef, type KindSearchHit } from "./base";
+import { matchScore, prepare } from "@/lib/search-match";
 import { bucketWidth, imageUrl } from "../image-refs";
 import type { JellyfinLibrariesData, JellyfinNowPlayingData, JellyfinRecentData, MediaKind, NowPlayingSession, RecentMediaItem } from "@/lib/widgets-types";
 
@@ -99,7 +100,7 @@ async function nowPlaying(ctx: KindContext<Config>): Promise<JellyfinNowPlayingD
     const kind = kindOf(it.Type);
     let subtitle: string | null = null;
     if (kind === "episode") subtitle = [str(it.SeriesName), episodeLabel(it)].filter(Boolean).join(" · ") || null;
-    else if (kind === "track") subtitle = [str(it.AlbumArtist) ?? str(arr(it.Artists)[0]), str(it.Album)].filter(Boolean).join(" — ") || null;
+    else if (kind === "track") subtitle = [str(it.AlbumArtist) ?? str(arr(it.Artists)[0]), str(it.Album)].filter(Boolean).join(" · ") || null;
     const pos = num(play.PositionTicks);
     const dur = num(it.RunTimeTicks);
     const method = play.PlayMethod === "Transcode" ? "transcode" : play.PlayMethod === "DirectStream" ? "directStream" : play.PlayMethod === "DirectPlay" ? "direct" : null;
@@ -325,6 +326,68 @@ async function visibility(ctx: KindContext<Config>): Promise<string | null> {
   return null;
 }
 
+// ------------------------------------------------------------------ universal search
+
+/** What a search hit is, for the palette's icon and the hint's first word. */
+const SEARCH_TYPES: Record<string, { type: string; word: string; rank: number }> = {
+  Movie: { type: "film", word: "Film", rank: 0 },
+  Series: { type: "series", word: "Series", rank: 0 },
+  MusicArtist: { type: "artist", word: "Artist", rank: 1 },
+  MusicAlbum: { type: "album", word: "Album", rank: 1 },
+  BoxSet: { type: "collection", word: "Collection", rank: 1 },
+  Episode: { type: "episode", word: "Episode", rank: 2 },
+  Audio: { type: "song", word: "Song", rank: 2 },
+  MusicVideo: { type: "video", word: "Music video", rank: 2 },
+};
+
+/** One Jellyfin item → a search hit linking to its page in Jellyfin's web app. */
+export function searchHit(ctx: KindContext<Config>, it: Item): KindSearchHit | null {
+  const id = str(it.Id);
+  const t = SEARCH_TYPES[String(it.Type)];
+  if (!id || !t) return null;
+  const year = num(it.ProductionYear);
+  let detail: string | null = null;
+  if (it.Type === "Episode") detail = [str(it.SeriesName), episodeLabel(it)].filter(Boolean).join(" ") || null;
+  else if (it.Type === "Audio") detail = [str(it.AlbumArtist) ?? str(arr(it.Artists)[0]), str(it.Album)].filter(Boolean).join(", ") || null;
+  else if (it.Type === "MusicAlbum") detail = str(it.AlbumArtist) ?? str(arr(it.Artists)[0]);
+  const hint = [t.word, detail, it.Type !== "Episode" && it.Type !== "Audio" && year ? String(year) : null].filter(Boolean).join(" · ");
+  const server = str(it.ServerId);
+  const url = `${ctx.baseUrl.replace(/\/+$/, "")}/web/#/details?id=${encodeURIComponent(id)}${server ? `&serverId=${encodeURIComponent(server)}` : ""}`;
+  return { id, label: str(it.Name) ?? "Untitled", hint, url, type: t.type, image: posterOf(ctx, it, 96) };
+}
+
+/** Films, series, episodes and music by name, as the chosen person sees them (else the whole server). */
+async function search(ctx: KindContext<Config>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]> {
+  const res = obj(
+    await http(ctx).json("/Items", {
+      signal: opts.signal,
+      timeoutMs: 1800, // backstop; search aborts sooner through the signal
+      query: {
+        userId: userId(ctx) ?? undefined,
+        searchTerm: q.slice(0, 100),
+        Recursive: true,
+        IncludeItemTypes: Object.keys(SEARCH_TYPES).join(","),
+        Limit: Math.min(40, opts.limit * 4),
+        Fields: "ProductionYear,ParentId",
+        EnableImageTypes: "Primary",
+        ImageTypeLimit: 1,
+        EnableTotalRecordCount: false,
+        EnableUserData: false,
+        IsMissing: false,
+      },
+    }),
+  );
+  if (opts.signal.aborted) return [];
+  const query = prepare(q);
+  return arr<Item>(res.Items)
+    .map((it, i) => ({ it, i, score: matchScore(query, { label: str(it.Name) ?? "" }), rank: SEARCH_TYPES[String(it.Type)]?.rank ?? 3 }))
+    // The name that matches best first; among equals, films and shows before episodes and songs.
+    .sort((a, b) => b.score - a.score || a.rank - b.rank || a.i - b.i)
+    .map(({ it }) => searchHit(ctx, it))
+    .filter((h): h is KindSearchHit => !!h)
+    .slice(0, opts.limit);
+}
+
 export const def: KindDef<Config> = {
   kind: "jellyfin",
   label: "Jellyfin",
@@ -391,6 +454,7 @@ export const def: KindDef<Config> = {
     "jellyfin.recent": (ctx, p) => recent(ctx, p),
     "jellyfin.libraries": (ctx) => libraries(ctx),
   },
+  search,
   image: {
     schema: z.object({
       item: z.string().regex(/^[a-f0-9]{32}$/i),

@@ -1,6 +1,6 @@
 "use client";
 /**
- * CopyButton — copies a value and says so in place, no toast needed.
+ * CopyButton: copies a value and says so in place, no toast needed.
  *
  *   <CopyButton value={url} label="Copy address" />            // icon only, with tooltip
  *   <CopyButton value={command} size="sm">Copy command</CopyButton>  // with text

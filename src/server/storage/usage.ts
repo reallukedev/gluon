@@ -11,7 +11,7 @@ import { Job, listJobs } from "./oplog";
 import type { StorageJob, UsageEntry, UsageResult } from "@/lib/storage-types";
 
 /**
- * "What's using space here?" — `du -x -B1 -a -d2` over one folder, run in the background at idle I/O
+ * "What's using space here?": `du -x -B1 -a -d2` over one folder, run in the background at idle I/O
  * priority. du prints each child's total as soon as that child is done, which doubles as progress.
  * The second level lets the Space map draw folders inside folders and drill in without a new scan.
  * Results are kept in storage_jobs so the answer is still there after a reload (and a restart).

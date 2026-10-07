@@ -1,4 +1,5 @@
 import "server-only";
+import { assertNoAppWork } from "../apps/lock";
 import fs from "node:fs";
 import { docker } from "../docker/client";
 import { hostPath } from "../host/paths";
@@ -219,6 +220,7 @@ const g = globalThis as G;
  * volume, so only the build cache (which has no other way) uses one.
  */
 export async function runCleanup(kind: CleanupKind, ids: string[]): Promise<CleanupResult> {
+  if (kind === "containers" || kind === "volumes") assertNoAppWork(kind === "containers" ? "remove stopped containers" : "remove unused volumes");
   if (g.__gluonDockerCleanup) throw new AppError("busy", "A Docker cleanup is already running. Wait for it to finish.", 409);
   g.__gluonDockerCleanup = true;
   try {

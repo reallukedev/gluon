@@ -17,6 +17,7 @@ import { NavIcon, HostMark } from "./NavIcon";
 import { CommandPalette } from "./CommandPalette";
 import { ReauthDialog } from "./ReauthDialog";
 import { ForcePasswordChange } from "./ForcePasswordChange";
+import { ForceMfaSetup } from "./ForceMfaSetup";
 import type { Pin as PinT } from "@/server/pins";
 import s from "./shell.module.css";
 
@@ -355,7 +356,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} nav={nav.all} pins={data.pins} />
       <ReauthDialog />
       {!pathname.startsWith("/files") && <UploadsElsewhere />}
-      {viewer.mustChangePassword && <ForcePasswordChange />}
+      {viewer.mustChangePassword ? <ForcePasswordChange /> : viewer.mustSetUpMfa ? <ForceMfaSetup /> : null}
     </div>
     </NavAccess.Provider>
   );

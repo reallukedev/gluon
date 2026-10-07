@@ -37,3 +37,20 @@ export function stopCopyConfirm(a: AppSummary, of: AppSummary | undefined, onCon
     onConfirm,
   };
 }
+
+/** Uninstalling an app Umbrel installed: Umbrel removes it along with its data. Works for old copies too. */
+export function uninstallUmbrelConfirm(a: AppSummary, of: AppSummary | undefined, onConfirm: () => Promise<void>): ConfirmOptions {
+  const other = of ? `${of.name} from ${sourceName(of.source)}` : a.copyOf ? `${a.copyOf.name} from ${sourceName(a.copyOf.source)}` : null;
+  return {
+    title: a.copyOf ? `Uninstall the old ${a.name} from Umbrel?` : `Uninstall ${a.name}?`,
+    consequences: [
+      "Umbrel removes the app and deletes everything it stored in its folder. This can't be undone.",
+      ...(other ? [`${other} has its own copy of the data and isn't touched.`] : []),
+      ...(!a.copyOf && a.routes.some((r) => r.enabled) ? ["Its public address will show an error until you remove or change it."] : []),
+      ...(!a.copyOf && a.household ? ["Household members lose it from their apps."] : []),
+    ],
+    typeToConfirm: a.name,
+    confirmLabel: "Uninstall",
+    onConfirm,
+  };
+}

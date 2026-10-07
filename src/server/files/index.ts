@@ -1,7 +1,6 @@
 import "server-only";
 import { all } from "../db";
 import { every, onStart } from "../jobs";
-import { registerSearch } from "../search";
 import { registerCheck, registerRemedy } from "../alerts/engine";
 import { raise, resolveMissing } from "../findings";
 import { filesystems } from "../metrics/sampler";
@@ -11,9 +10,9 @@ import { formatBytes, plural } from "@/lib/format";
 import { markInterrupted } from "./jobs";
 import { cleanupUploads } from "./upload";
 import { deleteForever, reconcileTrash, trashTotals } from "./trash";
-import { searchProvider } from "./search";
 
-// Side-effect module: background jobs, the ⌘K provider, and the "trash is holding space" finding.
+// Side-effect module: background jobs and the "trash is holding space" finding. (Universal search
+// finds files through searchNames in ./search.)
 
 onStart("files", async () => {
   markInterrupted();
@@ -23,8 +22,6 @@ onStart("files", async () => {
   setTimeout(() => void reconcileTrash().catch((e) => console.error("[gluon] trash reconcile failed", e)), 20_000).unref?.();
   every(30 * 60_000, () => reconcileTrash());
 });
-
-registerSearch(searchProvider);
 
 const TRASH_MIN = 1024 ** 3;
 

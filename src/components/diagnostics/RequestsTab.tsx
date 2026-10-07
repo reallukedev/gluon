@@ -175,7 +175,7 @@ export function RequestsTab() {
                   <div key={e.id} className={`${s.reqRow} ${s.reqGrid}`} style={{ transform: `translateY(${item.start}px)` }} data-internal={e.internal ? "" : undefined} title={e.userAgent}>
                     <Time ts={e.time} kind="time" seconds className={`${s.faint} num`} />
                     <span className={s.code} data-class={c}>
-                      {e.status || "—"}
+                      {e.status || "No reply"}
                     </span>
                     <span className={s.reqPath}>
                       <span className={s.method}>{e.method}</span>
@@ -185,7 +185,7 @@ export function RequestsTab() {
                     <span className={`${s.end} num`} title={e.status === 101 ? "A live connection (WebSocket) that stayed open" : undefined}>
                       {e.status === 101 ? "live" : `${e.duration < 1 ? "<1" : Math.round(e.duration)} ms`}
                     </span>
-                    <span className={`${s.end} num`}>{e.size ? fmt.bytes(e.size) : "—"}</span>
+                    <span className={`${s.end} num`}>{e.size ? fmt.bytes(e.size) : "None"}</span>
                     <span className={`${s.reqIp} mono`}>{e.remoteIp}</span>
                   </div>
                 );
@@ -303,7 +303,7 @@ function LastHour({ stats, cls, onCls }: { stats: RequestStats; cls: Cls; onCls:
             <strong>{fmt.percent(stats.errorRate * 100, stats.errorRate > 0 && stats.errorRate < 0.1 ? 1 : 0)}</strong> server errors
           </span>
           <span>
-            Slowest 5% took <strong>{stats.p95Ms !== null ? `${Math.round(stats.p95Ms)} ms` : "—"}</strong>
+            Slowest 5% took <strong>{stats.p95Ms !== null ? `${Math.round(stats.p95Ms)} ms` : "not measured yet"}</strong>
           </span>
           <span>
             <strong>{fmt.bytes(stats.bytes)}</strong> sent

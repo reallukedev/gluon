@@ -3,12 +3,12 @@ import net from "node:net";
 import { host, CommandError } from "../../host/exec";
 import { exposureReport } from "../../network/exposure";
 import { listUsers } from "../../auth/users";
-import { getSetting } from "../../settings";
 import { all } from "../../db";
 import { plural, listJoin } from "@/lib/format";
 import type { ExposureReport } from "@/lib/network-types";
 import { activityHref } from "@/lib/settings-links";
 import { fail, go, kv, ok, skip, warn, type CheckCtx, type CheckSpec, type Outcome } from "./core";
+import { mfaRequired } from "../../auth/policy";
 
 /** Security: sshd settings, what's reachable, and admins without two-step sign-in. */
 
@@ -96,8 +96,8 @@ export function lanOutcome(r: ExposureReport): Outcome {
 export function adminMfaOutcome(): Outcome {
   const admins = listUsers().filter((u) => u.role === "admin" && !u.disabled);
   const without = admins.filter((u) => !u.mfa);
-  const policy = getSetting("requireMfaAway");
-  const evidence = kv([...admins.map((u) => [u.username, u.mfa ? "two-step on" : "two-step OFF"] as [string, string]), ["Two-step required away from home", policy ? "yes" : "no"]]);
+  const policy = mfaRequired("admin", "away");
+  const evidence = kv([...admins.map((u) => [u.username, u.mfa ? "two-step on" : "two-step OFF"] as [string, string]), ["Two-step required for admins away from home", policy ? "yes" : "no"]]);
   if (!without.length) return ok(`Every admin uses two-step sign-in`, { evidence });
   const names = without.map((u) => u.displayName || u.username);
   return warn(without.length === 1 ? `${names[0]} signs in without two-step verification` : `${without.length} admins sign in without two-step verification`, {

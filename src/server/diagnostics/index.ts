@@ -1,6 +1,7 @@
 import "server-only";
 import { onStart } from "../jobs";
-import { registerSearch } from "../search";
+import { registerSearch, type ProviderItem } from "../search";
+import { matchScore, prepare, rank, splitVerb } from "@/lib/search-match";
 import { listApps } from "../docker/apps";
 import { ensureCaddyFollower } from "./caddy-log";
 
@@ -21,22 +22,37 @@ const CHECKUPS = [
   { id: "safety", label: "Check whether the server is safe on the internet", hint: "Exposure, logins, SSH and two-step sign-in", words: "safe security secure exposed hack ssh internet login two-step 2fa" },
 ];
 
-registerSearch(async (user, q) => {
-  if (user.role !== "admin") return null;
-  const term = q.toLowerCase().trim();
-  const items: { id: string; label: string; hint?: string; icon?: string; href?: string }[] = [];
-  for (const c of CHECKUPS) {
-    if (c.label.toLowerCase().includes(term) || c.words.split(" ").some((w) => w.startsWith(term) || (term.length >= 4 && term.includes(w)))) {
-      items.push({ id: `checkup:${c.id}`, label: c.label, hint: c.hint, icon: "diagnostics", href: `/diagnostics?start=${c.id}` });
+/** Words that ask for a checkup of an app ("why won't jellyfin open"). */
+const CHECK_VERBS: Record<string, string> = { check: "check", why: "check", diagnose: "check", broken: "check", won: "check", wont: "check", t: "check", working: "check", load: "check", loading: "check" };
+
+registerSearch({
+  key: "checkups",
+  name: "Checkups",
+  priority: 55,
+  async run(user, _q, ctx) {
+    if (user.role !== "admin") return null;
+    const items: ProviderItem[] = [];
+    for (const c of CHECKUPS) {
+      const score = matchScore(ctx.query, { label: c.label, keywords: c.words, hint: c.hint });
+      if (score) items.push({ id: `checkup:${c.id}`, label: c.label, hint: c.hint, icon: "diagnostics", href: `/diagnostics?start=${c.id}`, score });
     }
-  }
-  if (term.length >= 3) {
-    const apps = await listApps().catch(() => []);
-    const hits = apps.filter((x) => x.name.toLowerCase().includes(term) && (x.webPort || x.routes.length)).slice(0, 3);
-    for (const a of hits) {
-      const twin = hits.some((b) => b !== a && b.name === a.name);
-      items.push({ id: `checkup:app:${a.id}`, label: `Check why ${a.name} won't open`, hint: twin ? `Checkup · ${a.id}` : "Checkup", icon: "diagnostics", href: `/diagnostics?start=app&target=${encodeURIComponent(a.id)}` });
+    if (ctx.query.compact.length >= 3) {
+      // "jellyfin" or "why won't jellyfin open" offers a checkup for that app. Asked for with a verb
+      // ("check jellyfin") and only one app fits, the checkup is the best match.
+      const split = splitVerb(ctx.query, CHECK_VERBS);
+      const verb = split.verb;
+      // "open" only reads as part of a question here ("why won't X open"); alone it means Open X.
+      const words = split.rest.folded.split(" ").filter((w) => !verb || w !== "open");
+      const rest = words.length ? prepare(words.join(" ")) : split.rest;
+      const apps = await listApps().catch(() => []);
+      const hits = rank(rest, apps.filter((x) => x.webPort || x.routes.length), (a) => ({ label: a.name }), 0.78).slice(0, 3);
+      const unique = hits.length === 1 || (hits.length > 1 && hits[1]!.score < hits[0]!.score - 0.02);
+      hits.forEach(({ item: a, score }, i) => {
+        const twin = hits.some((b) => b.item !== a && b.item.name === a.name);
+        const asked = verb && unique && i === 0;
+        items.push({ id: `checkup:app:${a.id}`, label: `Check why ${a.name} won't open`, hint: twin ? `Checkup · ${a.id}` : "Checkup", icon: "diagnostics", href: `/diagnostics?start=app&target=${encodeURIComponent(a.id)}`, score: asked ? 1 : score * 0.8, final: !!asked });
+      });
     }
-  }
-  return items.length ? { name: "Checkups", items: items.slice(0, 6) } : null;
+    return { name: "Checkups", items: items.slice(0, 6) };
+  },
 });

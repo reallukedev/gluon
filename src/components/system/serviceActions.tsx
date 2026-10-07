@@ -62,7 +62,7 @@ export function bootLabel(enabled: string | null): string {
     case "transient":
       return "Temporary";
     default:
-      return "—";
+      return "Other";
   }
 }
 

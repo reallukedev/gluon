@@ -34,7 +34,7 @@ trap cleanup EXIT
 if [ "$action" = github ]; then
   repo=$1 ref=$2 version=$3 commit=$4; shift 4
   [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail "That isn't a GitHub repository name."
-  [[ $ref =~ ^[A-Za-z0-9_./-]{1,100}$ ]] || fail "That isn't a version Gluon can download."
+  [[ $ref =~ ^[A-Za-z0-9_./-]{1,100}$ && $ref != -* && $ref != *..* ]] || fail "That isn't a version Gluon can download."
   [[ $version =~ ^[A-Za-z0-9_.+-]{1,64}$ ]] || fail "That isn't a version name Gluon can use."
   # Unpack where there's room: /var is often a small partition on home servers.
   tmpbase=/var/tmp best=0

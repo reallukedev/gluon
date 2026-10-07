@@ -32,7 +32,7 @@ export function localBackendHost(host: string): string {
 
 const PUBLIC_RESOLVERS = ["1.1.1.1", "1.0.0.1", "8.8.8.8"];
 
-function resolver(): dns.promises.Resolver {
+export function resolver(): dns.promises.Resolver {
   const r = new dns.promises.Resolver({ timeout: 2500, tries: 2 });
   r.setServers(PUBLIC_RESOLVERS);
   return r;
@@ -93,6 +93,56 @@ function nameOf(x: unknown): string | null {
   return pick("O") ? `${pick("O")}${pick("CN") ? ` (${pick("CN")})` : ""}` : (pick("CN") ?? null);
 }
 
+/**
+ * Judge the certificate a TLS socket was handed for `servername`. `who` names the server in the
+ * messages ("Caddy", "The chat server"). Null when the server sent no certificate at all.
+ */
+export function certResult(socket: tls.TLSSocket, servername: string, certDays: number, who: string): TlsResult | null {
+  const cert = socket.getPeerCertificate();
+  if (!cert || !Object.keys(cert).length) return null;
+  const base: TlsResult = { servername, status: "error", issuer: null, subject: null, names: [], validFrom: null, validTo: null, daysLeft: null, trusted: null, issueError: null, message: "" };
+  const names = (cert.subjectaltname ?? "")
+    .split(/,\s*/)
+    .filter((s) => s.startsWith("DNS:"))
+    .map((s) => s.slice(4));
+  const validTo = new Date(cert.valid_to);
+  const validFrom = new Date(cert.valid_from);
+  const daysLeft = Math.floor((validTo.getTime() - Date.now()) / 86_400_000);
+  const identityErr = tls.checkServerIdentity(servername, cert);
+  const trusted = socket.authorized && !identityErr;
+  const issuer = nameOf(cert.issuer);
+  const r: TlsResult = {
+    ...base,
+    issuer,
+    subject: nameOf(cert.subject),
+    names,
+    validFrom: Number.isFinite(validFrom.getTime()) ? validFrom.toISOString() : null,
+    validTo: Number.isFinite(validTo.getTime()) ? validTo.toISOString() : null,
+    daysLeft: Number.isFinite(daysLeft) ? daysLeft : null,
+    trusted,
+    fingerprint: cert.fingerprint256,
+  };
+  const caddy = who === "Caddy";
+  if (daysLeft < 0) {
+    const whose = caddy ? "The certificate" : `The certificate ${who.toLowerCase()} uses`;
+    return { ...r, status: "expired", message: `${whose} for ${servername} expired ${-daysLeft} day${daysLeft === -1 ? "" : "s"} ago.` };
+  }
+  if (identityErr) return { ...r, status: "invalid", message: `${who} serves a certificate for ${names.slice(0, 3).join(", ") || "another name"}, not ${servername}.` };
+  if (!socket.authorized) {
+    const why = String(socket.authorizationError ?? "");
+    const self = /SELF_SIGNED|UNABLE_TO_GET_ISSUER|UNABLE_TO_VERIFY/.test(why);
+    if (caddy) {
+      return { ...r, status: self && /Caddy Local Authority/i.test(issuer ?? "") ? "pending" : "invalid", message: self ? `Caddy is using a temporary self-signed certificate for ${servername}; browsers will warn until a real one is issued.` : `The certificate for ${servername} isn't trusted (${why}).` };
+    }
+    return { ...r, status: "invalid", message: self ? `${who} uses a self-signed certificate for ${servername}, so chat apps will refuse to connect.` : `The certificate ${who.toLowerCase()} uses for ${servername} isn't trusted (${why}).` };
+  }
+  if (daysLeft < certDays) {
+    const renew = caddy ? "Caddy normally renews it well before then." : "Gluon copies in Caddy's renewed one when it has it.";
+    return { ...r, status: "expiring", message: `The certificate for ${servername} expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}. ${renew}` };
+  }
+  return { ...r, status: "ok", message: `Valid for ${daysLeft} more days, issued by ${issuer ?? "an unknown issuer"}.` };
+}
+
 /** Handshake with Caddy for `servername` and read the certificate it serves. */
 export function probeTls(servername: string, certDays: number, timeoutMs = 5000): Promise<TlsResult> {
   const base: TlsResult = { servername, status: "error", issuer: null, subject: null, names: [], validFrom: null, validTo: null, daysLeft: null, trusted: null, issueError: null, message: "" };
@@ -108,39 +158,7 @@ export function probeTls(servername: string, certDays: number, timeoutMs = 5000)
     const socket = tls.connect({ host: CADDY_HOST, port: CADDY_PORT, servername, rejectUnauthorized: false, ALPNProtocols: ["http/1.1"] });
     const timer = setTimeout(() => finish({ ...base, status: "error", message: `Caddy didn't finish the TLS handshake for ${servername} in time.` }), timeoutMs);
     socket.once("secureConnect", () => {
-      const cert = socket.getPeerCertificate();
-      if (!cert || !Object.keys(cert).length) {
-        return finish({ ...base, status: "pending", message: `Caddy has no certificate for ${servername} yet.` });
-      }
-      const names = (cert.subjectaltname ?? "")
-        .split(/,\s*/)
-        .filter((s) => s.startsWith("DNS:"))
-        .map((s) => s.slice(4));
-      const validTo = new Date(cert.valid_to);
-      const validFrom = new Date(cert.valid_from);
-      const daysLeft = Math.floor((validTo.getTime() - Date.now()) / 86_400_000);
-      const identityErr = tls.checkServerIdentity(servername, cert);
-      const trusted = socket.authorized && !identityErr;
-      const issuer = nameOf(cert.issuer);
-      const r: TlsResult = {
-        ...base,
-        issuer,
-        subject: nameOf(cert.subject),
-        names,
-        validFrom: Number.isFinite(validFrom.getTime()) ? validFrom.toISOString() : null,
-        validTo: Number.isFinite(validTo.getTime()) ? validTo.toISOString() : null,
-        daysLeft: Number.isFinite(daysLeft) ? daysLeft : null,
-        trusted,
-      };
-      if (daysLeft < 0) return finish({ ...r, status: "expired", message: `The certificate for ${servername} expired ${-daysLeft} day${daysLeft === -1 ? "" : "s"} ago.` });
-      if (identityErr) return finish({ ...r, status: "invalid", message: `Caddy serves a certificate for ${names.slice(0, 3).join(", ") || "another name"}, not ${servername}.` });
-      if (!socket.authorized) {
-        const why = String(socket.authorizationError ?? "");
-        const self = /SELF_SIGNED|UNABLE_TO_GET_ISSUER|UNABLE_TO_VERIFY/.test(why);
-        return finish({ ...r, status: self && /Caddy Local Authority/i.test(issuer ?? "") ? "pending" : "invalid", message: self ? `Caddy is using a temporary self-signed certificate for ${servername}; browsers will warn until a real one is issued.` : `The certificate for ${servername} isn't trusted (${why}).` });
-      }
-      if (daysLeft < certDays) return finish({ ...r, status: "expiring", message: `The certificate for ${servername} expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}. Caddy normally renews it well before then.` });
-      finish({ ...r, status: "ok", message: `Valid for ${daysLeft} more days, issued by ${issuer ?? "an unknown issuer"}.` });
+      finish(certResult(socket, servername, certDays, "Caddy") ?? { ...base, status: "pending", message: `Caddy has no certificate for ${servername} yet.` });
     });
     socket.once("error", (e: NodeJS.ErrnoException) => {
       const msg = e.message ?? "";

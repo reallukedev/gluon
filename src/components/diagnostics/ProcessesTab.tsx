@@ -137,7 +137,7 @@ function ProcRow({ p, by, open, onToggle }: { p: ProcessInfo; by: "cpu" | "mem";
           <dt>Parent</dt>
           <dd className="num mono">{p.ppid}</dd>
           <dt>Started</dt>
-          <dd>{p.startedAt ? <Time ts={p.startedAt} kind="dateTime" /> : "—"}</dd>
+          <dd>{p.startedAt ? <Time ts={p.startedAt} kind="dateTime" /> : "Not known"}</dd>
           <dt>Share of machine</dt>
           <dd className="num">
             {fmt.percent(p.cpu, 1)} CPU · {fmt.percent(p.memPct, 1)} memory

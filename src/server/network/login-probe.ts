@@ -4,7 +4,7 @@ import https from "node:https";
 import { one, run, now } from "../db";
 
 /**
- * "Does this app have a login of its own?" — a heuristic look at the backend's home page.
+ * "Does this app have a login of its own?": a heuristic look at the backend's home page.
  * 401/WWW-Authenticate, a redirect to /login, a password field, or a recognised app that always asks
  * for a login → "login". A plain page that opened without any of that → "none". Anything else
  * (APIs, apps that build their page in the browser, errors) → "unknown".

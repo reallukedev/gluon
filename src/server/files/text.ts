@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { AppError, conflict } from "../errors";
-import { hostPath, isWithin } from "../host/paths";
+import { inDir, inParent, openFileIn } from "./safe";
+import { isWithin } from "../host/paths";
 import { audit } from "../audit";
 import { docker } from "../docker/client";
 import type { User } from "../auth/users";
@@ -41,7 +42,7 @@ function decodeUtf8(buf: Buffer, truncated: boolean): string | null {
     return dec.decode(buf);
   } catch {
     if (!truncated) return null;
-    // The 1 MB cut may split a multi-byte character: retry without the last 1–3 bytes.
+    // The 1 MB cut may split a multi-byte character: retry without the last 1 to 3 bytes.
     for (let cut = 1; cut <= 3 && cut < buf.length; cut++) {
       try {
         return dec.decode(buf.subarray(0, buf.length - cut));
@@ -60,6 +61,8 @@ export async function readText(user: User, p: string): Promise<TextFile> {
   const fh = await fs.promises.open(t.fsPath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
   try {
     const st = await fh.stat();
+    // A folder on the way swapped for a link would open a different file: refuse rather than show it.
+    if (st.ino !== t.stat.ino || st.dev !== t.stat.dev) throw new AppError("changed", "That file changed while opening it. Try again.", 409);
     const want = Math.min(st.size, TEXT_LIMIT);
     const buf = Buffer.alloc(want);
     let got = 0;
@@ -121,21 +124,24 @@ export async function saveText(
     if (!dir.stat?.isDirectory()) throw new AppError("not_a_folder", "Choose a folder to create the file in.", 400);
     await assertMutable(dir.real, "create files in");
     const real = path.posix.join(dir.real, name);
-    let fd: fs.promises.FileHandle;
-    try {
-      fd = await fs.promises.open(hostPath(real), fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o644);
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === "EEXIST") throw conflict(`There's already something called ${name} here.`);
-      throw e;
-    }
-    try {
-      await fd.writeFile(bytes);
-      await fd.sync();
-      await fd.chown(dir.stat.uid, dir.stat.gid).catch(() => {});
-    } finally {
-      await fd.close();
-    }
-    const st = await fs.promises.lstat(hostPath(real));
+    const owner = dir.stat;
+    const st = await inDir(dir.real, dir.stat, async (d) => {
+      let fd: fs.promises.FileHandle;
+      try {
+        fd = await openFileIn(d, name, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o644);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === "EEXIST") throw conflict(`There's already something called ${name} here.`);
+        throw e;
+      }
+      try {
+        await fd.writeFile(bytes);
+        await fd.sync();
+        await fd.chown(owner.uid, owner.gid).catch(() => {});
+        return await fd.stat();
+      } finally {
+        await fd.close();
+      }
+    });
     audit(user, { action: "files.create", summary: `Created ${name}`, target: real, detail: { size: bytes.length } }, where);
     return { path: path.posix.join(dir.path, name), size: st.size, mtime: Math.round(st.mtimeMs) };
   }
@@ -154,41 +160,43 @@ export async function saveText(
   if (current.size > TEXT_LIMIT) throw new AppError("too_large", "That file is too large to edit here.", 413);
 
   // Atomic replace (temp + rename) unless the file's identity matters: hard links, or a container
-  // bind-mounts this exact file (it would keep seeing the old inode).
+  // bind-mounts this exact file (it would keep seeing the old inode). Both happen inside the
+  // file's folder opened without following links, on the file that was checked.
   const inPlace = current.nlink > 1 || (await isBindMountedFile(t.real));
-  if (inPlace) {
-    const fh = await fs.promises.open(t.fsPath, fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW);
-    try {
-      await fh.truncate(0);
-      await fh.write(bytes, 0, bytes.length, 0);
-      await fh.sync();
-    } finally {
+  const st = await inParent(t.real, async (d, base) => {
+    if (inPlace) {
+      const fh = await openFileIn(d, base, fs.constants.O_WRONLY, undefined, current);
+      try {
+        await fh.truncate(0);
+        await fh.write(bytes, 0, bytes.length, 0);
+        await fh.sync();
+      } finally {
+        await fh.close();
+      }
+    } else {
+      const tmpName = `.${name}.gluon-${crypto.randomBytes(4).toString("hex")}.tmp`;
+      const fh = await openFileIn(d, tmpName, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, current.mode & 0o7777);
+      try {
+        await fh.writeFile(bytes);
+        await fh.chmod(current.mode & 0o7777);
+        await fh.chown(current.uid, current.gid).catch(() => {});
+        await fh.sync();
+      } catch (e) {
+        await fh.close().catch(() => {});
+        await fs.promises.unlink(d.at(tmpName)).catch(() => {});
+        throw e;
+      }
       await fh.close();
+      // Last check right before replacing.
+      const again = await fs.promises.lstat(d.at(base));
+      if (again.mtimeMs !== current.mtimeMs || again.ino !== current.ino) {
+        await fs.promises.unlink(d.at(tmpName)).catch(() => {});
+        throw new AppError("changed", `${name} was changed by something else while saving. Reload it and try again.`, 409, { mtime: Math.round(again.mtimeMs), size: again.size });
+      }
+      await fs.promises.rename(d.at(tmpName), d.at(base));
     }
-  } else {
-    const tmpReal = path.posix.join(path.posix.dirname(t.real), `.${name}.gluon-${crypto.randomBytes(4).toString("hex")}.tmp`);
-    const tmp = hostPath(tmpReal);
-    const fh = await fs.promises.open(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, current.mode & 0o7777);
-    try {
-      await fh.writeFile(bytes);
-      await fh.chmod(current.mode & 0o7777);
-      await fh.chown(current.uid, current.gid).catch(() => {});
-      await fh.sync();
-    } catch (e) {
-      await fh.close().catch(() => {});
-      await fs.promises.unlink(tmp).catch(() => {});
-      throw e;
-    }
-    await fh.close();
-    // Last check right before replacing.
-    const again = await fs.promises.lstat(t.fsPath);
-    if (again.mtimeMs !== current.mtimeMs || again.ino !== current.ino) {
-      await fs.promises.unlink(tmp).catch(() => {});
-      throw new AppError("changed", `${name} was changed by something else while saving. Reload it and try again.`, 409, { mtime: Math.round(again.mtimeMs), size: again.size });
-    }
-    await fs.promises.rename(tmp, t.fsPath);
-  }
-  const st = await fs.promises.lstat(t.fsPath);
+    return fs.promises.lstat(d.at(base));
+  });
   audit(user, { action: "files.edit", summary: `Edited ${name}`, target: t.real, detail: { before: current.size, after: st.size, inPlace } }, where);
   return { path: t.path, size: st.size, mtime: Math.round(st.mtimeMs) };
 }

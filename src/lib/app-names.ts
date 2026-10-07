@@ -5,7 +5,7 @@
  */
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-const SOURCE_NAME: Record<string, string> = { casaos: "CasaOS", umbrel: "Umbrel", compose: "Compose", docker: "Container" };
+const SOURCE_NAME: Record<string, string> = { gluon: "Gluon", casaos: "CasaOS", umbrel: "Umbrel", compose: "Compose", docker: "Container" };
 
 /** Where an install came from, in words ("CasaOS"). */
 export const sourceName = (source: string) => SOURCE_NAME[source] ?? source;

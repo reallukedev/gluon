@@ -72,10 +72,10 @@ export const hostKey = (hostname: string, port: number | string) => `${hostname.
  * "test send" becomes a way to probe LAN services). Hosts an admin already uses for a server-wide
  * channel (e.g. a household ntfy server) are fine.
  */
-export async function assertReachableTarget(hostname: string, port: number, ctx: SendContext): Promise<void> {
-  if (!ctx.restricted) return;
+export async function assertReachableTarget(hostname: string, port: number, ctx: SendContext): Promise<string | null> {
+  if (!ctx.restricted) return null;
   const bare = hostname.replace(/^\[|\]$/g, "");
-  if (ctx.allowedHosts.has(hostKey(bare, port))) return;
+  if (ctx.allowedHosts.has(hostKey(bare, port))) return null;
   let addrs: string[];
   if (net.isIP(bare)) addrs = [bare];
   else {
@@ -91,6 +91,9 @@ export async function assertReachableTarget(hostname: string, port: number, ctx:
       true,
     );
   }
+  // The address that was checked, so the caller can connect to it and not look the name up again
+  // (a second lookup could be answered with a home address: DNS rebinding).
+  return addrs[0] ?? null;
 }
 
 function portOf(u: URL): number {
@@ -274,9 +277,9 @@ function mailHtml(m: OutMessage): string {
 </div></body></html>`;
 }
 
-function describeMailError(e: unknown, host: string): DeliveryError {
+function describeMailError(e: unknown, host: string, quiet = false): DeliveryError {
   const err = e as { code?: string; responseCode?: number; response?: string; message?: string };
-  const resp = err.response ? ` (${clip(String(err.response).trim(), 160)})` : "";
+  const resp = err.response && !quiet ? ` (${clip(String(err.response).trim(), 160)})` : "";
   switch (err.code) {
     case "EAUTH":
       return new DeliveryError(`The mail server rejected the username or password${resp}. Many providers need an app password.`, true);
@@ -304,15 +307,15 @@ async function sendEmail(c: EmailConfig, m: OutMessage, ctx: SendContext) {
   const smtp = c.via ? ctx.viaConfig : c;
   if (!smtp || !smtp.host) throw new DeliveryError("The mail server this channel sends through was removed. Pick another one.", true);
   const port = smtp.port ?? (smtp.security === "tls" ? 465 : smtp.security === "starttls" ? 587 : 25);
-  await assertReachableTarget(smtp.host, port, c.via ? { ...ctx, restricted: false } : ctx);
+  const checked = await assertReachableTarget(smtp.host, port, c.via ? { ...ctx, restricted: false } : ctx);
   const transport = nodemailer.createTransport({
-    host: smtp.host,
+    host: checked ?? smtp.host,
     port,
     secure: smtp.security === "tls",
     requireTLS: smtp.security === "starttls",
     ignoreTLS: smtp.security === "none",
     auth: smtp.user ? { user: smtp.user, pass: smtp.pass ?? "" } : undefined,
-    tls: { rejectUnauthorized: !smtp.allowSelfSigned },
+    tls: { rejectUnauthorized: !smtp.allowSelfSigned, ...(checked ? { servername: smtp.host } : {}) },
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 20_000,
@@ -324,12 +327,13 @@ async function sendEmail(c: EmailConfig, m: OutMessage, ctx: SendContext) {
       from: fromHeader,
       to: c.to,
       subject: clip(m.title, 200),
-      text: `${m.body}${m.link ? `\n\n${m.linkLabel ?? "Open"}: ${m.link}` : ""}\n\n— Gluon on ${m.serverName}`,
+      text: `${m.body}${m.link ? `\n\n${m.linkLabel ?? "Open"}: ${m.link}` : ""}\n\nSent by Gluon on ${m.serverName}`,
       html: mailHtml(m),
       headers: { "X-Gluon-Event": m.event, ...(m.findingId ? { "X-Gluon-Finding": m.findingId } : {}) },
     });
   } catch (e) {
-    throw describeMailError(e, smtp.host);
+    // A member's own mail server may be anything on the internet: don't echo its replies back.
+    throw describeMailError(e, smtp.host, !!checked);
   } finally {
     transport.close();
   }

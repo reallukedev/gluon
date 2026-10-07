@@ -5,6 +5,8 @@ import { def as immich } from "./kinds/immich";
 import { def as subsonic } from "./kinds/subsonic";
 import { def as slskd } from "./kinds/slskd";
 import { def as homebridge } from "./kinds/homebridge";
+import { def as homeassistant } from "./kinds/homeassistant";
+import { def as coolify } from "./kinds/coolify";
 import { def as genericJson } from "./kinds/generic-json";
 import { INTEGRATION_KINDS, type IntegrationKind, type IntegrationKindInfo } from "@/lib/widgets-types";
 import { notFound } from "../errors";
@@ -18,6 +20,8 @@ export const KINDS: Record<IntegrationKind, AnyDef> = {
   subsonic,
   slskd,
   homebridge,
+  homeassistant,
+  coolify,
   "generic-json": genericJson,
 };
 

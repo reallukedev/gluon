@@ -15,6 +15,7 @@ import { formatBytes } from "@/lib/format";
 import { assertMutable, assertRemovable, authorize, cleanName, freeName } from "./paths";
 import { containerToHost, freeBytes, localFreeBytes, mountOf } from "./mounts";
 import { moveToTrash } from "./trash";
+import { inDir, openFileIn } from "./safe";
 import { displayPath } from "./list";
 
 /**
@@ -271,92 +272,98 @@ async function finalize(user: User, r: Row, where: Where): Promise<UploadSession
   const dir = await authorize(user, r.dest_dir, "write");
   if (!dir.stat?.isDirectory()) throw new AppError("not_a_folder", `${r.dest_dir} isn't a folder any more.`, 409);
   await assertMutable(dir.real, "upload into");
-  let name = r.name;
-  let target = path.posix.join(dir.real, name);
-  let existing: fs.Stats | null = null;
-  try {
-    existing = await fs.promises.lstat(hostPath(target));
-  } catch {
-    /* free */
-  }
-  if (existing) {
-    if (r.conflict === "skip") {
-      fs.rmSync(tempDir(r.id), { recursive: true, force: true });
-      update(r.id, { status: "skipped", final_path: null, error: null });
-      return toSession(one<Row>("SELECT * FROM uploads WHERE id = ?", r.id)!);
-    }
-    if (r.conflict === "rename") {
-      name = await freeName(dir.real, name);
-      target = path.posix.join(dir.real, name);
-    } else {
-      if (existing.isDirectory()) throw new AppError("conflict", `A folder called ${name} is already here, so the file can't replace it.`, 409);
-      await assertRemovable({ real: target, root: dir.root, scope: dir.scope }, "replace");
-      // Overwrite = the old file goes to the trash, never silently lost.
-      await moveToTrash(target, user.id);
-    }
-  }
-
-  const src = tempFile(r.id);
-  const hostSrc = containerToHost(src, dir.real);
-  const sameMount = !!hostSrc && mountOf(hostSrc)?.mount === mountOf(dir.real)?.mount;
-  let staged: string; // host path of the file, next to the target, ready to link/rename
-  if (sameMount) {
-    staged = hostSrc!;
-  } else {
-    const free = freeBytes(dir.real);
-    if (free !== null && r.size > free) throw new AppError("no_space", `${mountOf(dir.real)?.mount ?? "The drive"} only has ${formatBytes(free)} free; ${r.name} needs ${formatBytes(r.size)}.`, 507);
-    staged = path.posix.join(dir.real, `.gluon-upload-${r.id}`);
-    const out = fs.createWriteStream(hostPath(staged), { flags: "wx", mode: 0o644 });
-    await pipeline(fs.createReadStream(src, { highWaterMark: 1024 * 1024 }), out);
-    const fh = await fs.promises.open(hostPath(staged), "r+");
-    await fh.sync().finally(() => fh.close());
-  }
-  try {
-    await fs.promises.chmod(hostPath(staged), 0o644);
-    await fs.promises.chown(hostPath(staged), dir.stat.uid, dir.stat.gid).catch(() => {});
-    if (r.mtime) await fs.promises.utimes(hostPath(staged), new Date(), new Date(r.mtime)).catch(() => {});
-    if (r.conflict === "overwrite") {
-      await fs.promises.rename(hostPath(staged), hostPath(target));
-    } else {
-      // No-clobber: link() fails if the name was taken meanwhile; pick another name then.
-      for (let attempt = 0; ; attempt++) {
-        try {
-          await fs.promises.link(hostPath(staged), hostPath(target));
-          await fs.promises.unlink(hostPath(staged));
-          break;
-        } catch (e) {
-          const code = (e as NodeJS.ErrnoException).code;
-          if (code === "EEXIST" && attempt < 5) {
-            name = await freeName(dir.real, r.name);
-            target = path.posix.join(dir.real, name);
-            continue;
-          }
-          if (code === "EPERM" || code === "ENOTSUP" || code === "EOPNOTSUPP") {
-            // Filesystems without hard links (vfat/exfat): fall back to rename.
-            await fs.promises.rename(hostPath(staged), hostPath(target));
-            break;
-          }
-          throw e;
-        }
+  const owner = dir.stat;
+  // Everything below happens inside the destination opened without following links (and checked
+  // to be the folder that was authorised), so a folder on the way swapped for a link can't redirect it.
+  return inDir(dir.real, dir.stat, async (d) => {
+    let name = r.name;
+    let target = path.posix.join(dir.real, name);
+    const existing = await fs.promises.lstat(d.at(name)).catch(() => null);
+    if (existing) {
+      if (r.conflict === "skip") {
+        fs.rmSync(tempDir(r.id), { recursive: true, force: true });
+        update(r.id, { status: "skipped", final_path: null, error: null });
+        return toSession(one<Row>("SELECT * FROM uploads WHERE id = ?", r.id)!);
+      }
+      if (r.conflict === "rename") {
+        name = await freeName(dir.real, name);
+        target = path.posix.join(dir.real, name);
+      } else {
+        if (existing.isDirectory()) throw new AppError("conflict", `A folder called ${name} is already here, so the file can't replace it.`, 409);
+        await assertRemovable({ real: target, root: dir.root, scope: dir.scope }, "replace");
+        // Overwrite = the old file goes to the trash, never silently lost.
+        await moveToTrash(target, user.id, existing);
       }
     }
-  } catch (e) {
-    if (!sameMount) await fs.promises.unlink(hostPath(staged)).catch(() => {});
-    throw e;
-  }
-  // Make the new directory entry durable.
-  try {
-    const dh = await fs.promises.open(dir.fsPath, "r");
-    await dh.sync().catch(() => {});
-    await dh.close();
-  } catch {
-    /* best effort */
-  }
-  fs.rmSync(tempDir(r.id), { recursive: true, force: true });
-  const finalPath = path.posix.join(r.dest_dir, name);
-  update(r.id, { status: "done", final_path: finalPath, error: null });
-  audit(user, { action: "files.upload", summary: `Uploaded ${name} (${formatBytes(r.size)})`, target: target, detail: { size: r.size, dir: dir.real, renamed: name !== r.name, replaced: !!existing && r.conflict === "overwrite" } }, where);
-  return toSession(one<Row>("SELECT * FROM uploads WHERE id = ?", r.id)!);
+
+    const src = tempFile(r.id);
+    const hostSrc = containerToHost(src, dir.real);
+    const sameMount = !!hostSrc && mountOf(hostSrc)?.mount === mountOf(dir.real)?.mount;
+    // The file, next to the target, ready to link or rename into place: Gluon's own temp file on the
+    // same drive, or a copy written into the destination.
+    const stagedName = `.gluon-upload-${r.id}`;
+    let staged: string;
+    if (sameMount) {
+      staged = hostPath(hostSrc!);
+    } else {
+      const free = freeBytes(dir.real);
+      if (free !== null && r.size > free) throw new AppError("no_space", `${mountOf(dir.real)?.mount ?? "The drive"} only has ${formatBytes(free)} free; ${r.name} needs ${formatBytes(r.size)}.`, 507);
+      staged = d.at(stagedName);
+      const out = await openFileIn(d, stagedName, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o644);
+      try {
+        await pipeline(fs.createReadStream(src, { highWaterMark: 1024 * 1024 }), fs.createWriteStream("", { fd: out.fd, autoClose: false, emitClose: false }));
+        await out.sync();
+      } finally {
+        await out.close().catch(() => {});
+      }
+    }
+    try {
+      // Owner, mode and time are set on the open file, never through a path someone could swap.
+      const fh = await fs.promises.open(staged, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+      try {
+        await fh.chmod(0o644);
+        await fh.chown(owner.uid, owner.gid).catch(() => {});
+        if (r.mtime) await fh.utimes(new Date(), new Date(r.mtime)).catch(() => {});
+      } finally {
+        await fh.close().catch(() => {});
+      }
+      if (r.conflict === "overwrite") {
+        await fs.promises.rename(staged, d.at(name));
+      } else {
+        // No-clobber: link() fails if the name was taken meanwhile; pick another name then.
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await fs.promises.link(staged, d.at(name));
+            await fs.promises.unlink(staged);
+            break;
+          } catch (e) {
+            const code = (e as NodeJS.ErrnoException).code;
+            if (code === "EEXIST" && attempt < 5) {
+              name = await freeName(dir.real, r.name);
+              target = path.posix.join(dir.real, name);
+              continue;
+            }
+            if (code === "EPERM" || code === "ENOTSUP" || code === "EOPNOTSUPP") {
+              // Filesystems without hard links (vfat/exfat): fall back to rename.
+              await fs.promises.rename(staged, d.at(name));
+              break;
+            }
+            throw e;
+          }
+        }
+      }
+    } catch (e) {
+      if (!sameMount) await fs.promises.unlink(d.at(stagedName)).catch(() => {});
+      throw e;
+    }
+    // Make the new directory entry durable.
+    await d.sync();
+    fs.rmSync(tempDir(r.id), { recursive: true, force: true });
+    const finalPath = path.posix.join(r.dest_dir, name);
+    update(r.id, { status: "done", final_path: finalPath, error: null });
+    audit(user, { action: "files.upload", summary: `Uploaded ${name} (${formatBytes(r.size)})`, target: target, detail: { size: r.size, dir: dir.real, renamed: name !== r.name, replaced: !!existing && r.conflict === "overwrite" } }, where);
+    return toSession(one<Row>("SELECT * FROM uploads WHERE id = ?", r.id)!);
+  });
 }
 
 /** Expire abandoned uploads and remove temp folders nobody owns. */

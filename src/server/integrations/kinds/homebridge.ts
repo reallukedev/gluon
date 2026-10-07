@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
-import { arr, client, num, obj, ok, runTest, str, UpstreamError, type KindContext, type KindDef } from "./base";
+import { arr, client, num, obj, ok, runTest, str, UpstreamError, type KindContext, type KindDef, type KindSearchHit } from "./base";
+import { rank, prepare } from "@/lib/search-match";
 import type { AccessoryKind, HomebridgeAccessoriesData, HomebridgeAccessory } from "@/lib/widgets-types";
 
 const schema = z.object({
@@ -60,13 +61,13 @@ async function login(ctx: KindContext<Config>): Promise<string> {
   return token;
 }
 
-async function hb<T>(ctx: KindContext<Config>, path: string): Promise<T> {
+async function hb<T>(ctx: KindContext<Config>, path: string, signal?: AbortSignal): Promise<T> {
   try {
-    return await raw(ctx).json<T>(path);
+    return await raw(ctx).json<T>(path, { signal });
   } catch (e) {
     if (e instanceof UpstreamError && e.upstreamStatus === 401) {
       tokens.delete(tokenKey(ctx));
-      return raw(ctx).json<T>(path);
+      return raw(ctx).json<T>(path, { signal });
     }
     throw e;
   }
@@ -155,11 +156,11 @@ function normalise(services: Record<string, unknown>[], layout: Map<string, { ro
   return out;
 }
 
-async function layoutMap(ctx: KindContext<Config>) {
+async function layoutMap(ctx: KindContext<Config>, signal?: AbortSignal) {
   const map = new Map<string, { room: string; name: string | null; hidden: boolean }>();
   const rooms: string[] = [];
   try {
-    for (const room of arr<Record<string, unknown>>(await hb(ctx, "/api/accessories/layout"))) {
+    for (const room of arr<Record<string, unknown>>(await hb(ctx, "/api/accessories/layout", signal))) {
       const name = str(room.name) ?? "Default Room";
       rooms.push(name);
       for (const s of arr<Record<string, unknown>>(room.services)) {
@@ -172,11 +173,11 @@ async function layoutMap(ctx: KindContext<Config>) {
   return { map, rooms };
 }
 
-async function accessories(ctx: KindContext<Config>, params: Record<string, unknown>): Promise<HomebridgeAccessoriesData> {
+async function accessories(ctx: KindContext<Config>, params: Record<string, unknown>, signal?: AbortSignal): Promise<HomebridgeAccessoriesData> {
   const [list, layout, settings] = await Promise.all([
-    hb<unknown>(ctx, "/api/accessories"),
-    layoutMap(ctx),
-    raw(ctx).json("/api/auth/settings", { noAuth: true }).catch(() => ({})),
+    hb<unknown>(ctx, "/api/accessories", signal),
+    layoutMap(ctx, signal),
+    raw(ctx).json("/api/auth/settings", { noAuth: true, signal }).catch(() => ({})),
   ]);
   let items = normalise(arr<Record<string, unknown>>(list), layout.map);
   const only = Array.isArray(params.only) ? (params.only as string[]) : [];
@@ -189,6 +190,54 @@ async function accessories(ctx: KindContext<Config>, params: Record<string, unkn
   }
   const rooms = [...new Set(items.map((a) => a.room).filter((r): r is string => !!r))];
   return { instance: str(obj(obj(settings).env).homebridgeInstanceName), accessories: items, rooms };
+}
+
+// ------------------------------------------------------------------ universal search
+
+const KIND_WORD: Record<AccessoryKind, string> = {
+  light: "Light",
+  switch: "Switch",
+  outlet: "Plug",
+  fan: "Fan",
+  thermostat: "Thermostat",
+  temperature: "Temperature sensor",
+  humidity: "Humidity sensor",
+  contact: "Contact sensor",
+  motion: "Motion sensor",
+  lock: "Lock",
+  cover: "Blind or door",
+  tv: "TV",
+  air: "Air",
+  other: "Accessory",
+};
+
+/** The accessory's state in a few words: "on", "21.5 °C", "open", "locked". */
+export function stateWords(a: HomebridgeAccessory): string | null {
+  if (a.kind === "temperature" && a.temperature !== null) return `${Math.round(a.temperature * 10) / 10} °C`;
+  if (a.kind === "humidity" && a.humidity !== null) return `${Math.round(a.humidity)}%`;
+  if (a.kind === "thermostat" && a.temperature !== null) return `${Math.round(a.temperature * 10) / 10} °C`;
+  if (a.contact) return a.contact;
+  if (a.locked !== null) return a.locked ? "locked" : "unlocked";
+  if (a.motion !== null) return a.motion ? "motion" : "no motion";
+  if (a.position !== null && a.kind === "cover") return a.position === 0 ? "closed" : a.position === 100 ? "open" : `${a.position}% open`;
+  if (a.on !== null) return a.on ? (a.brightness !== null ? `on, ${a.brightness}%` : "on") : "off";
+  return null;
+}
+
+/** Accessories by name, room or kind ("kitchen", "lights", "front door"), linking to Homebridge's page. */
+async function search(ctx: KindContext<Config>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]> {
+  const data = await accessories(ctx, {}, opts.signal);
+  if (opts.signal.aborted) return [];
+  const page = `${ctx.baseUrl.replace(/\/+$/, "")}/accessories`;
+  return rank(prepare(q), data.accessories, (a) => ({ label: a.name, keywords: `${a.room ?? ""} ${KIND_WORD[a.kind]} ${a.kind}s ${a.type}` }), 0.4)
+    .slice(0, opts.limit)
+    .map(({ item: a }) => ({
+      id: a.id,
+      label: a.name,
+      hint: [KIND_WORD[a.kind], a.room, stateWords(a)].filter(Boolean).join(" · "),
+      url: page,
+      type: a.kind,
+    }));
 }
 
 export const def: KindDef<Config> = {
@@ -243,4 +292,5 @@ export const def: KindDef<Config> = {
   data: {
     "homebridge.accessories": (ctx, p) => accessories(ctx, p),
   },
+  search,
 };

@@ -6,6 +6,7 @@ import { clientInfo } from "@/server/net-zone";
 import { getSetting } from "@/server/settings";
 import { safeNext } from "../safe-next";
 import { LoginForm } from "./LoginForm";
+import { mfaRequired } from "@/server/auth/policy";
 
 export const metadata = { title: "Sign in" };
 
@@ -15,5 +16,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const dest = safeNext(next);
   if (await currentAuth()) redirect(dest);
   const { zone } = clientInfo(await headers());
-  return <LoginForm next={dest} zone={zone} serverName={getSetting("serverName")} adminsNeedCode={getSetting("requireMfaAway")} />;
+  return <LoginForm next={dest} zone={zone} serverName={getSetting("serverName")} adminsNeedCode={mfaRequired("admin", "away")} />;
 }

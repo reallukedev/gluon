@@ -21,7 +21,7 @@ export function FieldNotes({ issues, errors = false, onFix }: { issues: Issue[];
   const shown = issues.filter((i) => errors || i.level !== "error");
   if (!shown.length) return null;
   return (
-    <div className={s.stack} style={{ gap: 4 }}>
+    <div className={s.stackTight}>
       {shown.map((i) => (
         <p key={i.id} className={s.note} data-level={i.level}>
           <span>

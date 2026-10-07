@@ -11,7 +11,8 @@ const body = z.object({ password: z.string().min(1, "Enter your password.").max(
 
 /** "Confirm it's you" before risky actions: password, plus a two-step code when that's on. */
 export const POST = route({ auth: "user", body }, async ({ body, user, session, ip, zone }) => {
-  const subject = `reauth:${user.username}`;
+  // One budget per person across sign-in, re-auth and password change.
+  const subject = `login:${user.username}`;
   guard(subject, ip, zone);
   if (!(await verifyPassword(findById(user.id), body.password))) {
     recordAttempt(subject, ip, false, zone);

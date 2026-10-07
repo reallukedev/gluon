@@ -172,7 +172,7 @@ function cachedChildren(real: string): Row[] {
 
 /**
  * Current size of a folder for a person. Starts a background calculation when there's no recent
- * number (or `refresh`), and returns immediately — the client polls or listens on "files.size".
+ * number (or `refresh`), and returns immediately; the client polls or listens on "files.size".
  */
 export async function folderSize(user: User, p: string, refresh: boolean): Promise<FolderSize> {
   const t = await authorize(user, p, "read");

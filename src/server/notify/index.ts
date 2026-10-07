@@ -2,6 +2,7 @@ import "server-only";
 import { onStart, every } from "../jobs";
 import { subscribe } from "../events";
 import { registerSearch } from "../search";
+import { rank } from "@/lib/search-match";
 import { alertsHref } from "@/lib/settings-links";
 import { followUps, kick, tick, TICK_MS } from "./dispatcher";
 import { allChannels, canSee } from "./channels";
@@ -28,16 +29,22 @@ onStart("notify", () => {
   }
 });
 
-registerSearch((user, q) => {
-  const term = q.toLowerCase();
-  const items = allChannels()
-    .filter((c) => canSee(user, c) && c.name.toLowerCase().includes(term))
-    .slice(0, 5)
-    .map((c) => ({
-      id: `channel:${c.id}`,
-      label: c.name,
-      hint: `Notification channel · ${c.kind}`,
-      href: user.role === "admin" ? alertsHref("notifications", { channel: c.id }) : `/settings/notifications`,
-    }));
-  return { name: "Notifications", items };
+registerSearch({
+  key: "channels",
+  name: "Notifications",
+  priority: 62,
+  run(user, _q, ctx) {
+    const visible = allChannels().filter((c) => canSee(user, c));
+    const items = rank(ctx.query, visible, (c) => ({ label: c.name, keywords: `notification channel alert ${c.kind}` }))
+      .slice(0, 5)
+      .map(({ item: c, score }) => ({
+        id: `channel:${c.id}`,
+        label: c.name,
+        hint: `Notification channel · ${c.kind}`,
+        icon: "bell",
+        href: user.role === "admin" ? alertsHref("notifications", { channel: c.id }) : `/settings/notifications`,
+        score,
+      }));
+    return { name: "Notifications", items };
+  },
 });

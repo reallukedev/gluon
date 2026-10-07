@@ -1,4 +1,5 @@
 import "server-only";
+import { assertNoAppWork } from "../apps/lock";
 import { docker } from "../docker/client";
 import { AppError } from "../errors";
 import { formatBytes } from "@/lib/format";
@@ -141,6 +142,7 @@ export async function getVolume(name: string): Promise<DockerVolume> {
 
 /** Remove one volume. Docker refuses volumes any container (even a stopped one) mounts; so does Gluon, first, in words. */
 export async function removeVolume(name: string, confirm?: string): Promise<{ message: string; freed: number | null }> {
+  assertNoAppWork("remove volumes");
   const v = await getVolume(name);
   const label = v.anonymous ? `unnamed volume ${name.slice(0, 12)}` : name;
   if (v.guard?.level === "block") throw new AppError("protected", `${v.guard.message} Gluon won't remove it.`, 409);

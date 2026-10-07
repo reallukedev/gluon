@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
-import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef } from "./base";
+import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef, type KindSearchHit } from "./base";
+import { matchScore, prepare } from "@/lib/search-match";
 import type { SlskdTransfer, SlskdTransfersData } from "@/lib/widgets-types";
 
 const schema = z
@@ -56,7 +57,7 @@ async function login(ctx: KindContext<Config>): Promise<string> {
 }
 
 /** GET JSON, signing in again once if slskd has forgotten the token (it restarted, or it expired early). */
-async function get<T = unknown>(ctx: KindContext<Config>, path: string, opts: { maxBytes?: number } = {}): Promise<T> {
+async function get<T = unknown>(ctx: KindContext<Config>, path: string, opts: { maxBytes?: number; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<T> {
   try {
     return await http(ctx).json<T>(path, opts);
   } catch (e) {
@@ -161,6 +162,47 @@ async function transfers(ctx: KindContext<Config>, params: Record<string, unknow
   };
 }
 
+// ------------------------------------------------------------------ universal search
+
+const STATE_WORD: Record<SlskdTransfer["state"], string> = { active: "Downloading", queued: "Queued", done: "Downloaded", failed: "Didn't finish" };
+
+/**
+ * Only what slskd already has: files it downloaded (or is downloading) and searches someone ran
+ * before. Never starts a Soulseek search, which would go out to the network.
+ */
+export function searchHits(ctx: KindContext<Config>, downloads: unknown, searches: unknown, q: string, limit: number): KindSearchHit[] {
+  const query = prepare(q);
+  const base = ctx.baseUrl.replace(/\/+$/, "");
+  const out: { hit: KindSearchHit; score: number; i: number }[] = [];
+  const seen = new Set<string>();
+  flatten(downloads, "download").forEach((t, i) => {
+    const score = matchScore(query, { label: t.file, keywords: t.folder ?? "", hint: t.user });
+    const key = `${t.folder}/${t.file}`;
+    if (score < 0.4 || seen.has(key)) return;
+    seen.add(key);
+    out.push({ i, score, hit: { id: `dl:${t.id}`, label: t.file, hint: [STATE_WORD[t.state], t.folder, `from ${t.user}`].filter(Boolean).join(" · "), url: `${base}/downloads`, type: "download" } });
+  });
+  arr<Record<string, unknown>>(searches).forEach((x, i) => {
+    const text = str(x.searchText);
+    const id = str(x.id);
+    if (!text || !id) return;
+    const score = matchScore(query, { label: text });
+    if (score < 0.5) return;
+    const files = num(x.fileCount);
+    out.push({ i: 10_000 + i, score: score * 0.95, hit: { id: `search:${id}`, label: text, hint: ["Earlier search", files !== null ? `${files} file${files === 1 ? "" : "s"} found` : null].filter(Boolean).join(" · "), url: `${base}/searches/${encodeURIComponent(id)}`, type: "search" } });
+  });
+  return out.sort((a, b) => b.score - a.score || a.i - b.i).slice(0, limit).map((x) => x.hit);
+}
+
+async function search(ctx: KindContext<Config>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]> {
+  const [downloads, searches] = await Promise.all([
+    get(ctx, "/api/v0/transfers/downloads", { maxBytes: 16 * 1024 * 1024, signal: opts.signal, timeoutMs: 1800 }),
+    get(ctx, "/api/v0/searches", { signal: opts.signal, timeoutMs: 1800 }).catch(() => []),
+  ]);
+  if (opts.signal.aborted) return [];
+  return searchHits(ctx, downloads, searches, q, opts.limit);
+}
+
 export const def: KindDef<Config> = {
   kind: "slskd",
   label: "slskd",
@@ -205,4 +247,5 @@ export const def: KindDef<Config> = {
   data: {
     "slskd.transfers": (ctx, p) => transfers(ctx, p),
   },
+  search,
 };

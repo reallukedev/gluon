@@ -17,7 +17,9 @@ together: one calm web app for everything running on the box, however it got the
 - **Storage.** Disks as the physical things they are, a map of what's using space, mounting drives
   and making mounts survive a restart, renaming mount points (with the apps that use them).
 - **Network.** Which apps are on the internet, at what address, whether each one works and whether
-  it asks for a login, drawn as a map from the visitor to the app. Manages Caddy routes.
+  it asks for a login, drawn as a map from the visitor to the app. Manages Caddy routes. XMPP chat
+  servers (Prosody and friends) get their own kind of address: sign-in, federation and certificate
+  checks, and Gluon copies Caddy's certificate into the chat server before its own can expire.
 - **System.** OS updates, services, power, who's signed in over SSH, temperatures and memory by app.
 - **Diagnostics.** A checkup that runs 60+ checks in seconds, targeted checks for "an app won't open"
   or "the internet is slow", and live traffic, connections, requests, processes and logs.

@@ -1,6 +1,6 @@
 "use client";
 /**
- * Disclosure — "Details", "Advanced", "Show output": a quiet row that opens a section in place.
+ * Disclosure: "Details", "Advanced", "Show output": a quiet row that opens a section in place.
  *
  *   <Disclosure summary="Advanced">…</Disclosure>
  *   <Disclosure summary="Show output" meta="42 lines" defaultOpen>…</Disclosure>

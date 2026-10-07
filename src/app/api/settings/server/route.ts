@@ -5,6 +5,7 @@ import { AppError } from "@/server/errors";
 import { getSetting, setSetting } from "@/server/settings";
 import { audit } from "@/server/audit";
 import { hasRecentAuth } from "@/server/auth/session";
+import { mfaPolicy } from "@/server/auth/policy";
 import { localIpv6Prefixes, resetZoneCache } from "@/server/net-zone";
 
 const cidr = z.string().max(64).refine((v) => {
@@ -26,7 +27,14 @@ const body = z.object({
   serverName: z.string().trim().min(1, "Give the server a name.").max(40).optional(),
   publicHost: z.string().trim().max(253).regex(/^$|^[a-z0-9.-]+$/i, "Use a plain hostname, like home.example.com").optional(),
   homeNetworks: z.array(cidr).max(32).optional(),
-  requireMfaAway: z.boolean().optional(),
+  mfaPolicy: z.enum(["off", "admins-away", "admins", "everyone-away", "everyone"]).optional(),
+  passwordPolicy: z
+    .object({
+      minLength: z.number().int().min(4, "Passwords need at least 4 characters.").max(64, "64 characters is the most Gluon can require."),
+      notUsername: z.boolean(),
+      lettersAndNumbers: z.boolean(),
+    })
+    .optional(),
   sessionDays: z.number().int().min(1).max(90).optional(),
   awaySessionDays: z.number().int().min(1).max(90).optional(),
   householdCanSeeStatus: z.boolean().optional(),
@@ -48,7 +56,8 @@ function current() {
     baseDomain: getSetting("baseDomain"),
     homeNetworks: getSetting("homeNetworks"),
     detectedPrefixes: localIpv6Prefixes().map((p) => `${p}/64`),
-    requireMfaAway: getSetting("requireMfaAway"),
+    mfaPolicy: mfaPolicy(),
+    passwordPolicy: getSetting("passwordPolicy"),
     sessionDays: getSetting("sessionDays"),
     awaySessionDays: getSetting("awaySessionDays"),
     householdCanSeeStatus: getSetting("householdCanSeeStatus"),
@@ -59,7 +68,7 @@ function current() {
 export const GET = route({ auth: "admin" }, () => current());
 
 /** Settings that decide who counts as "home" and how sign-in works: changing them needs a fresh confirm. */
-const SECURITY_KEYS = ["homeNetworks", "requireMfaAway", "sessionDays", "awaySessionDays", "publicHost"] as const;
+const SECURITY_KEYS = ["homeNetworks", "mfaPolicy", "passwordPolicy", "sessionDays", "awaySessionDays", "publicHost"] as const;
 
 export const PATCH = route({ auth: "admin", body }, ({ body, user, session, ip, zone }) => {
   const now = current();

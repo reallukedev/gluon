@@ -45,7 +45,17 @@ export interface SubdomainRoute extends Base {
   backend: Backend;
   only_paths?: string[];
   extra_paths?: ExtraPaths[];
+  /** An XMPP chat server: `host` is its domain, `backend` its client (c2s) port. */
+  xmpp?: XmppSettings;
 }
+export interface XmppSettings {
+  s2s_port: number | null;
+  http_port: number | null;
+  cert_sync: { container: string; dir: string } | null;
+}
+
+export const XMPP_C2S_PORT = 5222;
+export const XMPP_S2S_PORT = 5269;
 export interface PathRoute extends Base {
   type: "path";
   path: string;
@@ -226,7 +236,12 @@ export function renderCaddyfile(cfg: RoutesConfig): string {
   out.push(`\t# Everything else -> ${commentSafe(cfg.fallback.name)}`, "\thandle {", ...backendLines(cfg.fallback.backend, 2), "\t}", "}");
   for (const r of routes.filter((r): r is SubdomainRoute => r.type === "subdomain").sort((a, b) => a.host.localeCompare(b.host))) {
     const dns = coveredByWildcard(r.host, base) ? "A + AAAA via the wildcard record" : "needs its own DNS record";
-    out.push("", `# ${commentSafe(r.name)}. DNS-only (grey cloud), ${dns}.`, ...noteLines(r, ""), `${r.host} {`, "\timport common");
+    out.push("", `# ${commentSafe(r.name)}. DNS-only (grey cloud), ${dns}.`, ...noteLines(r, ""));
+    if (r.xmpp) {
+      out.push(...xmppSiteLines(r, r.xmpp, tileMap));
+      continue;
+    }
+    out.push(`${r.host} {`, "\timport common");
     out.push("", "\t# App-tile map for dashboards served here (see the base domain block).", "\theader /_domains/app-links.js >Cache-Control no-store", ...tileMap);
     (r.extra_paths ?? []).forEach((x, i) => {
       const note = x.note ? wrap(x.note, 76).map((l) => `\t# ${commentSafe(l)}`) : [];
@@ -251,6 +266,58 @@ export function renderCaddyfile(cfg: RoutesConfig): string {
   return out.join("\n") + "\n";
 }
 
+/**
+ * A chat server's web address. XMPP itself never goes through Caddy (apps connect straight to
+ * the client port, other servers to the federation port); this block exists so Caddy holds a
+ * certificate for the domain, which Gluon copies into the chat server, and to front its HTTP side.
+ */
+function xmppSiteLines(r: SubdomainRoute, x: XmppSettings, tileMap: string[]): string[] {
+  const h = r.host;
+  const ports = [`${r.backend.port}`, ...(x.s2s_port ? [`other servers to ${x.s2s_port}`] : [])].join(" and ");
+  const out = [
+    `# Chat apps connect straight to port ${ports}, not through Caddy.`,
+    "# Caddy holds the certificate Gluon copies into the chat server.",
+    `${h} {`,
+    "\timport common",
+    "",
+    "\t# App-tile map for dashboards served here (see the base domain block).",
+    "\theader /_domains/app-links.js >Cache-Control no-store",
+    ...tileMap,
+    "",
+  ];
+  if (x.http_port) {
+    const bosh = `https://${h}/http-bind`;
+    const ws = `wss://${h}/xmpp-websocket`;
+    out.push(
+      "\t# Web chat apps look up the connection endpoints here (XEP-0156).",
+      "\t@xmpp_discovery path /.well-known/host-meta /.well-known/host-meta.json",
+      '\theader @xmpp_discovery Access-Control-Allow-Origin "*"',
+      "\thandle /.well-known/host-meta {",
+      '\t\theader Content-Type "application/xrd+xml; charset=utf-8"',
+      `\t\trespond \`<?xml version='1.0' encoding='utf-8'?><XRD xmlns='http://docs.oasis-open.org/ns/xri/xrd-1.0'><Link rel='urn:xmpp:alt-connections:xbosh' href='${bosh}'/><Link rel='urn:xmpp:alt-connections:websocket' href='${ws}'/></XRD>\` 200`,
+      "\t}",
+      "\thandle /.well-known/host-meta.json {",
+      '\t\theader Content-Type "application/json"',
+      `\t\trespond \`{"links":[{"rel":"urn:xmpp:alt-connections:xbosh","href":"${bosh}"},{"rel":"urn:xmpp:alt-connections:websocket","href":"${ws}"}]}\` 200`,
+      "\t}",
+      "",
+      "\t# BOSH, WebSocket and file uploads: the chat server's own web port.",
+      "\thandle {",
+      ...backendLines({ host: r.backend.host, port: x.http_port, tls: false }, 2),
+      "\t}",
+    );
+  } else {
+    out.push(
+      "\thandle {",
+      '\t\theader Content-Type "text/plain; charset=utf-8"',
+      `\t\trespond "${h} is a chat server. Sign in with any XMPP app as you@${h}." 200`,
+      "\t}",
+    );
+  }
+  out.push("}");
+  return out;
+}
+
 // ---------------------------------------------------------------- validation
 
 const HOST_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
@@ -259,6 +326,10 @@ const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 const PATH_RE = /^\/[A-Za-z0-9._~-]+(\/[A-Za-z0-9._~-]+)*$/;
 const MATCH_RE = /^\/[A-Za-z0-9._~/-]*\*?$/;
 const URL_RE = /^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?(\/[A-Za-z0-9._~%/-]*)?$/;
+
+const CONTAINER_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
+const DIR_RE = /^(\/[A-Za-z0-9._-]+)+$/;
+export const PROSODY_CERT_DIR = "/etc/prosody/certs";
 
 function invalid(message: string, routeId?: string, field?: string): never {
   throw new AppError("invalid_route", message, 400, { route: routeId, field });
@@ -274,6 +345,31 @@ function cleanBackend(b: Partial<Backend> | undefined, rid: string): Backend {
   const port = Number(b.port);
   if (!Number.isInteger(port) || port < 1 || port > 65535) invalid("Backend port must be between 1 and 65535.", rid, "port");
   return { host, port, tls: !!b.tls };
+}
+
+function cleanPort(v: unknown, rid: string, field: string, label: string): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const port = Number(v);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) invalid(`${label} must be between 1 and 65535.`, rid, field);
+  return port;
+}
+
+function cleanXmpp(raw: Record<string, unknown>, backend: Backend, rid: string): XmppSettings {
+  const s2s = cleanPort(raw.s2s_port, rid, "s2s_port", "The federation port");
+  const httpPort = cleanPort(raw.http_port, rid, "http_port", "The chat server's web port");
+  if (httpPort !== null && httpPort === backend.port) invalid("The web port can't be the same as the port chat apps connect to.", rid, "http_port");
+  if (s2s !== null && s2s === backend.port) invalid("The federation port can't be the same as the port chat apps connect to.", rid, "s2s_port");
+  if (s2s !== null && httpPort !== null && s2s === httpPort) invalid("The web port can't be the same as the federation port.", rid, "http_port");
+  let sync: XmppSettings["cert_sync"] = null;
+  const cs = raw.cert_sync as Record<string, unknown> | null | undefined;
+  if (cs && typeof cs === "object") {
+    const container = String(cs.container ?? "").trim();
+    const dir = String(cs.dir ?? PROSODY_CERT_DIR).trim().replace(/\/+$/, "") || PROSODY_CERT_DIR;
+    if (!CONTAINER_RE.test(container)) invalid("Choose which container runs the chat server.", rid, "cert_container");
+    if (!DIR_RE.test(dir) || dir.split("/").includes("..")) invalid(`“${dir}” isn't a valid folder inside the container.`, rid, "cert_dir");
+    sync = { container, dir };
+  }
+  return { s2s_port: s2s, http_port: httpPort, cert_sync: sync };
 }
 
 /** Validate a full config from the client. Base domain always comes from the stored config. */
@@ -322,6 +418,12 @@ export function cleanConfig(raw: { routes: unknown[]; fallback?: RoutesConfig["f
         cleanExtras.push({ paths: xp, backend: cleanBackend(x.backend as Partial<Backend>, rid), ...(xn ? { note: xn } : {}) });
       }
       if (cleanExtras.length) out.extra_paths = cleanExtras;
+      if (r.xmpp && typeof r.xmpp === "object") {
+        out.xmpp = cleanXmpp(r.xmpp as Record<string, unknown>, out.backend as Backend, rid);
+        // A chat server publishes its whole domain; path limits don't apply.
+        delete out.only_paths;
+        delete out.extra_paths;
+      }
     } else if (r.type === "path" || r.type === "redirect") {
       const p = "/" + String(r.path ?? "").trim().replace(/^\/+|\/+$/g, "");
       if (!PATH_RE.test(p)) invalid("Paths can use letters, numbers and . _ ~ - (e.g. /photos).", rid, "path");

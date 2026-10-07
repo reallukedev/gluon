@@ -1,16 +1,21 @@
 import "server-only";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { tryReadConfig, caddyRunning, type RoutesConfig } from "../caddy/routes";
+import { tryReadConfig, caddyRunning, XMPP_C2S_PORT, XMPP_S2S_PORT, type RoutesConfig, type SubdomainRoute } from "../caddy/routes";
 import { AppError } from "../errors";
 import { getSetting } from "../settings";
 import { publish } from "../events";
 import { ddnsStatus } from "./ddns";
 import { resolveName, probeTls, probeHttpViaCaddy, probeBackend, lookupPublicIpv4 } from "./probes";
+import { checkSrv, probeXmpp } from "./xmpp-probe";
+import { certSyncState } from "./xmpp-certs";
+import { xmppVerdict } from "./xmpp-verdict";
 import { routeApps, routeUrls, FALLBACK_ID } from "./routes-meta";
 import { caddyCertError } from "../diagnostics/caddy-log";
 import { compressIpv6 } from "./sockets";
-import type { DnsResult, NetworkStatus, ProbeState, RouteAppRef, RouteStatus, TlsResult } from "@/lib/network-types";
+import type { DnsResult, NetworkStatus, ProbeState, RouteAppRef, RouteStatus, TlsResult, XmppStatus } from "@/lib/network-types";
+
+export { xmppVerdict };
 
 /**
  * Health of every public address: DNS (public resolvers), certificate (TLS handshake with Caddy
@@ -74,9 +79,17 @@ function evaluate(s: Omit<RouteStatus, "state" | "summary">, redirect: boolean, 
   const who = s.app?.name ?? s.name;
   if (!s.enabled) return { state: "disabled", summary: "Turned off. It isn't reachable from the internet." };
   if (s.backend && !s.backend.reachable) return { state: "fault", summary: `${who} isn't answering on port ${s.backend.port}: ${s.backend.error}.` };
+  const chat = s.xmpp ? xmppVerdict(s.xmpp) : null;
+  if (chat?.state === "fault") return chat;
   if (s.dns?.status === "missing") return { state: "fault", summary: s.dns.message };
   const tls = s.tls;
   if (tls?.status === "expired") return { state: "fault", summary: tls.message };
+  // A chat server's web page is a side door: when it breaks, chat apps still work.
+  const webBroken = !!(s.http?.error && tls?.status !== "pending") || !!(s.http?.status && s.http.status >= 500);
+  if (s.xmpp && webBroken) {
+    if (chat) return chat;
+    return { state: "attention", summary: `The web page at ${s.host} isn't loading (${s.http?.error ?? `HTTP ${s.http?.status}`}). Chat apps aren't affected.` };
+  }
   if (s.http?.error && tls?.status !== "pending") return { state: "fault", summary: `Caddy isn't serving it: ${s.http.error}` };
   if (s.http?.status && s.http.status >= 500) {
     const code = s.http.status;
@@ -94,8 +107,32 @@ function evaluate(s: Omit<RouteStatus, "state" | "summary">, redirect: boolean, 
   if (redirect && s.http?.status && (s.http.status < 300 || s.http.status >= 400)) {
     return { state: "attention", summary: `Expected a redirect but got HTTP ${s.http.status}.` };
   }
+  if (chat) return chat;
+  if (s.xmpp) return { state: "ok", summary: `Working. Chat apps sign in as name@${s.xmpp.domain}.` };
   const ms = s.http?.ms;
   return { state: "ok", summary: redirect ? `Redirects to ${s.http?.location ?? "its target"}.` : `Working${ms !== null && ms !== undefined ? ` (answered in ${ms} ms)` : ""}.` };
+}
+
+async function chatStatus(r: SubdomainRoute & { xmpp: NonNullable<SubdomainRoute["xmpp"]> }, certDays: number): Promise<XmppStatus> {
+  const x = r.xmpp;
+  const host = r.backend.host;
+  const [client, server, c2s, s2s, web] = await Promise.all([
+    checkSrv("xmpp-client", r.host, r.backend.port, XMPP_C2S_PORT),
+    checkSrv("xmpp-server", r.host, x.s2s_port, XMPP_S2S_PORT),
+    probeXmpp({ host, port: r.backend.port, domain: r.host, kind: "client", certDays }),
+    x.s2s_port ? probeXmpp({ host, port: x.s2s_port, domain: r.host, kind: "server", certDays }) : Promise.resolve(null),
+    x.http_port ? probeBackend(host, x.http_port) : Promise.resolve(null),
+  ]);
+  const { openRegistration, ...c2sPort } = c2s;
+  return {
+    domain: r.host,
+    srv: { client, server },
+    c2s: c2sPort,
+    s2s: s2s ? { port: s2s.port, reachable: s2s.reachable, ms: s2s.ms, error: s2s.error, tls: s2s.tls } : null,
+    web,
+    openRegistration,
+    certSync: x.cert_sync ? (certSyncState(r.id) ?? { container: x.cert_sync.container, checkedAt: null, copiedAt: null, ok: true, message: "Gluon checks the certificate shortly after start-up." }) : null,
+  };
 }
 
 async function build(): Promise<NetworkStatus> {
@@ -155,20 +192,21 @@ async function build(): Promise<NetworkStatus> {
         const backendCfg = r ? (r.type === "redirect" ? null : r.backend) : cfg.fallback.backend;
         const common = { id, name: r?.name ?? cfg.fallback.name, type, url: urls[id]!, host: hostName, enabled, app: apps[id] ?? null } as const;
         if (!enabled) {
-          const partial = { ...common, dns: null, tls: null, http: null, backend: null };
+          const partial = { ...common, dns: null, tls: null, http: null, backend: null, xmpp: null };
           return { ...partial, ...evaluate(partial, false, null) };
         }
-        const [dns, tls, http, backend] = await Promise.all([
+        const [dns, tls, http, backend, xmpp] = await Promise.all([
           dnsFor(hostName),
           tlsFor(hostName),
           probeHttpViaCaddy(hostName, probePath(r)),
           backendCfg ? probeBackend(backendCfg.host, backendCfg.port) : Promise.resolve(null),
+          r?.type === "subdomain" && r.xmpp ? chatStatus(r as SubdomainRoute & { xmpp: NonNullable<SubdomainRoute["xmpp"]> }, certDays) : Promise.resolve(null),
         ]);
         if (tls.status === "pending") {
           seenPending.add(hostName);
           if (!s.pendingSince.has(hostName)) s.pendingSince.set(hostName, Date.now());
         }
-        const partial = { ...common, dns, tls, http, backend };
+        const partial = { ...common, dns, tls, http, backend, xmpp };
         return { ...partial, ...evaluate(partial, r?.type === "redirect", s.pendingSince.get(hostName) ?? null) };
       }),
     ),

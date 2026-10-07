@@ -161,7 +161,7 @@ export function showTimestamp(v: string | undefined): number | null {
   if (!v || v === "n/a" || v === "0") return null;
   const m = v.match(/^@(\d+)$/);
   if (m) return Number(m[1]) * 1000 || null;
-  // "Fri 2026-09-25 17:32:54 CDT" — Date can't parse the zone abbreviation reliably; drop it and
+  // "Fri 2026-09-25 17:32:54 CDT": Date can't parse the zone abbreviation reliably; drop it and
   // accept the result as host-local time only when it looks sane.
   const d = Date.parse(v.replace(/^\w{3} /, "").replace(/ [A-Z]{2,5}$/, ""));
   return Number.isFinite(d) ? d : null;

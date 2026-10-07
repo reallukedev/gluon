@@ -18,7 +18,7 @@ import type { LocalWidgetAvailability } from "./home-widgets-types";
 // Integrations
 // =====================================================================================================================
 
-export const INTEGRATION_KINDS = ["jellyfin", "immich", "subsonic", "slskd", "homebridge", "generic-json"] as const;
+export const INTEGRATION_KINDS = ["jellyfin", "immich", "subsonic", "slskd", "homebridge", "homeassistant", "coolify", "generic-json"] as const;
 export type IntegrationKind = (typeof INTEGRATION_KINDS)[number];
 
 /** One input on the "connect an app" form. */
@@ -36,7 +36,7 @@ export interface IntegrationField {
   showWhen?: { key: string; in: string[] };
 }
 
-/** GET /api/integrations/kinds — everything the admin form needs to render one kind. */
+/** GET /api/integrations/kinds: everything the admin form needs to render one kind. */
 export interface IntegrationKindInfo {
   kind: IntegrationKind;
   label: string;
@@ -52,7 +52,7 @@ export interface IntegrationKindInfo {
 
 export interface SecretState {
   set: boolean;
-  /** e.g. "••••3f2a" — enough to recognise which key is stored. null when not set or too short to hint. */
+  /** e.g. "••••3f2a": enough to recognise which key is stored. null when not set or too short to hint. */
   hint: string | null;
 }
 
@@ -112,7 +112,7 @@ export interface IntegrationTestResult {
   ms: number;
 }
 
-/** GET /api/integrations/suggestions — apps on this server Gluon knows how to connect to. */
+/** GET /api/integrations/suggestions: apps on this server Gluon knows how to connect to. */
 export interface IntegrationSuggestion {
   /** Stable key: `${kind}:${appId}:${port}`. */
   key: string;
@@ -149,6 +149,9 @@ export const WIDGET_TYPES = [
   "subsonic.recent",
   "slskd.transfers",
   "homebridge.accessories",
+  "homeassistant.entities",
+  "homeassistant.people",
+  "coolify.deployments",
   "json.fields",
   "weather",
   "calendar",
@@ -169,6 +172,9 @@ export const WIDGET_SOURCE: Record<WidgetType, IntegrationKind | null> = {
   "subsonic.recent": "subsonic",
   "slskd.transfers": "slskd",
   "homebridge.accessories": "homebridge",
+  "homeassistant.entities": "homeassistant",
+  "homeassistant.people": "homeassistant",
+  "coolify.deployments": "coolify",
   "json.fields": "generic-json",
   weather: null,
   calendar: null,
@@ -188,6 +194,9 @@ export const WIDGET_REFRESH_MS: Record<WidgetType, number> = {
   "subsonic.recent": 60_000,
   "slskd.transfers": 5_000,
   "homebridge.accessories": 15_000,
+  "homeassistant.entities": 10_000,
+  "homeassistant.people": 30_000,
+  "coolify.deployments": 10_000,
   "json.fields": 30_000,
   weather: 900_000,
   calendar: 900_000,
@@ -213,6 +222,11 @@ const calendarUrl = z
   .trim()
   .transform((s) => s.replace(/^webcals?:\/\//i, "https://"))
   .pipe(url);
+
+/** `light.kitchen`, `sensor.living_room_temperature`: Home Assistant's own format. */
+export const HA_ENTITY_ID = /^[a-z0-9_]{1,64}\.[a-z0-9_]{1,190}$/;
+/** Most entities one Home Assistant widget may show. */
+export const HA_MAX_PICKED = 60;
 
 /** Booleans arrive as strings in GET query params ("false" must stay false). */
 const bool = (dflt: boolean) =>
@@ -248,6 +262,14 @@ export const widgetConfigSchemas = {
       only: list(z.array(z.string().max(128)).max(100)).default([]),
     })
     .strip(),
+  "homeassistant.entities": z
+    .object({
+      /** Entity ids to show, in this order. Empty = nothing picked yet. */
+      only: list(z.array(z.string().regex(HA_ENTITY_ID, "That isn't a Home Assistant entity.")).max(HA_MAX_PICKED)).default([]),
+    })
+    .strip(),
+  "homeassistant.people": z.object({}).strip(),
+  "coolify.deployments": z.object({ limit: z.coerce.number().int().min(1).max(20).default(6) }).strip(),
   "json.fields": z.object({}).strip(),
   weather: z
     .object({
@@ -359,7 +381,7 @@ export interface InstalledApp {
   duplicate: boolean;
 }
 
-/** POST /api/integrations/sign-in — connect Jellyfin or Immich by signing in once; Gluon keeps only the key it makes. */
+/** POST /api/integrations/sign-in: connect Jellyfin or Immich by signing in once; Gluon keeps only the key it makes. */
 export const SIGN_IN_KINDS = ["jellyfin", "immich"] as const;
 export type SignInKind = (typeof SIGN_IN_KINDS)[number];
 
@@ -370,7 +392,7 @@ export interface SignInResult {
   account: string;
 }
 
-/** GET /api/widgets/catalog — what this person can add. */
+/** GET /api/widgets/catalog: what this person can add. */
 export interface WidgetCatalog {
   /** Installed apps this person can see, integrable ones first. */
   apps: InstalledApp[];
@@ -419,7 +441,7 @@ export interface NowPlayingSession {
     kind: MediaKind;
     /** Episode/track/movie title. */
     title: string;
-    /** "Show name · S2 E5", "Artist — Album", or null. */
+    /** "Show name · S2 E5", "Artist · Album", or null. */
     subtitle: string | null;
     year: number | null;
     image: string | null;
@@ -633,6 +655,201 @@ export interface HomebridgeAccessoriesData {
   rooms: string[];
 }
 
+// ------------------------------------------------------------------ Home Assistant
+
+/** Which icon a thing gets: the domain, refined by its device class (a door sensor, a garage cover). */
+export type HaIcon =
+  | "light"
+  | "switch"
+  | "outlet"
+  | "fan"
+  | "cover"
+  | "garage"
+  | "blind"
+  | "climate"
+  | "lock"
+  | "scene"
+  | "script"
+  | "button"
+  | "temperature"
+  | "humidity"
+  | "power"
+  | "energy"
+  | "battery"
+  | "door"
+  | "window"
+  | "motion"
+  | "presence"
+  | "leak"
+  | "smoke"
+  | "media"
+  | "tv"
+  | "vacuum"
+  | "alarm"
+  | "person"
+  | "valve"
+  | "sensor";
+
+/**
+ * What pressing a thing does. `toggle` switches it on or off, `cover` opens or closes it, `run` starts a scene or
+ * script, `press` presses a button. null = it can only be looked at from Gluon (locks, alarms, thermostats, sensors).
+ */
+export type HaControl = "toggle" | "cover" | "run" | "press";
+
+export interface HomeAssistantEntity {
+  /** entity_id, e.g. "light.kitchen". */
+  id: string;
+  domain: string;
+  name: string;
+  area: string | null;
+  icon: HaIcon;
+  /** The state in words: "On", "Open", "Locked", "Heating", "Motion". null when a number or a time says it better. */
+  words: string | null;
+  /** A reading: sensor value, brightness or position in %, a thermostat's current temperature. */
+  value: number | null;
+  /** Unit of `value` and `target` as Home Assistant reports it ("°C", "%", "kWh"). Temperatures are converted on the client. */
+  unit: string | null;
+  /** A thermostat's or humidifier's target. */
+  target: number | null;
+  /** Extra line: what a media player is playing. */
+  detail: string | null;
+  /** Lit, open, running, playing, motion seen: drawn as an active tile. */
+  active: boolean;
+  /** Home Assistant says "unavailable" or "unknown". */
+  unavailable: boolean;
+  control: HaControl | null;
+  /** For toggle and cover controls: whether it's on / open right now. */
+  on: boolean | null;
+  /** An admin shared it with the household: members may see it. */
+  shared: boolean;
+  /** An admin let household members press it (never for locks, alarms, garage doors, gates or doors). Admins always can. */
+  household: boolean;
+  changedAt: number | null;
+  /** Scenes, scripts and buttons: when it was last used. */
+  lastUsedAt: number | null;
+}
+
+export interface HomeAssistantEntitiesData {
+  /** The home's name in Home Assistant ("Home"). */
+  location: string | null;
+  /** The picked entities that still exist, in the picked order. */
+  entities: HomeAssistantEntity[];
+  /** Picked entity ids Home Assistant doesn't have any more. */
+  missing: string[];
+  /**
+   * Household members only: picked ids an admin hasn't shared with the household. Nothing about them is sent, not
+   * even whether they exist; the widget shows a "not shared with you" tile in their place.
+   */
+  notShared: string[];
+}
+
+export interface HomeAssistantPerson {
+  id: string;
+  name: string;
+  /** home, away (not_home), a named zone ("Work"), or unknown. */
+  where: "home" | "away" | "zone" | "unknown";
+  /** The zone's name when `where` is "zone". */
+  place: string | null;
+  since: number | null;
+  image: string | null;
+}
+
+export interface HomeAssistantPeopleData {
+  people: HomeAssistantPerson[];
+  home: number;
+  /** An admin chose to show where people are (zone names). Off by default; when off, no place names are sent. */
+  places: boolean;
+}
+
+/** GET /api/integrations/[id]/entities: what a Home Assistant widget can show, for its settings. */
+export interface HomeAssistantPickable {
+  id: string;
+  name: string;
+  domain: string;
+  area: string | null;
+  icon: HaIcon;
+  control: HaControl | null;
+  /** Shared with the household to look at. */
+  shared: boolean;
+  /** Household members may press it. */
+  household: boolean;
+  /** Members could be allowed to press it at all (false for locks, alarms, garage doors, gates and doors). */
+  memberPressable: boolean;
+}
+
+export interface HomeAssistantPickableList {
+  entities: HomeAssistantPickable[];
+  areas: string[];
+  /** Why rooms are missing (the token isn't an administrator's), else null. */
+  areasNote: string | null;
+}
+
+/** POST /api/integrations/[id]/control */
+export const HA_ACTIONS = ["turn_on", "turn_off", "open", "close", "run", "press"] as const;
+export type HaAction = (typeof HA_ACTIONS)[number];
+
+export interface HomeAssistantControlResult {
+  /** The entity as Home Assistant reports it after the change (null if it couldn't say). */
+  entity: HomeAssistantEntity | null;
+}
+
+/** PUT /api/integrations/[id]/household-controls (admin): what household members may see, and what they may press. */
+export interface HouseholdControlsBody {
+  see?: { allow: string[]; deny: string[] };
+  press?: { allow: string[]; deny: string[] };
+}
+
+/** PUT /api/integrations/[id]/show-places (admin): whether Who's home names the places people are. */
+export interface ShowPlacesBody {
+  show: boolean;
+}
+
+// ------------------------------------------------------------------ Coolify
+
+export type CoolifyDeploymentStatus = "queued" | "in_progress" | "finished" | "failed" | "cancelled";
+
+export interface CoolifyDeployment {
+  /** deployment_uuid */
+  id: string;
+  app: string;
+  status: CoolifyDeploymentStatus;
+  /** Short commit hash. */
+  commit: string | null;
+  /** First line of the commit message. */
+  message: string | null;
+  startedAt: number | null;
+  finishedAt: number | null;
+  /** Path of the deployment's page inside Coolify ("/project/…/deployment/…"), to join with Coolify's address. */
+  path: string | null;
+  server: string | null;
+  trigger: "webhook" | "api" | "manual" | null;
+}
+
+export interface CoolifyResource {
+  id: string;
+  name: string;
+  type: "application" | "service" | "database" | "other";
+  line: LineState;
+  /** Coolify's own words, e.g. "exited:unhealthy". */
+  status: string;
+}
+
+export interface CoolifyDeploymentsData {
+  version: string | null;
+  /** Queued and running deployments, oldest first. */
+  active: CoolifyDeployment[];
+  /** Finished, failed and cancelled ones, newest first, limited to the widget's `limit`. */
+  recent: CoolifyDeployment[];
+  resources: {
+    total: number;
+    running: number;
+    /** Resources that aren't running or aren't healthy. */
+    problems: CoolifyResource[];
+  };
+  /** Why the history is missing (an older Coolify, a token without read access), else null. */
+  historyNote: string | null;
+}
+
 // ------------------------------------------------------------------ Generic JSON
 
 export const JSON_FIELD_FORMATS = ["text", "number", "bytes", "percent", "duration", "date", "relative", "boolean"] as const;
@@ -697,7 +914,7 @@ export interface CalendarEvent {
   start: number;
   end: number | null;
   allDay: boolean;
-  /** All-day only: "2026-09-25" (inclusive) — show these instead of converting `start`. */
+  /** All-day only: "2026-09-25" (inclusive): show these instead of converting `start`. */
   startDate: string | null;
   /** All-day only: last day, inclusive. */
   endDate: string | null;
@@ -760,6 +977,9 @@ export interface WidgetDataMap {
   "subsonic.recent": SubsonicRecentData;
   "slskd.transfers": SlskdTransfersData;
   "homebridge.accessories": HomebridgeAccessoriesData;
+  "homeassistant.entities": HomeAssistantEntitiesData;
+  "homeassistant.people": HomeAssistantPeopleData;
+  "coolify.deployments": CoolifyDeploymentsData;
   "json.fields": JsonFieldsData;
   weather: WeatherData;
   calendar: CalendarData;
@@ -778,6 +998,9 @@ export const WIDGET_LABELS: Record<WidgetType, { label: string; description: str
   "subsonic.recent": { label: "New music", description: "Recently added albums." },
   "slskd.transfers": { label: "Soulseek transfers", description: "Downloads and uploads in progress." },
   "homebridge.accessories": { label: "Home accessories", description: "Lights, switches and sensors from Homebridge." },
+  "homeassistant.entities": { label: "Home controls", description: "Lights, switches, scenes and sensors you pick from Home Assistant." },
+  "homeassistant.people": { label: "Who's home", description: "Who is home and who is out, from Home Assistant." },
+  "coolify.deployments": { label: "Deployments", description: "What Coolify is deploying, what failed, and what isn't running." },
   "json.fields": { label: "Custom values", description: "Numbers pulled from any JSON address." },
   weather: { label: "Weather", description: "Current weather and the next hours for a place." },
   calendar: { label: "Calendar", description: "Upcoming events from a calendar link (ICS)." },

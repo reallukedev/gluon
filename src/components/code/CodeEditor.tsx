@@ -10,8 +10,8 @@ import { unifiedMergeView } from "@codemirror/merge";
 import { loadLanguage, type CodeLanguage } from "./languages";
 import s from "./code.module.css";
 
-/** Colours come from Gluon's tokens, so the editor follows light/dark and the attention colour. */
-const theme = EditorView.theme({
+/** Colours come from Gluon's tokens, so the editor follows light/dark. Shared with the app builder's YAML editor. */
+export const editorTheme = EditorView.theme({
   "&": { color: "var(--ink)", backgroundColor: "var(--panel)", fontSize: "12.75px", height: "100%" },
   ".cm-content": { fontFamily: "var(--font-mono)", caretColor: "var(--ink)", padding: "10px 0" },
   ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.6" },
@@ -21,7 +21,8 @@ const theme = EditorView.theme({
   "&.cm-focused": { outline: "none" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": { backgroundColor: "color-mix(in oklab, var(--ink) 16%, transparent) !important" },
   ".cm-cursor": { borderLeftColor: "var(--ink)", borderLeftWidth: "2px" },
-  ".cm-searchMatch": { backgroundColor: "color-mix(in oklab, var(--attn) 35%, transparent)" },
+  // Sodium means "needs you", so search hits are an ink wash like the selection.
+  ".cm-searchMatch": { backgroundColor: "color-mix(in oklab, var(--ink) 14%, transparent)" },
   ".cm-panels": { backgroundColor: "var(--panel-2)", color: "var(--ink)", borderTop: "1px solid var(--line)" },
   ".cm-panels input, .cm-panels button": { fontFamily: "var(--font-sans)", fontSize: "13px" },
   ".cm-changedLine": { backgroundColor: "color-mix(in oklab, var(--ok) 12%, transparent) !important" },
@@ -30,7 +31,7 @@ const theme = EditorView.theme({
   ".cm-changedText": { background: "color-mix(in oklab, var(--ok) 30%, transparent)" },
 });
 
-const highlight = HighlightStyle.define([
+export const editorHighlight = HighlightStyle.define([
   { tag: [t.propertyName, t.definition(t.propertyName)], color: "var(--ink)", fontWeight: "600" },
   { tag: [t.string, t.special(t.string)], color: "var(--info)" },
   { tag: [t.number, t.bool, t.null, t.atom], color: "var(--ok)" },
@@ -85,9 +86,9 @@ export function CodeEditor({ value, onChange, language = "text", readOnly, origi
           highlightActiveLine(),
           highlightActiveLineGutter(),
           highlightSelectionMatches(),
-          syntaxHighlighting(highlight),
+          syntaxHighlighting(editorHighlight),
           keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
-          theme,
+          editorTheme,
           ...lang,
           EditorState.readOnly.of(!!readOnly),
           EditorView.editable.of(!readOnly),

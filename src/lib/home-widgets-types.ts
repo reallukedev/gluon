@@ -29,7 +29,7 @@ export interface InternetOutage {
   cause: "internet" | "router";
 }
 
-/** GET /api/widgets/internet — everyone. */
+/** GET /api/widgets/internet: everyone. */
 export interface InternetData {
   /** What the last round found. `waiting` before the first round has finished. */
   state: "ok" | "slow" | "down" | "router" | "waiting";
@@ -69,7 +69,7 @@ export interface SpaceDisk {
   historyHours: number;
 }
 
-/** GET /api/widgets/space — admins. */
+/** GET /api/widgets/space: admins. */
 export interface SpaceData {
   disks: SpaceDisk[];
   checkedAt: number;
@@ -77,7 +77,7 @@ export interface SpaceData {
 
 // ------------------------------------------------------------------ Power
 
-/** GET /api/widgets/power?dayStart=<ms> — admins. */
+/** GET /api/widgets/power?dayStart=<ms>: admins. */
 export type PowerData =
   | { available: false; reason: string }
   | {
@@ -120,14 +120,14 @@ export interface ScheduleItem {
   detail: string | null;
 }
 
-/** GET /api/widgets/schedule — admins. */
+/** GET /api/widgets/schedule: admins. */
 export type ScheduleData = { available: false; reason: string } | { available: true; items: ScheduleItem[]; checkedAt: number };
 
 // ------------------------------------------------------------------ Guest Wi-Fi
 
 export type WifiSecurity = "WPA" | "WEP" | "nopass";
 
-/** GET /api/widgets/guest-wifi — everyone (the point is to show guests). */
+/** GET /api/widgets/guest-wifi: everyone (the point is to show guests). */
 export type GuestWifiData =
   | { configured: false }
   | {
@@ -141,7 +141,7 @@ export type GuestWifiData =
       updatedAt: number;
     };
 
-/** PUT /api/widgets/guest-wifi — admins. Leave `password` out to keep the stored one. */
+/** PUT /api/widgets/guest-wifi: admins. Leave `password` out to keep the stored one. */
 export interface GuestWifiInput {
   ssid: string;
   security: WifiSecurity;

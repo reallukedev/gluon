@@ -7,6 +7,7 @@ import { noteSignIn } from "@/server/auth/devices";
 import { findById } from "@/server/auth/users";
 import { audit } from "@/server/audit";
 import { getSetting } from "@/server/settings";
+import { mfaRequired } from "@/server/auth/policy";
 
 const tokenOk = (t: unknown): t is string => typeof t === "string" && t.length >= 16 && t.length <= 100;
 
@@ -29,7 +30,7 @@ const body = z.object({
 export const POST = route({ auth: "public", body, burst: { limit: 10, windowMs: 60_000 } }, async ({ params, body, ip, zone, req }) => {
   if (!tokenOk(params.token)) throw new AppError("invite_invalid", "This invite link isn't valid.", 400);
   const user = await acceptInvite(params.token, body);
-  const mustEnrol = user.role === "admin" && zone === "away" && getSetting("requireMfaAway");
+  const mustEnrol = mfaRequired(user.role, zone);
   const idHash = await createSession(user.id, { pending: mustEnrol ? "enrol" : "none" });
   audit(user, { action: "auth.invite_accepted", summary: `Joined as ${user.role === "admin" ? "an admin" : "a household member"}` }, { ip, zone });
   if (!mustEnrol) {

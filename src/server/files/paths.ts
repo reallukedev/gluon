@@ -347,7 +347,7 @@ export async function assertRemovable(t: Pick<Target, "real" | "root" | "scope">
 
 // ---------------------------------------------------------------- helpers
 
-/** "file (2).mkv", "file (3).mkv"… — a free name in `dirReal` (host path). */
+/** "file (2).mkv", "file (3).mkv"…: a free name in `dirReal` (host path). */
 export async function freeName(dirReal: string, name: string, style: "copy" | "restored" = "copy"): Promise<string> {
   const exists = async (n: string) => {
     try {

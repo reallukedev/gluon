@@ -8,6 +8,7 @@ import zlib from "node:zlib";
 import { Readable, Transform } from "node:stream";
 import type { LookupFunction } from "node:net";
 import { AppError } from "../errors";
+import { isHomeIp } from "../net-zone";
 
 /**
  * Outbound HTTP for integrations and personal widget sources, with guards that suit a home server:
@@ -15,7 +16,7 @@ import { AppError } from "../errors";
  * - only http: and https:
  * - every address a hostname resolves to is checked *at connect time* (custom `lookup`), so DNS rebinding can't
  *   swap in a forbidden address after validation; literal IPs are checked before connecting
- * - link-local (169.254/16, fe80::/10 — includes cloud metadata 169.254.169.254), "this network" (0/8),
+ * - link-local (169.254/16, fe80::/10: includes cloud metadata 169.254.169.254), "this network" (0/8),
  *   multicast, broadcast/reserved and known metadata addresses are always refused
  * - loopback (the server itself, where the apps listen with host networking) is allowed for admin-configured
  *   integrations and admins' own widgets, refused for members' personal URLs
@@ -94,7 +95,8 @@ export function addressProblem(address: string, policy: NetPolicy): string | nul
       : `${a} is a reserved address`;
   }
   if (policy === "member" && (loopback.check(a, type) || ownAddresses().has(a.toLowerCase()))) return `${a} is the server itself`;
-  if (policy === "member" && privateNets.check(a, type)) return `${a} is inside the home network`;
+  // Also the home's own IPv6 /64 and any ranges the admin declared as home: global addresses, but still the LAN.
+  if (policy === "member" && (privateNets.check(a, type) || isHomeIp(a))) return `${a} is inside the home network`;
   return null;
 }
 

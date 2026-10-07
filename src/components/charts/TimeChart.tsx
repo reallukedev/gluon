@@ -42,7 +42,7 @@ function liveEdge(latest: number): number {
 /**
  * A time series chart drawn in hairlines. Rules and the "now" line snap to device pixels at any
  * DPR (crispEdges); data lines stay antialiased. Hovering (or touching) pins a readout and freezes
- * the picture — data and time window — so live data doesn't slide out from under the pointer.
+ * the picture (data and time window) so live data doesn't slide out from under the pointer.
  * Live charts step with their samples (the right edge is the newest sample), never by render
  * timing, so streaming data doesn't jitter. Values are never animated.
  */

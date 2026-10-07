@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { route } from "@/server/api";
+import { hasRecentAuth } from "@/server/auth/session";
+import { AppError } from "@/server/errors";
 import { audit } from "@/server/audit";
 import { notFound } from "@/server/errors";
 import { resolve } from "@/server/findings";
@@ -18,7 +20,14 @@ const patch = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const PATCH = route({ auth: "user", body: patch }, async ({ user, params, body, ip, zone }) => {
+/** Server-wide channels carry everyone's alerts and the server's own credentials: confirm it's you first. */
+function confirmServerWide(id: string, session: Parameters<typeof hasRecentAuth>[0]) {
+  const ch = getChannel(id);
+  if (ch && ch.owner === null && !hasRecentAuth(session)) throw new AppError("reauth", "Confirm it's you to continue.", 403);
+}
+
+export const PATCH = route({ auth: "user", body: patch }, async ({ user, session, params, body, ip, zone }) => {
+  if (body.config) confirmServerWide(String(params.id), session);
   const ch = await updateChannel(user, String(params.id), body);
   if (body.enabled === false) resolve(`notify.channel:${ch.id}`, `Alerts to “${ch.name}” were turned off`);
   const what = body.config ? "Changed settings of" : body.enabled === false ? "Turned off" : body.enabled === true ? "Turned on" : "Renamed";
@@ -26,7 +35,8 @@ export const PATCH = route({ auth: "user", body: patch }, async ({ user, params,
   return viewChannel(ch, user);
 });
 
-export const DELETE = route({ auth: "user" }, ({ user, params, ip, zone }) => {
+export const DELETE = route({ auth: "user" }, ({ user, session, params, ip, zone }) => {
+  confirmServerWide(String(params.id), session);
   const ch = deleteChannel(user, String(params.id));
   resolve(`notify.channel:${ch.id}`, `Channel “${ch.name}” was removed`);
   audit(user, { action: "notify.channel_deleted", target: ch.id, summary: `Removed channel “${ch.name}”` }, { ip, zone });

@@ -13,6 +13,11 @@ export interface KindContext<C> {
   config: C;
   /** Changes whenever the integration is edited; part of cache keys. */
   version: number;
+  /**
+   * Who is asking, when the caller knows (widget data passes it). Only kinds with `viewerScoped` should read it;
+   * absent means "unknown", which such kinds must treat as the least trusted viewer.
+   */
+  viewer?: { id: string; role: "admin" | "member" };
 }
 
 export type TestOutcome = Omit<IntegrationTestResult, "ms">;
@@ -21,6 +26,21 @@ export interface ImageRequest {
   /** Path + query on the upstream app. */
   path: string;
   query: Record<string, string>;
+}
+
+/** Something found inside a connected app by universal search: a film, a photo, a light, a song. */
+export interface KindSearchHit {
+  /** Stable within the integration. */
+  id: string;
+  label: string;
+  /** One short line of context: "Film · 2019", "Kitchen light · on". */
+  hint?: string;
+  /** Opens the item in the app itself, when it has a page for it. */
+  url?: string;
+  /** What it is, so the palette can pick an icon: free text like "film", "photo", "song", "light". */
+  type?: string;
+  /** A thumbnail through this connection's own image proxy (never an upstream URL). */
+  image?: string | null;
 }
 
 export interface KindDef<C = Record<string, unknown>> {
@@ -49,8 +69,15 @@ export interface KindDef<C = Record<string, unknown>> {
   };
   /** Adds auth to an outgoing request (headers and/or query). May be async (e.g. login for a token). */
   authorize?(ctx: KindContext<C>, req: { headers: Record<string, string>; query: Record<string, string> }): Promise<void> | void;
+  /**
+   * Universal search inside the app. Optional. Must answer within `signal` (search gives each app
+   * about two seconds) and return at most `limit` hits, best first.
+   */
+  search?(ctx: KindContext<C>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]>;
   /** Allow self-signed TLS for this integration. */
   insecureTls?(config: C): boolean;
+  /** Widget data depends on `ctx.viewer.role`, so it's cached per role. Default false: one answer for everyone. */
+  viewerScoped?: boolean;
 }
 
 /** An upstream app answered or failed in a way we can explain. Status 502 so the UI shows it on the widget. */
@@ -71,6 +98,8 @@ export interface CallOptions {
   allow?: number[];
   /** Skip `authorize` (login calls). */
   noAuth?: boolean;
+  /** Abort the request early, e.g. when universal search moves on to a new query. */
+  signal?: AbortSignal;
 }
 
 export function joinUrl(base: string, path: string, query?: Record<string, string>): string {
@@ -147,6 +176,7 @@ export function client<C>(def: KindDef<C>, ctx: KindContext<C>, authMessage: (st
         timeoutMs: o.timeoutMs ?? 5000,
         maxBytes: o.maxBytes ?? 4 * 1024 * 1024,
         insecureTls: def.insecureTls?.(ctx.config) ?? false,
+        signal: o.signal,
       });
     } catch (e) {
       fail(e);

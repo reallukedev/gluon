@@ -1,6 +1,6 @@
 "use client";
 /**
- * FlowSteps — where you are in a guided flow (set up a disk, rename a mount, two-step setup).
+ * FlowSteps: where you are in a guided flow (set up a disk, rename a mount, two-step setup).
  *
  *   <FlowSteps
  *     label="Set up a new disk"
@@ -12,7 +12,7 @@
  * working = dashed (pass `working` while the current step runs), failed = short red with the
  * word "failed" (pass `failed`), upcoming = faint. Horizontal from 640px, a vertical list on phones.
  * The hairline between two steps fills left to right (250ms, --ease-out) as a step completes;
- * reduced motion shows it filled without the sweep. Labels only — no step numbers.
+ * reduced motion shows it filled without the sweep. Labels only: no step numbers.
  */
 import * as React from "react";
 import s from "./flowSteps.module.css";

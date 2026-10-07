@@ -4,7 +4,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import YAML from "yaml";
 import { getApp, invalidateApps, type AppSummary } from "./apps";
-import { host, hostSpawn, lineReader } from "../host/exec";
+import { host } from "../host/exec";
+import { spawnLines } from "../apps/spawn";
 import { hostPath } from "../host/paths";
 import { AppError, conflict, notFound } from "../errors";
 
@@ -86,6 +87,7 @@ export async function applyCompose(
   content: string,
   expectedHash: string,
   emit: (e: { type: "line"; text: string; stream: "out" | "err" } | { type: "step"; text: string } | { type: "done"; ok: boolean; message: string }) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const app = await appWithCompose(id);
   if (app.self) throw new AppError("self", "Gluon can't edit its own compose file from here.");
@@ -116,33 +118,24 @@ export async function applyCompose(
   write(content);
   emit({ type: "step", text: "Saved. Applying with docker compose up…" });
 
-  const up = () =>
-    new Promise<number>((resolve) => {
-      const args = ["compose", "-p", app.id];
-      for (const f of app.configFile.split(",")) args.push("-f", f);
-      args.push("up", "-d", "--remove-orphans");
-      const child = hostSpawn("docker", args);
-      const out = lineReader((l) => emit({ type: "line", text: l, stream: "out" }));
-      const err = lineReader((l) => emit({ type: "line", text: l, stream: "err" }));
-      child.stdout?.on("data", (d) => out.push(d));
-      child.stderr?.on("data", (d) => err.push(d));
-      child.on("close", (code) => {
-        out.flush();
-        err.flush();
-        resolve(code ?? 1);
-      });
-      child.on("error", () => resolve(1));
-    });
-
-  const code = await up();
+  const args = ["compose", "-p", app.id, ...app.configFile.split(",").flatMap((f) => ["-f", f]), "up", "-d", "--remove-orphans"];
+  const line = (text: string, stream: "out" | "err") => emit({ type: "line", text, stream });
+  // The edit stops if the page goes away or it runs too long. Putting the old file back never
+  // stops early: leaving the app down would be worse than waiting.
+  let first: { code: number; timedOut: boolean; aborted: boolean };
+  try {
+    first = await spawnLines("docker", args, line, { timeoutMs: 20 * 60_000, signal });
+  } catch {
+    first = { code: 1, timedOut: false, aborted: false };
+  }
   invalidateApps();
-  if (code === 0) {
+  if (first.code === 0 && !first.aborted) {
     emit({ type: "done", ok: true, message: `${app.name} is running with the new configuration.` });
     return;
   }
-  emit({ type: "step", text: "That didn't start. Putting the previous version back…" });
+  emit({ type: "step", text: first.aborted ? "The page closed before it finished. Putting the previous version back…" : first.timedOut ? "That took too long. Putting the previous version back…" : "That didn't start. Putting the previous version back…" });
   write(current);
-  const back = await up();
+  const back = (await spawnLines("docker", args, line, { timeoutMs: 20 * 60_000 }).catch(() => ({ code: 1 }))).code;
   invalidateApps();
   emit({
     type: "done",

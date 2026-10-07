@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Field";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { IssueList } from "./Issues";
-import { YamlEditor, type YamlEditorHandle } from "./YamlEditor";
+import type { YamlEditorHandle } from "./YamlEditor";
+import { LazyYamlEditor as YamlEditor } from "./LazyYamlEditor";
 import type { Draft } from "./state";
 import s from "./builder.module.css";
 
@@ -76,7 +77,7 @@ export function ComposeTab({ draft, detail, issues, onFix, onFixAll, onGo, edito
             if (i.line) requestAnimationFrame(() => editorRef.current?.gotoLine(i.line!));
             else onGo(i);
           }}
-          empty="Nothing to fix. Umbrel will run this as written, plus its own proxy for the web page."
+          empty={detail.target === "compose" ? "Nothing to fix. Gluon runs this as written." : "Nothing to fix. Umbrel will run this as written, plus its own proxy for the web page."}
         />
       </Panel>
     </div>

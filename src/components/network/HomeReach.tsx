@@ -26,7 +26,7 @@ const SCOPE: Record<ListenScope, string> = {
 };
 
 function loginLine(l: LoginInfo | null | undefined): { state: LineState; label: string } {
-  if (!l) return { state: "unknown", label: "—" };
+  if (!l) return { state: "unknown", label: "Not checked" };
   if (l.verdict === "login") return { state: "running", label: l.declared === "yes" ? "Has its own login" : "Asks for a login" };
   if (l.verdict === "no-login") return { state: "attention", label: "No login" };
   return { state: "unknown", label: "Not sure" };
@@ -162,7 +162,7 @@ function LanRow({ l, flagged }: { l: LanExposure; flagged: boolean }) {
         </span>
       </span>
       <span role="cell" className={s.cellMain} title={l.login?.evidence ?? undefined}>
-        {l.login ? <StateLine state={ll.state} label={ll.label} /> : <span className={s.faint}>{l.scope === "local" ? "Not reachable from other devices" : "—"}</span>}
+        {l.login ? <StateLine state={ll.state} label={ll.label} /> : <span className={s.faint}>{l.scope === "local" ? "Not reachable from other devices" : "Not checked"}</span>}
       </span>
     </div>
   );

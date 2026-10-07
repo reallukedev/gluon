@@ -1,6 +1,6 @@
 "use client";
 import type { AppSummary } from "@/server/docker/apps";
-import type { NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse, ExposureReport, DdnsStatus } from "@/lib/network-types";
+import type { NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse, ExposureReport, DdnsStatus, ChatServersResponse } from "@/lib/network-types";
 import { api, useApi } from "@/lib/client/api";
 
 export const FALLBACK_ID = "__fallback__";
@@ -22,6 +22,14 @@ export function useExposure() {
 export function useDdns() {
   return useApi<DdnsStatus>("/api/network/ddns", { refresh: 60_000 });
 }
+
+/** Chat servers Gluon can see, and certificate sync per chat address. Only fetched while needed. */
+export function useChatServers(on: boolean) {
+  return useApi<ChatServersResponse>(on ? "/api/network/xmpp" : null, { refresh: 60_000 });
+}
+
+/** The STARTTLS port XMPP apps sign in on; a web address pointed at it is a chat server set up as a web app. */
+export const XMPP_CLIENT_PORTS = new Set([5222]);
 
 export function saveRoutes(rev: string, routes: RouteT[], fallback?: RoutesConfigT["fallback"]) {
   return api.put<RoutesSaveResponse>("/api/network/routes", { rev, routes, ...(fallback ? { fallback } : {}) });

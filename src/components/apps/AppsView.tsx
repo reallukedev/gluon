@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHoriz, OpenNewWindow, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye, Pin, PinSlash } from "iconoir-react";
+import { MoreHoriz, OpenNewWindow, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye, Pin, PinSlash, Import, Trash } from "iconoir-react";
 import { usePinToHome } from "@/components/home/pinned";
 import type { AppSummary } from "@/server/docker/apps";
 import type { Platform } from "@/server/platform";
@@ -25,7 +25,11 @@ import { AppIcon } from "./AppIcon";
 import { Addresses } from "./Addresses";
 import { CpuMeter, MemMeter, useAppUsage } from "./Meters";
 import { umbrelBusy } from "./umbrelStream";
-import { removeCopyConfirm, stopCopyConfirm } from "./copies";
+import { removeCopyConfirm, stopCopyConfirm, uninstallUmbrelConfirm } from "./copies";
+import { moveBlock, uninstallRoute } from "@/lib/app-move-types";
+import { MoveDialog } from "./MoveDialog";
+import { useMoveWatch } from "./useMoveWatch";
+import { UninstallDialog } from "./UninstallDialog";
 import s from "./apps.module.css";
 
 type Filter = "all" | "problems" | "public" | "stopped";
@@ -48,6 +52,23 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const [sort, setSort] = React.useState<Sort>(initialSort);
   const [busy, setBusy] = React.useState<string | null>(null);
   const [confirm, confirmNode] = useConfirm();
+  const [moveTarget, setMoveTarget] = React.useState<AppSummary | null>(null);
+  const [moveOpen, setMoveOpen] = React.useState(false);
+  const [removeTarget, setRemoveTarget] = React.useState<{ app: AppSummary; title?: string } | null>(null);
+  const [removeOpen, setRemoveOpen] = React.useState(false);
+  useMoveWatch(
+    apps.filter((a) => a.moving).map((a) => a.id),
+    moveOpen ? (moveTarget?.id ?? null) : null,
+    () => void mutate(),
+  );
+  const askMove = (a: AppSummary) => {
+    setMoveTarget(a);
+    setMoveOpen(true);
+  };
+  const askRemove = (a: AppSummary, title?: string) => {
+    setRemoveTarget({ app: a, title });
+    setRemoveOpen(true);
+  };
   const memTotal = host.at(-1)?.mem.total ?? null;
   const memScale = Math.max(0, ...[...usage.values()].map((u) => u.mem));
 
@@ -123,6 +144,22 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
     );
   }
 
+  function uninstallUmbrel(a: AppSummary) {
+    const of = a.copyOf ? byId.get(a.copyOf.id) : undefined;
+    confirm(
+      uninstallUmbrelConfirm(a, of, async () => {
+        try {
+          await api.post(`/api/apps/${encodeURIComponent(a.id)}/action`, { action: "uninstall" });
+        } catch (e) {
+          if (e instanceof ApiError && e.code === "reauth_cancelled") return;
+          throw e;
+        }
+        toast.success(a.copyOf ? `Uninstalling the old ${a.name}` : `Uninstalling ${a.name}`, { description: "Umbrel is removing it. It leaves Apps when it's done." });
+        void mutate();
+      }),
+    );
+  }
+
   const busyNote =
     busyApps.length === 1
       ? ` ${busyApps[0]!.name} is ${{ installing: "being installed", updating: "updating", uninstalling: "being uninstalled" }[busyApps[0]!.umbrel!.state as "installing" | "updating" | "uninstalling"]}.`
@@ -148,6 +185,30 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
       {busyNote}
     </>
   );
+
+  /** Moving and uninstalling, for the apps Gluon can do that for. */
+  function appMenuTail(a: AppSummary): MenuEntry[] {
+    const out: MenuEntry[] = [];
+    if (!a.self && a.source !== "gluon" && !a.copyOf) {
+      const why = moveBlock(a);
+      if (a.moving) out.push({ label: "Show the move…", description: "It's moving to Gluon now", icon: <Import />, onSelect: () => askMove(a) });
+      else out.push({ label: "Move to Gluon…", description: why ?? "Gluon runs it from its own folder", icon: <Import />, disabled: !!why, onSelect: () => askMove(a) });
+    }
+    const un = uninstallRoute(a);
+    if (un.via === "builder") out.push({ label: "Remove in the builder", icon: <Trash />, href: `/apps/custom/${encodeURIComponent(a.gluon!.builderId!)}` });
+    else if (!a.self) {
+      const title = a.copyOf ? `Remove the old ${a.name}?` : undefined;
+      out.push({
+        label: "Uninstall…",
+        description: a.moving ? "It's moving to Gluon now" : (un.block ?? (un.via === "umbrel" ? "Umbrel removes it and its data" : "Keep or delete its data")),
+        icon: <Trash />,
+        danger: true,
+        disabled: !!un.block || !!a.moving,
+        onSelect: () => (un.via === "umbrel" ? uninstallUmbrel(a) : askRemove(a, title)),
+      });
+    }
+    return out.length ? ["separator", ...out] : [];
+  }
 
   const sortHead = (key: Sort, label: string, align?: "end") => (
     <span role="columnheader" aria-sort={sort === key ? (key === "name" ? "ascending" : "descending") : "none"} className={align ? s.headEnd : undefined}>
@@ -266,6 +327,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
               a.hidden
                 ? { label: "Show in lists", icon: <Eye />, onSelect: () => void setHidden(a, false) }
                 : { label: "Hide from lists", icon: <EyeClosed />, description: "It keeps running", onSelect: () => void setHidden(a, true) },
+              ...appMenuTail(a),
             ];
             return (
               <div
@@ -301,7 +363,9 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                   </span>
                 </span>
                 <span role="cell" className={s.stateCell}>
-                  {busyState ? (
+                  {a.moving ? (
+                    <StateLine state="starting" label="Moving to Gluon…" />
+                  ) : busyState ? (
                     <UmbrelProgress app={a} />
                   ) : (
                     <StateLine state={a.line} label={a.copyOf ? (running ? "Old copy, still running" : "Old copy, stopped") : a.summary} />
@@ -320,7 +384,13 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                 </span>
                 <span role="cell" className={s.addrCell}>
                   {a.copyOf ? (
-                    <CopyNote app={a} of={byId.get(a.copyOf.id)} onRemove={() => removeCopy(a)} onStop={() => confirm(stopCopyConfirm(a, byId.get(a.copyOf!.id), () => act(a, "stop")))} onHide={() => void setHidden(a, true)} />
+                    <CopyNote
+                      app={a}
+                      of={byId.get(a.copyOf.id)}
+                      onRemove={() => (a.configFile ? removeCopy(a) : a.umbrel ? uninstallUmbrel(a) : askRemove(a, `Remove the old ${a.name}?`))}
+                      onStop={() => confirm(stopCopyConfirm(a, byId.get(a.copyOf!.id), () => act(a, "stop")))}
+                      onHide={() => void setHidden(a, true)}
+                    />
                   ) : (
                     <Addresses app={a} empty={busyState && a.containers.length === 0 ? "Not ready yet" : "No web page"} />
                   )}
@@ -346,9 +416,37 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
         </div>
       )}
       </div>
+      {moveTarget && (
+        <MoveDialog
+          key={moveTarget.id}
+          app={moveTarget}
+          open={moveOpen}
+          onOpenChange={setMoveOpen}
+          onFinished={() => void mutate()}
+          onRemoveOld={() => {
+            const a = byId.get(moveTarget.id) ?? moveTarget;
+            if (a.umbrel) uninstallUmbrel(a);
+            else if (a.configFile) removeCopy(a);
+            else askRemove(a, `Remove the old ${a.name}?`);
+          }}
+        />
+      )}
+      {removeTarget && (
+        <UninstallDialog
+          app={removeTarget.app}
+          title={removeTarget.title}
+          open={removeOpen}
+          onOpenChange={setRemoveOpen}
+          onDone={(message) => {
+            toast.success(message);
+            void mutate();
+          }}
+        />
+      )}
       {confirmNode}
     </Page>
   );
+
 }
 
 /** Umbrel installing / updating / removing, with its real percentage when Umbrel gives one. */
@@ -369,7 +467,7 @@ function UmbrelProgress({ app }: { app: AppSummary }) {
 function CopyNote({ app, of, onRemove, onStop, onHide }: { app: AppSummary; of: AppSummary | undefined; onRemove: () => void; onStop: () => void; onHide: () => void }) {
   const running = app.line !== "stopped";
   const name = of?.name ?? app.copyOf!.name;
-  const canRemove = !!app.configFile && !app.self;
+  const canRemove = !app.self && (!!app.configFile || !!app.umbrel || app.containers.length > 0);
   return (
     <span className={s.copyNote}>
       <span className={s.copyText}>
@@ -377,7 +475,7 @@ function CopyNote({ app, of, onRemove, onStop, onHide }: { app: AppSummary; of: 
       </span>
       {canRemove ? (
         <Button size="sm" variant="ghost" onClick={onRemove}>
-          {running ? "Stop and remove…" : "Remove…"}
+          {app.umbrel ? "Uninstall…" : running ? "Stop and remove…" : "Remove…"}
         </Button>
       ) : running ? (
         <Button size="sm" variant="ghost" onClick={onStop}>

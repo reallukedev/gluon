@@ -24,6 +24,7 @@ import {
   type Plan,
 } from "@/lib/onboarding";
 import type { Zone } from "./net-zone";
+import { mfaRequired } from "./auth/policy";
 
 /**
  * First run. Which steps apply is decided here, from real state, each time /welcome loads:
@@ -74,7 +75,7 @@ export function planFor(user: User, zone: Zone): Plan {
       start: resumeAt(saved, steps) as AdminStep,
       serverName,
       reach: { zone, publicAt },
-      requireMfaAway: getSetting("requireMfaAway"),
+      requireMfaAway: mfaRequired("admin", "away"),
       mfa,
     };
     return plan;
@@ -116,7 +117,7 @@ export async function inventoryApps(): Promise<InventoryApps> {
   const [apps, platform] = await Promise.all([listApps(), activePlatform().catch(() => "none" as const)]);
   const list = apps.filter((a) => !a.self && !a.copyOf);
   const sources = { umbrel: 0, casaos: 0, compose: 0, docker: 0 };
-  for (const a of list) sources[a.source]++;
+  for (const a of list) sources[a.source === "gluon" ? "compose" : a.source]++;
   const ranked = [...list].sort((a, b) => Number(b.line === "running") - Number(a.line === "running") || Number(!!b.icon) - Number(!!a.icon) || a.name.localeCompare(b.name));
   return {
     total: list.length,

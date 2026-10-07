@@ -29,7 +29,7 @@ export function mountedRows(disks: DiskView[]): Row[] {
 export function Persistence({ vol, disk, onPersist, disabled }: { vol: VolumeView; disk: DiskView; onPersist?: () => void; disabled?: boolean }) {
   if (vol.swapActive && !vol.primaryMount) return <span className={s.muted}>{vol.fstabLines.length ? "In /etc/fstab" : "Turned on by hand"}</span>;
   const p = vol.persistence;
-  if (!p) return <span className={s.muted}>—</span>;
+  if (!p) return <span className={s.muted}>None</span>;
   if (p.state === "persistent") {
     return (
       <span className={s.persist}>

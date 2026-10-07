@@ -257,6 +257,48 @@ export interface ImageLookup {
   description: string | null;
 }
 
+/** GET /api/custom-apps/image/search: Docker Hub repositories for what the person typed. */
+export interface HubRepo {
+  /** What goes in image: ("nginx" for official images, "jellyfin/jellyfin" otherwise). */
+  ref: string;
+  description: string;
+  stars: number;
+  pulls: number;
+  official: boolean;
+}
+
+export interface HubSearchResult {
+  query: string;
+  results: HubRepo[];
+  /** Why there are no results when that isn't the answer (rate limit, offline). */
+  error: string | null;
+}
+
+export interface TagInfo {
+  name: string;
+  /** Last pushed, ms (Docker Hub only). */
+  updated: number | null;
+  /** Compressed size in bytes for this server's platform, when the registry says. */
+  size: number | null;
+}
+
+/** GET /api/custom-apps/image/tags: one page of an image's tags, newest first, optionally filtered. */
+export interface TagPage {
+  ref: string;
+  tags: TagInfo[];
+  page: number;
+  next: boolean;
+  error: string | null;
+}
+
+/** GET /api/custom-apps/networks: Docker networks an app can join. */
+export interface DockerNetworkInfo {
+  name: string;
+  driver: string;
+  /** Compose project that made it, if any. */
+  project: string | null;
+}
+
 export interface ServerCheck {
   issues: Issue[];
   /** Host ports in use (TCP/UDP) and who uses them, for the port fields. */

@@ -36,6 +36,8 @@ const KIND_ICON: Partial<Record<IntegrationKind, string>> = {
   subsonic: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/navidrome.svg",
   slskd: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/slskd.svg",
   homebridge: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/homebridge.svg",
+  homeassistant: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/home-assistant.svg",
+  coolify: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/coolify.svg",
 };
 
 const FORMAT_LABEL: Record<JsonFieldFormat, string> = {

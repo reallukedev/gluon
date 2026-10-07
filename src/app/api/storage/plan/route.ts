@@ -5,7 +5,7 @@ import { planRename } from "@/server/storage/rename";
 import { planSetup } from "@/server/storage/setup";
 
 /**
- * POST /api/storage/plan — preview an operation; nothing changes.
+ * POST /api/storage/plan: preview an operation; nothing changes.
  *   { op: "mount", device, target, persist?, noatime? }         → MountPlan
  *   { op: "unmount", target }                                   → UnmountPlan (with holders)
  *   { op: "persist", targets: string[] | null, noatime? }       → PersistPlan

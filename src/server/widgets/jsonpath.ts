@@ -170,7 +170,7 @@ function asTime(v: string | number | boolean | null): number | null {
 }
 
 export function formatValue(v: string | number | boolean | null, format: JsonFieldFormat): string {
-  if (v === null) return "—";
+  if (v === null) return "No value";
   switch (format) {
     case "number": {
       const n = asNumber(v);
@@ -211,7 +211,7 @@ export function extractFields(doc: unknown, fields: { label: string; path: strin
     } catch {
       raw = MISSING;
     }
-    if (raw === MISSING) return { label: f.label, format: f.format, value: null, display: "—", missing: true };
+    if (raw === MISSING) return { label: f.label, format: f.format, value: null, display: "No value", missing: true };
     const value = toScalar(raw);
     return { label: f.label, format: f.format, value, display: formatValue(value, f.format), missing: false };
   });

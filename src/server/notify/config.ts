@@ -56,8 +56,43 @@ export function maskConfig(kind: ChannelKind, cfg: StoredConfig): { config: Reco
   return { config: out, secrets };
 }
 
-/** Merge what the person typed over the stored config, keeping secrets they didn't retype. */
+/** Where a channel delivers to. When any of these change, kept secrets would go to the new place. */
+const DESTINATION_FIELDS: Record<ChannelKind, string[]> = {
+  ntfy: ["server"],
+  pushover: [],
+  email: ["host", "port"],
+  webhook: ["url"],
+};
+
+/**
+ * Merge what the person typed over the stored config, keeping secrets they didn't retype. If the
+ * destination changed, kept secrets are dropped instead: a token or password stored for one server
+ * must never be sent to another one just because someone edited the address.
+ */
 export function mergeConfig(kind: ChannelKind, stored: StoredConfig | null, input: Record<string, unknown>): Record<string, unknown> {
+  const merged = mergeKeeping(kind, stored, input);
+  if (!stored) return merged;
+  const moved = DESTINATION_FIELDS[kind].some((f) => {
+    const v = input[f];
+    if (v === undefined || isMasked(v)) return false;
+    return String(v ?? "") !== String(stored[f] ?? "");
+  });
+  if (!moved) return merged;
+  for (const f of SECRET_FIELDS[kind]) {
+    const typed = input[f];
+    if (typed === undefined || isMasked(typed)) merged[f] = null;
+  }
+  if (kind === "webhook" && Array.isArray(merged.headers)) {
+    const typedHeaders = Array.isArray(input.headers) ? (input.headers as { value?: unknown }[]) : [];
+    merged.headers = (merged.headers as { name: string; value: string | null }[]).map((h, i) => {
+      const t = typedHeaders[i]?.value;
+      return t === undefined || isMasked(t) ? { name: h.name, value: null } : h;
+    });
+  }
+  return merged;
+}
+
+function mergeKeeping(kind: ChannelKind, stored: StoredConfig | null, input: Record<string, unknown>): Record<string, unknown> {
   const base: Record<string, unknown> = { ...(stored ?? {}) };
   for (const [k, v] of Object.entries(input)) {
     if (v === undefined) continue;

@@ -3,7 +3,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OpenNewWindow, Refresh, Play, Square, MoreHoriz, CloudDownload, Folder, Eye, EyeClosed, Trash, Pin, PinSlash } from "iconoir-react";
+import { OpenNewWindow, Refresh, Play, Square, MoreHoriz, CloudDownload, Folder, Eye, EyeClosed, Trash, Pin, PinSlash, Import } from "iconoir-react";
 import { usePinToHome } from "@/components/home/pinned";
 import type { AppDetail } from "@/server/docker/detail";
 import type { AppSummary } from "@/server/docker/apps";
@@ -12,7 +12,7 @@ import { useContainerStats } from "@/lib/client/live";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Panel, Notice, Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button, IconButton, LinkButton } from "@/components/ui/Button";
 import { Menu } from "@/components/ui/Menu";
 import { Tabs } from "@/components/ui/Tabs";
 import { Segmented } from "@/components/ui/Field";
@@ -23,6 +23,7 @@ import { StreamDialog, emptyStream, reduceStream, type StreamEvent, type StreamS
 import type { MenuEntry } from "@/components/ui/Menu";
 import { TimeChart } from "@/components/charts/TimeChart";
 import { sourceName } from "@/lib/app-names";
+import { moveBlock, uninstallRoute, type MoveJob } from "@/lib/app-move-types";
 import { AppIcon } from "./AppIcon";
 import { LogViewer } from "./LogViewer";
 import { AppSettings } from "./AppSettings";
@@ -30,6 +31,9 @@ import { StackDiagram } from "./StackDiagram";
 import { OperationProgress } from "./OperationProgress";
 import { removeCopyConfirm, stopCopyConfirm } from "./copies";
 import { reduceUmbrelStream, umbrelBusy } from "./umbrelStream";
+import { MoveDialog } from "./MoveDialog";
+import { useMoveWatch } from "./useMoveWatch";
+import { UninstallDialog } from "./UninstallDialog";
 import s from "./detail.module.css";
 
 const ComposeEditor = dynamic(() => import("./ComposeEditor").then((m) => m.ComposeEditor), {
@@ -43,7 +47,21 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
   const router = useRouter();
   const { viewer } = usePrefs();
   const { data: app = initial, mutate } = useApi<AppDetail>(`/api/apps/${encodeURIComponent(initial.id)}`, { refresh: 8000, fallbackData: initial });
-  const { data: allApps } = useApi<AppSummary[]>(app.copyOf ? "/api/apps" : null, { refresh: 30_000 });
+  const movedFrom = app.gluon?.movedFrom ?? null;
+  const { data: allApps } = useApi<AppSummary[]>(app.copyOf || movedFrom ? "/api/apps" : null, { refresh: 30_000 });
+  const [moveOpen, setMoveOpen] = React.useState(false);
+  // Only while a move involves this app (the page's own refresh says so) or its dialog is open.
+  const { data: moveState, mutate: refreshMove } = useApi<{ job: MoveJob | null }>(!app.self && (app.moving || moveOpen) ? `/api/apps/${encodeURIComponent(initial.id)}/move?only=job` : null, { refresh: 4000 });
+  useMoveWatch(app.moving ? [app.id] : [], moveOpen ? app.id : null, () => {
+    void mutate();
+    void refreshMove();
+  });
+  const [uninstallOpen, setUninstallOpen] = React.useState(false);
+  const [uninstallTitle, setUninstallTitle] = React.useState<string | undefined>(undefined);
+  const askUninstall = (title?: string) => {
+    setUninstallTitle(title);
+    setUninstallOpen(true);
+  };
   const [busy, setBusy] = React.useState<string | null>(null);
   const [stream, setStream] = React.useState<StreamState>(emptyStream);
   const [streamOpen, setStreamOpen] = React.useState(false);
@@ -112,6 +130,10 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
   const umbrelWorking = umbrelBusy(umbrel?.state);
   const canUpdate = !app.self && !umbrelWorking && !app.copyOf && (!!app.configFile || !!umbrel);
   const primary = app.copyOf ? allApps?.find((a) => a.id === app.copyOf!.id) : undefined;
+  const oldCopy = movedFrom ? allApps?.find((a) => a.id === movedFrom.id) : undefined;
+  const moving = !!app.moving && !!moveState?.job && !moveState.job.finishedAt;
+  const moveWhy = moveBlock(app) ?? (moving ? "It's moving right now" : null);
+  const un = uninstallRoute(app);
 
   const confirmUpdate = () =>
     confirm({
@@ -184,7 +206,17 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
     app.hidden
       ? { label: "Show in lists", icon: <Eye />, onSelect: () => void setHidden(false) }
       : { label: "Hide from lists", icon: <EyeClosed />, description: "It keeps running", onSelect: () => void setHidden(true) },
+    ...(!app.self && app.source !== "gluon" && !app.copyOf
+      ? [{ label: "Move to Gluon…", description: moveWhy ?? "Gluon runs it from its own folder", icon: <Import />, disabled: !!moveWhy, onSelect: () => setMoveOpen(true) }]
+      : []),
     ...(app.copyOf && app.configFile && !app.self ? (["separator", { label: stopped ? "Remove this old copy" : "Stop and remove this old copy", icon: <Trash />, danger: true, onSelect: confirmRemoveCopy }] as MenuEntry[]) : []),
+    ...(un.via === "builder"
+      ? (["separator", { label: "Remove in the builder", description: "You made this app in Gluon", icon: <Trash />, href: `/apps/custom/${encodeURIComponent(app.gluon!.builderId!)}` }] as MenuEntry[])
+      : un.via === "gluon" && !app.self && !(app.copyOf && app.configFile)
+        ? (["separator", { label: "Uninstall…", description: un.block ?? "Keep or delete its data", icon: <Trash />, danger: true, disabled: !!un.block || moving, onSelect: () => askUninstall(app.copyOf ? `Remove the old ${app.name}?` : undefined) }] as MenuEntry[])
+        : un.via === "umbrel" && !umbrel
+          ? (["separator", { label: "Uninstall", description: un.block ?? "", icon: <Trash />, danger: true, disabled: true }] as MenuEntry[])
+          : []),
     ...(umbrel && !app.self
       ? (["separator", { label: "Uninstall", description: "Remove it and its data from Umbrel", icon: <Trash />, danger: true, disabled: umbrelWorking, onSelect: confirmUninstall }] as MenuEntry[])
       : []),
@@ -265,20 +297,55 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
         }
       />
 
-      {app.copyOf ? (
+      {moving ? (
+        <div className={s.banner}>
+          <Notice
+            tone="attention"
+            title={moveState!.job!.appId === app.id ? `Moving ${app.name} to Gluon` : `${app.name} is being set up from ${moveState!.job!.name}`}
+            action={
+              <Button size="sm" onClick={() => setMoveOpen(true)}>
+                Show progress
+              </Button>
+            }
+          >
+            Gluon is copying its data and starting the new copy. Leave it running; it puts everything back if the copy doesn't start.
+          </Notice>
+        </div>
+      ) : app.copyOf ? (
         <div className={s.banner}>
           <Notice
             title={`An old copy of ${app.copyOf.name}`}
             action={
-              app.configFile && !app.self ? (
+              app.self ? undefined : app.configFile ? (
                 <Button size="sm" onClick={confirmRemoveCopy}>
                   {stopped ? "Remove it…" : "Stop and remove…"}
                 </Button>
-              ) : undefined
+              ) : umbrel ? (
+                <Button size="sm" disabled={umbrelWorking} onClick={confirmUninstall}>
+                  Uninstall it in Umbrel…
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => askUninstall(`Remove the old ${app.name}?`)}>
+                  Remove it…
+                </Button>
+              )
             }
           >
             It was installed from {sourceName(app.source)}. <Link href={`/apps/${encodeURIComponent(app.copyOf.id)}`}>{app.copyOf.name} from {sourceName(app.copyOf.source)}</Link> is the one in use
             {app.configFile ? "." : `. It shares its Compose name with that app, so Gluon handles its containers one by one and won't run Compose on it.`}
+          </Notice>
+        </div>
+      ) : movedFrom && oldCopy ? (
+        <div className={s.banner}>
+          <Notice
+            title={`Moved here from ${sourceName(movedFrom.source)}`}
+            action={
+              <LinkButton size="sm" href={`/apps/${encodeURIComponent(oldCopy.id)}`}>
+                Go to the old copy
+              </LinkButton>
+            }
+          >
+            The {sourceName(movedFrom.source)} copy is {oldCopy.line === "stopped" ? "stopped" : "still running"} and keeps its data. Remove it once you&apos;re sure this one works.
           </Notice>
         </div>
       ) : umbrel ? (
@@ -323,6 +390,30 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
         </Dialog>
       ) : (
         <StreamDialog open={streamOpen} onClose={() => setStreamOpen(false)} title={`Updating ${app.name}`} state={stream} running={running} />
+      )}
+      {!app.self && (
+        <MoveDialog
+          app={app}
+          open={moveOpen}
+          onOpenChange={setMoveOpen}
+          onFinished={() => {
+            void mutate();
+            void refreshMove();
+          }}
+          onRemoveOld={() => (umbrel ? confirmUninstall() : app.configFile ? confirmRemoveCopy() : askUninstall(`Remove the old ${app.name}?`))}
+        />
+      )}
+      {!app.self && !app.umbrel && (
+        <UninstallDialog
+          app={app}
+          title={uninstallTitle}
+          open={uninstallOpen}
+          onOpenChange={setUninstallOpen}
+          onDone={(message) => {
+            toast.success(message);
+            router.push(app.copyOf ? `/apps/${encodeURIComponent(app.copyOf.id)}` : "/apps");
+          }}
+        />
       )}
       {confirmNode}
     </Page>

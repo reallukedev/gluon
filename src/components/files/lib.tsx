@@ -25,14 +25,9 @@ export const rawUrl = (path: string, download = false) => `/api/files/raw?path=$
 export const filesHref = (path: string) => `/files?path=${encodeURIComponent(path)}`;
 export const thumbUrl = (e: Pick<FileEntry, "path" | "mtime" | "size">, size = 320) => `/api/files/thumb?path=${encodeURIComponent(e.path)}&size=${size}&v=${Math.floor(e.mtime / 1000).toString(36)}-${(e.size ?? 0).toString(36)}`;
 
-export function parentOf(p: string): string {
-  if (p === "/") return "/";
-  const i = p.lastIndexOf("/");
-  return i <= 0 ? "/" : p.slice(0, i);
-}
-export function joinPath(dir: string, name: string) {
-  return dir === "/" ? `/${name}` : `${dir}/${name}`;
-}
+import { joinPath, parentOf } from "./logic";
+
+export { joinPath, parentOf };
 export function baseName(p: string) {
   return p === "/" ? "/" : p.slice(p.lastIndexOf("/") + 1);
 }
@@ -294,4 +289,25 @@ export function useVideoPoster(key: string | null, url: string): string | null {
 export function modKey(): string {
   if (typeof navigator === "undefined") return "Ctrl+";
   return /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl+";
+}
+
+/** "⌥" on Apple devices, "Alt+" elsewhere. */
+export function altKey(): string {
+  if (typeof navigator === "undefined") return "Alt+";
+  return /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent) ? "⌥" : "Alt+";
+}
+
+/** The new-folder shortcut's hint. ⇧⌘N is the browser's private window, so it's ⌥⌘N (Ctrl+Alt+N). */
+export const newFolderHint = () => `${modKey()}${altKey()}N`;
+/** Is this key press the new-folder shortcut? (Option changes e.key on a Mac, so read the key's code.) */
+export const isNewFolderKey = (e: KeyboardEvent | React.KeyboardEvent) => (e.metaKey || e.ctrlKey) && e.altKey && !e.shiftKey && e.code === "KeyN";
+
+/**
+ * The modifier for shortcut hints that render on the page: "Ctrl+" on the server and the first
+ * client render (so hydration matches), then the real one.
+ */
+export function useModKey(): string {
+  const [mod, setMod] = React.useState("Ctrl+");
+  React.useEffect(() => setMod(modKey()), []);
+  return mod;
 }

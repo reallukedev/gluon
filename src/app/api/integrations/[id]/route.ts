@@ -3,6 +3,7 @@ import { route } from "@/server/api";
 import { audit } from "@/server/audit";
 import { deleteIntegration, getIntegration, updateIntegration } from "@/server/integrations/store";
 import { KINDS } from "@/server/integrations/registry";
+import { requireRecentAuth } from "@/server/integrations/recent";
 
 const idOf = (p: Record<string, string | string[]>) => String(Array.isArray(p.id) ? p.id[0] : p.id);
 
@@ -17,7 +18,9 @@ const patchBody = z.object({
   shared: z.boolean().optional(),
 });
 
-export const PATCH = route({ auth: "admin", body: patchBody }, ({ user, body, params, ip, zone }) => {
+export const PATCH = route({ auth: "admin", body: patchBody }, ({ user, session, body, params, ip, zone }) => {
+  // Sharing with the household opens the app to every member: confirm it's the admin.
+  if (body.shared === true && !getIntegration(idOf(params)).shared) requireRecentAuth(session);
   const { before, after } = updateIntegration(idOf(params), body);
   const changed = [
     body.name !== undefined && body.name.trim() !== before.name ? "name" : null,
@@ -39,7 +42,7 @@ export const PATCH = route({ auth: "admin", body: patchBody }, ({ user, body, pa
   return after;
 });
 
-export const DELETE = route({ auth: "admin" }, ({ user, params, ip, zone }) => {
+export const DELETE = route({ auth: "admin", recent: true }, ({ user, params, ip, zone }) => {
   const gone = deleteIntegration(idOf(params));
   audit(
     user,

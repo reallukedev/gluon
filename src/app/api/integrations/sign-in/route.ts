@@ -7,6 +7,7 @@ import { runIntegrationTest } from "@/server/integrations/test";
 import { KEY_NAME, mintKey } from "@/server/integrations/signin";
 import { KINDS } from "@/server/integrations/registry";
 import { SIGN_IN_KINDS, type SignInResult } from "@/lib/widgets-types";
+import { requireRecentAuth } from "@/server/integrations/recent";
 
 const body = z.object({
   kind: z.enum(SIGN_IN_KINDS),
@@ -26,7 +27,9 @@ const body = z.object({
  * Connect Jellyfin or Immich by signing in once. Gluon asks the app for its own API key named "Gluon", saves only
  * that key (encrypted), tests it, and forgets the password.
  */
-export const POST = route({ auth: "admin", body }, async ({ user, body, ip, zone }): Promise<SignInResult> => {
+export const POST = route({ auth: "admin", body }, async ({ user, session, body, ip, zone }): Promise<SignInResult> => {
+  // A new connection shared with the household: confirm it's the admin before anything is made.
+  if (!body.integrationId && body.shared) requireRecentAuth(session);
   const label = KINDS[body.kind].label;
   const existing = body.integrationId ? getRecord(body.integrationId) : null;
   if (body.integrationId && !existing) throw badRequest("That connection is gone. Close this and connect again.");

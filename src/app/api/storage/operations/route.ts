@@ -7,7 +7,7 @@ import { runCleanup } from "@/server/storage/cleanup";
 import { startRename } from "@/server/storage/rename";
 import { startSetup } from "@/server/storage/setup";
 
-/** GET /api/storage/operations?kind=&limit= — recent storage operations (newest first). */
+/** GET /api/storage/operations?kind=&limit=: recent storage operations (newest first). */
 export const GET = route(
   {
     auth: "admin",
@@ -21,7 +21,7 @@ export const GET = route(
 );
 
 /**
- * POST /api/storage/operations — change something (admin, re-auth within 10 min).
+ * POST /api/storage/operations: change something (admin, re-auth within 10 min).
  * mount / unmount / persist / cleanup answer with JSON { message, … } when done.
  * rename / setup start a background job and answer with an NDJSON stream of its steps
  * ({type:"job"}, {type:"step"}…, {type:"done", ok, status, message}). Closing the stream doesn't stop

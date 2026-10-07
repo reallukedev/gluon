@@ -119,23 +119,23 @@ function accessoryState(a: HomebridgeAccessory, temp: (c: number) => string): { 
       return { text: a.on ? (a.brightness !== null ? `On · ${Math.round(a.brightness)}%` : "On") : "Off", active: !!a.on };
     case "thermostat":
       return {
-        text: [a.temperature !== null ? temp(a.temperature) : null, a.targetTemperature !== null ? `set to ${temp(a.targetTemperature)}` : null].filter(Boolean).join(" · ") || "—",
+        text: [a.temperature !== null ? temp(a.temperature) : null, a.targetTemperature !== null ? `set to ${temp(a.targetTemperature)}` : null].filter(Boolean).join(" · ") || "No reading",
         active: !!a.on,
       };
     case "temperature":
-      return { text: a.temperature !== null ? temp(a.temperature) : "—", active: true };
+      return { text: a.temperature !== null ? temp(a.temperature) : "No reading", active: true };
     case "humidity":
-      return { text: a.humidity !== null ? `${Math.round(a.humidity)}%` : "—", active: true };
+      return { text: a.humidity !== null ? `${Math.round(a.humidity)}%` : "No reading", active: true };
     case "contact":
-      return { text: a.contact === "open" ? "Open" : a.contact === "closed" ? "Closed" : "—", active: a.contact === "open" };
+      return { text: a.contact === "open" ? "Open" : a.contact === "closed" ? "Closed" : "No reading", active: a.contact === "open" };
     case "motion":
       return { text: a.motion ? "Motion" : "Still", active: !!a.motion };
     case "lock":
-      return { text: a.locked === true ? "Locked" : a.locked === false ? "Unlocked" : "—", active: a.locked === false };
+      return { text: a.locked === true ? "Locked" : a.locked === false ? "Unlocked" : "No reading", active: a.locked === false };
     case "cover":
-      return { text: a.position !== null ? (a.position === 0 ? "Closed" : a.position === 100 ? "Open" : `${Math.round(a.position)}% open`) : "—", active: (a.position ?? 0) > 0 };
+      return { text: a.position !== null ? (a.position === 0 ? "Closed" : a.position === 100 ? "Open" : `${Math.round(a.position)}% open`) : "No reading", active: (a.position ?? 0) > 0 };
     default:
-      return { text: a.on === null ? "—" : a.on ? "On" : "Off", active: !!a.on };
+      return { text: a.on === null ? "No reading" : a.on ? "On" : "Off", active: !!a.on };
   }
 }
 
@@ -272,7 +272,7 @@ export function HomebridgeSettings({ config, onChange }: SettingsProps<Homebridg
 function FieldValue({ f }: { f: JsonFieldValue }) {
   const fmt = useFormat();
   const v = f.value;
-  if (v === null) return <span className="muted">—</span>;
+  if (v === null) return <span className="muted">No value</span>;
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() && Number.isFinite(Number(v)) ? Number(v) : null;
   const t = n !== null ? (n > 1e11 ? n : n * 1000) : typeof v === "string" ? Date.parse(v) : NaN;
   switch (f.format) {

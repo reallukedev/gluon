@@ -83,13 +83,13 @@ export function NetworkWidget({ size }: WidgetProps) {
           <span className="label">
             <ArrowDown aria-hidden /> In
           </span>
-          <strong>{shown ? fmt.rate(shown.net.rx) : "—"}</strong>
+          <strong>{shown ? fmt.rate(shown.net.rx) : <span className="muted">Waiting</span>}</strong>
         </div>
         <div className={s.figure} data-out="">
           <span className="label">
             <ArrowUp aria-hidden /> Out
           </span>
-          <strong>{shown ? fmt.rate(shown.net.tx) : "—"}</strong>
+          <strong>{shown ? fmt.rate(shown.net.tx) : <span className="muted">Waiting</span>}</strong>
         </div>
         {!compact && <span className={s.when}>{sel ? fmt.time(sel.t, true) : offline && last ? <Age at={last.t} expectMs={10_000} /> : "Now"}</span>}
       </div>

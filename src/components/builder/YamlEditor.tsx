@@ -4,36 +4,20 @@ import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-import { HighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching, foldGutter } from "@codemirror/language";
+import { syntaxHighlighting, indentOnInput, bracketMatching, foldGutter } from "@codemirror/language";
 import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { unifiedMergeView } from "@codemirror/merge";
-import { tags as t } from "@lezer/highlight";
 import type { Issue } from "@/lib/builder-types";
+import { editorHighlight, editorTheme } from "@/components/code/CodeEditor";
 import s from "@/components/code/code.module.css";
+import b from "./builder.module.css";
 
 /**
- * The compose editor: Gluon's CodeEditor look (same tokens) plus what the builder needs on top —
- * problems drawn on their lines, and a handle to jump to a line from the problem list.
+ * The compose editor: CodeEditor's theme and highlighting plus what the builder needs on top,
+ * problems drawn on their lines and a handle to jump to a line from the problem list.
  */
-
-const theme = EditorView.theme({
-  "&": { color: "var(--ink)", backgroundColor: "var(--panel)", fontSize: "12.75px", height: "100%" },
-  ".cm-content": { fontFamily: "var(--font-mono)", caretColor: "var(--ink)", padding: "10px 0" },
-  ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.6" },
-  ".cm-gutters": { backgroundColor: "var(--panel-2)", color: "var(--faint)", border: "none", borderRight: "1px solid var(--line)" },
-  ".cm-activeLine": { backgroundColor: "color-mix(in oklab, var(--ink) 4%, transparent)" },
-  ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--ink-2)" },
-  "&.cm-focused": { outline: "none" },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": { backgroundColor: "color-mix(in oklab, var(--ink) 16%, transparent) !important" },
-  ".cm-cursor": { borderLeftColor: "var(--ink)", borderLeftWidth: "2px" },
-  ".cm-searchMatch": { backgroundColor: "color-mix(in oklab, var(--ink) 14%, transparent)" },
-  ".cm-panels": { backgroundColor: "var(--panel-2)", color: "var(--ink)", borderTop: "1px solid var(--line)" },
-  ".cm-panels input, .cm-panels button": { fontFamily: "var(--font-sans)", fontSize: "13px" },
-  ".cm-changedLine": { backgroundColor: "color-mix(in oklab, var(--ok) 12%, transparent) !important" },
-  ".cm-deletedChunk": { backgroundColor: "color-mix(in oklab, var(--fault) 10%, transparent)" },
-  ".cm-insertedLine": { backgroundColor: "color-mix(in oklab, var(--ok) 12%, transparent)" },
-  ".cm-changedText": { background: "color-mix(in oklab, var(--ok) 30%, transparent)" },
-  // Problems: a short red underline for errors, an ink-2 one for warnings (red always has a glyph: the gutter diamond).
+const lintTheme = EditorView.theme({
+  // Errors get a red underline and a diamond in the gutter (red always has a glyph); warnings an ink-2 one.
   ".cm-lintRange-error": { backgroundImage: "none", textDecoration: "underline wavy var(--fault)", textUnderlineOffset: "3px" },
   ".cm-lintRange-warning": { backgroundImage: "none", textDecoration: "underline dotted var(--ink-2)", textUnderlineOffset: "3px" },
   ".cm-lintRange-info": { backgroundImage: "none" },
@@ -46,18 +30,6 @@ const theme = EditorView.theme({
   ".cm-diagnostic-error": { borderLeftColor: "var(--fault)" },
   ".cm-gutter-lint": { width: "14px" },
 });
-
-const highlight = HighlightStyle.define([
-  { tag: [t.propertyName, t.definition(t.propertyName)], color: "var(--ink)", fontWeight: "600" },
-  { tag: [t.string, t.special(t.string)], color: "var(--info)" },
-  { tag: [t.number, t.bool, t.null, t.atom], color: "var(--ok)" },
-  { tag: [t.comment, t.lineComment], color: "var(--muted)", fontStyle: "italic" },
-  { tag: [t.keyword, t.definitionKeyword], color: "var(--ink)", fontWeight: "600" },
-  { tag: [t.typeName, t.labelName, t.tagName], color: "var(--info)", fontWeight: "600" },
-  { tag: [t.variableName, t.attributeName], color: "var(--ink-2)" },
-  { tag: [t.punctuation, t.separator, t.bracket], color: "var(--faint)" },
-  { tag: t.meta, color: "var(--muted)" },
-]);
 
 export interface YamlEditorHandle {
   gotoLine: (line: number) => void;
@@ -76,7 +48,7 @@ interface Props {
   placeholder?: string;
 }
 
-export const YamlEditor = React.forwardRef<YamlEditorHandle, Props>(function YamlEditor({ value, onChange, issues, readOnly, original, height = 520, label }, ref) {
+export function YamlEditor({ ref, value, onChange, issues, readOnly, original, height = 520, label }: Props & { ref?: React.Ref<YamlEditorHandle> }) {
   const host = React.useRef<HTMLDivElement>(null);
   const view = React.useRef<EditorView | null>(null);
   const onChangeRef = React.useRef(onChange);
@@ -115,9 +87,10 @@ export const YamlEditor = React.forwardRef<YamlEditorHandle, Props>(function Yam
           highlightActiveLine(),
           highlightActiveLineGutter(),
           highlightSelectionMatches(),
-          syntaxHighlighting(highlight),
+          syntaxHighlighting(editorHighlight),
           keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
-          theme,
+          editorTheme,
+          lintTheme,
           ...lang,
           EditorState.readOnly.of(!!readOnly),
           EditorView.editable.of(!readOnly),
@@ -149,8 +122,8 @@ export const YamlEditor = React.forwardRef<YamlEditorHandle, Props>(function Yam
     if (view.current) applyDiagnostics(view.current, issues);
   }, [issues]);
 
-  return <div ref={host} className={s.editor} style={{ height, borderRadius: 0, border: 0 }} />;
-});
+  return <div ref={host} className={`${s.editor} ${b.yamlHost}`} style={{ "--editor-height": typeof height === "number" ? `${height}px` : height } as React.CSSProperties} />;
+}
 
 function applyDiagnostics(v: EditorView, issues: Issue[] | undefined) {
   const doc = v.state.doc;

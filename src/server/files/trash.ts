@@ -6,6 +6,7 @@ import { id as newId } from "../crypto";
 import { AppError, forbidden, notFound } from "../errors";
 import { audit } from "../audit";
 import { publish } from "../events";
+import { Changed, inDir, inParent, mkdirs } from "./safe";
 import { hostPath, isWithin, normalizeHostPath } from "../host/paths";
 import type { User } from "../auth/users";
 import type { FileJob, TrashItem, TrashSummary } from "@/lib/files-types";
@@ -16,7 +17,7 @@ import { startJob } from "./jobs";
 import { measureQuiet } from "./du";
 
 /**
- * Trash lives on the same filesystem as the thing deleted — `<mount root>/.gluon-trash/<id>/<name>` —
+ * Trash lives on the same filesystem as the thing deleted (`<mount root>/.gluon-trash/<id>/<name>`),
  * so trashing is an instant rename and never needs free space. Each item also gets a sidecar
  * `<id>.json` so the trash can be rebuilt from disk if the database is lost (or another Gluon
  * instance trashed it).
@@ -78,11 +79,12 @@ function cachedSize(real: string): number | null {
  * Move one resolved path to its filesystem's trash. Callers have already authorised and checked
  * removability. Returns the new trash row.
  */
-export async function moveToTrash(real: string, userId: string | null): Promise<TrashItem> {
+export async function moveToTrash(real: string, userId: string | null, expect?: Pick<fs.Stats, "dev" | "ino"> | null): Promise<TrashItem> {
   const m = mountOf(real);
   if (!m) throw new AppError("no_mount", "Couldn't work out which drive that's on.", 500);
   if (m.readOnly) throw new AppError("read_only", `${m.mount} is mounted read-only, so nothing on it can be moved to the trash.`, 409);
-  const st = await fs.promises.lstat(hostPath(real));
+  const st = await inParent(real, (d, n) => fs.promises.lstat(d.at(n)));
+  if (expect && (st.dev !== expect.dev || st.ino !== expect.ino)) throw new Changed(path.posix.basename(real));
   const dir = await ensureTrashDir(m.mount);
   const id = newId();
   const itemDir = path.posix.join(dir, id);
@@ -91,11 +93,19 @@ export async function moveToTrash(real: string, userId: string | null): Promise<
   const isDir = st.isDirectory();
   const size = isDir ? cachedSize(real) : st.size;
   const side: Sidecar = { id, originalPath: real, name, isDir, size, deletedAt: now(), deletedBy: userId };
-  await fs.promises.mkdir(hostPath(itemDir), { mode: 0o700 });
+  // Both ends are reached through folders opened without following links, and the item must still
+  // be the one that was checked, so a folder swapped for a link can't send something else to the trash.
+  await inDir(dir, null, (t) => fs.promises.mkdir(t.at(id), { mode: 0o700 }));
   try {
-    await fs.promises.rename(hostPath(real), hostPath(dest));
+    await inParent(real, (from, n) =>
+      inDir(itemDir, null, async (to) => {
+        const now = await fs.promises.lstat(from.at(n));
+        if (now.dev !== st.dev || now.ino !== st.ino) throw new Changed(n);
+        await fs.promises.rename(from.at(n), to.at(name));
+      }),
+    );
   } catch (e) {
-    await fs.promises.rmdir(hostPath(itemDir)).catch(() => {});
+    await inDir(dir, null, (t) => fs.promises.rmdir(t.at(id))).catch(() => {});
     const code = (e as NodeJS.ErrnoException).code;
     if (code === "EXDEV") throw new AppError("cross_device", `${real} sits on a different drive than its folder, so it can't be moved to the trash.`, 409);
     if (code === "EBUSY") throw new AppError("busy", `${real} is in use (probably a mount point), so it can't be moved to the trash.`, 409);
@@ -172,7 +182,7 @@ export async function trashPaths(user: User, paths: string[], where: { ip: strin
   const items: TrashItem[] = [];
   for (const t of unique) {
     try {
-      items.push(await moveToTrash(t.real, user.id));
+      items.push(await moveToTrash(t.real, user.id, t.stat));
     } catch (e) {
       if (items.length) {
         audit(user, { action: "files.trash", summary: `Moved ${plural(items.length, "item")} to the trash`, target: path.posix.dirname(unique[0]!.real), detail: { paths: items.map((i) => i.originalPath) } }, where);
@@ -226,9 +236,7 @@ export async function restore(
       if (!acc || acc.access !== "write") throw forbidden("You no longer have write access to where that came from.");
     }
     await assertMutable(parent.real, "restore into");
-    if (!parent.exists) {
-      await fs.promises.mkdir(hostPath(parent.real), { recursive: true, mode: 0o755 });
-    }
+    if (!parent.exists) await mkdirs(parent.real);
     let name = path.posix.basename(r.original_path);
     if (await exists(path.posix.join(parent.real, name))) {
       if (onConflict === "fail") {
@@ -238,7 +246,7 @@ export async function restore(
     }
     const dest = path.posix.join(parent.real, name);
     try {
-      await fs.promises.rename(hostPath(r.trash_path), hostPath(dest));
+      await inParent(r.trash_path, (from, n) => inDir(parent.real, null, (to) => fs.promises.rename(from.at(n), to.at(name))));
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "EXDEV") {
         throw new AppError("cross_device", `${parentPath} is now on a different drive than the trash, so ${name} can't be put back automatically.`, 409);

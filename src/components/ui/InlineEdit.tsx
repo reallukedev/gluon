@@ -1,6 +1,6 @@
 "use client";
 /**
- * InlineEdit — rename in place (a server name, a pinned folder, a route label).
+ * InlineEdit: rename in place (a server name, a pinned folder, a route label).
  *
  *   <InlineEdit value={name} label="Server name" onSave={(v) => api.patch(..., { name: v })} />
  *

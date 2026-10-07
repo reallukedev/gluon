@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, MoreHoriz, ClockRotateRight, Code, Refresh, Link as LinkIcon } from "iconoir-react";
+import { Plus, MoreHoriz, ClockRotateRight, Code, Refresh, Link as LinkIcon, ChatBubble } from "iconoir-react";
 import type { ExposureReport, NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
 import { api, ApiError } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
@@ -19,6 +19,7 @@ import { AppList } from "./AppList";
 import { AppDetails } from "./AppDetails";
 import { HomeReach } from "./HomeReach";
 import { PublishFlow, type FlowTarget } from "./PublishFlow";
+import { ChatServerFlow, type ChatTarget } from "./ChatServerFlow";
 import { HistoryDialog } from "./HistoryDialog";
 import { CaddyfileDialog } from "./CaddyfileDialog";
 import { driftSentence } from "./DriftNotice";
@@ -50,6 +51,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
   const [detailsKey, setDetailsKey] = React.useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [flow, setFlow] = React.useState<FlowTarget | null>(landing?.kind === "publish" ? { mode: "new", appId: landing.appId } : null);
+  const [chat, setChat] = React.useState<ChatTarget | null>(null);
   const [history, setHistory] = React.useState(false);
   const [caddyfile, setCaddyfile] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
@@ -261,7 +263,8 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
   const editRoute = (id: string) => {
     const r = data?.config.routes.find((x) => x.id === id);
     setDetailsOpen(false);
-    setFlow(r?.type === "redirect" ? { mode: "redirect", id } : { mode: "edit", id });
+    if (r?.type === "subdomain" && r.xmpp) setChat({ mode: "edit", id });
+    else setFlow(r?.type === "redirect" ? { mode: "redirect", id } : { mode: "edit", id });
   };
 
   // ---- the header sentence: state first.
@@ -341,6 +344,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
               items={[
                 { label: "Check everything now", icon: <Refresh />, onSelect: () => void recheck(), disabled: checking },
                 { label: "Add a short link", description: `A path on ${data?.config.base_domain ?? "the main domain"} that redirects`, icon: <LinkIcon />, onSelect: () => setFlow({ mode: "redirect" }), disabled: !data },
+                { label: "Add a chat server", description: "An XMPP server people sign in to from chat apps", icon: <ChatBubble />, onSelect: () => setChat({ mode: "new" }), disabled: !data },
                 "separator",
                 { label: "History", description: "Earlier versions, restore one", icon: <ClockRotateRight />, onSelect: () => setHistory(true), disabled: !data },
                 { label: "Caddyfile", description: "The web server's settings file", icon: <Code />, onSelect: () => setCaddyfile(true), disabled: !data },
@@ -433,6 +437,11 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
             setDetailsOpen(false);
             setFlow({ mode: "fallback" });
           }}
+          onRecheck={() => void recheck()}
+          onSetUpChat={(id) => {
+            setDetailsOpen(false);
+            setChat({ mode: "convert", id });
+          }}
           onToggleAddress={toggleAddress}
           onRemoveAddress={removeAddress}
           onRemoveApp={removeApp}
@@ -458,6 +467,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
           }}
         />
       )}
+      {data && chat && <ChatServerFlow key={JSON.stringify(chat)} target={chat} data={data} status={status.data} commit={commit} onClose={() => setChat(null)} onReload={() => void routes.mutate()} />}
       {data && (
         <HistoryDialog
           open={history}

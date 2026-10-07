@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHoriz, Box3dPoint, Page as PageIcon, Github } from "iconoir-react";
+import { MoreHoriz, Box3dPoint, Page as PageIcon, Github, Terminal } from "iconoir-react";
 import { api, useApi } from "@/lib/client/api";
 import type { CustomAppListItem, CustomAppsResponse, StoreStatus } from "@/lib/builder-types";
 import { Page, PageHeader, Empty, Notice, Skeleton, Panel } from "@/components/ui/Surface";
@@ -41,10 +41,10 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
         ) : (
           <div className={s.table} aria-busy aria-label="Loading your apps">
             {Array.from({ length: 3 }, (_, i) => (
-              <div key={i} className={s.listRow} style={{ cursor: "default" }}>
+              <div key={i} className={`${s.listRow} ${s.listRowStatic}`}>
                 <div className={s.appCell}>
                   <Skeleton width={34} height={34} radius={9} />
-                  <div className={s.appText} style={{ flex: 1 }}>
+                  <div className={`${s.appText} ${s.grow}`}>
                     <Skeleton width="50%" height={14} />
                     <Skeleton width="70%" height={11} style={{ marginTop: 4 }} />
                   </div>
@@ -111,6 +111,9 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
                 <LinkButton href="/apps/new?from=image" icon={<Box3dPoint />}>
                   Docker image
                 </LinkButton>
+                <LinkButton href="/apps/new?from=run" icon={<Terminal />}>
+                  docker run
+                </LinkButton>
                 <LinkButton href="/apps/new?from=compose" icon={<PageIcon />}>
                   Compose file
                 </LinkButton>
@@ -121,8 +124,8 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
             }
           >
             {umbrel
-              ? "Package any Docker image, compose file or GitHub project as an Umbrel app. Gluon hosts it in its own app store, so it installs, updates and uninstalls from Umbrel's dashboard, and shows up here and in Apps."
-              : "Package any Docker image, compose file or GitHub project as an app Gluon runs with Docker Compose, with its data kept in one folder."}
+              ? "Package any Docker image, docker run command, compose file or GitHub project as an Umbrel app. Gluon hosts it in its own app store, so it installs, updates and uninstalls from Umbrel's dashboard, and shows up here and in Apps."
+              : "Package any Docker image, docker run command, compose file or GitHub project as an app Gluon runs with Docker Compose, with its data kept in one folder."}
           </Empty>
         </Panel>
       ) : (
@@ -177,7 +180,8 @@ function AppRow({ app: a, onOpen, onDelete }: { app: CustomAppListItem; onOpen: 
     SOURCE_WORDS[a.source]
   );
   const items: MenuEntry[] = [
-    { label: "Edit", href },
+    ...(a.status === "draft" && !a.job ? [{ label: "Continue setting up", href: `/apps/new?draft=${a.id}&step=setup` }] : []),
+    { label: a.status === "draft" ? "Open in the builder" : "Edit", href },
     ...(a.runtime?.url && (a.runtime.state === "ready" || a.runtime.state === "running") ? [{ label: `Open ${a.name}`, href: a.runtime.url }] : []),
     ...(a.runtime?.appsId ? [{ label: "Show in Apps", href: `/apps/${encodeURIComponent(a.runtime.appsId)}` }] : []),
     ...(a.status === "draft" ? ["separator" as const, { label: "Delete draft…", danger: true, onSelect: onDelete }] : []),
@@ -221,7 +225,7 @@ function AppRow({ app: a, onOpen, onDelete }: { app: CustomAppListItem; onOpen: 
 
 function StoreNotice({ store, hasApps, hasPublished, onSetUp }: { store: StoreStatus | null; hasApps: boolean; hasPublished: boolean; onSetUp: () => void }) {
   if (!store) return null;
-  const gap = <div style={{ height: 16 }} />;
+  const gap = <div className={s.gap} />;
   if (store.gitMissing) {
     return (
       <>

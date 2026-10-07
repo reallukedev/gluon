@@ -24,7 +24,7 @@ function withTimeout<T>(p: Promise<T>, what: string): Promise<T> {
 }
 
 /**
- * GET /api/onboarding/inventory?part=apps|drives|addresses|attention — the admin's first look at the
+ * GET /api/onboarding/inventory?part=apps|drives|addresses|attention: the admin's first look at the
  * server, one part per request so each shows as soon as it's read and one failing doesn't hide the rest.
  * Read-only.
  */

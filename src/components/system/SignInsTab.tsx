@@ -158,7 +158,7 @@ function SessionRow({ x, ending, onEnd }: { x: LiveSession; ending: boolean; onE
               {running.label !== "At the prompt" && <span className={`${s.program} mono`}>{running.program}</span>}
             </>
           ) : (
-            <span className={s.dim}>{x.kind === "tunnel" ? "Nothing running" : "—"}</span>
+            <span className={s.dim}>{x.kind === "tunnel" ? "Nothing running" : "None"}</span>
           )}
         </span>
       </span>

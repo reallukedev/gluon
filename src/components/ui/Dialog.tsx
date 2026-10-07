@@ -216,10 +216,13 @@ export function ConfirmDialog({ open, onOpenChange, ...o }: ConfirmOptions & { o
 export function useConfirm() {
   const [state, setState] = React.useState<ConfirmOptions | null>(null);
   const [open, setOpen] = React.useState(false);
+  // A fresh dialog per question, so the last one's typed text or error never shows for a frame.
+  const [asked, setAsked] = React.useState(0);
   const ask = React.useCallback((o: ConfirmOptions) => {
     setState(o);
+    setAsked((n) => n + 1);
     setOpen(true);
   }, []);
-  const node = state ? <ConfirmDialog {...state} open={open} onOpenChange={setOpen} /> : null;
+  const node = state ? <ConfirmDialog key={asked} {...state} open={open} onOpenChange={setOpen} /> : null;
   return [ask, node] as const;
 }

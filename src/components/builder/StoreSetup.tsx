@@ -91,7 +91,7 @@ export function StoreSetupDialog({ open, onOpenChange, onDone, repair }: { open:
     body = (
       <Notice tone="fault" title="Umbrel can't reach Gluon">
         Umbrel tried <span className={s.mono}>{host(phase.address)}</span> and got no answer. Gluon listens on the host network; check that a firewall doesn&apos;t block Docker&apos;s networks from this port.
-        {phase.detail && <pre className={s.log} style={{ marginTop: 8 }}>{phase.detail}</pre>}
+        {phase.detail && <pre className={`${s.log} ${s.logAfter}`}>{phase.detail}</pre>}
       </Notice>
     );
     footer = (

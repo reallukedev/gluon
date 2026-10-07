@@ -7,7 +7,7 @@ const BIN = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
 
 /** 1_234_567 → "1.2 MB" (or "1.2 MiB"). Precision adapts so small values keep meaning. */
 export function formatBytes(n: number | null | undefined, mode: "decimal" | "binary" = "decimal", digits?: number): string {
-  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  if (n === null || n === undefined || !Number.isFinite(n)) return "Unknown";
   const base = mode === "binary" ? 1024 : 1000;
   const units = mode === "binary" ? BIN : DEC;
   let v = Math.abs(n);
@@ -22,7 +22,7 @@ export function formatBytes(n: number | null | undefined, mode: "decimal" | "bin
 
 /** Bytes per second → "4.2 MB/s" or "34 Mb/s". */
 export function formatRate(bytesPerSec: number | null | undefined, mode: "bytes" | "bits" = "bytes"): string {
-  if (bytesPerSec === null || bytesPerSec === undefined || !Number.isFinite(bytesPerSec)) return "—";
+  if (bytesPerSec === null || bytesPerSec === undefined || !Number.isFinite(bytesPerSec)) return "Unknown";
   if (mode === "bits") {
     const units = ["b/s", "kb/s", "Mb/s", "Gb/s"];
     let v = bytesPerSec * 8;
@@ -37,18 +37,18 @@ export function formatRate(bytesPerSec: number | null | undefined, mode: "bytes"
 }
 
 export function formatPercent(v: number | null | undefined, digits = 0): string {
-  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  if (v === null || v === undefined || !Number.isFinite(v)) return "Unknown";
   return `${v.toFixed(v > 0 && v < 1 && digits === 0 ? 1 : digits)}%`;
 }
 
 export function formatTemp(celsius: number | null | undefined, unit: "c" | "f" = "c"): string {
-  if (celsius === null || celsius === undefined || !Number.isFinite(celsius)) return "—";
+  if (celsius === null || celsius === undefined || !Number.isFinite(celsius)) return "Unknown";
   return unit === "f" ? `${Math.round((celsius * 9) / 5 + 32)}°F` : `${Math.round(celsius)}°C`;
 }
 
 /** 5025 s → "1 h 23 m"; 42 s → "42 s"; 3 days → "3 d 4 h". */
 export function formatDuration(seconds: number | null | undefined, parts = 2): string {
-  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return "—";
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return "Unknown";
   let s = Math.max(0, Math.floor(seconds));
   const units: [string, number][] = [
     ["y", 365 * 86400],

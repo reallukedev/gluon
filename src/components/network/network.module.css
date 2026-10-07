@@ -28,7 +28,7 @@
 }
 .appRowWrap { border-top: 1px solid var(--line); scroll-margin-top: 90px; transition: background-color var(--dur-base) ease; }
 .appRowWrap:first-child { border-top: 0; }
-.appRowWrap[data-highlight] { background: var(--panel-2); box-shadow: inset 2px 0 0 var(--ink); }
+.appRowWrap[data-highlight] { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .appRow { min-height: 64px; padding-top: 11px; padding-bottom: 11px; cursor: pointer; transition: background-color var(--dur-fast) ease; }
 .appRow:active { background: color-mix(in oklab, var(--ink) 5%, transparent); }
 @media (hover: hover) and (pointer: fine) {
@@ -49,7 +49,8 @@
 @media (hover: hover) and (pointer: fine) { .appName:hover { text-decoration: underline; } }
 .addrLine { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .url { min-width: 0; font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.8rem; color: var(--ink-2); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.url:hover { color: var(--ink); text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .url:hover { color: var(--ink); text-decoration: underline; } }
+.url:focus-visible { color: var(--ink); text-decoration: underline; }
 .lane { flex: none; font-size: var(--text-xs); color: var(--muted); }
 .alsoLine { min-width: 0; font-size: var(--text-xs); color: var(--muted); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .alsoLine :global(.mono) { color: var(--ink-2); }
@@ -180,7 +181,7 @@
 .thead { height: 34px; border-bottom: 1px solid var(--line); background: var(--panel-2); font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .trow { min-height: 52px; padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--line); }
 .thead + .trow { border-top: 0; }
-.trow[data-flagged] { box-shadow: inset 2px 0 0 var(--attn); }
+.trow[data-flagged] { background: var(--attn-soft); }
 .dnsGrid { grid-template-columns: minmax(200px, 1.4fr) minmax(160px, 1.1fr) minmax(170px, 1fr); }
 .certGrid { grid-template-columns: minmax(200px, 1.6fr) 120px minmax(170px, 1fr); }
 .lanGrid { grid-template-columns: 96px minmax(170px, 1.3fr) minmax(170px, 1.2fr) minmax(150px, 1fr); }
@@ -212,7 +213,7 @@
 .historyList { list-style: none; margin: 0; padding: 0; max-height: 480px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-control); }
 .historyItem { display: grid; gap: 2px; width: 100%; padding: 9px 12px; border-top: 1px solid var(--line); text-align: left; font-size: var(--text-sm); }
 .historyList li:first-child .historyItem { border-top: 0; }
-.historyItem[data-on] { background: var(--panel-2); box-shadow: inset 2px 0 0 var(--ink); }
+.historyItem[data-on] { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--ink); }
 .historyItem:disabled { opacity: 0.5; cursor: default; }
 @media (hover: hover) and (pointer: fine) { .historyItem:not(:disabled):hover { background: var(--panel-2); } }
 .historyReason { color: var(--muted); font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

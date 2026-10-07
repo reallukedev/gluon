@@ -6,6 +6,7 @@ import { usePrefs } from "@/components/PrefsProvider";
 import { Panel, Skeleton, Notice } from "@/components/ui/Surface";
 import { AffixInput, Field, Input, Switch, SettingRow } from "@/components/ui/Field";
 import { Button, IconButton } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { toast } from "@/components/ui/Toast";
 import { WorksWith } from "./WorksWith";
 import s from "./settings.module.css";
@@ -16,12 +17,31 @@ interface ServerSettings {
   baseDomain: string;
   homeNetworks: string[];
   detectedPrefixes: string[];
-  requireMfaAway: boolean;
+  mfaPolicy: MfaPolicy;
+  passwordPolicy: { minLength: number; notUsername: boolean; lettersAndNumbers: boolean };
   sessionDays: number;
   awaySessionDays: number;
   householdCanSeeStatus: boolean;
   thresholds: { diskAttention: number; diskFault: number; tempAttention: number; certDays: number; memoryAttention: number };
 }
+
+type MfaPolicy = "off" | "admins-away" | "admins" | "everyone-away" | "everyone";
+
+const MFA_OPTIONS: { value: MfaPolicy; label: string }[] = [
+  { value: "admins-away", label: "Admins, away from home" },
+  { value: "admins", label: "Admins, always" },
+  { value: "everyone-away", label: "Everyone, away from home" },
+  { value: "everyone", label: "Everyone, always" },
+  { value: "off", label: "Nobody" },
+];
+
+const MFA_EXPLAIN: Record<MfaPolicy, string> = {
+  "admins-away": "Admins enter a code from their phone when they sign in from outside home. At home a password is enough.",
+  admins: "Admins enter a code every time. An admin without it sets it up right after signing in at home.",
+  "everyone-away": "Everyone enters a code from outside home. At home a password is enough.",
+  everyone: "Everyone enters a code every time. Anyone without it sets it up right after signing in at home.",
+  off: "Nobody is asked for a code, though anyone can still turn two-step sign-in on for themselves.",
+};
 
 function DaysInput({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
   return (
@@ -97,7 +117,7 @@ export function Server() {
 
       <Panel title="Home network">
         <p className={s.hint} style={{ marginBottom: 12 }}>
-          Visitors from these addresses count as at home: they get home links to apps, and admins without two-step sign-in can sign in. Private ranges (192.168.x, 10.x,
+          Visitors from these addresses count as at home: they get home links to apps, and two-step rules for “away from home” don't apply to them. Private ranges (192.168.x, 10.x,
           172.16–31.x, Tailscale's 100.64.x) and this server's own IPv6 prefix always count. Changing this list asks you to confirm it's you.
         </p>
         <ul className={s.sortList} role="list">
@@ -137,19 +157,42 @@ export function Server() {
       </Panel>
 
       <Panel title="Signing in">
-        <SettingRow
-          label="Admins need two-step sign-in away from home"
-          description="An admin signing in from outside the home network must also enter a code from their phone. Admins who haven't set it up can still sign in at home."
-        >
-          <Switch checked={f.requireMfaAway} onChange={(v) => set("requireMfaAway", v)} aria-label="Admins need two-step sign-in away from home" />
+        <SettingRow label="Who needs two-step sign-in" description={MFA_EXPLAIN[f.mfaPolicy]} stack>
+          <Select aria-label="Who needs two-step sign-in" value={f.mfaPolicy} onChange={(v) => set("mfaPolicy", v)} options={MFA_OPTIONS} />
         </SettingRow>
-        {!f.requireMfaAway && (
-          <div style={{ padding: "0 0 14px" }}>
+        {f.mfaPolicy === "off" && (
+          <div className={s.noticeRow}>
             <Notice tone="attention" title="Anyone with an admin's password could run this server from anywhere">
-              Gluon can change anything on this machine. Keep this on unless every admin already uses two-step sign-in.
+              Gluon can change anything on this machine. Keep at least admins away from home unless every admin already uses two-step sign-in.
             </Notice>
           </div>
         )}
+        <SettingRow label="Shortest password" description="For new passwords. Ones people already use keep working until they change them." stack>
+          <AffixInput
+            type="number"
+            inputMode="numeric"
+            min={4}
+            max={64}
+            value={f.passwordPolicy.minLength}
+            onChange={(e) => set("passwordPolicy", { ...f.passwordPolicy, minLength: Math.max(4, Math.min(64, Math.round(Number(e.target.value)) || 4)) })}
+            after="characters"
+            aria-label="Shortest password"
+            className={s.charsInput}
+          />
+        </SettingRow>
+        {f.passwordPolicy.minLength < 8 && (
+          <div className={s.noticeRow}>
+            <Notice tone="attention" title="Short passwords are easy to guess">
+              Gluon slows down repeated guesses, but 8 characters or more is much harder to break, especially for admins.
+            </Notice>
+          </div>
+        )}
+        <SettingRow label="Not the same as the username" description="Refuse a password that's just the person's username.">
+          <Switch checked={f.passwordPolicy.notUsername} onChange={(v) => set("passwordPolicy", { ...f.passwordPolicy, notUsername: v })} aria-label="Not the same as the username" />
+        </SettingRow>
+        <SettingRow label="Letters and numbers" description="Ask for at least one letter and one number. Off by default: a long phrase is stronger than a short mix.">
+          <Switch checked={f.passwordPolicy.lettersAndNumbers} onChange={(v) => set("passwordPolicy", { ...f.passwordPolicy, lettersAndNumbers: v })} aria-label="Letters and numbers" />
+        </SettingRow>
         <SettingRow label="Stay signed in at home for" description="Days without use before someone has to sign in again.">
           <DaysInput value={f.sessionDays} onChange={(v) => set("sessionDays", v)} label="Days at home" />
         </SettingRow>

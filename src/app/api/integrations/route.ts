@@ -6,6 +6,7 @@ import { runIntegrationTest } from "@/server/integrations/test";
 import { KINDS } from "@/server/integrations/registry";
 import { integrationRefs } from "@/server/widgets/catalog";
 import { INTEGRATION_KINDS } from "@/lib/widgets-types";
+import { requireRecentAuth } from "@/server/integrations/recent";
 
 /** Admins: every connection (secrets masked). Members: the shared ones, as refs. */
 export const GET = route({ auth: "user" }, async ({ user }) => {
@@ -24,7 +25,8 @@ const createBody = z.object({
   test: z.boolean().default(true),
 });
 
-export const POST = route({ auth: "admin", body: createBody }, async ({ user, body, ip, zone }) => {
+export const POST = route({ auth: "admin", body: createBody }, async ({ user, session, body, ip, zone }) => {
+  if (body.shared) requireRecentAuth(session);
   const integration = createIntegration(body);
   audit(
     user,

@@ -1,0 +1,128 @@
+/* The guided New app flow. Tokens only; one plate per step, hairlines, no decoration. */
+
+.steps { margin-bottom: clamp(20px, 3vw, 28px); }
+/* On a phone the whole plan is a tall list; show where you are and what's next. */
+@media (max-width: 639px) {
+  .steps > li[data-state="done"],
+  .steps > li[aria-current="step"] ~ li ~ li { display: none; }
+}
+
+.body { display: grid; gap: 20px; min-width: 0; }
+.stack { display: grid; gap: 20px; min-width: 0; }
+.notice { margin-bottom: 16px; }
+.save { display: flex; justify-content: flex-end; margin-top: 14px; }
+.skeletonRows { display: grid; gap: 10px; }
+
+/* A step arriving: a short rise and fade, so the page doesn't swap under the eye. */
+.stepIn,
+.reveal {
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(calc(6px * var(--motion)));
+  }
+}
+
+/* ---------------------------------------------------------------- what to run */
+.sourcePanel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(14px, 2.4vw, 18px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  min-width: 0;
+}
+/* A sunk well like Segmented, with room for an icon: the chosen source lifts to the plate. */
+.sourcePicker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--sunk);
+}
+.sourceOption {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 560;
+  font-stretch: 94%;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, transform var(--dur-press) var(--ease-out);
+}
+.sourceOption > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sourceOption svg { width: 17px; height: 17px; flex: none; color: var(--muted); }
+.sourceOption[data-checked] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 0 0 1px var(--line); }
+.sourceOption[data-checked] svg { color: var(--ink); }
+.sourceOption:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.sourceOption:active { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) { .sourceOption:not([data-checked]):hover { color: var(--ink); } }
+@media (max-width: 480px) {
+  .sourceOption { padding: 0 6px; font-size: var(--text-sm); }
+  .sourceOption svg { display: none; }
+}
+/* Too narrow for four labels in a row: two by two, with their icons back. */
+@media (max-width: 400px) {
+  .sourcePicker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sourceOption svg { display: block; }
+}
+.sourceBody { display: grid; gap: 16px; min-width: 0; }
+.sourceDesc { font-size: var(--text-sm); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
+
+.runInput.runInput { min-height: 190px; white-space: pre; overflow-x: auto; resize: vertical; line-height: 1.55; }
+
+/* Notes from the parser and the fixes: the same short marks as the checks list. */
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; color: var(--ink-2); }
+.notes > li { display: grid; grid-template-columns: 6px minmax(0, 1fr); gap: 10px; align-items: baseline; overflow-wrap: anywhere; }
+.notes > li::before { content: ""; width: 2px; height: 11px; background: var(--faint); transform: translateY(1px); }
+.notes > li[data-level="warning"] { color: var(--ink); }
+.notes > li[data-level="warning"]::before { background: var(--ink-2); }
+
+.found { display: grid; gap: 16px; margin-top: 20px; min-width: 0; }
+.repoLink { font-size: var(--text-md); font-weight: 620; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+@media (hover: hover) and (pointer: fine) { .repoLink:hover { text-decoration: underline; text-underline-offset: 0.2em; } }
+.privateLink { display: inline-flex; align-items: center; gap: 6px; justify-self: start; font-size: var(--text-sm); }
+.privateLink svg { width: 13px; height: 13px; }
+.pushLeft { margin-right: auto; }
+
+/* ---------------------------------------------------------------- moving between steps */
+.nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; }
+.navMain { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; }
+@media (max-width: 640px) {
+  .nav { flex-direction: column-reverse; align-items: stretch; }
+  .navMain { flex-direction: column-reverse; align-items: stretch; margin-left: 0; }
+  .navMain > * { width: 100%; }
+}
+.blocked { margin-top: -10px; font-size: var(--text-sm); color: var(--muted); text-align: right; }
+@media (max-width: 640px) { .blocked { text-align: left; margin-top: 0; } }
+
+/* ---------------------------------------------------------------- public address */
+.ack { display: grid; gap: 10px; }
+
+/* ---------------------------------------------------------------- it's running */
+.running { display: grid; gap: 18px; min-width: 0; }
+.runningState { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: var(--text-md); min-width: 0; }
+.runningState .mono { color: var(--ink-2); overflow-wrap: anywhere; }
+.addressResult { display: grid; gap: 10px; justify-items: start; font-size: var(--text-md); min-width: 0; }
+.addressResult > a { overflow-wrap: anywhere; }
+.runningActions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) {
+  .runningActions { flex-direction: column; }
+  .runningActions > * { width: 100%; }
+}
+.navReason { font-size: var(--text-sm); color: var(--muted); overflow-wrap: anywhere; }
+@media (max-width: 640px) { .navReason { order: 1; } }
+.stepHeading:focus { outline: none; }

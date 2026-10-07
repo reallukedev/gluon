@@ -99,7 +99,7 @@
   text-overflow: ellipsis;
 }
 .callout::before { content: ""; flex: none; align-self: center; width: 5px; height: 1px; margin-right: -3px; background: var(--line-strong); }
-.diskLink:hover .callout { background: var(--panel-2); }
+@media (hover: hover) and (pointer: fine) { .diskLink:hover .callout { background: var(--panel-2); } }
 .calloutSub { color: var(--muted); font-size: var(--text-2xs); overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- the spec line: engraved names, plain values */
@@ -149,7 +149,7 @@
 .tRow > * { min-width: 0; }
 .mountCell, .devCell, .spaceCell { display: grid; gap: 4px; }
 .mountName { color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 560; }
-.mountName:hover, .devCell a:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .mountName:hover, .devCell a:hover { text-decoration: underline; } }
 .devCell a { color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .optCell { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .persist { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
@@ -199,7 +199,7 @@
 .partMain { min-width: 0; display: grid; gap: 3px; }
 .partName { font-size: var(--text-md); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .partName a { color: var(--ink); text-decoration: none; }
-.partName a:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .partName a:hover { text-decoration: underline; } }
 .partMain .sub a { color: var(--ink-2); }
 .partSide { display: grid; justify-items: end; gap: 6px; }
 @media (max-width: 720px) {
@@ -317,13 +317,13 @@
 .usageName svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
 .usageName .muted { font-size: var(--text-xs); white-space: nowrap; }
 .linkish { color: var(--ink); text-align: left; min-width: 0; }
-.linkish:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .linkish:hover { text-decoration: underline; } }
 .usageTrack { height: 8px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
 .usageTrack span { display: block; height: 100%; background: color-mix(in oklab, var(--ink) 40%, transparent); }
 .usageBytes { text-align: right; font-size: var(--text-sm); color: var(--ink-2); }
 .usageOpen { display: grid; place-items: center; color: var(--muted); }
 .usageOpen svg { width: 14px; height: 14px; }
-.usageOpen:hover { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .usageOpen:hover { color: var(--ink); } }
 /* The bar needs room beside a name that may carry a cleanup hint (~150px): below 520px it goes. */
 @container usage (max-width: 519px) { .usageRow { grid-template-columns: minmax(0, 1fr) 70px 24px; } .usageTrack { display: none; } }
 

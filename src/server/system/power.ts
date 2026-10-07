@@ -16,7 +16,7 @@ export type PowerAction = "restart" | "shutdown";
 export async function scheduledShutdown(): Promise<PowerStatus["scheduled"]> {
   try {
     const { stdout } = await host("busctl", ["get-property", "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "ScheduledShutdown"], { timeoutMs: 5000 });
-    // (st) "reboot" 1790400000000000   — or (st) "" 18446744073709551615 when nothing is scheduled
+    // (st) "reboot" 1790400000000000  : or (st) "" 18446744073709551615 when nothing is scheduled
     const m = stdout.match(/\(st\)\s+"([^"]*)"\s+(\d+)/);
     if (m) {
       const usec = Number(m[2]);

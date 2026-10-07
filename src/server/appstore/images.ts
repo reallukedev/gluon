@@ -3,7 +3,8 @@ import os from "node:os";
 import { docker } from "../docker/client";
 import { safeFetch, NetError } from "../integrations/net";
 import { imageError, isLocalImage, parseImage } from "@/lib/builder/names";
-import type { ImageLookup } from "@/lib/builder-types";
+import { hubQuery, mapHubSearch, mapHubTags, pageTags, retryAt, sortTags } from "@/lib/builder/hub";
+import type { HubSearchResult, ImageLookup, TagPage } from "@/lib/builder-types";
 
 /**
  * Looks an image up where Docker would: this server first, then its registry (Docker Hub, GHCR,
@@ -24,8 +25,6 @@ const ACCEPT = [
   "application/vnd.docker.distribution.manifest.v2+json",
 ].join(", ");
 
-/** Per-architecture tags (amd64-latest…): Docker picks the right build by itself. */
-const ARCH_TAG = /^(amd64|arm64v8|arm64|arm32v[67]|armhf|armv7|i386|ppc64le|s390x|riscv64)[-_]/;
 const ARCH: Record<string, string> = { x64: "amd64", arm64: "arm64", arm: "arm", ia32: "386", ppc64: "ppc64le", s390x: "s390x" };
 
 function registryHost(r: string) {
@@ -140,16 +139,127 @@ async function tags(host: string, registry: string, repository: string, auth: Re
   if (registry === "docker.io") {
     const [ns, name] = repository.split("/");
     const r = await get(`https://hub.docker.com/v2/namespaces/${ns}/repositories/${name}/tags?page_size=100&ordering=last_updated`, {});
-    if (r.status === 200) return ((JSON.parse(r.body.toString("utf8")) as { results?: { name: string }[] }).results ?? []).map((t) => t.name).filter((t) => !ARCH_TAG.test(t)).slice(0, 25);
+    if (r.status === 200) return mapHubTags(JSON.parse(r.body.toString("utf8")), ARCH[os.arch()] ?? "amd64").tags.map((t) => t.name).slice(0, 25);
   }
+  return (await registryTags(host, repository, auth)).slice(0, 25);
+}
+
+/** A registry's whole tag list (up to 1000), sorted newest-looking first. */
+async function registryTags(host: string, repository: string, auth: Record<string, string>): Promise<string[]> {
   const r = await get(`https://${host}/v2/${repository}/tags/list?n=1000`, auth, 2 * 1024 * 1024);
-  if (r.status !== 200) return [];
-  const all = (JSON.parse(r.body.toString("utf8")) as { tags?: string[] }).tags ?? [];
-  const versionKey = (t: string) => (t.match(/\d+/g) ?? []).map((n) => n.padStart(8, "0")).join(".");
-  return all
-    .filter((t) => !/^sha256-|\.sig$|\.att$|\.sbom$/.test(t) && !ARCH_TAG.test(t))
-    .sort((a, b) => (versionKey(b) > versionKey(a) ? 1 : versionKey(b) < versionKey(a) ? -1 : a.localeCompare(b)))
-    .slice(0, 25);
+  if (r.status !== 200) throw new RegistryAnswer(r.status);
+  return sortTags((JSON.parse(r.body.toString("utf8")) as { tags?: string[] }).tags ?? []);
+}
+
+class RegistryAnswer extends Error {
+  constructor(public status: number) {
+    super(`answered ${status}`);
+  }
+}
+
+// ---------------------------------------------------------------- Docker Hub search and tag pages
+
+/**
+ * Docker Hub allows anonymous clients about 180 requests a minute per address, shared by
+ * everything on this network. Answers are cached for 10 minutes, and after a 429 nothing is sent
+ * until Docker Hub's own reset time.
+ */
+type Cache<T> = Map<string, { at: number; value: T }>;
+type H = typeof globalThis & { __gluonHub?: { search: Cache<HubSearchResult>; tags: Cache<TagPage>; lists: Cache<string[]>; blockedUntil: number } };
+type HubState = NonNullable<H["__gluonHub"]>;
+const hub: HubState = ((globalThis as H).__gluonHub ??= { search: new Map(), tags: new Map(), lists: new Map(), blockedUntil: 0 } satisfies HubState);
+const TTL = 10 * 60_000;
+
+function cached<T>(c: Cache<T>, key: string): T | null {
+  const hit = c.get(key);
+  if (!hit || Date.now() - hit.at > TTL) return null;
+  // Map order doubles as recency, so the oldest entry goes first when the cache is full.
+  c.delete(key);
+  c.set(key, hit);
+  return hit.value;
+}
+function remember<T>(c: Cache<T>, key: string, value: T) {
+  c.set(key, { at: Date.now(), value });
+  while (c.size > 300) c.delete(c.keys().next().value!);
+}
+
+const limitedText = () => {
+  const s = Math.max(1, Math.ceil((hub.blockedUntil - Date.now()) / 1000));
+  return `Docker Hub is limiting requests from this network for ${s < 90 ? `${s} seconds` : `${Math.ceil(s / 60)} minutes`}. Type the full image name instead, like jellyfin/jellyfin.`;
+};
+
+export async function searchHub(input: string): Promise<HubSearchResult> {
+  const q = hubQuery(input);
+  if (!q) return { query: input.trim(), results: [], error: null };
+  const hit = cached(hub.search, q);
+  if (hit) return hit;
+  if (Date.now() < hub.blockedUntil) return { query: q, results: [], error: limitedText() };
+  try {
+    const r = await get(`https://hub.docker.com/v2/search/repositories/?query=${encodeURIComponent(q)}&page_size=12`, { Accept: "application/json" });
+    if (r.status === 429) {
+      hub.blockedUntil = retryAt(r.headers);
+      return { query: q, results: [], error: limitedText() };
+    }
+    if (r.status !== 200) return { query: q, results: [], error: `Docker Hub answered ${r.status}, so search isn't working right now. Type the full image name instead.` };
+    if (Number(r.headers["x-ratelimit-remaining"]) === 0) hub.blockedUntil = retryAt(r.headers);
+    const value: HubSearchResult = { query: q, results: mapHubSearch(JSON.parse(r.body.toString("utf8"))), error: null };
+    remember(hub.search, q, value);
+    return value;
+  } catch (e) {
+    return { query: q, results: [], error: e instanceof NetError ? `Gluon couldn't reach Docker Hub (${e.message}). Type the full image name instead.` : "Search isn't working right now. Type the full image name instead." };
+  }
+}
+
+const PAGE = 30;
+
+/** One page of an image's tags, newest first, filtered by `q`. Works before the image is looked up. */
+export async function tagPage(ref: string, q: string, page: number): Promise<TagPage> {
+  const clean = ref.trim();
+  const base: TagPage = { ref: clean, tags: [], page, next: false, error: null };
+  const err = imageError(clean);
+  if (err) return { ...base, error: err };
+  if (isLocalImage(clean)) return { ...base, error: "Gluon builds this image itself, so it has no tags to choose from." };
+  const p = parseImage(clean);
+  const key = `${p.registry}/${p.repository}|${q.trim().toLowerCase()}|${page}`;
+  const hit = cached(hub.tags, key);
+  if (hit) return hit;
+  try {
+    let out: TagPage;
+    if (p.registry === "docker.io") {
+      if (Date.now() < hub.blockedUntil) return { ...base, error: limitedText() };
+      const [ns, name] = p.repository.split("/");
+      const u = new URL(`https://hub.docker.com/v2/namespaces/${ns}/repositories/${name}/tags`);
+      u.searchParams.set("page_size", String(PAGE));
+      u.searchParams.set("page", String(page));
+      u.searchParams.set("ordering", "last_updated");
+      if (q.trim()) u.searchParams.set("name", q.trim());
+      const r = await get(u.toString(), { Accept: "application/json" });
+      if (r.status === 429) {
+        hub.blockedUntil = retryAt(r.headers);
+        return { ...base, error: limitedText() };
+      }
+      if (r.status === 404) return { ...base, error: page > 1 ? null : `Docker Hub has no image called ${p.repository.replace(/^library\//, "")}.` };
+      if (r.status !== 200) return { ...base, error: `Docker Hub answered ${r.status}, so the tags didn't load. Try again in a moment.` };
+      const m = mapHubTags(JSON.parse(r.body.toString("utf8")), ARCH[os.arch()] ?? "amd64");
+      out = { ...base, tags: m.tags, next: m.next };
+    } else {
+      const listKey = `${p.registry}/${p.repository}`;
+      let all = cached(hub.lists, listKey);
+      if (!all) {
+        const host = registryHost(p.registry);
+        const tok = await token(host, p.repository);
+        all = await registryTags(host, p.repository, tok ? { Authorization: `Bearer ${tok}` } : {});
+        remember(hub.lists, listKey, all);
+      }
+      const pg = pageTags(all, q, page, PAGE);
+      out = { ...base, tags: pg.tags.map((name) => ({ name, updated: null, size: null })), next: pg.next };
+    }
+    remember(hub.tags, key, out);
+    return out;
+  } catch (e) {
+    if (e instanceof RegistryAnswer) return { ...base, error: e.status === 401 || e.status === 403 || e.status === 404 ? `${p.registry} won't list the tags of ${p.repository}: it doesn't exist, or it's private.` : `${p.registry} answered ${e.status}, so the tags didn't load.` };
+    return { ...base, error: e instanceof NetError ? `Gluon couldn't reach ${p.registry} (${e.message}). Check the server's internet connection, then try again.` : "The tags didn't load. Try again in a moment." };
+  }
 }
 
 async function hubDescription(repository: string): Promise<string | null> {

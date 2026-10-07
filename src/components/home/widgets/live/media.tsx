@@ -6,7 +6,7 @@ import { useSmartUrl } from "../core";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
 import { Checkbox, Field, Input, Segmented } from "@/components/ui/Field";
 import { UsageBar } from "@/components/ui/Surface";
-import type { IntegrationRef, NowPlayingSession, RecentMediaItem } from "@/lib/widgets-types";
+import type { IntegrationKind, IntegrationRef, NowPlayingSession, RecentMediaItem } from "@/lib/widgets-types";
 import { Gate, IntegrationPicker, perSize, Poster, Quiet, RowsSkeleton, ShelfSkeleton, StatsSkeleton, useIntegrationWidget } from "./shared";
 import l from "./live.module.css";
 
@@ -138,7 +138,7 @@ function Shelf({ items, rows, src, square }: { items: { id: string; title: strin
           const sq = square || it.square;
           return (
             <li key={it.id} className={l.card} data-square={sq ? "" : undefined}>
-              <AppLink src={src} className={l.cardLink} title={it.subtitle ? `${it.title} — ${it.subtitle}` : it.title}>
+              <AppLink src={src} className={l.cardLink} title={it.subtitle ? `${it.title} · ${it.subtitle}` : it.title}>
                 <Poster src={it.image} title={it.title} square={sq} />
                 <span className={l.cardTitle}>{it.title}</span>
                 {it.subtitle && <span className={l.cardSub}>{it.subtitle}</span>}
@@ -207,7 +207,7 @@ export function JellyfinRecentSettings({ config, onChange }: SettingsProps<Recen
   );
 }
 
-export function IntegrationSettingsFor(kind: "jellyfin" | "immich" | "subsonic" | "slskd" | "homebridge" | "generic-json", placeholder: string) {
+export function IntegrationSettingsFor(kind: IntegrationKind, placeholder: string) {
   return function Settings({ config, onChange }: SettingsProps<IntegrationConfig>) {
     return (
       <div className={l.form}>
@@ -258,7 +258,7 @@ export function JellyfinLibraries({ item, size }: WidgetProps<IntegrationConfig>
                     <span className="truncate" title={lib.name}>
                       {lib.name}
                     </span>
-                    <span className="num">{lib.count !== null ? lib.count.toLocaleString() : "—"}</span>
+                    {lib.count !== null ? <span className="num">{lib.count.toLocaleString()}</span> : <span className="muted">Not counted</span>}
                   </li>
                 ))}
               </ul>
@@ -387,8 +387,8 @@ export function SubsonicNowPlaying({ item, size }: WidgetProps<IntegrationConfig
                   <span className={l.rowTitle} title={e.title}>
                     {e.title}
                   </span>
-                  <span className={l.rowSub} title={[e.artist, e.album].filter(Boolean).join(" — ")}>
-                    {[e.artist, e.album].filter(Boolean).join(" — ") || "Unknown artist"}
+                  <span className={l.rowSub} title={[e.artist, e.album].filter(Boolean).join(" · ")}>
+                    {[e.artist, e.album].filter(Boolean).join(" · ") || "Unknown artist"}
                   </span>
                   {!one && (e.user || e.player) && (
                     <span className={l.rowMeta}>

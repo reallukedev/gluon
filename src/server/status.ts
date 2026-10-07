@@ -1,4 +1,5 @@
 import "server-only";
+import { currentAnnouncements } from "./people/household";
 import { listApps, appsForMember, type AppSummary } from "./docker/apps";
 import { listOpen, type Finding } from "./findings";
 import { filesystems, latestHost, type FsUsage } from "./metrics/sampler";
@@ -106,10 +107,7 @@ export async function statusFor(user: User): Promise<StatusPayload> {
     filesystems: isAdmin ? filesystems() : [],
     uptime: h?.uptime ?? null,
     recent: isAdmin ? listActivity({ limit: 8 }) : [],
-    announcements: all<{ id: string; message: string; app_id: string | null }>(
-      "SELECT id, message, app_id FROM announcements WHERE until IS NULL OR until > ? ORDER BY created_at DESC",
-      now(),
-    ),
+    announcements: (await currentAnnouncements(user)).map(({ id, message, app_id }) => ({ id, message, app_id })),
     checkedAt: Date.now(),
   };
 }

@@ -4,7 +4,7 @@ import { raise, resolveMissing, type Remedy } from "../findings";
 import { tryReadConfig } from "../caddy/routes";
 import { listApps } from "../docker/apps";
 import { getSetting } from "../settings";
-import { networkStatus, pendingFor } from "./status";
+import { networkStatus, pendingFor, xmppVerdict } from "./status";
 import { ddnsStatus } from "./ddns";
 import { exposureReport } from "./exposure";
 import { FALLBACK_ID } from "./routes-meta";
@@ -16,6 +16,7 @@ import { FALLBACK_ID } from "./routes-meta";
  *  net.dns      a public name that doesn't resolve, or resolves somewhere else
  *  net.ddns     the dynamic DNS updater is stopped or reporting errors
  *  net.exposed  an app with no login of its own is on the internet
+ *  net.xmpp     a chat server people can't sign in to, or whose certificate or federation needs work (2 checks in a row)
  */
 
 const PENDING_GRACE = 30 * 60_000;
@@ -31,6 +32,7 @@ registerCheck("network-status", 120_000, async () => {
   const openCert = new Set<string>();
   const openBackend = new Set<string>();
   const openDns = new Set<string>();
+  const openXmpp = new Set<string>();
   const seenHosts = new Set<string>();
 
   for (const r of status.routes) {
@@ -123,11 +125,37 @@ registerCheck("network-status", 120_000, async () => {
         });
       }
     }
+
+    // ---- chat server (debounced like the backend: one failed handshake isn't news)
+    if (r.xmpp) {
+      const verdict = xmppVerdict(r.xmpp);
+      const key = `xmpp:${r.id}`;
+      if (verdict) failures.set(key, (failures.get(key) ?? 0) + 1);
+      else failures.delete(key);
+      if (verdict && (failures.get(key) ?? 0) >= 2) {
+        const id = `net.xmpp:${r.id}`;
+        openXmpp.add(id);
+        raise({
+          id,
+          kind: "net.xmpp",
+          severity: verdict.state,
+          subject: r.app?.appId ?? r.id,
+          title: verdict.state === "fault" ? `People can't use the chat server at ${r.host}` : `The chat server at ${r.host} needs attention`,
+          cause: verdict.summary,
+          detail: { route: r.id, c2s: r.xmpp.c2s, s2s: r.xmpp.s2s, certSync: r.xmpp.certSync },
+          remedy: { action: "", label: "Check the chat server", href: addressHref(r.id) },
+        });
+      }
+    }
   }
-  for (const k of [...failures.keys()]) if (!status.routes.some((r) => r.id === k && r.enabled)) failures.delete(k);
+  for (const k of [...failures.keys()]) {
+    const chat = k.startsWith("xmpp:");
+    if (!status.routes.some((r) => r.id === k.replace(/^xmpp:/, "") && r.enabled && (!chat || r.xmpp))) failures.delete(k);
+  }
   resolveMissing("net.backend", openBackend);
   resolveMissing("net.cert", openCert);
   resolveMissing("net.dns", openDns);
+  resolveMissing("net.xmpp", openXmpp);
 });
 
 registerCheck("network-ddns", 300_000, async () => {

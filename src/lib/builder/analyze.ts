@@ -7,9 +7,13 @@ import { YAMLMap, isMap, isSeq, type Document } from "yaml";
 import type { AppSpec, BuilderSource, BuilderTarget, Issue, SecretNames, WebSettings } from "@/lib/builder-types";
 import {
   DATA_PREFIX,
+  PENDING_KEY,
+  declareNetwork,
+  setPendingFolders,
   lineOf,
   nodeJs,
   parseCompose,
+  readNetworks,
   readService,
   scalarText,
   serviceNames,
@@ -27,15 +31,20 @@ import {
 import {
   DEVICE_RE,
   containerPathError,
+  cpusError,
   dataFolderError,
+  durationError,
   envNameError,
   envValueError,
   hostPathError,
   iconError,
   looksSecret,
   imageError,
+  labelKeyError,
+  mediaKind,
   memoryError,
   nameError,
+  networkNameError,
   portError,
   repoPathError,
   serviceNameError,
@@ -108,6 +117,8 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
   const topVolumes = doc.get("volumes", true);
   const namedDecl = new Map<string, Record<string, unknown>>();
   if (isMap(topVolumes)) for (const p of topVolumes.items) namedDecl.set(scalarText(p.key) ?? "", (isMap(p.value) ? nodeJs<Record<string, unknown>>(p.value, doc) : {}) ?? {});
+
+  const declaredNets = new Set(readNetworks(doc).map((n) => n.name));
 
   // ------------------------------------------------ services
   const names = serviceNames(doc);
@@ -191,10 +202,10 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
         if (decl && (decl.driver || decl.driver_opts || decl.external)) {
           issues.push({ id: `vol-driver-${f.name}-${i}`, level: umbrel ? "error" : "info", message: `“${f.name}” uses the volume “${v.source}” with its own driver${umbrel ? "; Umbrel can't create it. Mount a folder instead" : ""}.`, line, field: vf });
         } else {
-          issues.push({ id: `vol-named-${f.name}-${i}`, level: umbrel ? "warning" : "info", message: `“${f.name}” keeps ${v.target} in a Docker volume. Put it in the app's data folder so it's backed up and removed with the app.`, line, field: vf, fix: { id: `data-vol:${f.name}:${i}`, label: `Use data/${v.source}` } });
+          issues.push({ id: `vol-named-${f.name}-${i}`, level: umbrel ? "warning" : "info", message: `“${f.name}” keeps ${v.target} in a Docker volume. Put it in the app's data folder so it's backed up and removed with the app.`, line, field: vf, fix: { id: `data-vol:${f.name}:${i}`, label: mediaKind(v.target) ? "Choose a server folder" : `Use data/${v.source}` } });
         }
       } else if (v.kind === "relative") {
-        issues.push({ id: `vol-rel-${f.name}-${i}`, level: "error", message: `“${f.name}” mounts ${v.source}, a path relative to where the file was. It won't exist on the server.`, line, field: vf, fix: { id: `data-vol:${f.name}:${i}`, label: `Use data/${relName(v.source)}` } });
+        issues.push({ id: `vol-rel-${f.name}-${i}`, level: "error", message: `“${f.name}” mounts ${v.source}, a path relative to where the file was. It won't exist on the server.`, line, field: vf, fix: { id: `data-vol:${f.name}:${i}`, label: mediaKind(v.target) ? "Choose a server folder" : `Use data/${relName(v.source)}` } });
       } else if (v.kind === "host") {
         const e = hostPathError(v.source);
         if (e) issues.push({ id: `vol-host-${f.name}-${i}`, level: "error", message: `“${f.name}”: ${e}`, line, field: vf });
@@ -213,6 +224,10 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
       if (v.long && umbrel && v.kind !== "other") issues.push({ id: `vol-long-${f.name}-${i}`, level: "error", message: `“${f.name}” writes a volume in the long form. Umbrel only understands source:target strings.`, line, field: vf, fix: { id: `short-vol:${f.name}:${i}`, label: "Use the short form" } });
       else if (v.long && umbrel) issues.push({ id: `vol-long-${f.name}-${i}`, level: "error", message: `“${f.name}” has a ${v.raw?.includes("tmpfs") ? "tmpfs " : ""}volume Umbrel can't read. Rewrite it as source:target.`, line, field: vf });
     });
+
+    for (const t of f.pendingFolders) {
+      issues.push({ id: `vol-pending-${f.name}-${t}`, level: "error", message: `Choose a folder for ${t}${forms.length > 1 ? ` (“${f.name}”)` : ""}.`, line: at(PENDING_KEY), field: `${field("volumes")}.pending` });
+    }
 
     // environment
     const secrets = secretSet(f.name);
@@ -246,6 +261,30 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
     });
     const me = memoryError(f.memory);
     if (me) issues.push({ id: `mem-${f.name}`, level: "error", message: `“${f.name}”: ${me}`, line: at("mem_limit"), field: field("memory") });
+    const ce = cpusError(f.cpus);
+    if (ce) issues.push({ id: `cpus-${f.name}`, level: "error", message: `“${f.name}”, CPU limit: ${ce}`, line: at("cpus"), field: field("cpus") });
+    if (f.health) {
+      for (const [k, label, yamlKey] of [["interval", "how often", "interval"], ["timeout", "the timeout", "timeout"], ["startPeriod", "the start period", "start_period"]] as const) {
+        const de = durationError(f.health[k]);
+        if (de) issues.push({ id: `health-${k}-${f.name}`, level: "error", message: `“${f.name}”, health check ${label}: ${de}`, line: at("healthcheck"), field: field(`health.${yamlKey}`) });
+      }
+      if (f.health.retries && !/^\d+$/.test(f.health.retries.trim())) issues.push({ id: `health-retries-${f.name}`, level: "error", message: `“${f.name}”: health check tries is a whole number, like 3.`, line: at("healthcheck"), field: field("health.retries") });
+    }
+    f.labels.forEach((l, i) => {
+      const le = labelKeyError(l.key);
+      if (le) issues.push({ id: `label-${f.name}-${i}`, level: "error", message: `“${f.name}”, label ${l.key || i + 1}: ${le}`, line: at("labels"), field: `${field("labels")}.${i}` });
+    });
+    if (!umbrel && !f.hostNetwork) {
+      for (const net of f.networks) {
+        if (net === "default") continue;
+        const ne = networkNameError(net);
+        if (ne) issues.push({ id: `net-name-${f.name}-${net}`, level: "error", message: `“${f.name}”, network “${net}”: ${ne}`, line: at("networks"), field: field("networks") });
+        else if (!declaredNets.has(net)) issues.push({ id: `net-undeclared-${f.name}-${net}`, level: "error", message: `“${f.name}” joins the network “${net}”, which isn't declared under networks:.`, line: at("networks"), field: field("networks"), fix: { id: `declare-net:${net}`, label: "Join it as an existing network" } });
+      }
+    }
+    if (f.gpu && f.devices.some((d) => d.startsWith("/dev/nvidia"))) {
+      issues.push({ id: `gpu-dev-${f.name}`, level: "info", message: `“${f.name}” reserves the NVIDIA GPU and also lists /dev/nvidia devices; the reservation alone is enough.`, line: at("devices"), field: field("devices") });
+    }
     for (const d of f.dependsOn) {
       if (!names.includes(d)) issues.push({ id: `dep-${f.name}-${d}`, level: "error", message: `“${f.name}” waits for “${d}”, which isn't a service here.`, line: at("depends_on"), field: field("dependsOn") });
       if (d === f.name) issues.push({ id: `dep-self-${f.name}`, level: "error", message: `“${f.name}” can't wait for itself.`, line: at("depends_on"), field: field("dependsOn") });
@@ -325,6 +364,13 @@ export function applyFix(text: string, fixId: string, ctx: AnalyzeContext): FixR
       setEnv(doc, svc!, f.env.map((e) => (e.key === key ? { key, value: "", interpolated: false } : e)));
       return done(`${key} of “${svc}” is now empty; enter its value.`);
     }
+    case "declare-net": {
+      // fixId is declare-net:<name>, so the name arrives where the service usually sits.
+      const net = svc!;
+      if (readNetworks(doc).some((n) => n.name === net)) return null;
+      declareNetwork(doc, net, true);
+      return done(`“${net}” is joined as an existing network on this server.`);
+    }
     case "rm-version":
       doc.delete("version");
       return done("Removed version:.");
@@ -359,6 +405,14 @@ export function applyFix(text: string, fixId: string, ctx: AnalyzeContext): FixR
       const f = readService(doc, svc!);
       const v = f.volumes[idx];
       if (!v || (v.kind !== "named" && v.kind !== "relative")) return null;
+      const media = mediaKind(v.target);
+      if (media) {
+        // A media library never goes in app data (it's deleted with the app): wait for a server folder.
+        setVolumes(doc, svc!, f.volumes.filter((_, i) => i !== idx));
+        setPendingFolders(doc, svc!, [...f.pendingFolders, v.target]);
+        if (v.kind === "named") dropUnusedVolumes(doc);
+        return done(`Choose a server folder for ${v.target} of “${svc}”: it holds your ${media}, so it isn't kept with the app.`);
+      }
       const folder = v.kind === "named" ? v.source : relName(v.source);
       const rows: VolumeRow[] = f.volumes.map((r, i) => (i === idx ? { kind: "data", source: folder, target: r.target, readOnly: r.readOnly, raw: null, long: false } : r));
       setVolumes(doc, svc!, rows);

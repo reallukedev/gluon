@@ -18,3 +18,7 @@
 /* While held the press scale stays on, so the whole gesture reads as one long press. */
 .hold[data-holding] { transform: scale(calc(1 - 0.03 * var(--motion))); }
 .text { position: relative; }
+
+/* While busy only the words dim: a filter on the button's label box would shrink the fill to it. */
+.hold.hold[data-loading] > span { filter: none; opacity: 1; }
+.hold[data-loading] .text { opacity: 0.55; filter: blur(0.5px); }

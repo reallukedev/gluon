@@ -4,10 +4,19 @@ import { listApps } from "../docker/apps";
 import { docker } from "../docker/client";
 import { umbrelApps, umbrelStores } from "../platform/umbrel";
 import { missingImages } from "./images";
-import { parseCompose, readServices } from "@/lib/builder/compose";
+import { parseCompose, readNetworks, readServices } from "@/lib/builder/compose";
 import { containerNames } from "@/lib/builder/render";
 import { isLocalImage } from "@/lib/builder/names";
-import type { AppSpec, BuilderTarget, Issue, ServerCheck } from "@/lib/builder-types";
+import type { AppSpec, BuilderTarget, DockerNetworkInfo, Issue, ServerCheck } from "@/lib/builder-types";
+
+/** Networks an app can join: user-made ones, not host, none or Docker's default bridge. */
+export async function dockerNetworks(): Promise<DockerNetworkInfo[]> {
+  const list = await docker().listNetworks();
+  return list
+    .filter((n) => n.Name && !["host", "none", "bridge"].includes(n.Name) && n.Driver !== "null" && n.Driver !== "host")
+    .map((n) => ({ name: n.Name, driver: n.Driver ?? "bridge", project: n.Labels?.["com.docker.compose.project"] ?? null }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
 
 /**
  * Checks that need the server: ports something else already listens on, names Umbrel already
@@ -99,6 +108,27 @@ export async function serverChecks(spec: AppSpec, target: BuilderTarget, ownId: 
     }
   } catch {
     /* Docker unreachable: the publish will say so */
+  }
+
+  // ------------------------------------------------ networks and the GPU
+  const external = parsed.ok ? readNetworks(parsed.doc).filter((n) => n.external) : [];
+  const wantsGpu = services.filter((s) => s.gpu);
+  if (target === "compose" && (external.length || wantsGpu.length)) {
+    const [nets, info] = await Promise.all([
+      external.length ? docker().listNetworks().catch(() => null) : Promise.resolve(null),
+      wantsGpu.length ? (docker().info() as Promise<{ Runtimes?: Record<string, unknown> }>).catch(() => null) : Promise.resolve(null),
+    ]);
+    if (nets) {
+      const have = new Set(nets.map((n) => n.Name));
+      for (const n of external) {
+        if (have.has(n.name)) continue;
+        const svc = services.find((s) => s.networks.includes(n.name));
+        issues.push({ id: `srv-net-${n.name}`, level: "error", message: `The network “${n.name}” doesn't exist on this server, so the app can't join it. Pick one that exists, or let the app make its own.`, field: svc ? `services.${svc.name}.networks` : undefined });
+      }
+    }
+    if (info && !Object.keys(info.Runtimes ?? {}).some((r) => r.startsWith("nvidia"))) {
+      for (const s of wantsGpu) issues.push({ id: `srv-gpu-${s.name}`, level: "warning", message: `“${s.name}” asks for the NVIDIA GPU, but Docker on this server has no NVIDIA runtime. Install the NVIDIA Container Toolkit, or it won't start.`, field: `services.${s.name}.gpu` });
+    }
   }
 
   // ------------------------------------------------ images

@@ -5,7 +5,7 @@ import { MoreHoriz, OpenNewWindow } from "iconoir-react";
 import { api, useApi } from "@/lib/client/api";
 import type { BuilderTarget, CustomAppDetail, Issue, ServerCheck, StoreStatus } from "@/lib/builder-types";
 import { Page, PageHeader, Panel, Notice } from "@/components/ui/Surface";
-import { Button, IconButton } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
 import { Dialog, useConfirm } from "@/components/ui/Dialog";
@@ -25,6 +25,7 @@ import { StoreSetupDialog } from "./StoreSetup";
 import { IssueCount, SOURCE_WORDS, runtimeLine } from "./Issues";
 import type { YamlEditorHandle } from "./YamlEditor";
 import { linkHost, useDraft } from "./state";
+import { SaveLine } from "./SaveLine";
 import s from "./builder.module.css";
 
 export type BuilderTab = "details" | "services" | "compose" | "files" | "source" | "history";
@@ -164,6 +165,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
   const menu: MenuEntry[] = [
     ...(url && running ? [{ label: `Open ${d.spec.details.name}`, icon: <OpenNewWindow />, href: url }] : []),
     ...(d.runtime?.appsId ? [{ label: "Show in Apps", href: `/apps/${encodeURIComponent(d.runtime.appsId)}` }] : []),
+    ...(!published && !jobRunning ? [{ label: "Set it up step by step", href: `/apps/new?draft=${d.id}&step=setup` }] : []),
     ...(d.source === "github" ? [{ label: "Build from the newest commit", onSelect: () => openJob({ kind: "build" }), disabled: jobRunning }] : []),
     "separator" as const,
     published ? { label: target === "umbrel" ? "Remove from Umbrel…" : "Remove…", danger: true, onSelect: () => setRemoving(true), disabled: jobRunning } : { label: "Delete draft…", danger: true, onSelect: deleteDraft, disabled: jobRunning },
@@ -202,7 +204,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
       />
 
       {draft.state === "conflict" && (
-        <div style={{ marginBottom: 16 }}>
+        <div className={s.pageNotice}>
           <Notice
             tone="attention"
             title="Changed somewhere else"
@@ -222,7 +224,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
           <Tabs value={tab} onChange={setTab} items={tabs} aria-label="App builder" />
           <div className={s.tabBody}>
             {tab === "details" && <DetailsTab draft={draft} detail={d} services={analysis.services} issues={issues} target={target} storeId={storeData?.storeId ?? null} usedPorts={usedPorts} />}
-            {tab === "services" && <ServicesTab draft={draft} services={analysis.services} issues={issues} target={target} source={d.source} yamlBroken={!analysis.parsed.ok} onFix={fix} onOpenCompose={() => setTab("compose")} />}
+            {tab === "services" && <ServicesTab draft={draft} services={analysis.services} issues={issues} target={target} source={d.source} yamlBroken={!analysis.parsed.ok} usedPorts={usedPorts} onFix={fix} onOpenCompose={() => setTab("compose")} />}
             {tab === "compose" && <ComposeTab draft={draft} detail={d} issues={issues} onFix={fix} onFixAll={fixAll} onGo={goTo} editorRef={editorRef} secrets={draft.secrets} />}
             {tab === "files" && <FilesTab id={d.id} rev={d.rev} />}
             {tab === "source" && d.github && <SourceTab detail={d} draft={draft} busy={jobRunning} onRebuild={() => openJob(published ? { kind: "publish", rebuild: true } : { kind: "build" })} />}
@@ -252,7 +254,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
                 <dt>{published ? "Version" : "First version"}</dt>
                 <dd className="mono">{published ? `${d.publishedVersion}${changed ? ` → ${d.nextVersion}` : ""}` : d.nextVersion}</dd>
                 <dt>{target === "umbrel" ? "In Umbrel" : "Runs with"}</dt>
-                <dd className={target === "umbrel" ? "mono" : undefined}>{target === "umbrel" ? d.plannedAppId ?? "—" : "Docker Compose"}</dd>
+                <dd className={target === "umbrel" ? "mono" : undefined}>{target === "umbrel" ? d.plannedAppId ?? "Not chosen yet" : "Docker Compose"}</dd>
                 {url && (
                   <>
                     <dt>Opens at</dt>
@@ -354,30 +356,6 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
       />
       {confirmNode}
     </Page>
-  );
-}
-
-function SaveLine({ state, savedAt, error, onRetry }: { state: string; savedAt: number; error: string | null; onRetry: () => void }) {
-  return (
-    <p className={s.saveState} data-state={state} aria-live="polite">
-      <span className={s.saveDot} aria-hidden />
-      {state === "saving" || state === "dirty" ? (
-        "Saving…"
-      ) : state === "error" ? (
-        <span>
-          Not saved: {error}{" "}
-          <button type="button" className={s.link} onClick={onRetry}>
-            Try again
-          </button>
-        </span>
-      ) : state === "conflict" ? (
-        "Not saved: changed elsewhere"
-      ) : (
-        <span>
-          Saved <Time ts={savedAt} />
-        </span>
-      )}
-    </p>
   );
 }
 

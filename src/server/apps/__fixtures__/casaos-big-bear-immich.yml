@@ -1,0 +1,214 @@
+name: big-bear-immich
+services:
+  database:
+    cpu_shares: 90
+    command: []
+    container_name: immich-postgres
+    deploy:
+      resources:
+        limits:
+          memory: '24899485696'
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+      POSTGRES_DB: immich
+      POSTGRES_PASSWORD: REDACTED
+      POSTGRES_USER: casaos
+    hostname: immich-postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/immich.png
+    networks:
+      big_bear_immich_network: null
+    restart: unless-stopped
+    volumes:
+    - type: bind
+      source: /DATA/AppData/big-bear-immich/pgdata
+      target: /var/lib/postgresql/data
+      bind:
+        create_host_path: true
+    x-casaos:
+      envs:
+      - container: POSTGRES_PASSWORD
+        description:
+          en_US: 'Container Variable: POSTGRES_PASSWORD'
+      - container: POSTGRES_USER
+        description:
+          en_US: 'Container Variable: POSTGRES_USER'
+      - container: POSTGRES_DB
+        description:
+          en_US: 'Container Variable: POSTGRES_DB'
+      - container: PG_DATA
+        description:
+          en_US: 'Container Variable: PG_DATA'
+      volumes:
+      - container: /var/lib/postgresql/data
+        description:
+          en_US: 'Container Path: /var/lib/postgresql/data'
+  immich-machine-learning:
+    cpu_shares: 90
+    command: []
+    container_name: immich-machine-learning
+    deploy:
+      resources:
+        limits:
+          memory: '24899485696'
+    environment:
+      DB_DATABASE_NAME: casaos
+      DB_HOSTNAME: immich-postgres
+      DB_PASSWORD: REDACTED
+      DB_PORT: '5432'
+      DB_USERNAME: casaos
+      REDIS_HOSTNAME: immich-redis
+    hostname: immich-machine-learning
+    image: ghcr.io/immich-app/immich-machine-learning:v3.2.2
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/immich.png
+    networks:
+      big_bear_immich_network: null
+    restart: unless-stopped
+    volumes:
+    - type: bind
+      source: /DATA/AppData/big-bear-immich/model-cache
+      target: /cache
+      bind:
+        create_host_path: true
+    x-casaos:
+      envs:
+      - container: DB_HOSTNAME
+        description:
+          en_US: 'Container Variable: DB_HOSTNAME'
+      - container: DB_USERNAME
+        description:
+          en_US: 'Container Variable: DB_USERNAME'
+      - container: DB_PASSWORD
+        description:
+          en_US: 'Container Variable: DB_PASSWORD'
+      - container: DB_DATABASE_NAME
+        description:
+          en_US: 'Container Variable: DB_DATABASE_NAME'
+      - container: DB_PORT
+        description:
+          en_US: 'Container Variable: DB_PORT'
+      - container: REDIS_HOSTNAME
+        description:
+          en_US: 'Container Variable: REDIS_HOSTNAME'
+      volumes:
+      - container: /cache
+        description:
+          en_US: 'Container Path: /cache'
+  immich-server:
+    cpu_shares: 90
+    command: []
+    container_name: immich-server
+    depends_on:
+      database:
+        condition: service_started
+        required: true
+      redis:
+        condition: service_started
+        required: true
+    deploy:
+      resources:
+        limits:
+          memory: '24899485696'
+    environment:
+      DB_DATABASE_NAME: immich
+      DB_HOSTNAME: immich-postgres
+      DB_PASSWORD: REDACTED
+      DB_PORT: '5432'
+      DB_USERNAME: casaos
+      IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
+      REDIS_HOSTNAME: immich-redis
+    hostname: immich-server
+    image: ghcr.io/immich-app/immich-server:v3.2.2
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/immich.png
+    networks:
+      big_bear_immich_network: null
+    ports:
+    - mode: ingress
+      target: 2283
+      published: '2283'
+      protocol: tcp
+    restart: unless-stopped
+    volumes:
+    - type: bind
+      source: /mnt/hdd2/data/photos/upload
+      target: /usr/src/app/upload
+      bind:
+        create_host_path: true
+    x-casaos:
+      envs:
+      - container: DB_HOSTNAME
+        description:
+          en_US: 'Container Variable: DB_HOSTNAME'
+      - container: DB_USERNAME
+        description:
+          en_US: 'Container Variable: DB_USERNAME'
+      - container: DB_PASSWORD
+        description:
+          en_US: 'Container Variable: DB_PASSWORD'
+      - container: DB_DATABASE_NAME
+        description:
+          en_US: 'Container Variable: DB_DATABASE_NAME'
+      - container: DB_PORT
+        description:
+          en_US: 'Container Variable: DB_PORT'
+      - container: REDIS_HOSTNAME
+        description:
+          en_US: 'Container Variable: REDIS_HOSTNAME'
+      - container: IMMICH_MACHINE_LEARNING_URL
+        description:
+          en_US: 'Container Variable: IMMICH_MACHINE_LEARNING_URL'
+      ports:
+      - container: '2283'
+        description:
+          en_US: 'Container Port: 2283'
+      volumes:
+      - container: /usr/src/app/upload
+        description:
+          en_US: 'Container Path: /usr/src/app/upload'
+  redis:
+    cpu_shares: 90
+    command: []
+    container_name: immich-redis
+    deploy:
+      resources:
+        limits:
+          memory: '24899485696'
+    hostname: immich-redis
+    image: redis:6.2.20-alpine@sha256:2185e741f4c1e7b0ea9ca1e163a3767c4270a73086b6bbea2049a7203212fb7f
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/immich.png
+    networks:
+      big_bear_immich_network: null
+    restart: always
+networks:
+  big_bear_immich_network:
+    name: big-bear-immich_big_bear_immich_network
+    driver: bridge
+  default:
+    name: big-bear-immich_default
+x-casaos:
+  architectures:
+  - amd64
+  - arm64
+  author: BigBearTechWorld
+  category: Media
+  description:
+    en_US: Self-hosted photo and video storage.
+  developer: immich-app
+  hostname: ''
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/immich.png
+  id: com.bigbeartechworld.immich
+  index: /
+  is_uncontrolled: false
+  main: immich-server
+  port_map: '2283'
+  scheme: http
+  store_app_id: big-bear-immich
+  tagline:
+    en_US: Immich
+  title:
+    en_US: Immich
+    custom: ''

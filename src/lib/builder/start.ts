@@ -4,8 +4,8 @@
  */
 import type { AppDetails, AppSpec, BuilderSource, BuilderTarget, ImageLookup, SecretNames, WebSettings } from "@/lib/builder-types";
 import { applyAllFixes, mergeSecrets } from "./analyze";
-import { newCompose, parseCompose, readService, readServices, serviceNames, setEnv, setPorts, setVolumes, stringify, scalarText } from "./compose";
-import { looksSecret, parseImage, SERVICE_RE, slugify } from "./names";
+import { newCompose, parseCompose, readService, readServices, serviceNames, setEnv, setPendingFolders, setPorts, setVolumes, stringify, scalarText, type EnvRow } from "./compose";
+import { dataFolderFor, isLinuxServerImage, linuxServerEnv, looksSecret, mediaKind, parseImage, RESERVED_SERVICES, SERVICE_RE, slugify } from "./names";
 
 export const WEB_PORTS = [80, 8080, 3000, 8000, 8096, 5000, 9000, 8081, 8888, 3001, 5173, 4000, 8123, 8443, 443];
 const NOT_WEB = new Set([22, 25, 53, 110, 143, 465, 587, 993, 995, 1883, 3306, 5432, 6379, 27017, 11211, 5353, 1900, 7359]);
@@ -23,58 +23,93 @@ export const titleize = (s: string) =>
     .trim()
     .replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 
+/** The first port from `want` up that nothing on the server uses. */
+export function nextFreePort(want: number, used: { has: (p: number) => boolean }): number | null {
+  for (let p = Math.max(1024, want); p < 65536 && p < want + 2000; p++) if (!used.has(p)) return p;
+  return null;
+}
+
 /** The port most likely to be the web page. */
 export function pickWebPort(ports: { port: number; proto: "tcp" | "udp" }[]): number | null {
   const tcp = ports.filter((p) => p.proto === "tcp" && !NOT_WEB.has(p.port)).map((p) => p.port);
   return WEB_PORTS.find((p) => tcp.includes(p)) ?? tcp[0] ?? null;
 }
 
-const folderFor = (path: string) =>
-  path
-    .replace(/^\/+|\/+$/g, "")
-    .split("/")
-    .filter((p) => p && !["var", "lib", "usr", "src", "app", "opt", "srv", "home"].includes(p))
-    .slice(-2)
-    .join("-")
-    .replace(/[^A-Za-z0-9._-]+/g, "-") || "data";
+/** What the New app flow makes of an image: the spec, secret values it lifted, and what it did in words. */
+export interface ImageDraft {
+  spec: AppSpec;
+  secretValues: Record<string, Record<string, string>>;
+  said: string[];
+}
 
-/** A one-service app from an image and what its registry says about it. */
-export function specFromImage(image: string, lookup: ImageLookup | null, name?: string): AppSpec {
+/** The service name an image gets: its repository's last part when that's a valid name. */
+export function serviceNameFor(image: string): string {
+  const last = parseImage(image).repository.split("/").pop() ?? "app";
+  const svc = slugify(last);
+  return SERVICE_RE.test(svc) && !RESERVED_SERVICES.has(svc) ? svc : "app";
+}
+
+/** A friendly app name from an image reference: linuxserver/jellyfin:latest → Jellyfin. */
+export function nameForImage(image: string): string {
+  const parts = parseImage(image).repository.split("/");
+  const last = parts.pop() ?? "";
+  // vaultwarden/server reads better as Vaultwarden than as Server.
+  const owner = parts.pop();
+  if (owner && owner !== "library" && /^(server|app|web|api|core|docker|main|service|image)$/i.test(last)) return titleize(owner);
+  return titleize(last);
+}
+
+/**
+ * A one-service app from an image and what its registry says about it: the web page on its most
+ * likely port, the other ports, each declared volume as an app-data folder, and the image's own
+ * environment defaults so they can be seen and changed. Secret-looking defaults become secrets.
+ */
+export function draftFromImage(image: string, lookup: ImageLookup | null, name?: string): ImageDraft {
   const ref = parseImage(image);
-  const last = ref.repository.split("/").pop() ?? "app";
-  const svc = SERVICE_RE.test(slugify(last)) ? slugify(last) : "app";
-  const appName = name?.trim() || titleize(last);
+  const svc = serviceNameFor(image);
+  const appName = name?.trim() || nameForImage(image);
   const doc = parseCompose(newCompose(svc, image.trim())).doc;
   const web = blankWeb();
+  const said: string[] = [];
+  const secretValues: Record<string, Record<string, string>> = {};
   if (lookup) {
     const webPort = pickWebPort(lookup.ports);
     const rest = lookup.ports.filter((p) => !(p.port === webPort && p.proto === "tcp"));
     if (rest.length) setPorts(doc, svc, rest.map((p) => ({ host: p.port, container: p.port, proto: p.proto, ip: "", raw: null })));
     if (webPort) Object.assign(web, { service: svc, containerPort: webPort, port: webPort });
-    const seen = new Set<string>();
-    const vols = lookup.volumes.map((v) => {
-      let f = folderFor(v);
-      while (seen.has(f)) f = `${f}-2`;
-      seen.add(f);
-      return { kind: "data" as const, source: f, target: v, readOnly: false, raw: null, long: false };
-    });
+    const taken = new Set<string>();
+    // Media libraries wait for a server folder; everything else is kept with the app.
+    const media = lookup.volumes.filter((v) => mediaKind(v));
+    const vols = lookup.volumes.filter((v) => !mediaKind(v)).map((v) => ({ kind: "data" as const, source: dataFolderFor(v, taken), target: v, readOnly: false, raw: null, long: false }));
     if (vols.length) setVolumes(doc, svc, vols);
+    if (media.length) {
+      setPendingFolders(doc, svc, media);
+      said.push(`Choose where your ${[...new Set(media.map((m) => mediaKind(m)))].join(" and ")} ${media.length === 1 ? "is" : "are"} next: ${media.join(", ")} ${media.length === 1 ? "is" : "are"} mounted from a server folder, never kept in app data.`);
+    }
   }
-  // LinuxServer images run as the user PUID/PGID says, in the timezone TZ says.
-  if (/(^|\/)linuxserver\/|^lscr\.io\//.test(image)) {
-    const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "Etc/UTC";
-    setEnv(doc, svc, [
-      { key: "PUID", value: "1000", interpolated: false },
-      { key: "PGID", value: "1000", interpolated: false },
-      { key: "TZ", value: tz || "Etc/UTC", interpolated: false },
-    ]);
+  const env: EnvRow[] = [];
+  const lsio = isLinuxServerImage(image);
+  if (lsio) for (const e of linuxServerEnv()) env.push({ ...e, interpolated: false });
+  for (const e of lookup?.env ?? []) {
+    if (env.some((x) => x.key === e.key)) continue;
+    if (looksSecret(e.key)) {
+      // An empty secret default means the image doesn't need it set.
+      if (e.value) (secretValues[svc] ??= {})[e.key] = e.value;
+      continue;
+    }
+    env.push({ key: e.key, value: e.value, interpolated: false });
   }
+  if (env.length) setEnv(doc, svc, env);
+  if (lsio) said.push("PUID, PGID and TZ are set, which LinuxServer images read.");
+  const fromImage = (lookup?.env ?? []).filter((e) => !(lsio && ["PUID", "PGID", "TZ"].includes(e.key)) && (!looksSecret(e.key) || e.value));
+  if (fromImage.length) said.push(`${fromImage.length === 1 ? "The image's own setting" : `The image's own ${fromImage.length} settings`} ${fromImage.length === 1 ? "is" : "are"} filled in, so you can see and change ${fromImage.length === 1 ? "it" : "them"}.`);
   const details = blankDetails(appName);
   if (lookup?.description) details.tagline = lookup.description.split(/(?<=\.)\s/)[0]!.slice(0, 120);
   if (ref.tag && /^v?\d+(\.\d+)*$/.test(ref.tag)) details.version = ref.tag.replace(/^v/, "");
+  const last = ref.repository.split("/").pop() ?? "app";
   if (ref.registry === "docker.io") details.website = `https://hub.docker.com/${ref.repository.startsWith("library/") ? `_/${last}` : `r/${ref.repository}`}`;
   else if (ref.registry === "ghcr.io") details.website = `https://github.com/${ref.repository.split("/").slice(0, 2).join("/")}`;
-  return { details, web, compose: stringify(doc) };
+  return { spec: { details, web, compose: stringify(doc) }, secretValues, said };
 }
 
 /** Guess the web page of a compose file: a service publishing a web-looking port. */

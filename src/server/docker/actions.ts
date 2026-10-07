@@ -2,9 +2,11 @@ import "server-only";
 import { umbrelAction, umbrelAppState, type UmbrelAppState } from "../platform/umbrel";
 import { docker } from "./client";
 import { getApp, invalidateApps, type AppSummary } from "./apps";
-import { host, hostSpawn, lineReader } from "../host/exec";
+import { host } from "../host/exec";
 import { AppError, notFound } from "../errors";
 import { publish } from "../events";
+import { lockApps } from "../apps/lock";
+import { spawnLines } from "../apps/spawn";
 
 export type AppAction = "start" | "stop" | "restart" | "update" | "down" | "uninstall";
 
@@ -26,7 +28,11 @@ export async function appAction(id: string, action: AppAction): Promise<string> 
   const app = await getApp(id);
   if (!app) throw notFound("That app");
   guardSelf(app, action);
-  if (action === "uninstall" && !app.umbrel) throw new AppError("unsupported", "Only apps Umbrel installed can be uninstalled from here.");
+  // Everything else uninstalls through /api/apps/[id]/uninstall, which asks what happens to its data.
+  if (action === "uninstall" && !app.umbrel) throw new AppError("unsupported", "Uninstall it from its page, where you choose whether to keep its data.");
+  // Refused while a move or an uninstall works on this app (starting an original mid-copy would
+  // tear the data being copied), and holds the app for the length of the action.
+  const lock = lockApps([app.id], `${app.name} is being ${{ start: "started", stop: "stopped", restart: "restarted", update: "updated", down: "removed", uninstall: "uninstalled" }[action]}`);
   try {
     if (app.umbrel) {
       // Umbrel owns these apps: going around it would leave its state out of step.
@@ -52,6 +58,7 @@ export async function appAction(id: string, action: AppAction): Promise<string> 
       }
     }
   } finally {
+    lock.release();
     invalidateApps();
     publish("apps.changed", { id });
   }
@@ -89,22 +96,12 @@ export async function containerAction(containerId: string, action: "start" | "st
  * Stream a compose operation's output (pull/up) line by line. Used for "Update" so the person can
  * watch images download instead of staring at a spinner.
  */
-export function streamCompose(app: AppSummary, args: string[], onLine: (line: string, stream: "out" | "err") => void): Promise<number> {
-  return new Promise((resolve) => {
-    const child = hostSpawn("docker", composeArgs(app, ...args));
-    const out = lineReader((l) => onLine(l, "out"));
-    const err = lineReader((l) => onLine(l, "err"));
-    child.stdout?.on("data", (d) => out.push(d));
-    child.stderr?.on("data", (d) => err.push(d));
-    child.on("close", (code) => {
-      out.flush();
-      err.flush();
-      invalidateApps();
-      publish("apps.changed", { id: app.id });
-      resolve(code ?? 1);
-    });
-    child.on("error", () => resolve(1));
-  });
+export async function streamCompose(app: AppSummary, args: string[], onLine: (line: string, stream: "out" | "err") => void, signal?: AbortSignal, timeoutMs = 30 * 60_000): Promise<number> {
+  const r = await spawnLines("docker", composeArgs(app, ...args), onLine, { timeoutMs, signal });
+  if (r.timedOut) onLine(`Stopped after ${Math.round(timeoutMs / 60_000)} minutes without finishing.`, "err");
+  invalidateApps();
+  publish("apps.changed", { id: app.id });
+  return r.code;
 }
 
 /**

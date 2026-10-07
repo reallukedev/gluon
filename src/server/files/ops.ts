@@ -14,6 +14,7 @@ import { assertMutable, assertRemovable, authorize, cleanName, freeName, logical
 import { freeBytes, mountOf } from "./mounts";
 import { Cancelled, startJob, type JobContext } from "./jobs";
 import { moveToTrash } from "./trash";
+import { Changed, inDir, inParent, openFileIn, type Dir } from "./safe";
 import { cachedSizes, pinMap, toEntry } from "./list";
 
 type Where = { ip: string; zone: string };
@@ -24,6 +25,18 @@ async function lexists(real: string): Promise<fs.Stats | null> {
   } catch {
     return null;
   }
+}
+
+/** Rename `from` in one open folder to `to` in another, if `from` is still the item that was checked. */
+async function renameIn(fromDir: Dir, from: string, expect: Pick<fs.Stats, "dev" | "ino">, toDir: Dir, to: string) {
+  const st = await fs.promises.lstat(fromDir.at(from));
+  if (st.dev !== expect.dev || st.ino !== expect.ino) throw new Changed(from);
+  await fs.promises.rename(fromDir.at(from), toDir.at(to));
+}
+
+/** Move a checked item into a checked folder under a new name, both reached without following links. */
+async function moveInto(src: Target, dest: Target, toName: string) {
+  await inParent(src.real, (from, name) => inDir(dest.real, dest.stat, (to) => renameIn(from, name, src.stat!, to, toName)));
 }
 
 async function entryOf(user: User, t: Pick<Target, "scope">, logical: string, real: string): Promise<FileEntry> {
@@ -53,16 +66,19 @@ export async function makeFolder(user: User, parent: string, rawName: string, wh
   if (!dir.stat?.isDirectory()) throw new AppError("not_a_folder", "Choose a folder to create it in.", 400);
   await assertMutable(dir.real, "create folders in");
   const real = path.posix.join(dir.real, name);
-  try {
-    await fs.promises.mkdir(hostPath(real), { mode: 0o755 });
-  } catch (e) {
-    const code = (e as NodeJS.ErrnoException).code;
-    if (code === "EEXIST") throw conflict(`There's already something called ${name} here.`);
-    if (code === "EROFS") throw new AppError("read_only", "That drive is mounted read-only.", 409);
-    throw e;
-  }
-  // New folders belong to whoever owns the folder they're in (e.g. the media user), not root.
-  await fs.promises.lchown(hostPath(real), dir.stat.uid, dir.stat.gid).catch(() => {});
+  const owner = dir.stat;
+  await inDir(dir.real, dir.stat, async (d) => {
+    try {
+      await fs.promises.mkdir(d.at(name), { mode: 0o755 });
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === "EEXIST") throw conflict(`There's already something called ${name} here.`);
+      if (code === "EROFS") throw new AppError("read_only", "That drive is mounted read-only.", 409);
+      throw e;
+    }
+    // New folders belong to whoever owns the folder they're in (e.g. the media user), not root.
+    await fs.promises.lchown(d.at(name), owner.uid, owner.gid).catch(() => {});
+  });
   audit(user, { action: "files.mkdir", summary: `Created folder ${name}`, target: real }, where);
   return entryOf(user, dir, logicalChild(dir, name), real);
 }
@@ -75,12 +91,14 @@ export async function renamePath(user: User, p: string, rawName: string, where: 
   if (name === oldName) return entryOf(user, t, t.path, t.real);
   const parent = path.posix.dirname(t.real);
   const dest = path.posix.join(parent, name);
-  const existing = await lexists(dest);
-  // Allow case-only renames on case-insensitive filesystems (same inode).
-  if (existing && !(existing.ino === t.stat!.ino && existing.dev === t.stat!.dev)) {
-    throw conflict(`There's already something called ${name} in this folder.`);
-  }
-  await fs.promises.rename(t.fsPath, hostPath(dest));
+  await inParent(t.real, async (d, from) => {
+    const existing = await fs.promises.lstat(d.at(name)).catch(() => null);
+    // Allow case-only renames on case-insensitive filesystems (same inode).
+    if (existing && !(existing.ino === t.stat!.ino && existing.dev === t.stat!.dev)) {
+      throw conflict(`There's already something called ${name} in this folder.`);
+    }
+    await renameIn(d, from, t.stat!, d, name);
+  });
   const logical = path.posix.join(path.posix.dirname(t.path), name);
   repointPins([t.path, t.real], logical);
   audit(user, { action: "files.rename", summary: `Renamed ${oldName} to ${name}`, target: dest, detail: { from: t.real, to: dest } }, where);
@@ -160,34 +178,42 @@ class Meter extends Transform {
   }
 }
 
-async function copyFile(src: string, dest: string, st: fs.Stats, ctx: JobContext, state: CopyState, report: () => void) {
-  const from = hostPath(src);
-  const to = hostPath(dest);
-  if (st.size < 32 * 1024 * 1024) {
-    await fs.promises.copyFile(from, to, fs.constants.COPYFILE_EXCL);
-    state.bytesDone += st.size;
-  } else {
-    const out = fs.createWriteStream(to, { flags: "wx", mode: st.mode & 0o7777 });
-    await pipeline(
-      fs.createReadStream(from, { highWaterMark: 1024 * 1024 }),
-      new Meter((n) => {
-        state.bytesDone += n;
-        report();
-      }),
-      out,
-      { signal: ctx.signal },
-    );
-    const fh = await fs.promises.open(to, "r+");
-    await fh.sync().finally(() => fh.close());
+/** Copy one file between two open folders: the source must still be the file that was looked at. */
+async function copyFile(from: Dir, name: string, st: fs.Stats, to: Dir, toName: string, ctx: JobContext, state: CopyState, report: () => void) {
+  const input = await openFileIn(from, name, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, undefined, st);
+  try {
+    const output = await openFileIn(to, toName, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, st.mode & 0o7777);
+    try {
+      // Streams over the raw descriptors, left open: the handles are closed below, after the
+      // owner and times are set on them. (A FileHandle's own streams would keep it from closing.)
+      await pipeline(
+        fs.createReadStream("", { fd: input.fd, autoClose: false, emitClose: false, highWaterMark: 1024 * 1024 }),
+        new Meter((n) => {
+          state.bytesDone += n;
+          report();
+        }),
+        fs.createWriteStream("", { fd: output.fd, autoClose: false, emitClose: false }),
+        { signal: ctx.signal },
+      );
+      await output.sync();
+      await output.chmod(st.mode & 0o7777).catch(() => {});
+      await output.chown(st.uid, st.gid).catch(() => {});
+      await output.utimes(st.atime, st.mtime).catch(() => {});
+    } finally {
+      await output.close().catch(() => {});
+    }
+  } finally {
+    await input.close().catch(() => {});
   }
-  await fs.promises.chmod(to, st.mode & 0o7777).catch(() => {});
-  await fs.promises.lchown(to, st.uid, st.gid).catch(() => {});
-  await fs.promises.utimes(to, st.atime, st.mtime).catch(() => {});
   state.filesDone++;
   report();
 }
 
-/** Copy `src` (file, link or folder) to the new path `dest`, preserving modes, owners and times. */
+/**
+ * Copy `src` (file, link or folder) to the new path `dest`, preserving modes, owners and times.
+ * Every item is read and written inside folders opened without following links, so a folder
+ * swapped for a link halfway through stops the copy instead of reading or writing elsewhere.
+ */
 async function copyTree(src: string, dest: string, ctx: JobContext, state: CopyState, logicalRoot: string) {
   let lastReport = 0;
   const report = () => {
@@ -201,30 +227,35 @@ async function copyTree(src: string, dest: string, ctx: JobContext, state: CopyS
   while (stack.length) {
     ctx.check();
     const item = stack.pop()!;
-    const st = await fs.promises.lstat(hostPath(item.src));
     ctx.progress({ current: logicalRoot + item.src.slice(src.length) });
-    if (st.isDirectory()) {
-      await fs.promises.mkdir(hostPath(item.dest), { mode: 0o700 });
-      dirsToFinish.push({ dest: item.dest, st });
-      const names = await fs.promises.readdir(hostPath(item.src));
-      for (const n of names.reverse()) stack.push({ src: path.posix.join(item.src, n), dest: path.posix.join(item.dest, n) });
-    } else if (st.isFile()) {
-      await copyFile(item.src, item.dest, st, ctx, state, report);
-    } else if (st.isSymbolicLink()) {
-      const target = await fs.promises.readlink(hostPath(item.src));
-      await fs.promises.symlink(target, hostPath(item.dest));
-      await fs.promises.lchown(hostPath(item.dest), st.uid, st.gid).catch(() => {});
-      await fs.promises.lutimes(hostPath(item.dest), st.atime, st.mtime).catch(() => {});
-    } else {
-      state.skippedSpecial.push(item.src);
-    }
+    await inParent(item.src, (from, name) =>
+      inParent(item.dest, async (to, toName) => {
+        const st = await fs.promises.lstat(from.at(name));
+        if (st.isDirectory()) {
+          await fs.promises.mkdir(to.at(toName), { mode: 0o700 });
+          dirsToFinish.push({ dest: item.dest, st });
+          const names = await inDir(item.src, st, (d) => fs.promises.readdir(d.here));
+          for (const n of names.reverse()) stack.push({ src: path.posix.join(item.src, n), dest: path.posix.join(item.dest, n) });
+        } else if (st.isFile()) {
+          await copyFile(from, name, st, to, toName, ctx, state, report);
+        } else if (st.isSymbolicLink()) {
+          const target = await fs.promises.readlink(from.at(name));
+          await fs.promises.symlink(target, to.at(toName));
+          await fs.promises.lchown(to.at(toName), st.uid, st.gid).catch(() => {});
+          await fs.promises.lutimes(to.at(toName), st.atime, st.mtime).catch(() => {});
+        } else {
+          state.skippedSpecial.push(item.src);
+        }
+      }),
+    );
   }
   // Folders last, deepest first, so their times aren't bumped by the files written into them.
   for (const d of dirsToFinish.reverse()) {
-    const p = hostPath(d.dest);
-    await fs.promises.chmod(p, d.st.mode & 0o7777).catch(() => {});
-    await fs.promises.lchown(p, d.st.uid, d.st.gid).catch(() => {});
-    await fs.promises.utimes(p, d.st.atime, d.st.mtime).catch(() => {});
+    await inDir(d.dest, null, async (h) => {
+      await h.chmod(d.st.mode & 0o7777).catch(() => {});
+      await h.chown(d.st.uid, d.st.gid).catch(() => {});
+      await h.utimes(d.st.atime, d.st.mtime).catch(() => {});
+    });
   }
   ctx.progress({ done: state.filesDone, bytesDone: state.bytesDone });
 }
@@ -294,7 +325,7 @@ export async function moveItems(user: User, sources: string[], dest: string, pol
     for (const p of todo) {
       const to = path.posix.join(d.real, p.finalName!);
       if (p.replace) await moveToTrash(to, user.id);
-      await fs.promises.rename(p.src.fsPath, hostPath(to));
+      await moveInto(p.src, d, p.finalName!);
       repointPins([p.src.path, p.src.real], logicalChild(d, p.finalName!));
       moved.push({ from: p.src.real, to });
     }
@@ -326,7 +357,7 @@ async function transfer(user: User, ctx: JobContext, d: Target, todo: Plan[], mo
     if (mode === "move" && p.sameFs) {
       const to = path.posix.join(d.real, p.finalName!);
       if (p.replace) await moveToTrash(to, user.id);
-      await fs.promises.rename(p.src.fsPath, hostPath(to));
+      await moveInto(p.src, d, p.finalName!);
       repointPins([p.src.path, p.src.real], logicalChild(d, p.finalName!));
       done.push({ from: p.src.real, to });
     } else heavy.push(p);
@@ -350,23 +381,24 @@ async function transfer(user: User, ctx: JobContext, d: Target, todo: Plan[], mo
     const temp = path.posix.join(d.real, `.gluon-part-${ctx.id}-${i}`);
     try {
       await copyTree(p.src.real, temp, ctx, state, p.src.path);
+      const tempName = path.posix.basename(temp);
       if (p.replace) await moveToTrash(final, user.id);
       else if (await lexists(final)) {
         // Someone created it meanwhile: never clobber.
         const alt = await freeName(d.real, p.finalName!);
-        await fs.promises.rename(hostPath(temp), hostPath(path.posix.join(d.real, alt)));
+        await inDir(d.real, d.stat, (dd) => fs.promises.rename(dd.at(tempName), dd.at(alt)));
         done.push({ from: p.src.real, to: path.posix.join(d.real, alt) });
         if (mode === "move") await removeSource(p, ctx);
         continue;
       }
-      await fs.promises.rename(hostPath(temp), hostPath(final));
+      await inDir(d.real, d.stat, (dd) => fs.promises.rename(dd.at(tempName), dd.at(p.finalName!)));
       done.push({ from: p.src.real, to: final });
       if (mode === "move") {
         await removeSource(p, ctx);
         repointPins([p.src.path, p.src.real], logicalChild(d, p.finalName!));
       }
     } catch (e) {
-      await fs.promises.rm(hostPath(temp), { recursive: true, force: true }).catch(() => {});
+      await inDir(d.real, d.stat, (dd) => fs.promises.rm(dd.at(path.posix.basename(temp)), { recursive: true, force: true })).catch(() => {});
       if (e instanceof Cancelled || ctx.signal.aborted) {
         throw new Cancelled(done.length ? `Stopped after ${plural(done.length, "item")}. What was already ${mode === "move" ? "moved" : "copied"} stays; the unfinished item was cleaned up.` : "Stopped. Nothing was changed.");
       }
@@ -390,6 +422,10 @@ async function transfer(user: User, ctx: JobContext, d: Target, todo: Plan[], mo
 
 async function removeSource(p: Plan, ctx: JobContext) {
   ctx.progress({ phase: "Removing originals", current: p.src.path });
-  await fs.promises.rm(p.src.fsPath, { recursive: true, force: false, maxRetries: 2 });
+  await inParent(p.src.real, async (dir, name) => {
+    const st = await fs.promises.lstat(dir.at(name));
+    if (st.dev !== p.src.stat!.dev || st.ino !== p.src.stat!.ino) throw new Changed(name);
+    await fs.promises.rm(dir.at(name), { recursive: true, force: false, maxRetries: 2 });
+  });
   ctx.progress({ phase: "Moving" });
 }

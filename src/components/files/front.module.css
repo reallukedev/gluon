@@ -1,0 +1,56 @@
+/* The front page: collections first, places as plates. */
+
+.front { display: grid; gap: 38px; min-width: 0; padding-bottom: 24px; }
+.shelf { display: grid; gap: 12px; min-width: 0; }
+.head { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.title { margin: 0; font-family: var(--font-display); font-stretch: 90%; font-size: var(--text-lg); font-weight: 600; color: var(--ink); }
+.count { flex: 1; font-size: var(--text-xs); font-weight: 600; color: var(--muted); }
+.empty { margin: 0; color: var(--muted); font-size: var(--text-sm); }
+.strip { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 8px; margin: -2px -2px 0; scroll-snap-type: x proximity; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.strip[data-all] { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); overflow: visible; }
+.tile { flex: none; display: grid; align-content: start; gap: 6px; width: 168px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; scroll-snap-align: start; cursor: pointer; }
+.strip[data-all] .tile { width: auto; }
+.face { display: block; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; background: var(--sunk); box-shadow: 0 0 0 1px color-mix(in oklab, var(--line) 70%, transparent); transition: box-shadow var(--dur-fast) ease, transform var(--dur-press) var(--ease-out); }
+.face[data-tall] { aspect-ratio: 2 / 3; }
+.tile:active .face { transform: scale(0.98); }
+@media (pointer: coarse) { .plate { min-height: 56px; } }
+.tile:focus-visible { outline: none; }
+.tile:focus-visible .face { box-shadow: 0 0 0 2px var(--ink); }
+.name { overflow: hidden; font-size: var(--text-sm); white-space: nowrap; text-overflow: ellipsis; }
+.sub { margin-top: -3px; overflow: hidden; font-size: var(--text-xs); color: var(--muted); white-space: nowrap; text-overflow: ellipsis; }
+@media (hover: hover) and (pointer: fine) { .tile:hover .face { box-shadow: 0 0 0 1px var(--line-strong); } }
+
+/* What's taking the space: a ledger with a size rule per line. */
+.ledger { display: grid; margin: 0; padding: 4px 0; list-style: none; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); }
+.ledger li { display: flex; align-items: center; gap: 4px; padding-right: 8px; }
+.ledger li + li { box-shadow: inset 0 1px 0 color-mix(in oklab, var(--line) 60%, transparent); }
+.ledgerRow { position: relative; flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 10px 6px 14px 16px; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.ledgerName { display: grid; min-width: 0; font-size: var(--text-md); }
+.ledgerName :global(.mono) { font-size: var(--text-xs); color: var(--muted); }
+.ledgerSize { font-size: var(--text-md); font-weight: 600; }
+.ledgerRule { position: absolute; left: 16px; right: 6px; bottom: 6px; }
+@media (hover: hover) and (pointer: fine) { .ledgerRow:hover { background: var(--panel-2); } }
+
+/* Places: a rack of plates with their meters. */
+.rack { display: grid; gap: 18px; }
+.rackGroup { display: grid; gap: 8px; }
+.rackRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.plate { display: grid; gap: 7px; width: 228px; padding: 11px 13px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: transform var(--dur-press) var(--ease-out); }
+.plate:not([data-missing]):active { transform: scale(0.98); }
+.plate[data-missing] { cursor: default; color: var(--muted); }
+.plateTop { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: var(--text-md); font-weight: 560; }
+.plateIcon { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.meter { position: relative; display: block; height: 4px; border-radius: 2px; background: var(--sunk); }
+.meter > span { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--ink-2); }
+.meter[data-level="attention"] > span { background: var(--attn); }
+.meter[data-level="fault"] > span { background: var(--fault); }
+.plateSub { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--text-xs); color: var(--muted); }
+.faultMark { flex: none; width: 2px; height: 7px; background: var(--fault); }
+@media (hover: hover) and (pointer: fine) { .plate:not([data-missing]):hover { border-color: var(--line-strong); background: var(--panel-2); } }
+
+@media (max-width: 720px) {
+  .strip { margin: 0 -16px; padding: 2px 16px 8px; scroll-padding: 0 16px; }
+  .tile { width: 132px; }
+  .plate { width: calc(50% - 4px); }
+}
+@media (max-width: 380px) { .plate { width: 100%; } }

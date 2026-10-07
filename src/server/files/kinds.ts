@@ -18,6 +18,11 @@ const EXT: Record<Exclude<FileKind, "folder" | "other">, string[]> = {
   ],
 };
 
+/** File extensions that make up a kind, for searching by kind ("every photo under here"). */
+export function extensionsOf(kind: FileKind): string[] {
+  return kind === "folder" || kind === "other" ? [] : EXT[kind];
+}
+
 const BY_EXT = new Map<string, FileKind>();
 for (const [kind, exts] of Object.entries(EXT) as [FileKind, string[]][]) {
   for (const e of exts) if (!BY_EXT.has(e)) BY_EXT.set(e, kind);

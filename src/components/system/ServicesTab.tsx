@@ -168,7 +168,7 @@ export function ServicesTab({ list, initialUnit }: { list: SWRResponse<{ service
                   {bootLabel(x.enabled)}
                 </span>
                 <span role="cell" className={`${s.num} num`}>
-                  {x.memory !== null && x.memory > 0 ? fmt.bytes(x.memory) : <span className={s.faint}>—</span>}
+                  {x.memory !== null && x.memory > 0 ? fmt.bytes(x.memory) : <span className={s.faint}>None</span>}
                 </span>
                 <span role="cell" className={s.actions}>
                   <IconButton label={`Log for ${x.name}`} size="sm" onClick={() => openUnit(x.unit)}>

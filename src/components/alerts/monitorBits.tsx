@@ -7,13 +7,13 @@ import s from "./trace.module.css";
 
 /** Uptime as people read it: 100%, 99.93%, 97.4%. */
 export function pct(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "No data";
   if (v >= 99.995) return "100%";
   if (v >= 99) return `${v.toFixed(2)}%`;
   return `${v.toFixed(1)}%`;
 }
 
-export const ms = (v: number | null | undefined) => (v === null || v === undefined ? "—" : v >= 10_000 ? `${(v / 1000).toFixed(1)} s` : `${Math.round(v)} ms`);
+export const ms = (v: number | null | undefined) => (v === null || v === undefined ? "No data" : v >= 10_000 ? `${(v / 1000).toFixed(1)} s` : `${Math.round(v)} ms`);
 
 export function monitorLine(m: Pick<MonitorView, "state" | "consecutiveFailures" | "config" | "flapping">): { line: LineState; label: string } {
   switch (m.state) {

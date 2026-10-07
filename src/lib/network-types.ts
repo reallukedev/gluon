@@ -24,6 +24,17 @@ export interface SubdomainRouteT extends RouteBase {
   only_paths?: string[];
   /** Paths on this subdomain served by a different backend. Kept as-is by the editor. */
   extra_paths?: { paths: string[]; backend: { host: string; port: number; tls: boolean }; note?: string }[];
+  /** Set when this address is an XMPP chat server; `host` is its domain and `backend` its client port. */
+  xmpp?: XmppSettingsT;
+}
+
+export interface XmppSettingsT {
+  /** Server-to-server port (federation); null when the server only talks to its own users. */
+  s2s_port: number | null;
+  /** The chat server's own HTTP port (BOSH, WebSocket, uploads). null: the web address shows a short page. */
+  http_port: number | null;
+  /** Copy Caddy's certificate for the domain into this container and reload it. */
+  cert_sync: { container: string; dir: string } | null;
 }
 export interface PathRouteT extends RouteBase {
   type: "path";
@@ -138,6 +149,8 @@ export interface TlsResult {
   trusted: boolean | null;
   /** Caddy's last certificate error for this name, from its log. */
   issueError: string | null;
+  /** SHA-256 fingerprint of the leaf certificate, when one was presented. */
+  fingerprint?: string;
   message: string;
 }
 
@@ -169,9 +182,57 @@ export interface RouteStatus {
   tls: TlsResult | null;
   http: HttpResult | null;
   backend: BackendResult | null;
+  /** Chat server checks, for XMPP addresses. */
+  xmpp: XmppStatus | null;
   state: ProbeState;
   /** Plain sentence: "Working", "Immich isn't answering on port 2283." */
   summary: string;
+}
+
+export interface SrvRecord {
+  target: string;
+  port: number;
+  priority: number;
+  weight: number;
+}
+
+export interface SrvResult {
+  name: string;
+  records: SrvRecord[];
+  /** missing is fine: clients then connect to the domain itself on the standard port. */
+  status: "ok" | "missing" | "mismatch" | "error";
+  message: string;
+}
+
+export interface XmppPortResult {
+  port: number;
+  reachable: boolean;
+  ms: number | null;
+  error: string | null;
+  /** The certificate the chat server presents after STARTTLS. */
+  tls: TlsResult | null;
+}
+
+export interface XmppCertSync {
+  container: string;
+  /** When Gluon last compared or copied the certificate. */
+  checkedAt: number | null;
+  /** When it last copied a new one in. */
+  copiedAt: number | null;
+  ok: boolean;
+  message: string;
+}
+
+export interface XmppStatus {
+  domain: string;
+  srv: { client: SrvResult; server: SrvResult | null };
+  c2s: XmppPortResult;
+  s2s: XmppPortResult | null;
+  /** The chat server's HTTP side answers (only checked when it has one). */
+  web: BackendResult | null;
+  /** Anyone can create an account (in-band registration is open). null = couldn't tell. */
+  openRegistration: boolean | null;
+  certSync: XmppCertSync | null;
 }
 
 export interface NetworkStatus {
@@ -183,6 +244,28 @@ export interface NetworkStatus {
   routes: RouteStatus[];
   caddyRunning: boolean;
   counts: { ok: number; attention: number; fault: number; pending: number; disabled: number };
+}
+
+// ---------------------------------------------------------------- chat servers
+
+/** A container on this server that looks like an XMPP chat server. */
+export interface ChatServerCandidate {
+  container: string;
+  image: string;
+  /** Compose project, which is usually the app's id. */
+  project: string | null;
+  running: boolean;
+  /** Host ports for the client, federation and web sides (null when not published). */
+  ports: { c2s: number | null; s2s: number | null; http: number | null };
+  certDir: string;
+  /** Gluon knows how to reload this server after copying a certificate. */
+  canSync: boolean;
+}
+
+export interface ChatServersResponse {
+  servers: ChatServerCandidate[];
+  /** Certificate sync per chat address (route id), once Gluon has checked it. */
+  sync: Record<string, XmppCertSync>;
 }
 
 // ---------------------------------------------------------------- DDNS

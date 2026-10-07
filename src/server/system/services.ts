@@ -506,9 +506,18 @@ export function followJournal(unit: string, opts: { afterCursor?: string; backlo
     onEnd();
   });
   child.on("error", () => onEnd());
+  // A live view is still a bounded one: no follower outlives six hours.
+  const limit = setTimeout(() => child?.kill("SIGTERM"), 6 * 3600_000);
+  limit.unref?.();
   return () => {
-    child?.kill("SIGTERM");
+    clearTimeout(limit);
+    const c = child;
     child = null;
+    if (!c) return;
+    c.kill("SIGTERM");
+    setTimeout(() => {
+      if (c.exitCode === null && c.signalCode === null) c.kill("SIGKILL");
+    }, 5000).unref?.();
   };
 }
 

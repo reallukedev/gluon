@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Download, EditPencil, NavArrowLeft, NavArrowRight, Archive } from "iconoir-react";
 import type { FileEntry, TextFile } from "@/lib/files-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
@@ -9,12 +10,15 @@ import { Button, IconButton } from "@/components/ui/Button";
 import { Notice, Skeleton } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
-import { CodeEditor } from "@/components/code/CodeEditor";
+
 import { Segmented } from "@/components/ui/Field";
 import { Markdown } from "./Markdown";
 import type { CodeLanguage } from "@/components/code/languages";
 import { KIND_LABEL, KindIcon, THUMBABLE, downloadUrl, isArchive, rawUrl, thumbUrl, useMediaQuery } from "./lib";
 import s from "./files.module.css";
+
+// The editor (CodeMirror) is big; load it only when a text file is opened.
+const CodeEditor = dynamic(() => import("@/components/code/CodeEditor").then((m) => m.CodeEditor), { ssr: false, loading: () => <Skeleton height={240} radius={8} /> });
 
 interface Props {
   entry: FileEntry | null;
@@ -380,7 +384,7 @@ function TextPreview({ entry, canWrite, onDirty, onSaved, confirm }: { entry: Fi
             </span>
           }
         >
-          It was changed <Time ts={conflict.mtime} /> — after you opened it. Saving yours replaces those changes.
+          It was changed <Time ts={conflict.mtime} />, after you opened it. Saving yours replaces those changes.
         </Notice>
       )}
       {reading ? (

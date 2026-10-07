@@ -31,6 +31,8 @@ export const KIND_LABEL: Record<IntegrationKind, string> = {
   subsonic: "a music server",
   slskd: "slskd",
   homebridge: "Homebridge",
+  homeassistant: "Home Assistant",
+  coolify: "Coolify",
   "generic-json": "a JSON address",
 };
 const KIND_NAME: Record<IntegrationKind, string> = {
@@ -39,6 +41,8 @@ const KIND_NAME: Record<IntegrationKind, string> = {
   subsonic: "the music server",
   slskd: "slskd",
   homebridge: "Homebridge",
+  homeassistant: "Home Assistant",
+  coolify: "Coolify",
   "generic-json": "that address",
 };
 

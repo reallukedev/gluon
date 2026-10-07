@@ -1,0 +1,215 @@
+/* Browsing: one framed browser, columns (or a list or grid) side by side, a status line under them. */
+
+.notices { display: grid; gap: 8px; margin-bottom: 12px; }
+.frame {
+  position: relative;
+  display: grid;
+  grid-template-rows: 50px minmax(0, 1fr) 48px;
+  height: max(460px, calc(100dvh - 250px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+}
+
+/* ------------------------------------------------------------ the bar */
+.bar { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 8px 0 10px; box-shadow: inset 0 -1px 0 var(--line); }
+.path { flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden; font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-sm); white-space: nowrap; }
+.pathPart { flex: 0 1 auto; min-width: 3ch; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; padding: 3px 4px; border: 0; border-radius: 5px; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.pathPart[aria-current] { flex: none; max-width: 40ch; color: var(--ink); font-weight: 600; cursor: default; }
+.pathPart[data-drop] { background: color-mix(in oklab, var(--ink) 10%, transparent); box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); }
+.pathSep { flex: none; color: var(--faint); }
+@media (hover: hover) and (pointer: fine) { .pathPart:not([aria-current]):hover { background: var(--sunk); color: var(--ink); } }
+
+/* ------------------------------------------------------------ the strip (1px gaps draw the rules) */
+.strip { display: flex; gap: 1px; min-height: 0; overflow-x: auto; overflow-y: hidden; background: var(--line); scrollbar-width: thin; overscroll-behavior-x: contain; }
+.col { position: relative; flex: none; display: grid; grid-template-rows: minmax(0, 1fr) auto; width: 272px; min-height: 0; background: var(--panel); outline: none; }
+.col:focus-visible { box-shadow: inset 0 0 0 2px var(--ink-2); }
+.col[data-drop] { background: color-mix(in oklab, var(--ink) 5%, var(--panel)); }
+.colScroll { min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 0; scrollbar-width: thin; }
+.colScroll[data-pad] { padding: 12px; }
+.colFoot { padding: 6px 12px; font-size: var(--text-2xs); color: var(--faint); box-shadow: inset 0 1px 0 var(--line); }
+.colNote { padding: 10px; }
+.vrow { position: absolute; left: 0; right: 0; top: 0; padding: 0 4px; }
+.vgrid { position: absolute; left: 0; right: 0; top: 0; display: grid; }
+
+.empty { display: grid; justify-items: start; gap: 6px; padding: 18px 16px; }
+.emptyTitle { margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--ink); }
+.emptyText { margin: 0; font-size: var(--text-sm); color: var(--muted); }
+.emptyActions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  height: 100%;
+  padding: 0 8px 0 9px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: var(--text-md);
+  cursor: default;
+  user-select: none;
+}
+.row[data-hidden] .rowName { color: var(--muted); }
+.row[data-cut], .lrow[data-cut], .tile[data-cut] { opacity: 0.5; }
+.rowIcon { width: 16px; height: 16px; color: var(--muted); }
+.rowName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rowEnd { display: inline-flex; align-items: center; gap: 4px; }
+.rowSize { font-size: var(--text-xs); color: var(--faint); }
+.chev { width: 14px; height: 14px; color: var(--faint); }
+.broken { color: var(--fault); }
+
+/* The folder you're inside, in a column you've left: a quiet plate. Selected where the keyboard is: ink. */
+.row[data-open], .row[aria-selected="true"] { background: var(--sunk); }
+.col[data-active] .row[aria-selected="true"] { background: var(--ink); color: var(--inverse); }
+.col[data-active] .row[aria-selected="true"] :is(.rowIcon, .rowSize, .chev) { color: color-mix(in oklab, var(--inverse) 70%, var(--ink)); }
+.col:focus-visible .row[data-focused] { box-shadow: 0 0 0 2px var(--ink-2); }
+.row[data-drop], .lrow[data-drop] { background: color-mix(in oklab, var(--ink) 10%, var(--panel)); box-shadow: inset 0 0 0 1px var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .row:not([aria-selected="true"]):not([data-open]):hover, .lrow:not([aria-selected="true"]):hover { background: var(--panel-2); }
+}
+
+/* ------------------------------------------------------------ places */
+.placesCol { position: sticky; left: 0; z-index: 2; display: block; width: 220px; overflow-y: auto; padding: 8px 6px; background: var(--panel-2); box-shadow: 1px 0 0 var(--line); }
+.placeGroup { display: grid; gap: 1px; margin-bottom: 14px; }
+.placeLabel { padding: 0 8px 6px; }
+.place { display: flex; align-items: center; gap: 9px; width: 100%; min-width: 0; min-height: 34px; padding: 5px 8px; border: 0; border-radius: 6px; background: none; color: var(--ink-2); font: inherit; font-size: var(--text-md); text-align: left; cursor: pointer; }
+.place[data-on] { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+.place[data-drop] { box-shadow: inset 0 0 0 1px var(--ink); }
+.place[data-missing] { color: var(--faint); cursor: default; }
+.placeIcon { flex: none; width: 17px; height: 17px; color: var(--muted); }
+.placeText { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.placeSub { font-size: var(--text-xs); color: var(--muted); }
+.meter { position: relative; display: block; height: 3px; border-radius: 2px; background: var(--sunk); }
+.meter > span { position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--ink-2); }
+.meter[data-level="attention"] > span { background: var(--attn); }
+.meter[data-level="fault"] > span { background: var(--fault); }
+.faultMark { flex: none; width: 2px; height: 8px; background: var(--fault); }
+@media (hover: hover) and (pointer: fine) { .place:not([data-on]):not([data-missing]):hover { background: color-mix(in oklab, var(--ink) 5%, transparent); color: var(--ink); } }
+
+.pinRow { position: relative; display: flex; align-items: center; min-width: 0; }
+.pinRow[data-dragging] { z-index: 2; opacity: 0.85; }
+.pinRow .place { padding-right: 32px; }
+.pinGrip { position: absolute; left: -6px; top: 50%; translate: 0 -50%; display: grid; place-items: center; width: 12px; height: 22px; padding: 0; border: 0; background: none; color: var(--faint); cursor: grab; opacity: 0; touch-action: none; }
+.pinGrip svg { width: 12px; height: 12px; }
+.pinMenu { position: absolute; right: 2px; opacity: 0; }
+.pinGrip:focus-visible, .pinMenu:focus-visible, .pinMenu[data-popup-open] { opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .pinRow:hover .pinGrip, .pinRow:hover .pinMenu { opacity: 1; } }
+@media (hover: none) { .pinMenu, .pinGrip { opacity: 1; } }
+/* Fingers need room: 40px targets wherever the pointer is coarse (phones and tablets). */
+@media (pointer: coarse) {
+  .place { min-height: 44px; }
+  .pinRow .place { padding-left: 22px; }
+  .pinGrip { left: 0; width: 22px; height: 40px; }
+  .pick::after { content: ""; position: absolute; inset: -8px; }
+}
+
+/* ------------------------------------------------------------ a folder as a list or a grid */
+.pane { flex: 1 0 360px; width: auto; grid-template-rows: auto minmax(0, 1fr) auto; }
+.pane:not([data-view="list"]) { grid-template-rows: minmax(0, 1fr) auto; }
+.listHead, .lrow { display: grid; grid-template-columns: minmax(0, 1fr) 92px 132px 0; align-items: center; gap: 0 12px; padding: 0 12px 0 10px; }
+.pane[data-admin] :is(.listHead, .lrow) { grid-template-columns: minmax(0, 1fr) 92px 132px 84px; }
+.listHead { height: 34px; font-family: var(--font-display); font-stretch: 85%; font-size: var(--text-2xs); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); box-shadow: inset 0 -1px 0 var(--line); }
+.lrow { height: 100%; border-radius: 6px; cursor: default; user-select: none; }
+.lrow[aria-selected="true"] { background: var(--sunk); }
+.pane[data-active] .lrow[aria-selected="true"] { background: color-mix(in oklab, var(--ink) 12%, var(--panel)); }
+.pane:focus-visible .lrow[data-focused] { box-shadow: inset 0 0 0 2px var(--ink-2); }
+.lName { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.lFace { flex: none; width: 30px; height: 30px; overflow: hidden; border-radius: 6px; }
+.lText { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.lLabel { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; font-size: var(--text-md); color: var(--ink); white-space: nowrap; text-overflow: ellipsis; }
+.lrow[data-hidden] .lLabel { color: var(--muted); }
+.linkTo { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-xs); color: var(--muted); }
+.lRule { max-width: 240px; }
+.lMeta { display: none; font-size: var(--text-xs); color: var(--muted); }
+.lSize { text-align: right; font-size: var(--text-sm); color: var(--ink-2); }
+.lDate { font-size: var(--text-sm); color: var(--muted); white-space: nowrap; }
+.lOwner { overflow: hidden; font-size: var(--text-xs); color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.pane:not([data-admin]) .lOwner { visibility: hidden; }
+/* A narrow pane keeps the name readable: dates and owners fold under it. */
+@container (max-width: 560px) {
+  .listHead, .lrow, .pane[data-admin] :is(.listHead, .lrow) { grid-template-columns: minmax(0, 1fr) 0 0 0; }
+  .lSize, .lDate, .lOwner { visibility: hidden; }
+  .lMeta { display: block; }
+  .lRule { display: none; }
+}
+.pane { container-type: inline-size; }
+
+.tile { position: relative; display: grid; align-content: start; gap: 7px; min-width: 0; cursor: default; user-select: none; outline: none; }
+.tileFace { position: relative; display: grid; overflow: hidden; border-radius: 10px; background: var(--sunk); box-shadow: 0 0 0 1px color-mix(in oklab, var(--line) 70%, transparent); transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) ease; }
+.tileFace[data-dir] { background: var(--panel-2); }
+.tile[aria-selected="true"] .tileFace { transform: scale(0.94); box-shadow: 0 0 0 2px var(--ink); }
+.pane:focus-visible .tile[data-focused] .tileFace { box-shadow: 0 0 0 2px var(--ink-2), 0 0 0 4px color-mix(in oklab, var(--ink) 12%, transparent); }
+.tile[data-drop] .tileFace { box-shadow: 0 0 0 2px var(--ink); background: color-mix(in oklab, var(--ink) 10%, var(--panel)); }
+.cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mosaic { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; background: var(--panel); }
+.mosaic img { width: 100%; height: 100%; object-fit: cover; }
+.mosaic[data-n="1"] img { grid-column: 1 / -1; grid-row: 1 / -1; }
+.mosaic[data-n="2"] img { grid-row: 1 / -1; }
+.mosaic[data-n="3"] img:first-child { grid-row: 1 / -1; }
+.folderTab { position: absolute; left: 8px; bottom: 8px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; background: var(--panel); color: var(--ink-2); box-shadow: 0 0 0 1px var(--line); }
+.folderTab svg { width: 15px; height: 15px; }
+.pick { position: absolute; top: 8px; left: 8px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1.5px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: transparent; opacity: 0; cursor: pointer; transition: opacity var(--dur-fast) ease; }
+.pick svg { width: 14px; height: 14px; stroke-width: 2.4; }
+.pick[data-visible], .tile[aria-selected="true"] .pick { opacity: 1; }
+.pick[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--inverse); }
+.tileText { display: grid; gap: 1px; min-width: 0; padding: 0 2px; }
+.tileName { overflow: hidden; font-size: var(--text-sm); color: var(--ink); white-space: nowrap; text-overflow: ellipsis; }
+.tileSub { overflow: hidden; font-size: var(--text-xs); color: var(--muted); white-space: nowrap; text-overflow: ellipsis; }
+@media (hover: hover) and (pointer: fine) { .tile:hover .pick { opacity: 1; } }
+@media (hover: none) { .pick { opacity: 0.85; } }
+
+/* ------------------------------------------------------------ the preview column */
+.previewCol { flex: 1 0 380px; width: auto; min-width: 380px; grid-template-rows: minmax(0, 1fr); }
+.previewInner { display: grid; gap: 14px; padding: 14px 18px 20px; }
+.stage { display: grid; place-items: center; min-height: 200px; max-height: 340px; padding: 8px; overflow: hidden; border-radius: 10px; background: var(--sunk); }
+.stage[data-kind="image"] { height: 320px; }
+.stage[data-kind="text"], .stage[data-kind="pdf"] { display: block; max-height: none; padding: 0; background: transparent; }
+.previewName { margin: 0; font-family: var(--font-display); font-stretch: 90%; font-size: var(--text-lg); font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.previewActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.summaryCol { min-width: 300px; flex-basis: 300px; }
+.summaryList { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 16px; margin: 0; font-size: var(--text-sm); }
+.summaryList dt { color: var(--muted); }
+.summaryList dd { margin: 0; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
+.summaryHint { margin: 4px 0 0; font-size: var(--text-sm); color: var(--faint); }
+
+/* ------------------------------------------------------------ the status line */
+.status { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0 6px 0 14px; box-shadow: inset 0 1px 0 var(--line); }
+.statusText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); }
+.statusText b { font-weight: 600; }
+.statusActions { flex: none; display: flex; align-items: center; gap: 2px; }
+
+.drop {
+  position: absolute;
+  inset: 50px 0 48px;
+  z-index: 5;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  outline: 1px dashed var(--ink-2);
+  outline-offset: -6px;
+  background: color-mix(in oklab, var(--panel) 86%, transparent);
+  color: var(--ink);
+  font-size: var(--text-md);
+  pointer-events: none;
+}
+.drop svg { width: 22px; height: 22px; }
+.drop[data-refused] { outline-color: var(--fault); color: var(--fault); }
+
+/* ------------------------------------------------------------ phones: one column at a time */
+@media (max-width: 720px) {
+  .frame { height: calc(100dvh - 220px - env(safe-area-inset-bottom)); min-height: 420px; grid-template-rows: 52px minmax(0, 1fr) 56px; }
+  .path { display: none; }
+  .bar { justify-content: space-between; }
+  .strip { overflow: hidden; gap: 0; }
+  .col, .placesCol, .previewCol, .pane { flex: 1 0 100%; width: 100%; min-width: 0; }
+  .placesCol { position: static; box-shadow: none; }
+  .frame[data-phone] .col:not([data-phone-current]) { display: none; }
+  .row { font-size: var(--text-base); }
+  .place { min-height: 46px; font-size: var(--text-base); }
+  .drop { inset: 52px 0 56px; }
+}
+@media (prefers-reduced-motion: reduce) { .tileFace { transition: none; } }

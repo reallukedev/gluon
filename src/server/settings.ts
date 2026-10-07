@@ -12,7 +12,17 @@ const schemas = {
   publicHost: z.string().max(253).default(""),
   baseDomain: z.string().max(253).default(""),
   homeNetworks: z.array(z.string().max(64)).max(32).default([]),
+  /** Older on/off switch for admins away from home; read only when mfaPolicy hasn't been set. */
   requireMfaAway: z.boolean().default(true),
+  /** Who needs two-step sign-in, and where. null on servers that haven't chosen: follows requireMfaAway. */
+  mfaPolicy: z.enum(["off", "admins-away", "admins", "everyone-away", "everyone"]).nullable().default(null),
+  passwordPolicy: z
+    .object({
+      minLength: z.number().int().min(4).max(64),
+      notUsername: z.boolean(),
+      lettersAndNumbers: z.boolean(),
+    })
+    .default({ minLength: 8, notUsername: true, lettersAndNumbers: false }),
   sessionDays: z.number().int().min(1).max(90).default(30),
   /** Days of inactivity before a session used from outside home has to sign in again (≤ sessionDays). */
   awaySessionDays: z.number().int().min(1).max(90).default(7),

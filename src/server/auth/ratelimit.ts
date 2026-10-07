@@ -10,7 +10,7 @@ import type { Zone } from "../net-zone";
  * Every secret-checking endpoint (password, second step, re-auth, password change, setup code) calls
  * `guard()` first and `recordAttempt()` after. Failures are counted per subject (an account, for one
  * purpose) *and per zone*, so strangers hammering an account from the internet slow down the
- * internet — never the person signing in at home. Per IP address there is a hard cap as well.
+ * internet: never the person signing in at home. Per IP address there is a hard cap as well.
  *
  *   away, per account: 5 free failures in 24 h, then 1 min, 2, 4 … up to 1 h between tries
  *   home, per account: 5 free failures in 15 min, then 30 s, 1 min … up to 15 min
@@ -96,7 +96,7 @@ const bursts = () => (g.__gluonBursts ??= new Map<string, number[]>());
 
 /**
  * Cheap flood control for public endpoints (sign-in, setup, invites): at most `limit` requests per
- * `windowMs` per key. In memory on purpose — it only has to blunt floods, the durable limits above
+ * `windowMs` per key. In memory on purpose: it only has to blunt floods, the durable limits above
  * do the real work. Returns seconds to wait, or 0 (and counts this request).
  */
 export function burst(key: string, limit: number, windowMs: number): number {

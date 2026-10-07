@@ -17,7 +17,7 @@ const UPLOAD_TEXT: Record<UploadItem["status"], string> = {
   waiting: "Reconnecting",
   completing: "Saving",
   done: "Uploaded",
-  skipped: "Skipped — already there",
+  skipped: "Skipped, already there",
   failed: "Failed",
   cancelled: "Cancelled",
   interrupted: "Interrupted",

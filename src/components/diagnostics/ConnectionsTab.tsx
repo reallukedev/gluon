@@ -189,7 +189,7 @@ export function ConnectionsTab() {
                           </span>
                           <span role="cell" className={s.cellText}>{SCOPE_WORD[c.remote.scope]}</span>
                           <span role="cell" className={`${s.numCell} num`} title="Bytes waiting to be read / sent">
-                            {c.recvQ || c.sendQ ? `${fmt.bytes(c.recvQ)} / ${fmt.bytes(c.sendQ)}` : <span className={s.faint}>—</span>}
+                            {c.recvQ || c.sendQ ? `${fmt.bytes(c.recvQ)} / ${fmt.bytes(c.sendQ)}` : <span className={s.faint}>Empty</span>}
                           </span>
                         </div>
                       ))}

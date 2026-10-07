@@ -1,8 +1,9 @@
 import "server-only";
 import { registerSearch } from "../search";
 import { tryReadConfig, routeUrl } from "../caddy/routes";
-import { onStart } from "../jobs";
-import { networkStatus } from "./status";
+import { every, onStart } from "../jobs";
+import { invalidateStatus, networkStatus } from "./status";
+import { syncChatCertificates } from "./xmpp-certs";
 import "./checks";
 
 /** Network domain: checks (./checks), search provider, and a warm status cache at start-up. */
@@ -36,4 +37,11 @@ registerSearch((user, q) => {
 onStart("network-status", () => {
   // Warm the cache so the Network page opens with data; errors surface on the page itself.
   setTimeout(() => void networkStatus().catch(() => undefined), 15_000);
+});
+
+onStart("xmpp-certs", () => {
+  // Healthy chat servers are rechecked every six hours; ones that need attention (a new domain
+  // still waiting for Caddy, a reload that didn't take) every 15 minutes. The first run waits for Caddy.
+  setTimeout(() => void syncChatCertificates().then(invalidateStatus).catch(() => undefined), 60_000).unref?.();
+  every(15 * 60_000, () => syncChatCertificates({ onlyDue: true }).then(invalidateStatus));
 });

@@ -6,6 +6,7 @@ import { Panel } from "@/components/ui/Surface";
 import { Field, Input, TextArea, Switch } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { slugify, umbrelAppId } from "@/lib/builder/names";
+import { nextFreePort } from "@/lib/builder/start";
 import type { ServiceForm } from "@/lib/builder/compose";
 import { IconPicker } from "./IconPicker";
 import { linkHost } from "./state";
@@ -23,7 +24,7 @@ interface Props {
   usedPorts: Map<number, string>;
 }
 
-export function DetailsTab({ draft, detail, services, issues, target, storeId }: Props) {
+export function DetailsTab({ draft, detail, services, issues, target, storeId, usedPorts }: Props) {
   const d = draft.spec.details;
   const published = detail.status === "published";
   const setD = (patch: Partial<AppDetails>) => draft.setSpec((sp) => ({ ...sp, details: { ...sp.details, ...patch } }));
@@ -102,12 +103,12 @@ export function DetailsTab({ draft, detail, services, issues, target, storeId }:
           </div>
         </div>
       </Panel>
-      <WebPanel draft={draft} detail={detail} services={services} issues={issues} target={target} setW={setW} />
+      <WebPanel draft={draft} detail={detail} services={services} issues={issues} target={target} usedPorts={usedPorts} setW={setW} />
     </>
   );
 }
 
-function WebPanel({ draft, detail, services, issues, target, setW }: { draft: Draft; detail: CustomAppDetail; services: ServiceForm[]; issues: Issue[]; target: BuilderTarget; setW: (p: Partial<WebSettings>) => void }) {
+export function WebPanel({ draft, detail, services, issues, target, usedPorts, setW }: { draft: Draft; detail: CustomAppDetail; services: ServiceForm[]; issues: Issue[]; target: BuilderTarget; usedPorts: Map<number, string>; setW: (p: Partial<WebSettings>) => void }) {
   const w = draft.spec.web;
   const svc = services.find((x) => x.name === w.service) ?? null;
   const hostNet = !!svc?.hostNetwork;
@@ -149,6 +150,7 @@ function WebPanel({ draft, detail, services, issues, target, setW }: { draft: Dr
                 <Input value={(hostNet ? w.containerPort : w.port) ?? ""} inputMode="numeric" mono readOnly={hostNet} onChange={(e) => setW({ port: num(e.target.value) })} placeholder="8080" />
               </Field>
               <FieldNotes issues={issuesAt(issues, "web.port")} />
+              <PortSuggestion port={hostNet ? w.containerPort : w.port} usedPorts={usedPorts} ownPort={detail.status === "published" ? detail.publishedSpec?.web.port ?? null : null} disabled={hostNet} onUse={(port) => setW({ port })} />
             </div>
             <div data-field="web.path">
               <Field label="Path" optional description="Where the tile opens, like /admin." error={errorAt(issues, "web.path")}>
@@ -160,7 +162,7 @@ function WebPanel({ draft, detail, services, issues, target, setW }: { draft: Dr
                 <div className={s.inlineControl}>
                   <span id="umbrel-auth">
                     Ask for the Umbrel password first
-                    <span className={s.hint} style={{ display: "block" }}>
+                    <span className={s.controlHint}>
                       Turn this off if the app has its own sign-in, or if apps on your phone connect to it directly.
                     </span>
                   </span>
@@ -172,5 +174,20 @@ function WebPanel({ draft, detail, services, issues, target, setW }: { draft: Dr
         )}
       </div>
     </Panel>
+  );
+}
+
+/** When the chosen port is taken (the check says by whom), offer the next free one. */
+function PortSuggestion({ port, usedPorts, ownPort, disabled, onUse }: { port: number | null; usedPorts: Map<number, string>; ownPort: number | null; disabled: boolean; onUse: (p: number) => void }) {
+  if (!port || port === ownPort || disabled || !usedPorts.has(port)) return null;
+  const free = nextFreePort(port + 1, usedPorts);
+  if (!free) return null;
+  return (
+    <p className={s.hint}>
+      <button type="button" className={s.link} onClick={() => onUse(free)}>
+        Use port {free} instead
+      </button>
+      , which nothing on this server uses.
+    </p>
   );
 }

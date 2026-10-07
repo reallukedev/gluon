@@ -1,0 +1,123 @@
+{
+ "container": {
+  "Id": "35715d3d39f6e5e73d9c8d286d20ee72bf79e1cffe042aecf8b0af83b7ff011a",
+  "Name": "/coolify-sentinel",
+  "Config": {
+   "Hostname": "35715d3d39f6",
+   "User": "",
+   "Env": [
+    "DEBUG=false",
+    "PUSH_ENDPOINT=http://coolify:8080",
+    "PUSH_INTERVAL_SECONDS=60",
+    "COLLECTOR_ENABLED=true",
+    "COLLECTOR_REFRESH_RATE_SECONDS=10",
+    "COLLECTOR_RETENTION_PERIOD_DAYS=7",
+    "TOKEN=REDACTED",
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "PORT=8888"
+   ],
+   "Cmd": [
+    "/app/sentinel"
+   ],
+   "Image": "docker.io/coollabsio/sentinel:1.0.1",
+   "WorkingDir": "/",
+   "Entrypoint": null,
+   "Labels": {
+    "coolify.managed": "true"
+   },
+   "Healthcheck": {
+    "Test": [
+     "CMD-SHELL",
+     "curl --fail http://127.0.0.1:8888/api/health || exit 1"
+    ],
+    "Interval": 10000000000,
+    "Timeout": 3000000000,
+    "StartPeriod": 120000000000,
+    "Retries": 3
+   }
+  },
+  "HostConfig": {
+   "Binds": [
+    "/var/run/docker.sock:/var/run/docker.sock",
+    "/data/coolify/sentinel:/app/db"
+   ],
+   "NetworkMode": "coolify",
+   "PidMode": "host",
+   "CgroupnsMode": "private",
+   "IpcMode": "private",
+   "PortBindings": {},
+   "RestartPolicy": {
+    "Name": "no",
+    "MaximumRetryCount": 0
+   },
+   "CapAdd": null,
+   "CapDrop": null,
+   "Devices": [],
+   "Privileged": false,
+   "ExtraHosts": [
+    "host.docker.internal:host-gateway"
+   ],
+   "Tmpfs": null,
+   "ShmSize": 67108864,
+   "SecurityOpt": [
+    "label=disable"
+   ],
+   "Init": null,
+   "Dns": null,
+   "GroupAdd": null,
+   "Sysctls": null,
+   "Memory": 0,
+   "NanoCpus": 0
+  },
+  "Mounts": [
+   {
+    "Type": "bind",
+    "Source": "/data/coolify/sentinel",
+    "Destination": "/app/db",
+    "Mode": "",
+    "RW": true,
+    "Propagation": "rprivate"
+   },
+   {
+    "Type": "bind",
+    "Source": "/var/run/docker.sock",
+    "Destination": "/var/run/docker.sock",
+    "Mode": "",
+    "RW": true,
+    "Propagation": "rprivate"
+   }
+  ],
+  "NetworkSettings": {
+   "Networks": {
+    "coolify": {}
+   }
+  }
+ },
+ "image": {
+  "Config": {
+   "Env": [
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "PORT=8888"
+   ],
+   "Cmd": [
+    "/app/sentinel"
+   ],
+   "Entrypoint": null,
+   "WorkingDir": "/",
+   "User": null,
+   "Labels": {
+    "coolify.managed": "true"
+   },
+   "Healthcheck": {
+    "Test": [
+     "CMD-SHELL",
+     "wget --no-verbose --tries=1 --spider \"http://127.0.0.1:${PORT}/api/health\" || exit 1"
+    ],
+    "Interval": 30000000000,
+    "Timeout": 3000000000,
+    "StartPeriod": 5000000000,
+    "Retries": 3
+   }
+  }
+ }
+}

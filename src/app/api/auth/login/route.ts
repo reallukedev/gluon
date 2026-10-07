@@ -7,10 +7,10 @@ import { createSession, currentDevice } from "@/server/auth/session";
 import { noteSignIn } from "@/server/auth/devices";
 import { audit } from "@/server/audit";
 import { raise, resolve } from "@/server/findings";
-import { getSetting } from "@/server/settings";
 import { peopleHref } from "@/lib/settings-links";
 import { now, run } from "@/server/db";
 import type { Zone } from "@/server/net-zone";
+import { mfaRequired, mfaRequiredMessage } from "@/server/auth/policy";
 
 const body = z.object({ username: z.string().trim().min(1, "Enter your username.").max(64), password: z.string().min(1, "Enter your password.").max(256) });
 
@@ -42,17 +42,16 @@ export const POST = route({ auth: "public", body, burst: { limit: 20, windowMs: 
   const ok = await verifyPassword(row, body.password);
   const usable = !!row && !row.disabled;
 
-  // An admin without two-step, from outside home: a password alone is never enough here. Say so
-  // whether or not the password was right, so this answer can't be used to confirm a guess.
-  if (usable && zone === "away" && row.role === "admin" && !row.totp_enabled && getSetting("requireMfaAway")) {
-    if (!ok) {
-      const r = recordAttempt(`login:${username}`, ip, false, zone);
-      if (r.startedThrottle) noteThrottle(row, r.failures, ip, zone);
-    }
-    audit({ id: row.id, username: row.username }, { action: "auth.login", summary: "Blocked admin sign-in from outside home without two-step verification", outcome: "failed" }, { ip, zone });
+  // An admin without two-step, from outside home: a password alone is never enough here. Only
+  // answered this way when the password was right, so it can't be used to find admin usernames, and
+  // always counted as a failure, so the throttle can't confirm a guess either.
+  if (ok && usable && zone === "away" && !row.totp_enabled && mfaRequired(row.role, zone)) {
+    const r = recordAttempt(`login:${username}`, ip, false, zone);
+    if (r.startedThrottle) noteThrottle(row, r.failures, ip, zone);
+    audit({ id: row.id, username: row.username }, { action: "auth.login", summary: "Blocked sign-in from outside home without two-step verification", outcome: "failed" }, { ip, zone });
     throw new AppError(
       "mfa_required_away",
-      "Admins need two-step sign-in to connect from outside home. Sign in once on your home network, turn it on in Settings → Security, then try again.",
+      mfaRequiredMessage(row.role),
       403,
     );
   }

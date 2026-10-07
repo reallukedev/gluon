@@ -19,6 +19,7 @@ import type { User } from "../auth/users";
 import { describeConfig, describeChanges, routeWarnings } from "./routes-meta";
 import { invalidateStatus, NOT_CONFIGURED } from "./status";
 import { invalidateExposure } from "./exposure";
+import { syncChatCertificates } from "./xmpp-certs";
 import type { DriftInfo, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
 
 /**
@@ -125,6 +126,12 @@ async function save(user: User, where: Where, rev: string, raw: { routes: unknow
     invalidateStatus();
     invalidateExposure();
     publish("network.routes", { rev: configRev(saved) });
+    if (saved.routes.some((r) => r.type === "subdomain" && r.xmpp?.cert_sync)) {
+      // Now for a domain Caddy already has; again once a new name has had time to get one.
+      const run = () => void syncChatCertificates().then(invalidateStatus).catch(() => undefined);
+      run();
+      setTimeout(run, 90_000).unref?.();
+    }
     const meta = await describeConfig(saved);
     return { config: saved, rev: configRev(saved), drift: caddyfileDrift(saved), warnings, summary: changes, ...meta };
   });
@@ -138,4 +145,19 @@ export function restoreRoutes(user: User, where: Where, body: { id: string; rev:
   const snap = readHistoryRoutes(body.id);
   if (!Array.isArray(snap.routes)) throw new AppError("bad_snapshot", "That snapshot doesn't contain any addresses, so it can't be restored.", 400);
   return save(user, where, body.rev, { routes: snap.routes, fallback: snap.fallback }, `Restored snapshot ${body.id} by ${user.username} in Gluon`, "network.routes.restore", `Restored public addresses from ${body.id}`);
+}
+
+/**
+ * Point every public address (and the fallback) that names app `from` at app `to`, after Gluon
+ * moves an app. Goes through the same checked, audited save as the Network page. Returns how many
+ * addresses changed; 0 (and no save) when none name the app.
+ */
+export async function reassignRouteApp(user: User, where: Where, from: string, to: string): Promise<number> {
+  const current = currentConfig();
+  const ids = current.routes.filter((r) => r.app === from).map((r) => r.id);
+  const fallback = current.fallback?.app === from;
+  if (!ids.length && !fallback) return 0;
+  const routes = current.routes.map((r) => (r.app === from ? { ...r, app: to } : r));
+  await save(user, where, configRev(current), { routes, fallback: fallback ? { ...current.fallback, app: to } : current.fallback }, `Moved ${from} to ${to} in Gluon`, "network.routes.save", `Pointed public addresses at ${to}`);
+  return ids.length + (fallback ? 1 : 0);
 }

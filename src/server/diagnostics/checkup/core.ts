@@ -70,12 +70,12 @@ export function withTimeout<T>(p: Promise<T>, ms: number, message: string): Prom
   ]);
 }
 
-export const ms = (n: number | null | undefined) => (n === null || n === undefined || !Number.isFinite(n) ? "—" : n < 10 ? `${Math.round(n * 10) / 10} ms` : `${Math.round(n)} ms`);
+export const ms = (n: number | null | undefined) => (n === null || n === undefined || !Number.isFinite(n) ? "not measured" : n < 10 ? `${Math.round(n * 10) / 10} ms` : `${Math.round(n)} ms`);
 
 /** Evidence lines: "key  value" pairs aligned for the monospace disclosure. */
 export function kv(rows: [string, string | number | null | undefined][]): string {
   const w = Math.min(28, Math.max(...rows.map(([k]) => k.length)));
-  return rows.map(([k, v]) => `${k.padEnd(w)}  ${v === null || v === undefined || v === "" ? "—" : v}`).join("\n");
+  return rows.map(([k, v]) => `${k.padEnd(w)}  ${v === null || v === undefined || v === "" ? "none" : v}`).join("\n");
 }
 
 export const oneLine = (s: string, max = 300) => s.replace(/\s+/g, " ").trim().slice(0, max);

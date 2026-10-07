@@ -247,7 +247,7 @@ export function CaddyDetails({
                   </span>
                 </span>
                 <span role="cell" className={`${s.cellText} num`}>
-                  {c.tls.validTo ? <Time ts={Date.parse(c.tls.validTo)} kind="date" /> : <span className={s.faint}>—</span>}
+                  {c.tls.validTo ? <Time ts={Date.parse(c.tls.validTo)} kind="date" /> : <span className={s.faint}>Not known</span>}
                 </span>
                 <span role="cell" className={s.cellMain} title={c.tls.message}>
                   <StateLine state={l.state} label={l.label} />

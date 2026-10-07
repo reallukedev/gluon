@@ -1,6 +1,6 @@
 "use client";
 /**
- * HoldButton — press and hold to confirm the most dangerous actions (power off, wipe a disk).
+ * HoldButton: press and hold to confirm the most dangerous actions (power off, wipe a disk).
  *
  *   <HoldButton holdMs={1500} onConfirm={shutDown}>Hold to shut down</HoldButton>
  *
@@ -85,7 +85,10 @@ export function HoldButton({
     setHolding(false);
   };
 
+  // The hint sits beside the button, not in it: inside it would also become part of the name and
+  // be read twice (once as name, once as description).
   return (
+    <>
     <Button
       variant={variant}
       size={size}
@@ -133,9 +136,10 @@ export function HoldButton({
     >
       <span className={s.fill} aria-hidden data-motion-gentle="" />
       <span className={s.text}>{children}</span>
-      <span id={hintId} className="sr-only">
-        {hint}
-      </span>
     </Button>
+    <span id={hintId} className="sr-only">
+      {hint}
+    </span>
+    </>
   );
 }

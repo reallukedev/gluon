@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
-import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef } from "./base";
+import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef, type KindSearchHit } from "./base";
+import { matchScore, prepare } from "@/lib/search-match";
 import { imageUrl } from "../image-refs";
 import type { ImmichMemory, ImmichOnThisDayData, ImmichRecentData, ImmichStatsData } from "@/lib/widgets-types";
 
@@ -150,6 +151,103 @@ async function recent(ctx: KindContext<Config>, params: Record<string, unknown>)
   return { items, note: null };
 }
 
+// ------------------------------------------------------------------ universal search
+
+const base = (ctx: KindContext<Config>) => ctx.baseUrl.replace(/\/+$/, "");
+
+function yearOf(a: Record<string, unknown>): number | null {
+  const t = time(a.localDateTime ?? a.fileCreatedAt);
+  return t ? new Date(t).getUTCFullYear() : null;
+}
+
+/** A photo or video found by what's in it, linking to it in Immich. */
+export function assetHit(ctx: KindContext<Config>, a: Record<string, unknown>): KindSearchHit | null {
+  const id = str(a.id);
+  if (!id || !UUID.test(id) || !visible(a)) return null;
+  const exif = obj(a.exifInfo);
+  const where = [str(exif.city), str(exif.country)].filter(Boolean).join(", ");
+  const video = a.type === "VIDEO";
+  const year = yearOf(a);
+  return {
+    id: `asset:${id.toLowerCase()}`,
+    label: str(a.originalFileName) ?? (video ? "Video" : "Photo"),
+    hint: [video ? "Video" : "Photo", where || null, year ? String(year) : null].filter(Boolean).join(" · "),
+    url: `${base(ctx)}/photos/${id.toLowerCase()}`,
+    type: video ? "video" : "photo",
+    image: thumb(ctx, id),
+  };
+}
+
+export function personHit(ctx: KindContext<Config>, p: Record<string, unknown>): KindSearchHit | null {
+  const id = str(p.id);
+  const name = str(p.name);
+  if (!id || !name || p.isHidden === true) return null;
+  return { id: `person:${id}`, label: name, hint: "Person", url: `${base(ctx)}/people/${encodeURIComponent(id)}`, type: "person" };
+}
+
+export function placeHit(ctx: KindContext<Config>, p: Record<string, unknown>): KindSearchHit | null {
+  const name = str(p.name);
+  if (!name) return null;
+  const region = [str(p.admin1name), str(p.countryName)].filter((x) => x && x !== name).join(", ");
+  const query = encodeURIComponent(JSON.stringify({ city: name }));
+  return { id: `place:${name}:${region}`, label: name, hint: ["Place", region || null].filter(Boolean).join(" · "), url: `${base(ctx)}/search?query=${query}`, type: "place" };
+}
+
+export function albumHit(ctx: KindContext<Config>, a: Record<string, unknown>): KindSearchHit | null {
+  const id = str(a.id);
+  const name = str(a.albumName);
+  if (!id || !name) return null;
+  const n = num(a.assetCount);
+  const cover = str(a.albumThumbnailAssetId);
+  return {
+    id: `album:${id}`,
+    label: name,
+    hint: ["Album", n !== null ? `${n} item${n === 1 ? "" : "s"}` : null].filter(Boolean).join(" · "),
+    url: `${base(ctx)}/albums/${encodeURIComponent(id)}`,
+    type: "album",
+    image: cover ? thumb(ctx, cover) : null,
+  };
+}
+
+/**
+ * People, places and albums by name, and photos by what's in them (Immich's smart search, so "beach
+ * at sunset" works). Each part fails on its own: a library without machine learning still finds people.
+ */
+async function search(ctx: KindContext<Config>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]> {
+  const h = http(ctx);
+  const term = q.slice(0, 100);
+  const settled = await Promise.allSettled([
+    h.json<unknown>("/api/search/person", { query: { name: term, withHidden: false }, signal: opts.signal, timeoutMs: 1800 }),
+    h.json<unknown>("/api/search/places", { query: { name: term }, signal: opts.signal, timeoutMs: 1800 }),
+    h.json<unknown>("/api/albums", { signal: opts.signal, timeoutMs: 1800 }),
+    term.length >= 3 ? h.json<unknown>("/api/search/smart", { method: "POST", body: { query: term, size: opts.limit * 2, withExif: true }, allow: [400], signal: opts.signal, timeoutMs: 1800 }) : Promise.resolve(null),
+  ]);
+  // Each part may fail on its own (an older Immich, a key without some permission); only when
+  // everything fails is it worth telling the person why.
+  if (settled.every((r) => r.status === "rejected")) throw (settled[0] as PromiseRejectedResult).reason;
+  const [people, places, albums, smart] = settled.map((r) => (r.status === "fulfilled" ? r.value : null));
+  if (opts.signal.aborted) return [];
+  const query = prepare(q);
+  const named = [
+    ...arr<Record<string, unknown>>(people).slice(0, 5).map((p) => personHit(ctx, p)),
+    ...arr<Record<string, unknown>>(albums)
+      .filter((a) => matchScore(query, { label: str(a.albumName) ?? "" }) >= 0.5)
+      .slice(0, 4)
+      .map((a) => albumHit(ctx, a)),
+    ...arr<Record<string, unknown>>(places).slice(0, 3).map((p) => placeHit(ctx, p)),
+  ]
+    .filter((x): x is KindSearchHit => !!x)
+    .map((hit, i) => ({ hit, i, score: matchScore(query, { label: hit.label }) }))
+    .sort((a, b) => b.score - a.score || a.i - b.i);
+  const photos = arr<Record<string, unknown>>(obj(obj(smart).assets).items)
+    .map((a) => assetHit(ctx, a))
+    .filter((x): x is KindSearchHit => !!x);
+  // Names that match well lead; photos follow in Immich's own order (most similar first).
+  const strong = named.filter((x) => x.score >= 0.8).map((x) => x.hit);
+  const weak = named.filter((x) => x.score < 0.8).map((x) => x.hit);
+  return [...strong, ...photos, ...weak].slice(0, opts.limit);
+}
+
 export const def: KindDef<Config> = {
   kind: "immich",
   label: "Immich",
@@ -188,6 +286,7 @@ export const def: KindDef<Config> = {
     "immich.recent": (ctx, p) => recent(ctx, p),
     "immich.onThisDay": (ctx) => onThisDay(ctx),
   },
+  search,
   image: {
     schema: z.object({
       asset: z.string().regex(UUID),

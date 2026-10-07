@@ -33,6 +33,7 @@ import { cpuTempOutcome, loadOutcome, memoryOutcome } from "./hardware";
 import { dockerDiskOutcome, updatesOutcome } from "./system";
 import { adminMfaOutcome, exposure, lanOutcome, sshFailuresOutcome, sshPasswordOutcome, sshRootOutcome, gluonLoginsOutcome } from "./security";
 import { cpuWindow, download, hostNameservers, httpAnswer, pingSeries, summarizeRtts } from "./probes";
+import { mfaRequired } from "../../auth/policy";
 
 /** Targeted checkups: go deeper along one path for one symptom. */
 
@@ -873,8 +874,8 @@ async function safetyPlan(): Promise<Plan> {
     group: "accounts",
     label: "Away from home",
     run: async () => {
-      const on = getSetting("requireMfaAway");
-      if (!on) return warn("Admins can sign in from the internet without two-step verification", { detail: "Turn on \"Require two-step for admins away from home\" in Settings → Server.", fix: go("Open server settings", "/settings/server") });
+      const on = mfaRequired("admin", "away");
+      if (!on) return warn("Admins can sign in from the internet without two-step verification", { detail: "Choose a two-step sign-in rule that covers admins away from home in Settings → Server.", fix: go("Open server settings", "/settings/server") });
       return ok("Admins need two-step sign-in to get in from outside");
     },
   });

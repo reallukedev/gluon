@@ -10,6 +10,7 @@ import { host } from "../host/exec";
 import { all, now, one, run } from "../db";
 import { tryReadConfig, routeUrl, THIS_SERVER, type Route } from "../caddy/routes";
 import type { LineState } from "@/lib/types";
+import { readMarker } from "../apps/marker";
 
 export interface PortMapping {
   host: number;
@@ -51,7 +52,7 @@ export interface AppSummary {
   description: string | null;
   category: string | null;
   icon: string | null;
-  source: "casaos" | "umbrel" | "compose" | "docker";
+  source: "gluon" | "casaos" | "umbrel" | "compose" | "docker";
   configFile: string | null;
   workingDir: string | null;
   containers: ContainerSummary[];
@@ -68,9 +69,15 @@ export interface AppSummary {
   umbrel: { state: UmbrelAppState; progress: number; version: string; latest: string | null; storeId: string | null } | null;
   /** Set when this is an older install of an app that also runs from somewhere else (e.g. a CasaOS Immich next to Umbrel's). */
   copyOf: { id: string; name: string; source: AppSummary["source"] } | null;
+  /** Set for apps Gluon runs from its own folder (made in the builder, or moved here). */
+  gluon: { folder: string; builderId: string | null; movedFrom: { source: string; id: string; name: string } | null } | null;
+  /** Set by GET /api/apps while a move to Gluon involves this app (as the original or the new copy). */
+  moving?: boolean;
 }
 
 interface CasaMeta {
+  /** Which block the metadata came from: CasaOS's x-casaos or Gluon's own x-gluon. */
+  kind?: "casaos" | "gluon";
   title?: string;
   icon?: string;
   portMap?: number;
@@ -109,9 +116,21 @@ function casaMeta(configFile: string | null): CasaMeta | null {
   try {
     const doc = YAML.parse(fs.readFileSync(p, "utf8")) as Record<string, unknown>;
     const x = doc?.["x-casaos"] as Record<string, unknown> | undefined;
-    if (x) {
+    const gx = doc?.["x-gluon"] as Record<string, unknown> | undefined;
+    if (gx && typeof gx === "object") {
+      const port = Number(gx.port);
+      meta = {
+        kind: "gluon",
+        title: typeof gx.name === "string" ? gx.name : undefined,
+        icon: typeof gx.icon === "string" ? gx.icon : undefined,
+        portMap: Number.isFinite(port) && port > 0 ? port : undefined,
+        index: typeof gx.path === "string" ? gx.path : undefined,
+        description: typeof gx.description === "string" ? gx.description : undefined,
+      };
+    } else if (x) {
       const pm = Number(String(x.port_map ?? "").trim());
       meta = {
+        kind: "casaos",
         title: pickLang(x.title),
         icon: typeof x.icon === "string" ? x.icon : undefined,
         portMap: Number.isFinite(pm) && pm > 0 ? pm : undefined,
@@ -382,19 +401,27 @@ function markCopies(apps: AppSummary[]) {
     if (k) groups.set(k, [...(groups.get(k) ?? []), a]);
   }
   const live = (a: AppSummary) => a.line !== "stopped" && a.containers.length > 0;
+  const mark = (a: AppSummary, primary: AppSummary) => {
+    a.copyOf = { id: primary.id, name: primary.name, source: primary.source };
+    // A stopped copy's "at home" address would open whatever answers on that port now,
+    // usually the app that replaced it.
+    if (!live(a) && a.urls.home && a.webPort && a.webPort === primary.webPort) a.urls.home = null;
+  };
+  // An app moved to Gluon names the one it came from, whatever either is called now.
+  const byId = new Map(apps.map((a) => [a.id, a]));
+  for (const a of apps) {
+    const from = a.gluon?.movedFrom && byId.get(a.gluon.movedFrom.id);
+    if (from && from !== a && !from.self) mark(from, a);
+  }
   for (const g of groups.values()) {
     if (g.length < 2) continue;
-    const rank = (a: AppSummary) => (a.source === "umbrel" ? 2 : 0) + (live(a) ? 1 : 0);
+    // Gluon's own copy is the one in use: it only exists because someone moved the app there.
+    const rank = (a: AppSummary) => (a.source === "gluon" ? 4 : a.source === "umbrel" ? 2 : 0) + (live(a) ? 1 : 0);
     const primary = [...g].sort((a, b) => rank(b) - rank(a))[0]!;
     for (const a of g) {
-      if (a === primary) continue;
-      if (a.source === "umbrel") continue; // two Umbrel apps: both are real
-      if (primary.source === "umbrel" || (live(primary) && !live(a))) {
-        a.copyOf = { id: primary.id, name: primary.name, source: primary.source };
-        // A stopped copy's "at home" address would open whatever answers on that port now,
-        // usually the app that replaced it.
-        if (!live(a) && a.urls.home && a.webPort && a.webPort === primary.webPort) a.urls.home = null;
-      }
+      if (a === primary || a.copyOf) continue;
+      if (a.source === "umbrel" && primary.source !== "gluon") continue; // two Umbrel apps: both are real
+      if (primary.source === "umbrel" || primary.source === "gluon" || (live(primary) && !live(a))) mark(a, primary);
     }
   }
 }
@@ -457,6 +484,7 @@ async function buildApps(): Promise<AppSummary[]> {
     const ownFile = isStack && !umbrel ? (labels["com.docker.compose.project.config_files"]?.split(",")[0] ?? null) : null;
     const configFile = split ? null : ownFile;
     const workingDir = isStack && !umbrel && !split ? (labels["com.docker.compose.project.working_dir"] ?? null) : null;
+    const marker = workingDir && configFile ? readMarker(workingDir) : null;
     const u = umbrel ? uById.get(id) : undefined;
     const fileMeta = umbrel ? umbrelMeta(id, cs) : casaMeta(ownFile);
     const meta: CasaMeta | null = u
@@ -491,7 +519,7 @@ async function buildApps(): Promise<AppSummary[]> {
       description: pref?.description || meta?.description || null,
       category: meta?.category ?? null,
       icon: pref?.icon || meta?.icon || null,
-      source: umbrel ? "umbrel" : meta ? "casaos" : isStack ? "compose" : "docker",
+      source: umbrel ? "umbrel" : marker ? "gluon" : meta?.kind === "casaos" ? "casaos" : isStack ? "compose" : "docker",
       configFile,
       workingDir,
       containers,
@@ -506,6 +534,7 @@ async function buildApps(): Promise<AppSummary[]> {
       self: containers.some((c) => c.shortId === selfId.slice(0, 12) || c.name === "gluon" || c.name === "gluon-dev" || c.name === "tend" || c.name === "tend-dev"),
       umbrel: u ? umbrelInfo(u, latestById.get(id)) : null,
       copyOf: null,
+      gluon: marker && workingDir ? { folder: workingDir, builderId: marker.builderId, movedFrom: marker.movedFrom } : null,
     };
     if (!app.icon)
       guesses.push(
@@ -541,6 +570,7 @@ async function buildApps(): Promise<AppSummary[]> {
       self: false,
       umbrel: umbrelInfo(u, latestById.get(u.id)),
       copyOf: null,
+      gluon: null,
     });
   }
 

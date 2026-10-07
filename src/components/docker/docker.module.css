@@ -35,7 +35,7 @@
 
 /* Sized by the table's own width (sidebar and density change it), not the viewport. overflow: hidden only
    rounds the row fills into the corners; the tiers below keep every column inside.
-   Full widths — images: 18+240+170+104+112+68 + 5×18 + 32 = 834px; volumes: 18+220+170+96+112+68 + 5×18 + 32
+   Full widths. Images: 18+240+170+104+112+68 + 5×18 + 32 = 834px; volumes: 18+220+170+96+112+68 + 5×18 + 32
    = 806px; networks: 220+160+180+68 + 3×18 + 32 = 714px. */
 .table {
   border: 1px solid var(--line);

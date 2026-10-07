@@ -21,6 +21,9 @@ import {
 } from "./live/media";
 import { HomebridgeAccessories, HomebridgeSettings, JsonFields, LinkStatus, LinkStatusSettings, SlskdTransfers, type HomebridgeConfig, type LinkStatusConfig } from "./live/services";
 import { CalendarSettings, CalendarWidget, FeedSettings, FeedWidget, WeatherSettings, WeatherWidget, type CalendarConfig, type FeedConfig, type WeatherConfig } from "./live/personal";
+import { HaEntities, HaEntitiesSettings, HaPeople, HaPeopleSettings, saveHaEntities, saveHaPeople, type HaEntitiesConfig, type HaPeopleConfig } from "./live/homeassistant";
+import { CoolifyDeployments } from "./live/coolify";
+import { ControlsPreview, DeploymentsPreview, PeoplePreview } from "./live/previews";
 import { Preview } from "../previews";
 
 registerWidget<IntegrationConfig>({
@@ -156,6 +159,59 @@ registerWidget<HomebridgeConfig>({
   Component: HomebridgeAccessories,
   Settings: HomebridgeSettings,
   preview: <Preview of="accessories" />,
+});
+
+registerWidget<HaEntitiesConfig>({
+  type: "homeassistant.entities",
+  kind: "homeassistant",
+  name: "Home controls",
+  description: "Lights, switches, scenes and sensors you pick from Home Assistant. Press a tile to switch it.",
+  category: "Media & services",
+  sizes: ["s", "m", "t", "l", "w", "x"],
+  defaultSize: "m",
+  defaultConfig: {},
+  multiple: true,
+  setupOnPin: true,
+  title: (c) => c.title || "Home",
+  Component: HaEntities,
+  Settings: HaEntitiesSettings,
+  beforeSave: saveHaEntities,
+  preview: <ControlsPreview />,
+  keywords: "home assistant lights switches scenes sensors thermostat smart home",
+});
+
+registerWidget<HaPeopleConfig>({
+  type: "homeassistant.people",
+  kind: "homeassistant",
+  name: "Who's home",
+  description: "Who is home and who is out, and for how long, from the people in Home Assistant.",
+  category: "Household",
+  sizes: ["s", "m", "t", "w"],
+  defaultSize: "s",
+  defaultConfig: {},
+  title: (c) => c.title || "Who's home",
+  Component: HaPeople,
+  Settings: HaPeopleSettings,
+  beforeSave: saveHaPeople,
+  preview: <PeoplePreview />,
+  keywords: "home assistant people presence family away",
+});
+
+registerWidget<IntegrationConfig>({
+  type: "coolify.deployments",
+  kind: "coolify",
+  name: "Deployments",
+  description: "What Coolify is deploying, how the last deploys went, and anything that isn't running.",
+  category: "Server",
+  sizes: ["s", "m", "t", "l", "w", "x"],
+  defaultSize: "m",
+  defaultConfig: {},
+  adminOnly: true,
+  title: (c) => c.title || "Deployments",
+  Component: CoolifyDeployments,
+  Settings: IntegrationSettingsFor("coolify", "Deployments"),
+  preview: <DeploymentsPreview />,
+  keywords: "coolify deploy builds apps",
 });
 
 registerWidget<IntegrationConfig>({

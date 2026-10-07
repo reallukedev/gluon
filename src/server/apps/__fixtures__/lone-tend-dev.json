@@ -1,0 +1,159 @@
+{
+ "container": {
+  "Id": "e68ecff7d27ebf7429337cb9db67f32f70187ad978e027b767433c9e1615eeee",
+  "Name": "/tend-dev",
+  "Config": {
+   "Hostname": "leech",
+   "User": "",
+   "Env": [
+    "PORT=8131",
+    "TEND_DATA=/data",
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "NODE_VERSION=24.21.0",
+    "YARN_VERSION=1.22.22",
+    "NEXT_TELEMETRY_DISABLED=1"
+   ],
+   "Cmd": [
+    "sh",
+    "-c",
+    "npm install --no-audit --no-fund --foreground-scripts && npx next dev -p ${PORT:-8131} -H 0.0.0.0"
+   ],
+   "Image": "tend-dev:local",
+   "WorkingDir": "/app",
+   "Entrypoint": [
+    "docker-entrypoint.sh"
+   ],
+   "Labels": {}
+  },
+  "HostConfig": {
+   "Binds": [
+    "tend-dev-next:/app/.next",
+    "tend-dev-data:/data",
+    "/var/run/docker.sock:/var/run/docker.sock",
+    "proxy_caddy_admin:/run/caddy",
+    "/home/luke/proxy/caddy:/proxy-caddy",
+    "/home/luke/tend:/app",
+    "tend-dev-node-modules:/app/node_modules"
+   ],
+   "NetworkMode": "host",
+   "PidMode": "host",
+   "CgroupnsMode": "host",
+   "IpcMode": "private",
+   "PortBindings": {},
+   "RestartPolicy": {
+    "Name": "unless-stopped",
+    "MaximumRetryCount": 0
+   },
+   "CapAdd": null,
+   "CapDrop": null,
+   "Devices": [],
+   "Privileged": true,
+   "ExtraHosts": null,
+   "Tmpfs": null,
+   "ShmSize": 67108864,
+   "SecurityOpt": [
+    "label=disable"
+   ],
+   "Init": null,
+   "Dns": [],
+   "GroupAdd": null,
+   "Sysctls": null,
+   "Memory": 0,
+   "NanoCpus": 0
+  },
+  "Mounts": [
+   {
+    "Type": "bind",
+    "Source": "/home/luke/tend",
+    "Destination": "/app",
+    "Mode": "",
+    "RW": true,
+    "Propagation": "rprivate"
+   },
+   {
+    "Type": "volume",
+    "Name": "tend-dev-data",
+    "Source": "/var/lib/docker/volumes/tend-dev-data/_data",
+    "Destination": "/data",
+    "Driver": "local",
+    "Mode": "z",
+    "RW": true,
+    "Propagation": ""
+   },
+   {
+    "Type": "bind",
+    "Source": "/home/luke/proxy/caddy",
+    "Destination": "/proxy-caddy",
+    "Mode": "",
+    "RW": true,
+    "Propagation": "rprivate"
+   },
+   {
+    "Type": "volume",
+    "Name": "tend-dev-next",
+    "Source": "/var/lib/docker/volumes/tend-dev-next/_data",
+    "Destination": "/app/.next",
+    "Driver": "local",
+    "Mode": "z",
+    "RW": true,
+    "Propagation": ""
+   },
+   {
+    "Type": "volume",
+    "Name": "tend-dev-node-modules",
+    "Source": "/var/lib/docker/volumes/tend-dev-node-modules/_data",
+    "Destination": "/app/node_modules",
+    "Driver": "local",
+    "Mode": "z",
+    "RW": true,
+    "Propagation": ""
+   },
+   {
+    "Type": "volume",
+    "Name": "proxy_caddy_admin",
+    "Source": "/var/lib/docker/volumes/proxy_caddy_admin/_data",
+    "Destination": "/run/caddy",
+    "Driver": "local",
+    "Mode": "z",
+    "RW": true,
+    "Propagation": ""
+   },
+   {
+    "Type": "bind",
+    "Source": "/var/run/docker.sock",
+    "Destination": "/var/run/docker.sock",
+    "Mode": "",
+    "RW": true,
+    "Propagation": "rprivate"
+   }
+  ],
+  "NetworkSettings": {
+   "Networks": {
+    "host": {}
+   }
+  }
+ },
+ "image": {
+  "Config": {
+   "Env": [
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "NODE_VERSION=24.21.0",
+    "YARN_VERSION=1.22.22",
+    "NEXT_TELEMETRY_DISABLED=1",
+    "TEND_DATA=/data"
+   ],
+   "Cmd": [
+    "sh",
+    "-c",
+    "npm install --no-audit --no-fund --foreground-scripts && npx next dev -p ${PORT:-8131} -H 0.0.0.0"
+   ],
+   "Entrypoint": [
+    "docker-entrypoint.sh"
+   ],
+   "WorkingDir": "/app",
+   "User": null,
+   "Labels": null,
+   "Healthcheck": null
+  }
+ }
+}

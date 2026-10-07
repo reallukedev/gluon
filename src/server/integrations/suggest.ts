@@ -31,7 +31,7 @@ const KNOWN: Known[] = [
     name: "Octo",
     port: 8080,
     config: { auth: "password" },
-    note: "Octo passes music requests on to Navidrome, so sign in with your Navidrome username and password. Connect either Octo or Navidrome — not both.",
+    note: "Octo passes music requests on to Navidrome, so sign in with your Navidrome username and password. Connect either Octo or Navidrome, not both.",
   },
   {
     kind: "subsonic",
@@ -53,6 +53,19 @@ const KNOWN: Known[] = [
     image: /(^|\/)homebridge$/,
     name: "Homebridge",
     port: 8581,
+  },
+  {
+    kind: "homeassistant",
+    // The official image, and the linuxserver build CasaOS installs.
+    image: /(^|\/)(home-assistant|homeassistant)$/,
+    name: "Home Assistant",
+    port: 8123,
+  },
+  {
+    kind: "coolify",
+    image: /^coollabsio\/coolify$/,
+    name: "Coolify",
+    port: 8080,
   },
 ];
 

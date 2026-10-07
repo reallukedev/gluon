@@ -3,7 +3,7 @@
 //
 // Gluon decides "at home" vs "away" from the visitor's address, and that decision gates admin
 // sign-in. X-Forwarded-For is only meaningful when it was written by our own proxy (Caddy, on a
-// Docker network) — anyone else can type whatever they like into it. So for every request:
+// Docker network): anyone else can type whatever they like into it. So for every request:
 //   - any `x-gluon-peer` the client sent is dropped, and the socket's remote address is written in;
 //   - if the peer is not a private address (loopback, Docker bridge, LAN, Tailscale), every
 //     forwarding header is dropped too, so Next falls back to the socket for XFF/proto/host.

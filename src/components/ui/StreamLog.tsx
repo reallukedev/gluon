@@ -13,7 +13,8 @@ export type StreamEvent =
 
 export interface StreamState {
   steps: { text: string; state: "running" | "done" | "failed" }[];
-  lines: { text: string; err: boolean }[];
+  /** `n` counts every line ever added, so keys stay stable once old lines are trimmed. */
+  lines: { text: string; err: boolean; n?: number }[];
   result: { ok: boolean; message: string } | null;
   progress: { done: number; total: number; current?: string } | null;
 }
@@ -23,7 +24,7 @@ export const emptyStream: StreamState = { steps: [], lines: [], result: null, pr
 export function reduceStream(st: StreamState, e: StreamEvent): StreamState {
   switch (e.type) {
     case "line":
-      return { ...st, lines: [...st.lines.slice(-4000), { text: e.text, err: e.stream === "err" }] };
+      return { ...st, lines: [...st.lines.slice(-4000), { text: e.text, err: e.stream === "err", n: (st.lines.at(-1)?.n ?? st.lines.length) + 1 }] };
     case "step": {
       const steps = st.steps.map((x) => (x.state === "running" ? { ...x, state: "done" as const } : x));
       return { ...st, steps: [...steps, { text: e.text, state: e.state ?? "running" }] };
@@ -44,7 +45,8 @@ export function StreamView({ state, height = 280 }: { state: StreamState; height
   React.useEffect(() => {
     const el = out.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
-  }, [state.lines.length]);
+    // The array, not its length: past the 4,000-line cap the length stops changing.
+  }, [state.lines]);
   return (
     <div className={s.wrap}>
       {state.steps.length > 0 && (
@@ -74,7 +76,7 @@ export function StreamView({ state, height = 280 }: { state: StreamState; height
           }}
         >
           {state.lines.map((l, i) => (
-            <span key={i} data-err={l.err ? "" : undefined}>
+            <span key={l.n ?? i} data-err={l.err ? "" : undefined}>
               {l.text}
               {"\n"}
             </span>

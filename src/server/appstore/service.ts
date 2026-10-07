@@ -6,6 +6,7 @@ import { audit } from "../audit";
 import { publish as publishEvent } from "../events";
 import { activePlatform } from "../platform";
 import { hostPath, hostExists } from "../host/paths";
+import { appFolder, appsRoot, invalidateAppsRoot } from "../apps/root";
 import { hostSpawn, lineReader } from "../host/exec";
 import { listApps, invalidateApps, lanHost, setAppPrefs } from "../docker/apps";
 import { publicBaseUrl } from "../settings";
@@ -37,16 +38,20 @@ const STORE_NAME = "Made with Gluon";
 
 // ---------------------------------------------------------------- where apps go
 
+/**
+ * New apps run with Docker Compose from Gluon's own apps folder, on Umbrel too: Gluon starts,
+ * updates and removes them directly instead of going through Umbrel's store. Apps already
+ * published to Umbrel keep their target (r.target) and keep updating there.
+ */
 export async function currentTarget(): Promise<BuilderTarget> {
-  return (await activePlatform().catch(() => "none" as const)) === "umbrel" ? "umbrel" : "compose";
+  return "compose";
 }
 
-/** Where compose apps live when Gluon runs them itself (GLUON_APPS_DIR overrides; a host path). */
-export function composeRoot(): string {
-  const env = process.env.GLUON_APPS_DIR;
-  if (env && /^\/[A-Za-z0-9._/-]+$/.test(env) && !env.includes("..")) return env.replace(/\/+$/, "");
-  return hostExists("/DATA/AppData") ? "/DATA/AppData/gluon-apps" : "/opt/gluon/apps";
-}
+/** Where compose apps live when Gluon runs them itself (see src/server/apps/root.ts). */
+export const composeRoot = appsRoot;
+
+/** This app's folder: where it was published before (in any apps root), else a new one. */
+const folderFor = (project: string, id: string) => appFolder(project, (m) => m === id);
 
 const gluonUrl = (id: string) => `${publicBaseUrl()}/apps/custom/${id}`;
 const repoUrl = (gh: AppRow["github"]) => (gh ? `https://github.com/${gh.owner}/${gh.repo}${gh.path ? `/tree/${gh.branch}/${gh.path}` : ""}` : null);
@@ -75,7 +80,7 @@ export async function storeStatus(): Promise<StoreStatus> {
     storeId: row?.storeId ?? null,
     displayUrl: row?.registeredUrl ? hideToken(row.registeredUrl) : null,
     gitMissing: !(await gitAvailable()),
-    composeRoot: composeRoot(),
+    composeRoot: await composeRoot(),
   };
   if (platform !== "umbrel") return status;
   if (!(await findUmbrel())) return status;
@@ -439,7 +444,7 @@ export async function checkApp(id: string, opts: { images?: boolean } = {}) {
   const res = await serverChecks(r.spec, target, ownId, opts);
   const dup = r.status !== "published" ? findBySlug(r.spec.details.slug, id) : null;
   if (dup) res.issues.push({ id: "srv-slug", level: "error", message: `Another app you made (${dup.name}) already uses the id “${r.spec.details.slug}”.`, field: "details.slug" });
-  const folder = `${composeRoot()}/${r.spec.details.slug}`;
+  const folder = await folderFor(r.spec.details.slug, id);
   if (target === "compose" && r.status !== "published" && hostExists(folder) && folderOwner(folder) !== id) {
     res.issues.push({ id: "srv-folder", level: "error", message: `${folder} already exists and isn't this app's. Pick another id.`, field: "details.slug" });
   } else if (target === "compose" && r.status !== "published" && hostExists(folder)) {
@@ -476,9 +481,8 @@ export async function startPublish(id: string, user: User, where: Where, opts: {
   const r = getAppRow(id);
   if (!r) throw notFound("That app");
   const target = r.target ?? (await currentTarget());
-  const current = await currentTarget();
-  if (r.target && r.target !== current) {
-    throw new AppError("target_changed", r.target === "umbrel" ? `${r.name} was published to Umbrel, but Gluon isn't working with Umbrel now.` : `${r.name} runs with Docker Compose. Remove it and publish again to move it to Umbrel.`, 409);
+  if (r.target === "umbrel" && (await activePlatform().catch(() => "none" as const)) !== "umbrel") {
+    throw new AppError("target_changed", `${r.name} was published to Umbrel, but Gluon isn't working with Umbrel now.`, 409);
   }
   const building = buildServices(r.spec.compose).length > 0 && r.source === "github";
   const installed = target === "umbrel" && r.appId ? (await umbrelApps(0).catch(() => [])).some((a) => a.id === r.appId) : r.status === "published";
@@ -628,7 +632,7 @@ async function publishCompose(id: string, user: User, where: Where, emit: Emit, 
   const secrets = await validate(r, "compose", r.appId, emit);
   const built = await buildIfNeeded(r, user, emit, !!opts.rebuild);
   r = getAppRow(id)!;
-  const dir = `${composeRoot()}/${project}`;
+  const dir = await folderFor(project, id);
   const owner = folderOwner(dir);
   if (hostExists(dir) && owner !== id) {
     throw new AppError("folder_taken", owner ? `${dir} holds the data of another app you made (or one Gluon forgot). Delete the folder, or give this app another id.` : `${dir} already exists and isn't one of Gluon's apps. Pick another id.`, 409);
@@ -641,6 +645,7 @@ async function publishCompose(id: string, user: User, where: Where, emit: Emit, 
   emit({ type: "step", text: `Writing ${dir}` });
   fs.mkdirSync(hostPath(dir), { recursive: true, mode: 0o755 });
   fs.writeFileSync(hostPath(`${dir}/.gluon-app`), `${id}\n`);
+  invalidateAppsRoot();
   for (const [rel, content] of Object.entries(rendered.files)) {
     const file = hostPath(`${dir}/${rel}`);
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -775,7 +780,7 @@ async function removeUmbrel(r: AppRow, user: User, where: Where, emit: Emit, opt
 }
 
 async function removeCompose(r: AppRow, user: User, where: Where, emit: Emit, opts: { keepData: boolean; forget: boolean }) {
-  const dir = `${composeRoot()}/${r.appId}`;
+  const dir = await folderFor(r.appId!, r.id);
   emit({ type: "stage", stage: "stop" });
   if (hostExists(`${dir}/docker-compose.yml`)) {
     emit({ type: "step", text: `Stopping and removing ${r.name}'s containers` });
@@ -822,7 +827,7 @@ export async function previewFiles(id: string): Promise<{ target: BuilderTarget;
   const images: Record<string, string> = {};
   for (const s of buildServices(r.spec.compose)) images[s.service] = last?.images[s.service] ?? `gluon.local/${r.slug}${s.service === r.slug ? "" : `-${s.service}`}:<commit>`;
   try {
-    const rendered = renderApp({ spec: r.spec, target, appId, version, secrets, images, gluonUrl: gluonUrl(id), repoUrl: repoUrl(r.github), appDir: `${composeRoot()}/${appId}` });
+    const rendered = renderApp({ spec: r.spec, target, appId, version, secrets, images, gluonUrl: gluonUrl(id), repoUrl: repoUrl(r.github), appDir: await folderFor(appId, id) });
     return { target, appId, version, files: rendered.files, published: last?.files ?? null, error: null, secretFiles: Object.keys(secrets).map((s) => `secrets/${s}.env`) };
   } catch (e) {
     return { target, appId, version, files: {}, published: last?.files ?? null, error: e instanceof Error ? e.message : "The compose file has errors.", secretFiles: [] };

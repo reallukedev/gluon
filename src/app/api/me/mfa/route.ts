@@ -6,7 +6,7 @@ import { beginEnrolment, checkCode, checkEnrolTicket, disableTotp, enableTotp, g
 import { guard, recordAttempt } from "@/server/auth/ratelimit";
 import { decrypt } from "@/server/crypto";
 import { audit } from "@/server/audit";
-import { getSetting } from "@/server/settings";
+import { mfaRequired } from "@/server/auth/policy";
 
 /** Two-step status for Settings → Security. */
 export const GET = route({ auth: "user" }, ({ user, zone }) => {
@@ -14,7 +14,8 @@ export const GET = route({ auth: "user" }, ({ user, zone }) => {
   return {
     enabled: !!row.totp_enabled,
     recoveryLeft: row.totp_enabled ? recoveryCodesLeft(row) : 0,
-    requiredAway: user.role === "admin" && getSetting("requireMfaAway"),
+    // Kept as requiredAway for the settings page: true when the server's rule covers this person.
+    requiredAway: mfaRequired(user.role, "away"),
     zone,
   };
 });
@@ -63,8 +64,8 @@ export const POST = route({ auth: "user", body, recent: true }, async ({ user, b
     }
     case "disable": {
       if (!row.totp_enabled) return { ok: true };
-      if (user.role === "admin" && getSetting("requireMfaAway") && zone === "away") {
-        throw new AppError("mfa_required_away", "Admins can't turn off two-step sign-in from outside home. Do it from your home network.", 403);
+      if (mfaRequired(user.role, zone)) {
+        throw new AppError("mfa_required", "This server's rules need two-step sign-in for you here, so it can't be turned off. An admin can change the rule in Settings → Server.", 403);
       }
       disableTotp(user.id);
       audit(user, { action: "auth.mfa_disabled", summary: "Turned off two-step verification" }, { ip, zone });

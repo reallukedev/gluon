@@ -159,7 +159,10 @@ function SubscriptionRow({
   const [tested, setTested] = React.useState<TestResult | null>(null);
   const on = !!sub;
 
-  React.useEffect(() => setDraft(sub), [sub]);
+  // Reset only when the saved filter really changes: saving another channel hands every row a new
+  // (equal) object, and an identity dependency would wipe this row's unsaved edits.
+  const subKey = JSON.stringify(sub);
+  React.useEffect(() => setDraft(sub), [subKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const dirty = JSON.stringify(draft) !== JSON.stringify(sub);
   const set = <K extends keyof SubscriptionFilter>(k: K, v: SubscriptionFilter[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d));
 

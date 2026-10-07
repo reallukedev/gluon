@@ -12,6 +12,8 @@ export interface Viewer {
   mfa: boolean;
   zone: "home" | "away";
   mustChangePassword?: boolean;
+  /** The server's two-step rule covers this person here and they haven't set it up. */
+  mustSetUpMfa?: boolean;
 }
 
 interface Ctx {

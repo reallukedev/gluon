@@ -8,6 +8,7 @@ import { clientInfo, isHttpsRequest, type Zone } from "../net-zone";
 import { getSetting } from "../settings";
 import { findById, toUser, type User } from "./users";
 import { DEVICE_COOKIE, DEVICE_COOKIE_SECURE, DEVICE_MAX_AGE_S, deviceHash, newDeviceToken, pruneDeviceFindings, sessionDevices } from "./devices";
+import { mfaRequired } from "./policy";
 
 /**
  * Session cookies. Over HTTPS (the public address, behind Caddy) the cookie is `__Host-` prefixed:
@@ -203,10 +204,28 @@ export const currentAuth = cache(async () => {
 /** Includes pending sessions (used by the second-step and set-up-two-step endpoints). */
 export const pendingAuth = cache(readSession);
 
-export async function requireUser(): Promise<{ session: Session; user: User }> {
+/** Signed in, nothing more: for the shell itself, which shows the two-step setup when it's due. */
+export async function requireSignedIn(): Promise<{ session: Session; user: User }> {
   const a = await currentAuth();
   if (!a) redirect("/login");
   return a;
+}
+
+/** Signed in and allowed to see pages: someone who must set up two-step sign-in first goes there. */
+export async function requireUser(): Promise<{ session: Session; user: User }> {
+  const a = await requireSignedIn();
+  const { zone } = await requestInfo();
+  if (mustSetUpMfa(a.user, zone)) redirect("/two-step");
+  return a;
+}
+
+/**
+ * The two-step policy (Settings → Server) applies to this person here and they haven't set it up.
+ * Checked on every request, not only at sign-in: a session started before the rule, or a cookie
+ * taken elsewhere, must not carry on without it.
+ */
+export function mustSetUpMfa(user: User, zone: Zone): boolean {
+  return !user.mfa && mfaRequired(user.role, zone);
 }
 
 export async function requireAdmin(): Promise<{ session: Session; user: User }> {

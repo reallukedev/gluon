@@ -1,18 +1,18 @@
 "use client";
 import * as React from "react";
 import { OpenNewWindow } from "iconoir-react";
-import { ApiError, streamPost } from "@/lib/client/api";
-import type { BuilderTarget, CustomAppDetail, Issue, JobEvent, StoreStatus } from "@/lib/builder-types";
+import type { BuilderTarget, CustomAppDetail, Issue, StoreStatus } from "@/lib/builder-types";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Field";
 import { DefinitionList, Notice } from "@/components/ui/Surface";
 import { IssueList } from "./Issues";
 import { JobProgress } from "./JobProgress";
-import { emptyJob, jobFrom, reduceJob, type JobView } from "./state";
+import { jobFrom } from "./state";
+import { useJob, type JobMode } from "./useJob";
 import s from "./builder.module.css";
 
-export type JobMode = { kind: "publish"; rebuild?: boolean } | { kind: "build" } | { kind: "remove"; keepData: boolean; forget: boolean } | { kind: "attach" };
+export type { JobMode } from "./useJob";
 
 interface Props {
   open: boolean;
@@ -33,18 +33,14 @@ interface Props {
  * ended. The run belongs to the server; closing this doesn't stop it, and reopening shows it again.
  */
 export function PublishDialog({ open, onOpenChange, detail, issues, target, store, beforeStart, onFinished, onSetUpStore, initialMode }: Props) {
-  const [view, setView] = React.useState<JobView | null>(null);
-  const [running, setRunning] = React.useState(false);
+  const { view, setView, running, startError, start, reset, serverRunning } = useJob(detail, { beforeStart, onFinished });
   const [rebuild, setRebuild] = React.useState(false);
-  const [startError, setStartError] = React.useState<string | null>(null);
-  const abort = React.useRef<AbortController | null>(null);
   const job = detail.job;
-  const serverRunning = !!job && !job.finishedAt;
 
   // Opening while a job runs (or just ran) shows it; the live stream takes over when we started it.
   React.useEffect(() => {
     if (!open) return;
-    setStartError(null);
+    reset();
     if (initialMode && initialMode.kind !== "attach") return void start(initialMode);
     if (job && !running) setView({ ...jobFrom(job.events), stages: job.stages, kind: job.kind });
     else if (!job && !running) setView(null);
@@ -55,37 +51,6 @@ export function PublishDialog({ open, onOpenChange, detail, issues, target, stor
     if (open && job && !running && (serverRunning || view)) setView({ ...jobFrom(job.events), stages: job.stages, kind: job.kind });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.events.length, job?.finishedAt]);
-
-  async function start(mode: JobMode) {
-    if (mode.kind === "attach") return;
-    setStartError(null);
-    setRunning(true);
-    setView({ ...emptyJob });
-    abort.current = new AbortController();
-    try {
-      await beforeStart();
-      const url = mode.kind === "publish" ? "publish" : mode.kind === "build" ? "build" : "remove";
-      const body = mode.kind === "publish" ? { rebuild: !!mode.rebuild } : mode.kind === "remove" ? { keepData: mode.keepData, forget: mode.forget } : {};
-      let ended = false;
-      await streamPost<JobEvent>(`/api/custom-apps/${detail.id}/${url}`, body, (e) => {
-        if (e.type === "done") ended = true;
-        setView((v) => reduceJob(v ?? emptyJob, e));
-      }, abort.current.signal);
-      if (!ended) setView((v) => reduceJob(v ?? emptyJob, { type: "error", message: "Gluon lost track of it before it finished. It may still be running; this page shows how it ends." }));
-    } catch (e) {
-      if ((e as Error)?.name === "AbortError") return;
-      if (e instanceof ApiError && e.code === "reauth_cancelled") {
-        setView(null);
-        setStartError(null);
-      } else {
-        setView(null);
-        setStartError(e instanceof Error ? e.message : "That didn't start.");
-      }
-    } finally {
-      setRunning(false);
-      onFinished();
-    }
-  }
 
   const errors = issues.filter((i) => i.level === "error");
   const warnings = issues.filter((i) => i.level === "warning");
@@ -155,14 +120,14 @@ export function PublishDialog({ open, onOpenChange, detail, issues, target, stor
         )}
         {errors.length > 0 ? (
           <div>
-            <p className={s.hint} style={{ marginBottom: 6 }}>
+            <p className={s.listLead}>
               Fix {errors.length === 1 ? "this" : "these"} first:
             </p>
             <IssueList issues={errors} />
           </div>
         ) : warnings.length > 0 ? (
           <div>
-            <p className={s.hint} style={{ marginBottom: 6 }}>
+            <p className={s.listLead}>
               {warnings.length === 1 ? "One thing to know" : `${warnings.length} things to know`}:
             </p>
             <IssueList issues={warnings} />

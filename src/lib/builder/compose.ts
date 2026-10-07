@@ -127,6 +127,11 @@ export interface HealthForm {
   startPeriod: string;
 }
 
+export interface LabelRow {
+  key: string;
+  value: string;
+}
+
 export interface ServiceForm {
   name: string;
   image: string;
@@ -141,21 +146,36 @@ export interface ServiceForm {
   hostNetwork: boolean;
   networkMode: string;
   memory: string;
+  /** CPU limit in cores ("1.5"), from cpus: or deploy.resources.limits.cpus. */
+  cpus: string;
+  /** Reserves the NVIDIA GPU (deploy.resources.reservations.devices). */
+  gpu: boolean;
+  labels: LabelRow[];
+  /** Networks it joins by name ("default" is the app's own). Empty: just the app's own. */
+  networks: string[];
   health: HealthForm | null;
   healthDisabled: boolean;
   dependsOn: string[];
   containerName: string | null;
   privileged: boolean;
+  /** Container paths waiting for the person to choose a server folder (media libraries). */
+  pendingFolders: string[];
   /** Keys set in the compose file that the form doesn't show. */
   extraKeys: string[];
 }
 
 const MODELED = new Set([
   "image", "build", "ports", "volumes", "environment", "restart", "command", "user", "devices", "network_mode", "mem_limit",
-  "healthcheck", "depends_on", "container_name", "privileged",
+  "healthcheck", "depends_on", "container_name", "privileged", "labels", "networks", "cpus",
 ]);
 
 export const DATA_PREFIX = "${APP_DATA_DIR}/data/";
+/**
+ * Media folders Gluon won't guess (app data is deleted with the app) wait under this extension
+ * key until the person chooses a server folder. Compose ignores x- keys, so the file stays
+ * valid and nothing is mounted until then; the checks block starting while any are left.
+ */
+export const PENDING_KEY = "x-gluon-choose-folder";
 const DATA_PREFIX_RE = /^\$\{?APP_DATA_DIR\}?\/data\/(.+)$/;
 const DATA_ROOT_RE = /^\$\{?APP_DATA_DIR\}?(\/.*)?$/;
 
@@ -279,6 +299,39 @@ function readCommand(v: unknown): string {
   return text(v);
 }
 
+function readLabels(v: unknown): LabelRow[] {
+  if (isObj(v)) return Object.entries(v).map(([key, val]) => ({ key, value: text(val) }));
+  if (Array.isArray(v))
+    return v.map(text).map((s) => {
+      const eq = s.indexOf("=");
+      return eq > 0 ? { key: s.slice(0, eq), value: s.slice(eq + 1) } : { key: s, value: "" };
+    });
+  return [];
+}
+
+const isGpuDevice = (d: unknown) =>
+  isObj(d) && (String(d.driver ?? "").toLowerCase() === "nvidia" || (Array.isArray(d.capabilities) && d.capabilities.map(String).includes("gpu")));
+
+type DeployShape = { resources?: { limits?: { memory?: unknown; cpus?: unknown }; reservations?: { devices?: unknown[] } } };
+
+/** deploy: holds only what the form shows (memory, CPU, the GPU), so it isn't an "also set" key. */
+function deployIsModeled(d: unknown): boolean {
+  if (!isObj(d)) return d === undefined || d === null;
+  const only = (o: unknown, keys: string[]) => isObj(o) && Object.keys(o).every((k) => keys.includes(k));
+  if (!only(d, ["resources"])) return false;
+  const r = d.resources;
+  if (r === undefined) return true;
+  if (!only(r, ["limits", "reservations"])) return false;
+  const res = r as Record<string, unknown>;
+  if (res.limits !== undefined && !only(res.limits, ["memory", "cpus"])) return false;
+  if (res.reservations !== undefined) {
+    if (!only(res.reservations, ["devices"])) return false;
+    const devs = (res.reservations as Record<string, unknown>).devices;
+    if (devs !== undefined && !(Array.isArray(devs) && devs.every(isGpuDevice))) return false;
+  }
+  return true;
+}
+
 function readHealth(v: unknown): { health: HealthForm | null; disabled: boolean } {
   if (!isObj(v)) return { health: null, disabled: false };
   if (v.disable === true) return { health: null, disabled: true };
@@ -304,11 +357,22 @@ export function readService(doc: Document, name: string): ServiceForm {
   if (Array.isArray(o.depends_on)) dependsOn = o.depends_on.map(text).filter(Boolean);
   else if (isObj(o.depends_on)) dependsOn = Object.keys(o.depends_on);
   const networkMode = text(o.network_mode);
+  const deploy = (isObj(o.deploy) ? o.deploy : {}) as DeployShape;
   let memory = text(o.mem_limit);
   if (!memory) {
-    const m = (o as { deploy?: { resources?: { limits?: { memory?: unknown } } } }).deploy?.resources?.limits?.memory;
+    const m = deploy.resources?.limits?.memory;
     if (typeof m === "string" || typeof m === "number") memory = String(m);
   }
+  let cpus = text(o.cpus);
+  if (!cpus) {
+    const c = deploy.resources?.limits?.cpus;
+    if (typeof c === "string" || typeof c === "number") cpus = String(c);
+  }
+  const devs = deploy.resources?.reservations?.devices;
+  const gpu = Array.isArray(devs) && devs.some(isGpuDevice);
+  let networks: string[] = [];
+  if (Array.isArray(o.networks)) networks = o.networks.map(text).filter(Boolean);
+  else if (isObj(o.networks)) networks = Object.keys(o.networks);
   const { health, disabled } = readHealth(o.healthcheck);
   return {
     name,
@@ -324,12 +388,17 @@ export function readService(doc: Document, name: string): ServiceForm {
     hostNetwork: networkMode === "host",
     networkMode,
     memory,
+    cpus,
+    gpu,
+    labels: readLabels(o.labels),
+    networks,
     health,
     healthDisabled: disabled,
     dependsOn,
     containerName: o.container_name ? text(o.container_name) : null,
     privileged: o.privileged === true || o.privileged === "true",
-    extraKeys: Object.keys(o).filter((k) => k !== "<<" && !MODELED.has(k)),
+    pendingFolders: Array.isArray(o[PENDING_KEY]) ? (o[PENDING_KEY] as unknown[]).map(text).filter((t) => t.startsWith("/")) : [],
+    extraKeys: Object.keys(o).filter((k) => k !== "<<" && k !== PENDING_KEY && !MODELED.has(k) && !(k === "deploy" && deployIsModeled(o.deploy))),
   };
 }
 
@@ -385,8 +454,115 @@ export function setCommand(doc: Document, service: string, command: string) {
 
 export function setMemory(doc: Document, service: string, memory: string) {
   const n = serviceNode(doc, service);
-  n?.deleteIn(["deploy", "resources", "limits", "memory"]);
+  if (n) {
+    n.deleteIn(["deploy", "resources", "limits", "memory"]);
+    pruneDeploy(n);
+  }
   setKey(doc, service, "mem_limit", memory.trim().toLowerCase().replace(/\s+/g, ""));
+}
+
+/** Remove empty maps left behind under deploy: after a nested delete. */
+function pruneDeploy(n: YAMLMap) {
+  for (const path of [["deploy", "resources", "limits"], ["deploy", "resources", "reservations"], ["deploy", "resources"], ["deploy"]]) {
+    const v = n.getIn(path, true);
+    if (isMap(v) && v.items.length === 0) n.deleteIn(path);
+    if (isSeq(v) && v.items.length === 0) n.deleteIn(path);
+  }
+}
+
+export function setCpus(doc: Document, service: string, cpus: string) {
+  const n = serviceNode(doc, service);
+  if (!n) return;
+  n.deleteIn(["deploy", "resources", "limits", "cpus"]);
+  pruneDeploy(n);
+  const t = cpus.trim();
+  setKey(doc, service, "cpus", t && /^\d+(\.\d+)?$/.test(t) ? Number(t) : t);
+}
+
+/** Reserve every NVIDIA GPU for the service (compose's equivalent of docker run --gpus all). */
+export function setGpu(doc: Document, service: string, on: boolean) {
+  const n = serviceNode(doc, service);
+  if (!n) return;
+  const path = ["deploy", "resources", "reservations", "devices"];
+  const old = n.getIn(path, true);
+  const kept = isSeq(old) ? old.items.filter((d) => !isGpuDevice(nodeJs(d, doc))) : [];
+  if (on) {
+    const seq = new YAMLSeq();
+    seq.items.push(...kept, doc.createNode({ driver: "nvidia", count: "all", capabilities: ["gpu"] }));
+    n.setIn(path, seq);
+  } else if (kept.length) {
+    const seq = new YAMLSeq();
+    seq.items.push(...kept);
+    n.setIn(path, seq);
+  } else {
+    n.deleteIn(path);
+    pruneDeploy(n);
+  }
+}
+
+export function setLabels(doc: Document, service: string, rows: LabelRow[]) {
+  const map = new YAMLMap();
+  for (const r of rows) if (r.key) map.set(doc.createNode(r.key), quoted(doc, r.value));
+  setKey(doc, service, "labels", map.items.length ? map : "");
+}
+
+export interface NetworkDecl {
+  name: string;
+  /** Made by someone else (external: true); compose only joins it. */
+  external: boolean;
+}
+
+/** Networks declared at the top of the file. */
+export function readNetworks(doc: Document): NetworkDecl[] {
+  const top = doc.get("networks", true);
+  if (!isMap(top)) return [];
+  return top.items.map((p) => {
+    const v = nodeJs<Record<string, unknown> | null>(p.value, doc);
+    return { name: scalarText(p.key) ?? "", external: !!v && (v.external === true || isObj(v.external)) };
+  }).filter((n) => n.name);
+}
+
+/**
+ * Which networks a service joins. Joining any named network means compose no longer adds the
+ * app's own network by itself, so "default" stays in the list unless the person removes it.
+ * Existing settings per network (aliases, addresses) survive.
+ */
+export function setServiceNetworks(doc: Document, service: string, names: string[], external: string[] = []) {
+  const n = serviceNode(doc, service);
+  if (!n) return;
+  const uniq = [...new Set(names.filter(Boolean))];
+  const old = n.get("networks", true);
+  if (!uniq.length || (uniq.length === 1 && uniq[0] === "default" && !isMap(old))) n.delete("networks");
+  else if (isMap(old)) {
+    const map = new YAMLMap();
+    for (const name of uniq) map.set(doc.createNode(name), (old.get(name, true) as Node | undefined) ?? null);
+    n.set("networks", map);
+  } else n.set("networks", doc.createNode(uniq));
+  for (const name of uniq) if (name !== "default") declareNetwork(doc, name, external.includes(name));
+  dropUnusedNetworks(doc);
+}
+
+export function declareNetwork(doc: Document, name: string, external: boolean) {
+  let top = doc.get("networks", true);
+  if (!isMap(top)) {
+    doc.set("networks", doc.createNode({}));
+    top = doc.get("networks", true);
+  }
+  const m = top as YAMLMap;
+  if (m.has(name)) return;
+  m.set(doc.createNode(name), external ? doc.createNode({ external: true }) : doc.createNode({}));
+}
+
+function dropUnusedNetworks(doc: Document) {
+  const top = doc.get("networks", true);
+  if (!isMap(top)) return;
+  const used = new Set<string>();
+  for (const s of serviceNames(doc)) for (const net of readService(doc, s).networks) used.add(net);
+  for (const p of [...top.items]) {
+    const k = scalarText(p.key) ?? "";
+    if (k !== "default" && !used.has(k)) top.delete(k);
+  }
+  if (top.items.length === 0) doc.delete("networks");
 }
 
 export function setHostNetwork(doc: Document, service: string, on: boolean) {
@@ -395,6 +571,7 @@ export function setHostNetwork(doc: Document, service: string, on: boolean) {
   if (on) {
     n.set("network_mode", "host");
     n.delete("networks");
+    dropUnusedNetworks(doc);
   } else if (scalarText(n.get("network_mode", true)) === "host") n.delete("network_mode");
 }
 
@@ -431,6 +608,17 @@ export function setEnv(doc: Document, service: string, rows: EnvRow[]) {
   setKey(doc, service, "environment", map.items.length ? map : "");
 }
 
+export function setPendingFolders(doc: Document, service: string, targets: string[]) {
+  setKey(doc, service, PENDING_KEY, [...new Set(targets)]);
+}
+
+/** Mount a server folder at a pending target, and stop waiting for it. */
+export function choosePendingFolder(doc: Document, service: string, target: string, hostPath: string) {
+  const f = readService(doc, service);
+  setVolumes(doc, service, [...f.volumes, { kind: "host", source: hostPath, target, readOnly: false, raw: null, long: false }]);
+  setPendingFolders(doc, service, f.pendingFolders.filter((t) => t !== target));
+}
+
 export function setDevices(doc: Document, service: string, devices: string[]) {
   setKey(doc, service, "devices", devices.filter(Boolean));
 }
@@ -448,8 +636,10 @@ export function setDependsOn(doc: Document, service: string, deps: string[]) {
 
 export function setHealth(doc: Document, service: string, h: HealthForm | null, disabled = false) {
   if (disabled) return setKey(doc, service, "healthcheck", doc.createNode({ disable: true }));
-  if (!h || !h.test.trim()) return setKey(doc, service, "healthcheck", "");
-  const o: Record<string, unknown> = { test: ["CMD-SHELL", h.test.trim()] };
+  const timings = !!h && [h.interval, h.timeout, h.retries, h.startPeriod].some((x) => x.trim());
+  if (!h || (!h.test.trim() && !timings)) return setKey(doc, service, "healthcheck", "");
+  // Without a test, compose keeps the image's own check and changes only its timing.
+  const o: Record<string, unknown> = h.test.trim() ? { test: ["CMD-SHELL", h.test.trim()] } : {};
   if (h.interval.trim()) o.interval = h.interval.trim();
   if (h.timeout.trim()) o.timeout = h.timeout.trim();
   if (h.retries.trim() && /^\d+$/.test(h.retries.trim())) o.retries = Number(h.retries.trim());

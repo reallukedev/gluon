@@ -212,8 +212,14 @@ function PowerWidget({ item, size, openSettings }: WidgetProps<PowerConfig>) {
     <div className={m.power} data-size={size}>
       <div className={m.powerHead}>
         <span className={m.figure}>
-          {data.watts !== null ? (data.watts < 10 ? data.watts.toFixed(1) : Math.round(data.watts)) : "—"}
-          <small> W</small>
+          {data.watts !== null ? (
+            <>
+              {data.watts < 10 ? data.watts.toFixed(1) : Math.round(data.watts)}
+              <small> W</small>
+            </>
+          ) : (
+            <small>No reading</small>
+          )}
         </span>
         <span className={m.powerNow}>{stale ? "Not measuring right now" : "Processor, now"}</span>
       </div>
@@ -232,7 +238,7 @@ function PowerWidget({ item, size, openSettings }: WidgetProps<PowerConfig>) {
         <div>
           <dt>This month</dt>
           <dd className="num" title={monthKwh !== null ? `About ${monthKwh.toFixed(1)} kWh at the ${data.avgHours >= 48 ? "last week's" : "average so far"} ${Math.round(data.avgWatts!)} W` : undefined}>
-            {monthKwh === null ? "—" : price ? `≈ ${money(monthKwh * price, currency)}` : `≈ ${monthKwh.toFixed(monthKwh < 10 ? 1 : 0)} kWh`}
+            {monthKwh === null ? <span className="muted">Not yet</span> : price ? `≈ ${money(monthKwh * price, currency)}` : `≈ ${monthKwh.toFixed(monthKwh < 10 ? 1 : 0)} kWh`}
           </dd>
         </div>
         {(size === "t" || size === "w") && data.avgWatts !== null && (
@@ -310,7 +316,7 @@ function ScheduleRow({ it }: { it: ScheduleItem }) {
   const when = it.next;
   return (
     <>
-      <span className={`${m.when} num`}>{when ? (it.approx ? `~${fmt.time(when)}` : fmt.time(when)) : "—"}</span>
+      <span className={`${m.when} num`}>{when ? (it.approx ? `~${fmt.time(when)}` : fmt.time(when)) : <span className="muted">Not set</span>}</span>
       <span className={m.what}>
         <span className={m.whatName} title={it.unit ?? it.detail ?? it.name}>
           {it.name}

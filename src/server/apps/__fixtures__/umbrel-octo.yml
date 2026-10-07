@@ -1,0 +1,65 @@
+version: '3.7'
+services:
+  app_proxy:
+    environment:
+      APP_HOST: octo
+      APP_PORT: 8080
+    container_name: leech-octo_app_proxy_1
+  octo:
+    image: >-
+      ghcr.io/winters27/octo@sha256:55d202412ae3a3224c74761301ac4369c6a5a6e15888f6eea3789c68b4fadb3e
+    container_name: octo
+    restart: on-failure
+    ports:
+      - '5274:8080'
+    env_file:
+      - path: ${APP_DATA_DIR}/data/octo.env
+        required: false
+    volumes:
+      - /mnt/hdd1_ST2000DM001-1ER164/media/music:/music
+      - ${APP_DATA_DIR}/data/octo-config:/app/config
+    depends_on:
+      - navidrome
+      - yt-dlp-shim
+      - slskd
+  yt-dlp-shim:
+    build: ${APP_DATA_DIR}/yt-dlp-shim
+    container_name: yt-dlp-shim
+    restart: on-failure
+    env_file:
+      - path: ${APP_DATA_DIR}/data/yt-dlp-shim.env
+        required: false
+    expose:
+      - '8080'
+    volumes:
+      - ${APP_DATA_DIR}/data/ytdlp-cache:/root/.cache/yt-dlp
+      - ${APP_DATA_DIR}/data/ytshim-cache:/var/lib/ytshim
+      - ${APP_DATA_DIR}/data/ytdlp-bin:/opt/ytdlp
+      - /mnt/hdd1_ST2000DM001-1ER164/media/music:/music
+  slskd:
+    image: >-
+      slskd/slskd@sha256:ecd4026d4f8fb504e2cc55323efa2c1f5b56d20d3686b018249cc36b48ea17a6
+    container_name: slskd
+    restart: on-failure
+    ports:
+      - '5030:5030'
+      - '50300:50300'
+    env_file:
+      - path: ${APP_DATA_DIR}/data/slskd.env
+        required: false
+    volumes:
+      - ${APP_DATA_DIR}/data/slskd-state:/app
+      - /mnt/hdd1_ST2000DM001-1ER164/media/music:/music
+  navidrome:
+    image: >-
+      deluan/navidrome@sha256:38dc2727bfcfd5ede290f8ada114fc90368146f265ae4701ddddbcbe2a44ee52
+    container_name: navidrome
+    restart: on-failure
+    ports:
+      - '4533:4533'
+    env_file:
+      - path: ${APP_DATA_DIR}/data/navidrome.env
+        required: false
+    volumes:
+      - ${APP_DATA_DIR}/data/navidrome-data:/data
+      - /mnt/hdd1_ST2000DM001-1ER164/media/music:/music:ro

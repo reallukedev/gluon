@@ -29,6 +29,9 @@ const STALE_MS: Record<WidgetType, number> = {
   "subsonic.recent": 30 * 60_000,
   "slskd.transfers": 0,
   "homebridge.accessories": 2 * 60_000,
+  "homeassistant.entities": 2 * 60_000,
+  "homeassistant.people": 10 * 60_000,
+  "coolify.deployments": 5 * 60_000,
   "json.fields": 10 * 60_000,
   weather: 3 * 60 * 60_000,
   calendar: 6 * 60 * 60_000,
@@ -95,8 +98,8 @@ export async function widgetData(user: User, req: WidgetRequest): Promise<Widget
     const def = KINDS[rec.kind];
     const fn = def.data[type] as ((ctx: ReturnType<typeof contextFor>, p: Record<string, unknown>) => Promise<unknown>) | undefined;
     if (!fn) throw badRequest("That connected app can't feed this kind of widget.");
-    const ctx = contextFor(rec);
-    const key = `int:${rec.id}:${rec.updatedAt}:${type}:${stable(config)}`;
+    const ctx = { ...contextFor(rec), viewer: { id: user.id, role: user.role } };
+    const key = `int:${rec.id}:${rec.updatedAt}:${type}:${def.viewerScoped ? `${user.role}:` : ""}${stable(config)}`;
     const r = await cached(
       key,
       ttl,

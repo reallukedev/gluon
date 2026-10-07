@@ -1,6 +1,6 @@
 .meter { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; min-width: 0; }
 .value { flex: none; min-width: 7ch; text-align: right; font-size: var(--text-sm); color: var(--ink-2); }
-.none { display: block; width: 100%; text-align: right; color: var(--faint); font-size: var(--text-sm); }
+.none { display: block; width: 100%; text-align: right; color: var(--muted); font-size: var(--text-xs); line-height: 1.25; }
 .spark { flex: 1 1 auto; max-width: 56px; min-width: 32px; height: 16px; display: block; }
 /* A 3px sunk track with an ink-2 fill; the fill scales from the left (a small absolutely placed bar). */
 .bar { position: relative; flex: 1 1 auto; max-width: 56px; min-width: 32px; height: 3px; border-radius: 2px; background: var(--sunk); overflow: hidden; }

@@ -89,7 +89,7 @@ export const AppList = React.forwardRef<HTMLElement, Props>(function AppList({ e
 
 export function LoginCell({ l }: { l: LoginWords }) {
   if (l.tone === "loading") return <Skeleton width={110} height={12} />;
-  if (l.tone === "off") return <span className={s.faint}>—</span>;
+  if (l.tone === "off") return <span className={s.faint}>Off</span>;
   return (
     <span className={s.login} data-tone={l.tone} title={l.evidence ?? undefined}>
       <span className={s.loginGlyph} aria-hidden>

@@ -1,6 +1,7 @@
 import "server-only";
 import { onStart, every } from "../jobs";
 import { registerSearch } from "../search";
+import { rank } from "@/lib/search-match";
 import { alertsHref } from "@/lib/settings-links";
 import { listMonitorRows } from "./store";
 import { schedule } from "./runner";
@@ -18,17 +19,22 @@ onStart("monitors", () => {
   every(60 * 60_000, () => pruneChecks(listMonitorRows().map((m) => m.id)), { immediate: false });
 });
 
-registerSearch((user, q) => {
-  if (user.role !== "admin") return null;
-  const term = q.toLowerCase();
-  const items = listMonitorRows()
-    .filter((m) => m.name.toLowerCase().includes(term) || m.target.toLowerCase().includes(term))
-    .slice(0, 6)
-    .map((m) => ({
-      id: `monitor:${m.id}`,
-      label: m.name,
-      hint: m.source === "auto" ? `Monitor · ${m.target}` : `Monitor · ${m.kind.toUpperCase()} ${m.target}`,
-      href: alertsHref("watching", { monitor: m.id }),
-    }));
-  return { name: "Monitors", items };
+registerSearch({
+  key: "monitors",
+  name: "Monitors",
+  priority: 60,
+  run(user, _q, ctx) {
+    if (user.role !== "admin") return null;
+    const items = rank(ctx.query, listMonitorRows(), (m) => ({ label: m.name, keywords: `monitor uptime check ${m.kind} ${m.target}` }))
+      .slice(0, 6)
+      .map(({ item: m, score }) => ({
+        id: `monitor:${m.id}`,
+        label: m.name,
+        hint: m.source === "auto" ? `Monitor · ${m.target}` : `Monitor · ${m.kind.toUpperCase()} ${m.target}`,
+        icon: "monitor",
+        href: alertsHref("watching", { monitor: m.id }),
+        score,
+      }));
+    return { name: "Monitors", items };
+  },
 });

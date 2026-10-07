@@ -96,7 +96,12 @@ export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | nul
   // Look at apps Gluon hasn't checked yet (e.g. the one just published), within a few seconds.
   const unchecked = next.routes.filter(
     (r): r is Exclude<Route, { type: "redirect" }> =>
-      r.enabled !== false && r.type !== "redirect" && isLocalBackend(r.backend.host) && (apps[r.id]?.hasLogin ?? "unknown") === "unknown" && !storedProbe(`${localBackendHost(r.backend.host)}:${r.backend.port}`),
+      r.enabled !== false &&
+      r.type !== "redirect" &&
+      !(r.type === "subdomain" && r.xmpp) &&
+      isLocalBackend(r.backend.host) &&
+      (apps[r.id]?.hasLogin ?? "unknown") === "unknown" &&
+      !storedProbe(`${localBackendHost(r.backend.host)}:${r.backend.port}`),
   );
   if (unchecked.length) {
     await Promise.race([
@@ -110,6 +115,8 @@ export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | nul
   for (const r of next.routes) {
     if (r.enabled === false || r.type === "redirect") continue;
     if (r.type === "subdomain" && r.only_paths?.length) continue;
+    // Chat accounts always need a password; the client port doesn't speak HTTP to probe anyway.
+    if (r.type === "subdomain" && r.xmpp) continue;
     const app = apps[r.id] ?? null;
     const v = loginVerdictFor(app, r.backend);
     if (v.verdict !== "no-login") continue;

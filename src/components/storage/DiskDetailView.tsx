@@ -64,7 +64,7 @@ function HealthPanel({ disk, detail }: { disk: DiskView; detail: SmartDetail | u
     [
       "Temperature",
       sm.temperature === null ? (
-        <span className={s.muted}>—</span>
+        <span className={s.muted}>Not reported</span>
       ) : (
         <span className="num">
           {fmt.temp(sm.temperature)}
@@ -74,12 +74,12 @@ function HealthPanel({ disk, detail }: { disk: DiskView; detail: SmartDetail | u
         </span>
       ),
     ],
-    ["Powered on", sm.powerOnHours !== null ? <span className="num">{fmt.duration(sm.powerOnHours * 3600, 2)}{sm.powerCycles !== null ? <span className={s.muted}> · started {sm.powerCycles.toLocaleString()} times</span> : null}</span> : "—"],
-    ["Bad sectors replaced", sm.reallocated !== null ? <span className="num">{sm.reallocated.toLocaleString()}{sm.reallocatedRising ? <b> · rising</b> : null}</span> : "—"],
-    ["Waiting / unreadable", sm.pending !== null || sm.uncorrectable !== null ? <span className="num">{sm.pending ?? "—"} / {sm.uncorrectable ?? "—"}</span> : "—"],
+    ["Powered on", sm.powerOnHours !== null ? <span className="num">{fmt.duration(sm.powerOnHours * 3600, 2)}{sm.powerCycles !== null ? <span className={s.muted}> · started {sm.powerCycles.toLocaleString()} times</span> : null}</span> : "Not reported"],
+    ["Bad sectors replaced", sm.reallocated !== null ? <span className="num">{sm.reallocated.toLocaleString()}{sm.reallocatedRising ? <b> · rising</b> : null}</span> : "Not reported"],
+    ["Waiting / unreadable", sm.pending !== null || sm.uncorrectable !== null ? <span className="num">{sm.pending ?? "unknown"} / {sm.uncorrectable ?? "unknown"}</span> : "Not reported"],
   ];
   if (sm.wearPercent !== null) items.push(["Write endurance used", <span key="w" className="num">{Math.round(sm.wearPercent)}%</span>]);
-  if (sm.nvme) items.push(["Spare space", <span key="n" className="num">{sm.nvme.availableSpare ?? "—"}% (warns below {sm.nvme.availableSpareThreshold ?? "—"}%)</span>]);
+  if (sm.nvme) items.push(["Spare space", <span key="n" className="num">{sm.nvme.availableSpare === null ? "Not reported" : `${sm.nvme.availableSpare}%`}{sm.nvme.availableSpareThreshold === null ? "" : ` (warns below ${sm.nvme.availableSpareThreshold}%)`}</span>]);
   if (sm.lastSelfTest) items.push(["Last self-test", `${sm.lastSelfTest.type}: ${sm.lastSelfTest.status}`]);
   items.push(["Checked", sm.readAt ? <Time key="c" ts={sm.readAt} /> : <Time key="c" ts={sm.checkedAt} />]);
   return (
@@ -174,10 +174,10 @@ function AttributesPanel({ disk, detail }: { disk: DiskView; detail: SmartDetail
                 {v.tone === "fault" ? <StateLine state="unhealthy" size={12} label={v.text} /> : v.tone === "attention" ? <StateLine state="attention" size={12} label={v.text} /> : <span className={s.muted}>{v.text}</span>}
               </span>
               <span role="cell" className={`${s.num} num`}>
-                {a.value ?? "—"}
+                {a.value ?? "None"}
               </span>
               <span role="cell" className={`${s.num} num ${s.muted}`}>
-                {a.thresh ?? "—"}
+                {a.thresh ?? "None"}
               </span>
               <span role="cell" className={`mono ${s.attrRaw}`} title={a.raw}>
                 {a.raw}
@@ -349,10 +349,10 @@ export function DiskDetailView({ initial }: { initial: Detail }) {
   const identity: [React.ReactNode, React.ReactNode][] = [
     ["Device", <span key="d" className="mono">{disk.path}</span>],
     ...(disk.byId ? ([["Stable name", <span key="b" className="mono truncate" title={disk.byId}>{disk.byId.replace("/dev/disk/by-id/", "")}</span>]] as [React.ReactNode, React.ReactNode][]) : []),
-    ["Model", disk.model ?? "—"],
+    ["Model", disk.model ?? "Not reported"],
     ...(disk.vendor ? ([["Maker", disk.vendor]] as [React.ReactNode, React.ReactNode][]) : []),
-    ["Serial", <span key="s" className="mono">{disk.serial ?? "—"}</span>],
-    ["Size", <span key="z" className="num">{disk.mediaPresent ? `${fmt.bytes(disk.size)} (${disk.size.toLocaleString()} bytes)` : "—"}</span>],
+    ["Serial", <span key="s" className="mono">{disk.serial ?? "Not reported"}</span>],
+    ["Size", <span key="z" className="num">{disk.mediaPresent ? `${fmt.bytes(disk.size)} (${disk.size.toLocaleString()} bytes)` : "No disk inserted"}</span>],
     ["Kind", [MEDIA_SHORT[disk.media], transportLabel(disk), disk.removable ? "removable" : null].filter(Boolean).join(" · ")],
     ["Role", disk.system ? disk.systemReason ?? "System disk" : disk.state === "in-use" ? "Data" : disk.state === "no-media" ? "Empty reader" : "Not in use"],
   ];

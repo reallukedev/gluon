@@ -226,6 +226,20 @@ function toAnn(r: AnnRow, names: Map<string, string>, t: number): Announcement {
 }
 
 /** Active announcements the viewer should see (members: none about apps they can't see). Admins can ask for all. */
+/**
+ * The raw current announcements a person should see (the shell banner, Status): an app-scoped one
+ * only reaches people who can open that app.
+ */
+export async function currentAnnouncements(viewer: User, limit?: number): Promise<{ id: string; message: string; app_id: string | null; until: number | null }[]> {
+  const rows = all<{ id: string; message: string; app_id: string | null; until: number | null }>(
+    "SELECT id, message, app_id, until FROM announcements WHERE until IS NULL OR until > ? ORDER BY created_at DESC",
+    now(),
+  );
+  const visible = await visibleApps(viewer);
+  const mine = rows.filter((r) => !r.app_id || !visible || visible.has(r.app_id));
+  return limit ? mine.slice(0, limit) : mine;
+}
+
 export async function listAnnouncements(viewer: User, includeExpired = false): Promise<Announcement[]> {
   const t = now();
   const rows = all<AnnRow>(

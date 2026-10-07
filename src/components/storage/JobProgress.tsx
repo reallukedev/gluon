@@ -8,7 +8,7 @@ import { Time } from "@/components/ui/Time";
 import type { JobStep, StorageJob } from "@/lib/storage-types";
 import s from "./storage.module.css";
 
-/** Events from the storage job stream (NDJSON on POST, SSE on reattach — same payloads). */
+/** Events from the storage job stream (NDJSON on POST, SSE on reattach: same payloads). */
 export type JobEvent =
   | { type: "job"; job: StorageJob }
   | { type: "step"; id: string; text: string; state: JobStep["status"]; undo: boolean; detail: string | null; error: string | null }

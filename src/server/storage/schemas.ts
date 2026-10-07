@@ -33,10 +33,10 @@ export const cleanupOp = z.discriminatedUnion("kind", [
   }),
 ]);
 
-/** POST /api/storage/plan — previews, nothing changes. */
+/** POST /api/storage/plan: previews, nothing changes. */
 export const planBody = z.discriminatedUnion("op", [mountOp, unmountOp, persistOp, renameOp, setupOp]);
 
-/** POST /api/storage/operations — the real thing. rename/setup need the plan hash they were shown. */
+/** POST /api/storage/operations: the real thing. rename/setup need the plan hash they were shown. */
 export const operationBody = z.discriminatedUnion("op", [
   mountOp,
   unmountOp,

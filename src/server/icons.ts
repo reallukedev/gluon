@@ -4,12 +4,18 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DATA_DIR } from "./db";
 import { safeFetch, type NetPolicy } from "./integrations/net";
+import { listApps } from "./docker/apps";
+import { pickEvictions, type CacheFile } from "./icons-cache";
 
 /**
  * App icons, fetched once by the server and kept on disk. Icons come from app stores' CDNs
  * (GitHub, jsDelivr, selfh.st); through Gluon they keep loading when the internet is down, and
  * household members' browsers never contact those sites. A fetched icon is refreshed after a
  * week; if the refresh fails, the copy on disk is served.
+ *
+ * Bounded: household members only get icons of the apps on this server (not any URL they type), and the folder
+ * keeps at most MAX_FILES icons and MAX_DIR_BYTES, dropping the least recently used. Admins may fetch any icon
+ * (the app builder previews the address they enter), within the same caps.
  */
 
 const DIR = path.join(DATA_DIR, "icons");
@@ -19,11 +25,57 @@ const MAX_BYTES = 6 * 1024 * 1024;
 /** Raster icons bigger than this are scaled down to ICON_PX before they are kept. */
 const KEEP_BYTES = 96 * 1024;
 const ICON_PX = 256;
+const MAX_FILES = 1500;
+const MAX_DIR_BYTES = 48 * 1024 * 1024;
 
-type G = typeof globalThis & { __gluonIconMisses?: Map<string, number>; __gluonIconInflight?: Map<string, Promise<Icon | null>> };
+type G = typeof globalThis & {
+  __gluonIconMisses?: Map<string, number>;
+  __gluonIconInflight?: Map<string, Promise<Icon | null>>;
+  __gluonIconIndex?: Promise<Map<string, CacheFile>>;
+  __gluonIconAllowed?: { at: number; set: Promise<Set<string>> };
+};
 const g = globalThis as G;
 const misses = (g.__gluonIconMisses ??= new Map());
 const inflight = (g.__gluonIconInflight ??= new Map());
+
+/** What's in the folder, read once per process and kept current as icons are written and evicted. */
+function index(): Promise<Map<string, CacheFile>> {
+  g.__gluonIconIndex ??= (async () => {
+    const m = new Map<string, CacheFile>();
+    const names = await fs.readdir(DIR).catch(() => [] as string[]);
+    await Promise.all(
+      names.map(async (name) => {
+        const dot = name.indexOf(".");
+        if (dot < 1) return;
+        const st = await fs.stat(path.join(DIR, name)).catch(() => null);
+        if (st?.isFile()) m.set(name.slice(0, dot), { name, size: st.size, mtime: st.mtimeMs, used: st.mtimeMs });
+      }),
+    );
+    return m;
+  })();
+  return g.__gluonIconIndex;
+}
+
+/** Icon addresses household members may ask for: the icons of the apps on this server. */
+function memberAllowed(): Promise<Set<string>> {
+  const now = Date.now();
+  if (!g.__gluonIconAllowed || now - g.__gluonIconAllowed.at > 60_000) {
+    const set = listApps()
+      .then((apps) => new Set(apps.map((a) => a.icon).filter((x): x is string => !!x).map(normalise).filter((x): x is string => !!x)))
+      .catch(() => new Set<string>());
+    g.__gluonIconAllowed = { at: now, set };
+  }
+  return g.__gluonIconAllowed.set;
+}
+
+function normalise(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface Icon {
   type: string;
@@ -44,14 +96,34 @@ function sniff(type: string, body: Buffer): string | null {
 }
 
 async function readCached(key: string): Promise<(Icon & { at: number }) | null> {
-  const files = await fs.readdir(DIR).catch(() => [] as string[]);
-  const name = files.find((f) => f.startsWith(`${key}.`));
-  if (!name) return null;
-  const file = path.join(DIR, name);
-  const [body, st] = await Promise.all([fs.readFile(file), fs.stat(file)]);
-  const ext = name.slice(key.length + 1);
+  const idx = await index();
+  const entry = idx.get(key);
+  if (!entry) return null;
+  const body = await fs.readFile(path.join(DIR, entry.name)).catch(() => null);
+  if (!body) {
+    idx.delete(key);
+    return null;
+  }
+  entry.used = Date.now();
+  const ext = entry.name.slice(key.length + 1);
   const type = Object.entries(EXT).find(([, e]) => e === ext)?.[0] ?? "application/octet-stream";
-  return { type, body, at: st.mtimeMs };
+  return { type, body, at: entry.mtime };
+}
+
+async function store(key: string, icon: Icon) {
+  const idx = await index();
+  await fs.mkdir(DIR, { recursive: true });
+  const name = `${key}.${EXT[icon.type]}`;
+  const old = idx.get(key);
+  if (old && old.name !== name) await fs.rm(path.join(DIR, old.name), { force: true });
+  await fs.writeFile(path.join(DIR, name), icon.body);
+  const t = Date.now();
+  idx.set(key, { name, size: icon.body.length, mtime: t, used: t });
+  for (const victim of pickEvictions(idx, { maxFiles: MAX_FILES, maxBytes: MAX_DIR_BYTES, keep: key })) {
+    const e = idx.get(victim);
+    idx.delete(victim);
+    if (e) await fs.rm(path.join(DIR, e.name), { force: true }).catch(() => undefined);
+  }
 }
 
 async function fetchIcon(url: string, policy: NetPolicy): Promise<Icon | null> {
@@ -79,6 +151,8 @@ export async function appIcon(raw: string, policy: NetPolicy): Promise<Icon | nu
     return null;
   }
   if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+  // Members can't make the server fetch (and keep) whatever they like: only icons of the apps here.
+  if (policy === "member" && !(await memberAllowed()).has(u.toString())) return null;
   const key = crypto.createHash("sha256").update(`${policy}\0${u.toString()}`).digest("hex").slice(0, 40);
   const cached = await readCached(key).catch(() => null);
   if (cached && Date.now() - cached.at < FRESH_MS) return cached;
@@ -93,10 +167,7 @@ export async function appIcon(raw: string, policy: NetPolicy): Promise<Icon | nu
         misses.set(key, Date.now());
         return null;
       }
-      await fs.mkdir(DIR, { recursive: true });
-      const old = (await fs.readdir(DIR).catch(() => [] as string[])).filter((f) => f.startsWith(`${key}.`));
-      await Promise.all(old.map((f) => fs.rm(path.join(DIR, f), { force: true })));
-      await fs.writeFile(path.join(DIR, `${key}.${EXT[got.type]}`), got.body);
+      await store(key, got).catch(() => undefined);
       return got;
     })().finally(() => inflight.delete(key));
     inflight.set(key, job);

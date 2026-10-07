@@ -38,9 +38,10 @@ async function dockerSubnets(): Promise<net.BlockList> {
       }
     }
   } catch {
-    // Docker unreachable: fall back to the ranges Docker hands out by default.
-    list.addSubnet("172.16.0.0", 12, "ipv4");
-    list.addSubnet("10.0.0.0", 8, "ipv4");
+    // Docker unreachable: trust no container networks (loopback still works) and don't cache the
+    // empty answer, so the next request asks Docker again. Guessing at default ranges would also
+    // trust anything else on a 10/8 or 172.16/12 home network.
+    return list;
   }
   g.__gluonDockerNets = { at: Date.now(), list };
   return list;

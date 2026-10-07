@@ -1,7 +1,8 @@
 import "server-only";
 import crypto from "node:crypto";
 import { z } from "zod";
-import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef } from "./base";
+import { arr, client, num, obj, ok, runTest, str, time, UpstreamError, type KindContext, type KindDef, type KindSearchHit } from "./base";
+import { matchScore, prepare } from "@/lib/search-match";
 import { bucketWidth, imageUrl } from "../image-refs";
 import type { SubsonicNowPlayingData, SubsonicRecentData } from "@/lib/widgets-types";
 
@@ -45,8 +46,8 @@ function http(ctx: KindContext<Config>) {
 }
 
 /** Call a Subsonic method and unwrap `subsonic-response`, turning Subsonic errors into sentences. */
-async function call(ctx: KindContext<Config>, method: string, query: Record<string, string | number> = {}) {
-  const res = obj(await http(ctx).json(`/rest/${method}.view`, { query }));
+async function call(ctx: KindContext<Config>, method: string, query: Record<string, string | number> = {}, o: { timeoutMs?: number; signal?: AbortSignal } = {}) {
+  const res = obj(await http(ctx).json(`/rest/${method}.view`, { query, ...o }));
   const sr = obj(res["subsonic-response"]);
   if (!sr.status) throw new UpstreamError("That address answered, but not like a Subsonic music server (Navidrome, Octo…). Check the address.");
   if (sr.status !== "ok") {
@@ -109,6 +110,51 @@ async function recent(ctx: KindContext<Config>, params: Record<string, unknown>)
         ? { scanning: s.scanning === true, count: num(s.count), folderCount: num(s.folderCount), lastScan: time(s.lastScan) }
         : null,
   };
+}
+
+// ------------------------------------------------------------------ universal search
+
+/** Navidrome's web app has a page per artist and album; other servers' pages aren't known, so no link. */
+function webLink(ctx: KindContext<Config>, server: string | null, kind: "artist" | "album", id: string): string | undefined {
+  if (!server || !/navidrome/i.test(server)) return undefined;
+  return `${ctx.baseUrl.replace(/\/+$/, "")}/app/#/${kind}/${encodeURIComponent(id)}/show`;
+}
+
+/** search3's answer → hits: artists, albums and songs, the best-named first. */
+export function searchHits(ctx: KindContext<Config>, sr: Record<string, unknown>, q: string, limit: number): KindSearchHit[] {
+  const r = obj(sr.searchResult3);
+  const server = str(sr.type);
+  const out: { hit: KindSearchHit; rank: number }[] = [];
+  for (const a of arr<Record<string, unknown>>(r.artist)) {
+    const id = str(a.id);
+    if (!id) continue;
+    const n = num(a.albumCount);
+    out.push({ rank: 0, hit: { id: `artist:${id}`, label: str(a.name) ?? "Unknown artist", hint: ["Artist", n !== null ? `${n} album${n === 1 ? "" : "s"}` : null].filter(Boolean).join(" · "), url: webLink(ctx, server, "artist", id), type: "artist", image: cover(ctx, a.coverArt, 96) } });
+  }
+  for (const a of arr<Record<string, unknown>>(r.album)) {
+    const id = str(a.id);
+    if (!id) continue;
+    const year = num(a.year);
+    out.push({ rank: 1, hit: { id: `album:${id}`, label: str(a.name) ?? str(a.title) ?? "Unknown album", hint: ["Album", str(a.artist), year ? String(year) : null].filter(Boolean).join(" · "), url: webLink(ctx, server, "album", id), type: "album", image: cover(ctx, a.coverArt ?? a.id, 96) } });
+  }
+  for (const t of arr<Record<string, unknown>>(r.song)) {
+    const id = str(t.id);
+    if (!id) continue;
+    const albumId = str(t.albumId);
+    out.push({ rank: 2, hit: { id: `song:${id}`, label: str(t.title) ?? "Unknown track", hint: ["Song", [str(t.artist), str(t.album)].filter(Boolean).join(", ") || null].filter(Boolean).join(" · "), url: albumId ? webLink(ctx, server, "album", albumId) : undefined, type: "song", image: cover(ctx, t.coverArt ?? t.albumId, 96) } });
+  }
+  const query = prepare(q);
+  return out
+    .map((x, i) => ({ ...x, i, score: matchScore(query, { label: x.hit.label }) }))
+    .sort((a, b) => b.score - a.score || a.rank - b.rank || a.i - b.i)
+    .slice(0, limit)
+    .map((x) => x.hit);
+}
+
+async function search(ctx: KindContext<Config>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]> {
+  const sr = await call(ctx, "search3", { query: q.slice(0, 100), artistCount: 3, albumCount: 4, songCount: 6 }, { signal: opts.signal, timeoutMs: 1800 });
+  if (opts.signal.aborted) return [];
+  return searchHits(ctx, sr, q, opts.limit);
 }
 
 export const def: KindDef<Config> = {
@@ -183,6 +229,7 @@ export const def: KindDef<Config> = {
     "subsonic.nowPlaying": (ctx) => nowPlaying(ctx),
     "subsonic.recent": (ctx, p) => recent(ctx, p),
   },
+  search,
   image: {
     schema: z.object({
       cover: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),

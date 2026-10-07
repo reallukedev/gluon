@@ -14,11 +14,18 @@ export function onStart(name: string, start: () => void | Promise<void>) {
 }
 
 export function every(ms: number, fn: () => unknown, opts: { immediate?: boolean } = {}) {
+  // A slow run (a hung host command, a big scan) mustn't stack up behind itself: skip a tick
+  // while the previous one is still going.
+  let busy = false;
   const run = async () => {
+    if (busy) return;
+    busy = true;
     try {
       await fn();
     } catch (e) {
       console.error("[gluon] job failed", e);
+    } finally {
+      busy = false;
     }
   };
   if (opts.immediate) void run();

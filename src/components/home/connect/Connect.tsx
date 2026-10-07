@@ -300,7 +300,13 @@ export function ConnectForm({
             <summary>Where to find {signIn ? "the key" : "these"}</summary>
             <p>{service.connect?.keyHelp}</p>
           </details>
-          {!signIn && <p className={c.help}>Stored encrypted on this server and only used to read from {service.label}.</p>}
+          {!signIn && (
+            <p className={c.help}>
+              {service.kind === "homeassistant"
+                ? "Stored encrypted on this server. Gluon uses it to read from Home Assistant, and to switch only the things you allow on Home controls."
+                : `Stored encrypted on this server and only used to read from ${service.label}.`}
+            </p>
+          )}
           {signIn && (
             <button type="button" className={c.switchMode} onClick={() => setMode("account")}>
               Sign in with your {service.label} account instead

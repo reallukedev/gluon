@@ -1,0 +1,129 @@
+name: jellyfin
+services:
+  jellyfin:
+    cpu_shares: 90
+    command: []
+    container_name: jellyfin
+    deploy:
+      resources:
+        limits:
+          memory: '24899485696'
+        reservations:
+          memory: '268435456'
+    devices:
+    - /dev/dri:/dev/dri
+    - /dev/vcsm:/dev/vcsm
+    - /dev/vchiq:/dev/vchiq
+    - /dev/video10:/dev/video10
+    - /dev/video11:/dev/video11
+    - /dev/video12:/dev/video12
+    environment:
+      PGID: '1000'
+      PUID: '1000'
+      TZ: America/Chicago
+    hostname: jellyfin
+    image: linuxserver/jellyfin:10.11.10
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Jellyfin/icon.svg
+    network_mode: bridge
+    ports:
+    - target: 8096
+      published: '8097'
+      protocol: tcp
+    - target: 8920
+      published: '8921'
+      protocol: tcp
+    - target: 7359
+      published: '7359'
+      protocol: tcp
+    - target: 1900
+      published: '1901'
+      protocol: tcp
+    restart: unless-stopped
+    volumes:
+    - type: bind
+      source: /DATA/AppData/jellyfin/config
+      target: /config
+    - type: bind
+      source: /mnt/hdd1_ST2000DM001-1ER164/media
+      target: /Media
+    - type: bind
+      source: /opt/vc/lib
+      target: /opt/vc/lib
+    x-casaos:
+      envs:
+      - container: TZ
+        description:
+          en_US: TimeZone
+      - container: PUID
+        description:
+          en_US: Run Jellyfin as specified uid.
+      - container: PGID
+        description:
+          en_US: Run Jellyfin as specified gid.
+      - container: JELLYFIN_PublishedServerUrl
+        description:
+          en_US: The autodiscovery response domain or IP address.
+      ports:
+      - container: '8096'
+        description:
+          en_US: WebUI HTTP Port
+      - container: '8920'
+        description:
+          en_US: WebUI HTTPS Port
+      - container: '7359'
+        description:
+          en_US: Jellyfin auto-discovery Port
+      - container: '1900'
+        description:
+          en_US: Jellyfin DLNA Port
+      volumes:
+      - container: /config
+        description:
+          en_US: Jellyfin config directory.
+      - container: /Media
+        description:
+          en_US: Jellyfin Media directory.
+      - container: /opt/vc/lib
+        description:
+          en_US: OpenMax libs
+networks:
+  default:
+    name: jellyfin_default
+x-casaos:
+  architectures:
+  - amd64
+  - arm64
+  author: ZimaOS Team
+  category: Media
+  description:
+    en_US: Jellyfin stands out among media server applications for its fully open-source,
+      free, and privacy-focused design. Unlike Emby and Plex, Jellyfin delivers robust
+      media management, real-time transcoding,
+  developer: Jellyfin
+  docs: https://jellyfin.org/docs/
+  hostname: ''
+  icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Jellyfin/icon.svg
+  id: org.icewhale.jellyfin
+  index: /
+  is_uncontrolled: false
+  main: jellyfin
+  port_map: '8097'
+  release_notes:
+    en_US: '- Jellyfin 10.11.10 is a stable bugfix release.
+
+      - Fixes security advisories GHSA-f47c-m7gr-q92j, GHSA-jg92-mrxq-vv75, and GHSA-wwwm-px48-fpvq.
+
+      - Also fixes stale UserData cache and user manager collation issues.'
+  repo: https://github.com/jellyfin/jellyfin
+  scheme: http
+  store_app_id: jellyfin
+  support: https://github.com/jellyfin/jellyfin/issues
+  tagline:
+    en_US: The personal Media System
+  title:
+    en_US: Jellyfin
+    custom: ''
+  update_at: 2026-05-24 00:00:00+00:00
+  version: 10.11.10
+  website: https://jellyfin.org/

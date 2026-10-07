@@ -1,6 +1,6 @@
 "use client";
 /**
- * SegmentBar — one bar split into labelled parts: memory by app, a disk by folder, space by user.
+ * SegmentBar: one bar split into labelled parts: memory by app, a disk by folder, space by user.
  *
  *   <SegmentBar
  *     label="Memory by app"

@@ -87,6 +87,16 @@ interface Leaving {
 function useLeaving(findings: Finding[], hiddenByMe: React.RefObject<Set<string>>) {
   const [leaving, setLeaving] = React.useState<Leaving[]>([]);
   const prev = React.useRef(findings);
+  // Removal timers live outside the effect: a re-render with a new (equal) list must not cancel
+  // a pending removal, or the faded row stays in the list as a blank gap.
+  const timers = React.useRef(new Set<ReturnType<typeof setTimeout>>());
+  React.useEffect(() => {
+    const all = timers.current;
+    return () => {
+      for (const t of all) clearTimeout(t);
+      all.clear();
+    };
+  }, []);
   React.useEffect(() => {
     const before = prev.current;
     prev.current = findings;
@@ -96,8 +106,11 @@ function useLeaving(findings: Finding[], hiddenByMe: React.RefObject<Set<string>
     const added = gone.map(({ f, index }) => ({ f, index, resolved: !hiddenByMe.current.delete(f.id) }));
     setLeaving((l) => [...l.filter((x) => !now.has(x.f.id) && !added.some((y) => y.f.id === x.f.id)), ...added]);
     const ms = added.some((x) => x.resolved) ? SETTLE_MS + LEAVE_MS + 40 : LEAVE_MS + 40;
-    const t = setTimeout(() => setLeaving((l) => l.filter((x) => !added.some((y) => y.f.id === x.f.id))), ms);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      timers.current.delete(t);
+      setLeaving((l) => l.filter((x) => !added.some((y) => y.f.id === x.f.id)));
+    }, ms);
+    timers.current.add(t);
   }, [findings, hiddenByMe]);
   // Leaving items keep their old place in the list.
   const rows: { f: Finding; leaving?: Leaving }[] = findings.map((f) => ({ f }));

@@ -12,7 +12,7 @@ import { Time } from "@/components/ui/Time";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { toast } from "@/components/ui/Toast";
 import { BRANCH_RE, repoPathError } from "@/lib/builder/names";
-import { YamlEditor } from "./YamlEditor";
+import { LazyYamlEditor as YamlEditor } from "./LazyYamlEditor";
 import type { Draft } from "./state";
 import s from "./builder.module.css";
 
@@ -159,7 +159,7 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
         meta={
           <a href={url} target="_blank" rel="noopener noreferrer" className={s.link}>
             {gh.owner}/{gh.repo}
-            <OpenNewWindow width={13} height={13} style={{ marginLeft: 5, verticalAlign: "-2px" }} />
+            <OpenNewWindow className={s.inlineIcon} aria-hidden />
           </a>
         }
       >
@@ -175,7 +175,7 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
           <div className={s.inlineControl}>
             <span>
               {gh.hasToken ? "A token is saved for this repository." : gh.private ? "The repository is private and no token is saved." : "No token (the repository is public)."}
-              <span className={s.hint} style={{ display: "block" }}>
+              <span className={s.controlHint}>
                 {gh.hasToken ? "It's encrypted and never shown again." : "A token lets Gluon clone private repositories and avoids GitHub's limits."}
               </span>
             </span>
@@ -229,7 +229,7 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
         flush
       >
         {(gh.builtCommit || gh.latestCommit) && (
-          <p className={s.hint} style={{ padding: "12px 18px 0" }}>
+          <p className={`${s.hint} ${s.panelLead}`}>
             {gh.builtCommit ? (
               <>
                 Built from <a className={`${s.link} mono`} href={`${url}/commit/${gh.builtCommit}`} target="_blank" rel="noopener noreferrer">{gh.builtCommit.slice(0, 7)}</a>
@@ -248,11 +248,11 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
           </p>
         )}
         {detail.builds.length === 0 ? (
-          <p className={s.hint} style={{ padding: "12px 18px 16px" }}>
+          <p className={`${s.hint} ${s.panelText}`}>
             No builds yet. Gluon builds the images when you publish, or now with Build now.
           </p>
         ) : (
-          <ul className={s.plainList} style={{ marginTop: 4 }}>
+          <ul className={`${s.plainList} ${s.plainListAfter}`}>
             {detail.builds.map((b) => (
               <li key={b.id}>
                 <span className={s.plainMain}>

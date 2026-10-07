@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { route } from "@/server/api";
+import { AppError } from "@/server/errors";
+import { hasRecentAuth } from "@/server/auth/session";
 import { audit } from "@/server/audit";
 import { CHANNEL_KINDS } from "@/lib/alerts-types";
 import { createChannel, listChannelsFor, viewChannel } from "@/server/notify/channels";
@@ -16,7 +18,8 @@ const body = z.object({
   config: z.record(z.string(), z.unknown()),
 });
 
-export const POST = route({ auth: "user", body }, async ({ user, body, ip, zone }) => {
+export const POST = route({ auth: "user", body }, async ({ user, session, body, ip, zone }) => {
+  if (body.scope === "server" && !hasRecentAuth(session)) throw new AppError("reauth", "Confirm it's you to continue.", 403);
   const ch = await createChannel(user, body);
   audit(user, { action: "notify.channel_created", target: ch.id, summary: `Added ${body.scope === "server" ? "server-wide " : ""}${ch.kind} channel “${ch.name}”` }, { ip, zone });
   return viewChannel(ch, user);

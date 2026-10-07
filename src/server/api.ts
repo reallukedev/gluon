@@ -3,7 +3,8 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { AppError } from "./errors";
 import { CommandError } from "./host/exec";
-import { currentAuth, hasRecentAuth, pendingAuth, type Session } from "./auth/session";
+import { currentAuth, hasRecentAuth, mustSetUpMfa, pendingAuth, type Session } from "./auth/session";
+import { mfaRequiredMessage } from "./auth/policy";
 import type { User } from "./auth/users";
 import { clientInfo, type Zone } from "./net-zone";
 import { burst as burstLimit, waitText } from "./auth/ratelimit";
@@ -118,6 +119,12 @@ function readAllowed(req: NextRequest): boolean {
 type Handler<B, Q> = (ctx: Ctx<B, Q>) => unknown | Promise<unknown>;
 type PublicHandler<B, Q> = (ctx: PublicCtx<B, Q>) => unknown | Promise<unknown>;
 
+/** What someone who must set up two-step sign-in may reach: at home, setting it up; away, only leaving. */
+const MFA_SETUP_PATH = /^\/api\/(auth\/|me(\/mfa(\/.*)?)?$|shell$)/;
+const SIGN_OUT_PATH = /^\/api\/(auth\/|me$|shell$)/;
+/** What someone who must pick a new password may reach before they do. */
+const PASSWORD_CHANGE_PATH = /^\/api\/(auth\/|me(\/password)?$|shell$)/;
+
 export function route<B = undefined, Q = undefined>(opts: Options<B, Q> & { auth: "public" }, fn: PublicHandler<B, Q>): (req: NextRequest, rc: { params: Promise<Record<string, string | string[]>> }) => Promise<Response>;
 export function route<B = undefined, Q = undefined>(opts: Options<B, Q> & { auth: "user" | "admin" }, fn: Handler<B, Q>): (req: NextRequest, rc: { params: Promise<Record<string, string | string[]>> }) => Promise<Response>;
 export function route<B, Q>(opts: Options<B, Q>, fn: Handler<B, Q> | PublicHandler<B, Q>) {
@@ -139,6 +146,13 @@ export function route<B, Q>(opts: Options<B, Q>, fn: Handler<B, Q> | PublicHandl
         if (!auth) return errorResponse("unauthenticated", "You've been signed out. Sign in again to continue.", 401);
         if (opts.auth === "admin" && auth.user.role !== "admin") {
           return errorResponse("forbidden", "Only admins can do that.", 403);
+        }
+        // Setting it up only happens at home: from away, a stolen cookie could enrol its own phone.
+        if (mustSetUpMfa(auth.user, zone) && !(zone === "home" ? MFA_SETUP_PATH : SIGN_OUT_PATH).test(req.nextUrl.pathname)) {
+          return errorResponse(zone === "home" ? "mfa_required" : "mfa_required_away", mfaRequiredMessage(auth.user.role), 403);
+        }
+        if (auth.user.mustChangePassword && !PASSWORD_CHANGE_PATH.test(req.nextUrl.pathname)) {
+          return errorResponse("must_change_password", "Choose a new password before doing anything else.", 403);
         }
         if (opts.recent && !hasRecentAuth(auth.session)) {
           return errorResponse("reauth", "Confirm it's you to continue.", 403);

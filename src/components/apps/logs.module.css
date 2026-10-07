@@ -78,10 +78,10 @@
 }
 .viewport[data-wrap] .line { white-space: pre-wrap; word-break: break-word; }
 .viewport:not([data-wrap]) .line { width: max-content; min-width: 100%; }
-.line[data-level="error"] { color: var(--ink); background: color-mix(in oklab, var(--fault) 9%, transparent); box-shadow: inset 2px 0 0 var(--fault); }
-.line[data-level="warn"] { color: var(--ink); box-shadow: inset 2px 0 0 var(--ink-2); }
+.line[data-level="error"] { color: var(--ink); background: color-mix(in oklab, var(--fault) 12%, transparent); }
+.line[data-level="warn"] { color: var(--ink); background: color-mix(in oklab, var(--attn) 12%, transparent); }
 .line[data-level="debug"] { color: var(--muted); }
-.line[data-current] { background: color-mix(in oklab, var(--ink) 9%, transparent); box-shadow: inset 2px 0 0 var(--ink); }
+.line[data-current] { background: color-mix(in oklab, var(--ink) 9%, transparent); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ts { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; user-select: none; }
 .ctr { flex: none; width: var(--ctr-w, 14ch); overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
 .text { min-width: 0; }

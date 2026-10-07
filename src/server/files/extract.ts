@@ -8,7 +8,8 @@ import { local } from "../host/exec";
 import type { User } from "../auth/users";
 import type { FileJob } from "@/lib/files-types";
 import { formatBytes, plural } from "@/lib/format";
-import { assertMutable, authorize, freeName, splitName } from "./paths";
+import { assertMutable, authorize, canSee, freeName, resolveHost, splitName, type Scope } from "./paths";
+import { inDir, openDir, openFileIn } from "./safe";
 import { freeBytes } from "./mounts";
 import { Cancelled, startJob, type JobContext } from "./jobs";
 
@@ -50,9 +51,10 @@ function findTool(names: string[]): { cmd: string; where: "local" | "host" } | n
 
 const ENV = { PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" };
 
-function run(cmd: string, args: string[], where: "local" | "host", stdin: "pipe" | "ignore" = "ignore"): ChildProcess {
+/** `into` is an open folder handed to the tool as its descriptor 3, so it extracts there and nowhere else. */
+function run(cmd: string, args: string[], where: "local" | "host", stdin: "pipe" | "ignore" = "ignore", into: number | null = null): ChildProcess {
   const full = where === "host" ? ["nsenter", "-t", "1", "-m", "-u", "-i", "-n", "-p", "--", cmd, ...args] : [cmd, ...args];
-  return spawn(full[0]!, full.slice(1), { env: ENV as unknown as NodeJS.ProcessEnv, stdio: [stdin, "pipe", "pipe"] });
+  return spawn(full[0]!, full.slice(1), { env: ENV as unknown as NodeJS.ProcessEnv, stdio: into === null ? [stdin, "pipe", "pipe"] : [stdin, "pipe", "pipe", into] });
 }
 
 /**
@@ -121,25 +123,44 @@ async function zipTotals(file: string): Promise<{ files: number; bytes: number }
   }
 }
 
-async function chownTree(root: string, uid: number, gid: number, ctx: JobContext) {
-  const stack = [root];
+/**
+ * Give everything extracted to the owner of the folder it lands in, and (for household members)
+ * drop links that would point outside the folders shared with them once the result is in place.
+ * Each folder is opened without following links, so nothing outside the extraction is touched.
+ */
+export async function settle(temp: string, rootRel: string, finalReal: string, uid: number, gid: number, scope: Scope, ctx: JobContext): Promise<number> {
+  const stack = [temp];
   let n = 0;
+  let dropped = 0;
   while (stack.length) {
     const cur = stack.pop()!;
-    const p = hostPath(cur);
-    let st: fs.Stats;
-    try {
-      st = await fs.promises.lstat(p);
-    } catch {
-      continue;
-    }
-    await fs.promises.lchown(p, uid, gid).catch(() => {});
-    if (st.isDirectory()) for (const name of await fs.promises.readdir(p).catch(() => [] as string[])) stack.push(path.posix.join(cur, name));
-    if (++n % 2000 === 0) {
-      ctx.check();
-      ctx.progress({ phase: "Setting owners", current: cur });
-    }
+    await inDir(cur, null, async (dir) => {
+      await dir.chown(uid, gid).catch(() => {});
+      for (const name of await fs.promises.readdir(dir.here).catch(() => [] as string[])) {
+        const st = await fs.promises.lstat(dir.at(name)).catch(() => null);
+        if (!st) continue;
+        if (st.isSymbolicLink() && !scope.admin) {
+          const rel = path.posix.relative(path.posix.join(temp, rootRel), cur);
+          const finalDir = rel.startsWith("..") ? finalReal : path.posix.join(finalReal, rel);
+          const target = await fs.promises.readlink(dir.at(name));
+          const points = target.startsWith("/") ? target : path.posix.join(finalDir, target);
+          const r = await resolveHost(points).catch(() => null);
+          if (!r || !canSee(scope, r.real)) {
+            await fs.promises.unlink(dir.at(name)).catch(() => {});
+            dropped++;
+            continue;
+          }
+        }
+        await fs.promises.lchown(dir.at(name), uid, gid).catch(() => {});
+        if (st.isDirectory()) stack.push(path.posix.join(cur, name));
+        if (++n % 2000 === 0) {
+          ctx.check();
+          ctx.progress({ phase: "Setting owners", current: cur });
+        }
+      }
+    });
   }
+  return dropped;
 }
 
 /**
@@ -187,18 +208,22 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
     { path: t.real },
     where,
     async (ctx) => {
-      const temp = path.posix.join(parent.real, `.gluon-extract-${ctx.id}`);
-      const tempFs = toolUse.where === "host" ? temp : hostPath(temp);
+      const tempName = `.gluon-extract-${ctx.id}`;
+      const temp = path.posix.join(parent.real, tempName);
       const archiveFs = toolUse.where === "host" ? t.real : t.fsPath;
-      await fs.promises.mkdir(hostPath(temp), { mode: 0o755 });
+      await inDir(parent.real, parent.stat, (d) => fs.promises.mkdir(d.at(tempName), { mode: 0o755 }));
+      // The tool gets the temp folder as an open descriptor where it can, so a folder on the way
+      // swapped for a link can't make it extract (as root) somewhere else.
+      const into = await openDir(temp);
+      const tempFs = into.fd !== null ? "/proc/self/fd/3" : toolUse.where === "host" ? temp : hostPath(temp);
       try {
         ctx.progress({ phase: "Extracting", total: zt?.files ?? null, bytesTotal: fmt.kind === "tar" || fmt.kind === "single" ? size : (zt?.bytes ?? null) });
         let files = 0;
         if (viaBsdtar) {
-          const child = run(toolUse.cmd, ["-x", "--no-same-owner", "-f", archiveFs, "-C", tempFs], toolUse.where);
+          const child = run(toolUse.cmd, ["-x", "--no-same-owner", "-f", archiveFs, "-C", tempFs], toolUse.where, "ignore", into.fd);
           await wait(child, ctx, undefined, space);
         } else if (fmt.kind === "zip") {
-          const child = run(toolUse.cmd, ["-o", "-d", tempFs, archiveFs], toolUse.where);
+          const child = run(toolUse.cmd, ["-o", "-d", tempFs, archiveFs], toolUse.where, "ignore", into.fd);
           await wait(child, ctx, (l) => {
             const m = l.match(/^\s*(inflating|extracting|linking):\s+(.*?)\s*$/);
             if (m) {
@@ -212,7 +237,7 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
             fmt.kind === "tar"
               ? ["-x", "-f", "-", "-C", tempFs, "--no-same-owner", "--delay-directory-restore", ...(fmt.flag ? [fmt.flag] : [])]
               : ["-d", "-c"];
-          const child = run(toolUse.cmd, args, toolUse.where, "pipe");
+          const child = run(toolUse.cmd, args, toolUse.where, "pipe", fmt.kind === "tar" ? into.fd : null);
           const input = fs.createReadStream(t.fsPath, { highWaterMark: 1024 * 1024 });
           let read = 0;
           input.on("data", (b) => {
@@ -223,7 +248,8 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
           input.pipe(child.stdin!);
           child.stdin!.on("error", () => {});
           if (fmt.kind === "single") {
-            const out = fs.createWriteStream(hostPath(path.posix.join(temp, fmt.outName)), { flags: "wx", mode: 0o644 });
+            const fh = await openFileIn(into, fmt.outName, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o644);
+            const out = fh.createWriteStream();
             child.stdout!.pipe(out);
             await Promise.all([wait(child, ctx, undefined, space), new Promise<void>((res, rej) => out.on("finish", res).on("error", rej))]);
           } else {
@@ -231,7 +257,7 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
           }
         } else {
           const args = toolUse.cmd.endsWith("unrar") ? ["x", "-o+", "-idq", archiveFs, `${tempFs}/`] : ["x", "-y", "-bsp1", "-bso0", `-o${tempFs}`, archiveFs];
-          const child = run(toolUse.cmd, args, toolUse.where);
+          const child = run(toolUse.cmd, args, toolUse.where, "ignore", into.fd);
           await wait(child, ctx, (l) => {
             const m = l.match(/(\d+)%/);
             if (m) ctx.progress({ bytesDone: Math.round((Number(m[1]) / 100) * size), bytesTotal: size });
@@ -239,32 +265,28 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
         }
         ctx.check();
 
-        await chownTree(temp, parent.stat!.uid, parent.stat!.gid, ctx);
-        await fs.promises.chmod(hostPath(temp), 0o755).catch(() => {});
-
-        // One top-level folder? Use it directly.
-        const top = await fs.promises.readdir(hostPath(temp));
-        let finalName: string;
-        if (top.length === 1 && (await fs.promises.lstat(hostPath(path.posix.join(temp, top[0]!)))).isDirectory()) {
-          finalName = await freeName(parent.real, top[0]!);
-          await fs.promises.rename(hostPath(path.posix.join(temp, top[0]!)), hostPath(path.posix.join(parent.real, finalName)));
-          await fs.promises.rmdir(hostPath(temp));
-        } else if (top.length === 1 && fmt.kind === "single") {
-          finalName = await freeName(parent.real, top[0]!);
-          await fs.promises.rename(hostPath(path.posix.join(temp, top[0]!)), hostPath(path.posix.join(parent.real, finalName)));
-          await fs.promises.rmdir(hostPath(temp));
-        } else {
-          finalName = await freeName(parent.real, splitName(name).stem);
-          await fs.promises.rename(hostPath(temp), hostPath(path.posix.join(parent.real, finalName)));
-        }
+        // One top-level folder (or the single decompressed file)? Use it directly: no "Album/Album".
+        const top = await fs.promises.readdir(into.here);
+        const hoist = top.length === 1 && ((await fs.promises.lstat(into.at(top[0]!))).isDirectory() || fmt.kind === "single");
+        const finalName = await freeName(parent.real, hoist ? top[0]! : splitName(name).stem);
+        const dropped = await settle(temp, hoist ? top[0]! : "", path.posix.join(parent.real, finalName), parent.stat!.uid, parent.stat!.gid, parent.scope, ctx);
+        await into.chmod(0o755).catch(() => {});
+        await inDir(parent.real, parent.stat, async (d) => {
+          if (hoist) {
+            await fs.promises.rename(into.at(top[0]!), d.at(finalName));
+            await fs.promises.rmdir(d.at(tempName));
+          } else await fs.promises.rename(d.at(tempName), d.at(finalName));
+        });
         const finalPath = path.posix.join(parent.path, finalName);
         return {
-          message: `Extracted ${name} into ${finalName}${files ? ` (${plural(files, "file")})` : ""}`,
+          message: `Extracted ${name} into ${finalName}${files ? ` (${plural(files, "file")})` : ""}${dropped ? `. Left out ${plural(dropped, "link")} pointing outside your folders` : ""}`,
           result: { path: finalPath, name: finalName, files },
         };
       } catch (e) {
-        await fs.promises.rm(hostPath(temp), { recursive: true, force: true }).catch(() => {});
+        await inDir(parent.real, null, (d) => fs.promises.rm(d.at(tempName), { recursive: true, force: true })).catch(() => {});
         throw e;
+      } finally {
+        await into.close();
       }
     },
     { action: "files.extract", target: t.real },

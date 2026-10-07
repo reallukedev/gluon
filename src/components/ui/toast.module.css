@@ -44,7 +44,7 @@
   transform: translateX(var(--toast-swipe-movement-x))
     translateY(calc(var(--toast-swipe-movement-y) - (var(--toast-index) * var(--peek)) - (var(--shrink) * var(--height))))
     scale(var(--scale));
-  transition: transform 400ms ease, opacity 400ms ease, height 150ms ease;
+  transition: transform 400ms var(--ease-out), opacity 400ms var(--ease-out), height 150ms var(--ease-out);
 }
 .toast::after { content: ""; position: absolute; top: 100%; left: 0; width: 100%; height: calc(var(--gap) + 1px); }
 .toast[data-expanded] { transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--offset-y)); height: var(--toast-height); }

@@ -85,7 +85,7 @@ export function serviceNameError(name: string): string | null {
   return null;
 }
 
-/** Lowercase a–z/0–9/- id from any name, including accented and non-Latin ones. */
+/** Lowercase a-z, 0-9 and - id from any name, including accented and non-Latin ones. */
 export function slugify(name: string): string {
   const s = name
     .normalize("NFKD")
@@ -209,6 +209,106 @@ export function parseGithub(input: string): { owner: string; repo: string; branc
 export function repoPathError(p: string): string | null {
   if (!p) return null;
   if (p.startsWith("/") || /(^|\/)\.\.?(\/|$)/.test(p) || p.includes("\0") || p.length > 300) return "Use a folder inside the repository, like apps/web.";
+  return null;
+}
+
+/** LinuxServer images (linuxserver/…, lscr.io/linuxserver/…) run as PUID/PGID, in the timezone TZ names. */
+export const isLinuxServerImage = (image: string) => /(^|\/)linuxserver\/|^lscr\.io\//.test(image.trim());
+
+/** The variables LinuxServer images read, with this server's usual answers. */
+export function linuxServerEnv(timeZone?: string): { key: string; value: string }[] {
+  let tz = timeZone;
+  if (!tz) {
+    try {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      tz = undefined;
+    }
+  }
+  return [
+    { key: "PUID", value: "1000" },
+    { key: "PGID", value: "1000" },
+    { key: "TZ", value: tz || "Etc/UTC" },
+  ];
+}
+
+const FOLDER_NOISE = new Set(["var", "lib", "usr", "src", "app", "opt", "srv", "home", "share"]);
+
+/**
+ * The app-data folder a container path gets: /config → config, /var/lib/mysql → mysql,
+ * /data/tvshows → data-tvshows. `taken` keeps two paths from sharing a folder.
+ */
+export function dataFolderFor(containerPath: string, taken?: Set<string>): string {
+  const base =
+    containerPath
+      .replace(/^\/+|\/+$/g, "")
+      .split("/")
+      .filter((p) => p && !FOLDER_NOISE.has(p))
+      .slice(-2)
+      .join("-")
+      .replace(/[^A-Za-z0-9._-]+/g, "-")
+      .replace(/^[.-]+/, "") || "data";
+  if (!taken) return base;
+  let f = base;
+  for (let n = 2; taken.has(f); n++) f = `${base}-${n}`;
+  taken.add(f);
+  return f;
+}
+
+/** Folder names that hold a media library, by what people call the library. */
+const MEDIA: [RegExp, string][] = [
+  [/^(music|songs)([-_ ]?library)?$/, "music"],
+  [/^(movies?|films?)$/, "movies"],
+  [/^(tv|tv[-_ ]?shows?|shows|series|anime)$/, "TV"],
+  [/^(videos?|recordings)$/, "videos"],
+  [/^(photos?|pictures)$/, "photos"],
+  [/^e?books$/, "books"],
+  [/^audio[-_ ]?books$/, "audiobooks"],
+  [/^podcasts?$/, "podcasts"],
+  [/^(comics|manga)$/, "comics"],
+  [/^(downloads?|torrents)$/, "downloads"],
+  [/^media$/, "media"],
+];
+
+/**
+ * What a container path holds when it's a media library (/music, /data/movies, /tv), else null.
+ * Gluon never puts these in app data on its own: app data is deleted with the app.
+ */
+export function mediaKind(containerPath: string): string | null {
+  const last = containerPath.replace(/\/+$/, "").split("/").pop()?.toLowerCase() ?? "";
+  for (const [re, word] of MEDIA) if (re.test(last)) return word;
+  return null;
+}
+
+/** CPU limit in cores, like compose's cpus: 0.5, 2. */
+export function cpusError(v: string): string | null {
+  const t = v.trim();
+  if (!t) return null;
+  if (!/^\d+(\.\d+)?$/.test(t) || Number(t) <= 0) return "Use a number of cores, like 0.5 or 2.";
+  if (Number(t) > 1024) return "That's more cores than any server has.";
+  return null;
+}
+
+/** Compose durations: 30s, 1m30s, 500ms, 2h. */
+export function durationError(v: string): string | null {
+  const t = v.trim();
+  if (!t) return null;
+  if (!/^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/.test(t)) return "Use a duration like 30s, 2m or 1m30s.";
+  return null;
+}
+
+/** Docker network names. */
+export const NETWORK_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/;
+export function networkNameError(n: string): string | null {
+  if (!n) return "Name the network.";
+  if (!NETWORK_RE.test(n)) return "Use letters, digits, ., _ and - (up to 63).";
+  return null;
+}
+
+/** Label keys: reverse-DNS style, like com.example.role or traefik.enable. */
+export function labelKeyError(k: string): string | null {
+  if (!k) return "Give the label a name.";
+  if (k.length > 255 || !/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(k)) return "Use letters, digits, ., /, _ and -.";
   return null;
 }
 

@@ -4,6 +4,7 @@ import { hash, verify } from "@node-rs/argon2";
 import { all, now, one, run } from "../db";
 import { hmac, id as newId, sha256 } from "../crypto";
 import { AppError, badRequest, conflict, notFound } from "../errors";
+import { passwordPolicy, passwordProblem } from "./policy";
 
 export type Role = "admin" | "member";
 
@@ -55,9 +56,10 @@ const ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2 as 
 
 export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{1,31}$/i;
 
-export function validatePassword(pw: string, _username?: string) {
-  if (pw.length < 1) throw badRequest("Enter a password.", { field: "password" });
-  if (pw.length > 256) throw badRequest("That password is too long.", { field: "password" });
+/** Checked whenever a password is set, against the rules in Settings → Server; existing passwords keep working. */
+export function validatePassword(pw: string, username?: string) {
+  const problem = passwordProblem(pw, username, passwordPolicy());
+  if (problem) throw badRequest(problem, { field: "password" });
 }
 
 /**

@@ -120,6 +120,15 @@ async function appsWithin(p: string): Promise<PlaceApp[]> {
 
 const sortApps = (apps: Iterable<PlaceApp>) => [...apps].sort((a, b) => a.name.localeCompare(b.name));
 
+function folderId(p: string): string | null {
+  try {
+    const st = fs.statSync(hostPath(p));
+    return `${st.dev}:${st.ino}`;
+  } catch {
+    return null;
+  }
+}
+
 function labelFor(p: string) {
   return path.posix.basename(p) || p;
 }
@@ -171,9 +180,14 @@ export async function places(user: User): Promise<Places> {
   const scope = await scopeFor(user);
   const out: Place[] = [];
   const seen = new Set<string>();
+  // The same folder reached twice (a bind mount, a link like /data -> /DATA, a case-insensitive disk) is one place.
+  const seenIds = new Set<string>();
   const add = (pl: Place) => {
     if (seen.has(pl.path)) return;
+    const id = folderId(pl.path);
+    if (id && seenIds.has(id)) return;
     seen.add(pl.path);
+    if (id) seenIds.add(id);
     out.push(pl);
   };
 

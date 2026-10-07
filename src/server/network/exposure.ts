@@ -43,9 +43,15 @@ const KNOWN_PORTS: Record<number, { label: string; login?: LoginProbe["result"];
   9200: { label: "Elasticsearch", db: true },
   11211: { label: "Memcached", db: true },
   27017: { label: "MongoDB database", db: true },
+  5222: { label: "XMPP chat (apps sign in)", login: "login", evidence: "Chat accounts need a password to sign in." },
+  5223: { label: "XMPP chat (apps sign in, direct TLS)", login: "login", evidence: "Chat accounts need a password to sign in." },
+  5269: { label: "XMPP federation (other chat servers)", login: "login", evidence: "Other chat servers have to prove who they are with a certificate." },
+  5280: { label: "XMPP chat server web side (BOSH, WebSocket, uploads)" },
+  5281: { label: "XMPP chat server web side (HTTPS)" },
+  5347: { label: "XMPP components", login: "login", evidence: "Components need the shared secret from the chat server's config." },
 };
 
-const ADMIN_RE = /(homebridge|portainer|casaos|umbrel|cockpit|webmin|proxmox|adminer|phpmyadmin|pgadmin|dozzle|dockge|yacht|nginx-proxy-manager|pi-?hole|adguard|home-?assistant|unifi|toolbox|user-management|syncthing|\b(?:tend|gluon)\b|router|opnsense|pfsense|truenas|unraid)/i;
+const ADMIN_RE = /(homebridge|portainer|casaos|umbrel|cockpit|webmin|proxmox|adminer|phpmyadmin|pgadmin|dozzle|dockge|yacht|nginx-proxy-manager|pi-?hole|adguard|home-?assistant|unifi|toolbox|user-management|syncthing|router|opnsense|pfsense|truenas|unraid)/i;
 const NON_HTTP = new Set([22, 25, 53, 110, 111, 139, 143, 445, 587, 993, 995, 2049, 3306, 5432, 6379, 9200, 11211, 27017]);
 
 type G = typeof globalThis & { __gluonExposure?: { at: number; value: ExposureReport | null; running: Promise<ExposureReport> | null } };
@@ -199,12 +205,13 @@ async function build(force: boolean): Promise<ExposureReport> {
 
   // ---- Internet
   const proxiedNames = new Set(ddns?.config.proxiedDomains ?? []);
-  const entries: { id: string; name: string; type: InternetExposure["type"]; host: string; backend: { host: string; port: number; tls: boolean }; onlyPaths: string[] | null; appHint?: string | null }[] = [
-    { id: FALLBACK_ID, name: cfg.fallback.name, type: "fallback", host: cfg.base_domain, backend: cfg.fallback.backend, onlyPaths: null },
+  const entries: { id: string; name: string; type: InternetExposure["type"]; host: string; backend: { host: string; port: number; tls: boolean }; onlyPaths: string[] | null; chat: boolean }[] = [
+    { id: FALLBACK_ID, name: cfg.fallback.name, type: "fallback", host: cfg.base_domain, backend: cfg.fallback.backend, onlyPaths: null, chat: false },
   ];
   for (const r of cfg.routes) {
     if (r.enabled === false || r.type === "redirect") continue;
-    entries.push({ id: r.id, name: r.name, type: r.type, host: r.type === "subdomain" ? r.host : cfg.base_domain, backend: r.backend, onlyPaths: r.type === "subdomain" && r.only_paths?.length ? r.only_paths : null });
+    const sub = r.type === "subdomain" ? r : null;
+    entries.push({ id: r.id, name: r.name, type: r.type, host: sub ? sub.host : cfg.base_domain, backend: r.backend, onlyPaths: sub?.only_paths?.length ? sub.only_paths : null, chat: !!sub?.xmpp });
   }
   const internet: InternetExposure[] = await Promise.all(
     entries.map((e) =>
@@ -218,10 +225,14 @@ async function build(force: boolean): Promise<ExposureReport> {
         const app: RouteAppRef | null =
           named && appById.has(named.appId) ? named : listenerApp ? { appId: listenerApp.id, name: listenerApp.name, hasLogin: listenerApp.hasLogin } : (named ?? null);
         const probeHost = localBackendHost(e.backend.host);
-        const probe = await loginProbe(probeHost, e.backend.port, { tls: e.backend.tls, maxAgeMs: probeAge }).catch(() => null);
-        const login = loginInfo(app?.hasLogin ?? null, probe);
+        // A chat server's client port speaks XMPP, not HTTP, and its accounts always need a password.
+        const probe = e.chat ? null : await loginProbe(probeHost, e.backend.port, { tls: e.backend.tls, maxAgeMs: probeAge }).catch(() => null);
+        const login = e.chat ? loginInfo(app?.hasLogin ?? null, null, { result: "login", evidence: "Chat accounts need a password to sign in." }) : loginInfo(app?.hasLogin ?? null, probe);
         // Judge by what the app is, not its image: platforms like Umbrel wrap ordinary apps in their own images.
-        const adminUi = ADMIN_RE.test(`${app?.appId ?? ""} ${app?.name ?? ""} ${e.name}`) || (!!probe?.admin && !/umbrel|casaos/i.test(probe.fingerprint ?? ""));
+        // Gluon itself is the admin tool for this whole server; it's recognised by its own flag, since
+        // apps from Gluon's store are named "Gluon <something>" too.
+        const self = !!(app && appById.get(app.appId)?.self);
+        const adminUi = !e.chat && (self || ADMIN_RE.test(`${app?.appId ?? ""} ${app?.name ?? ""} ${e.name}`) || (!!probe?.admin && !/umbrel|casaos/i.test(probe.fingerprint ?? "")));
         const listenerOwner = listener?.owner;
         return {
           routeId: e.id,

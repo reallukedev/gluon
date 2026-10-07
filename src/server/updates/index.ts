@@ -42,6 +42,7 @@ type G = typeof globalThis & {
   __gluonUpdateCheck?: Check;
   __gluonUpdateChecking?: { channel: UpdateChannel; promise: Promise<Check> };
   __gluonUpdateWatch?: ReturnType<typeof setInterval> | null;
+  __gluonUpdateStarting?: boolean;
 };
 const g = globalThis as G;
 
@@ -296,6 +297,18 @@ export async function startUpdate(opts: {
   allowOlder?: boolean;
   where?: { ip: string; zone: string };
 }): Promise<UpdateRun> {
+  // Claimed before any await: the running row is only written after slow GitHub calls, and a
+  // manual Apply and the automatic check must not both get through in that gap.
+  if (g.__gluonUpdateStarting || one("SELECT id FROM self_updates WHERE outcome = 'running'")) throw new AppError("busy", "An update is already running.", 409);
+  g.__gluonUpdateStarting = true;
+  try {
+    return await startUpdateClaimed(opts);
+  } finally {
+    g.__gluonUpdateStarting = false;
+  }
+}
+
+async function startUpdateClaimed(opts: Parameters<typeof startUpdate>[0]): Promise<UpdateRun> {
   await watch();
   if (one("SELECT id FROM self_updates WHERE outcome = 'running'")) throw new AppError("busy", "An update is already running.", 409);
   const s = await status(true);
@@ -342,7 +355,9 @@ export async function startUpdate(opts: {
       };
       if (opts.method === "github") {
         const t = target!;
-        args = ["github", REPO, t.ref, t.version, t.commit, ...modeArgs()];
+        // Download the exact commit that was checked, not whatever the tag points at by now.
+        const pinned = /^[0-9a-f]{40}$/.test(t.commit) ? t.commit : t.ref;
+        args = ["github", REPO, pinned, t.version, t.commit, ...modeArgs()];
       } else {
         args = ["pull", ...modeArgs()];
       }

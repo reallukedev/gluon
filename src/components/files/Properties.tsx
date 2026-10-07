@@ -63,7 +63,7 @@ export function Properties({ path, focus, onClose, onFixOwnership }: { path: str
               ["Owner", <span key="o" className="mono">{st.owner ?? st.uid}:{st.group ?? st.gid} <span className="muted">({st.uid}:{st.gid})</span></span>],
               ["Permissions", <span key="p" className="mono">{st.mode} <span className="muted">{st.perms.toString(8).padStart(4, "0")}</span></span>],
               ...(st.link
-                ? ([["Link to", <span key="l" className="mono">{st.link.target}{st.link.broken ? " — broken, the target is missing" : st.link.outside ? " — outside your shared folders" : ""}</span>]] as [React.ReactNode, React.ReactNode][])
+                ? ([["Link to", <span key="l" className="mono">{st.link.target}{st.link.broken ? " (broken: the target is missing)" : st.link.outside ? " (outside your shared folders)" : ""}</span>]] as [React.ReactNode, React.ReactNode][])
                 : []),
               ...(st.real !== st.path ? ([["Real location", <span key="r" className="mono">{st.real}</span>]] as [React.ReactNode, React.ReactNode][]) : []),
               ...(st.fs
@@ -74,7 +74,7 @@ export function Properties({ path, focus, onClose, onFixOwnership }: { path: str
                     </span>,
                   ]] as [React.ReactNode, React.ReactNode][])
                 : []),
-              ["Your access", st.protectedReason ? "View only — " + st.protectedReason : st.access === "write" ? "Can view and change" : "Can view"],
+              ["Your access", st.protectedReason ? "View only. " + st.protectedReason : st.access === "write" ? "Can view and change" : "Can view"],
             ]}
           />
           {viewer.role === "admin" && dir && (

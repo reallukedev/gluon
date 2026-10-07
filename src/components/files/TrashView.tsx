@@ -179,7 +179,7 @@ export function TrashView({ data, error, isAdmin, refresh, onJob, onNavigate }: 
               {i.deletedByName && isAdmin && ` · ${i.deletedByName}`}
             </span>
             <span role="cell" className={`${s.sizeCol} num`}>
-              {i.size !== null ? fmt.bytes(i.size) : "—"}
+              {i.size !== null ? fmt.bytes(i.size) : ""}
             </span>
             <span role="cell" className={s.rowActions}>
               <Menu

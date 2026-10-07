@@ -3,7 +3,7 @@ import { notFound } from "@/server/errors";
 import { getInventoryState, findDisk } from "@/server/storage/inventory";
 import { smartDetail, smartFor } from "@/server/storage/smart";
 
-/** GET /api/storage/disks/:disk — one disk (by id, name or serial) with its full SMART table and history. */
+/** GET /api/storage/disks/:disk: one disk (by id, name or serial) with its full SMART table and history. */
 export const GET = route({ auth: "admin" }, async ({ params }) => {
   const key = decodeURIComponent(String(params.disk ?? ""));
   const s = await getInventoryState();

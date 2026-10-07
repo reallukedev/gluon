@@ -313,7 +313,7 @@
   .pretty { text-wrap: pretty; }
   /*
    * Content arriving after a skeleton (or any late client render): a 200ms fade so it does not pop.
-   * Opacity only — no travel, no layout shift. Size the skeleton like the content it stands in for.
+   * Opacity only: no travel, no layout shift. Size the skeleton like the content it stands in for.
    */
   .appear {
     transition: opacity var(--dur-base) var(--ease-out);

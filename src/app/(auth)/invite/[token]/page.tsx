@@ -7,6 +7,7 @@ import { clientInfo } from "@/server/net-zone";
 import { getSetting } from "@/server/settings";
 import { InviteForm } from "./InviteForm";
 import s from "../../auth.module.css";
+import { mfaRequired } from "@/server/auth/policy";
 
 export const metadata = { title: "Join" };
 
@@ -32,6 +33,6 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     );
   }
   const { zone } = clientInfo(await headers());
-  const mustEnrol = invite.role === "admin" && zone === "away" && getSetting("requireMfaAway");
+  const mustEnrol = mfaRequired(invite.role, zone);
   return <InviteForm token={token} displayName={invite.display_name ?? ""} role={invite.role} serverName={serverName} mustEnrol={mustEnrol} />;
 }

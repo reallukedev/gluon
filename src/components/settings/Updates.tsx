@@ -588,9 +588,10 @@ function Channel({ data, onSaved, setChecking }: { data: UpdatesStatus; onSaved:
 
 // ---------------------------------------------------------------- automatic updates
 
-const hourLabel = (h: number) => new Date(2000, 0, 1, h).toLocaleTimeString([], { hour: "numeric" });
-
 function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: UpdatesStatus) => void }) {
+  const fmt = useFormat();
+  // Through the person's clock setting (12 or 24 hour), like every other time in Gluon.
+  const hourLabel = (h: number) => fmt.time(new Date(2000, 0, 1, h));
   const [busy, setBusy] = React.useState(false);
   const methods = data.options.filter((o) => o.method === "github" || o.reason !== "Umbrel's app store doesn't list Gluon.").map((o) => o.method);
 

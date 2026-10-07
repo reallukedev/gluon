@@ -6,7 +6,7 @@ import { dockerUsage } from "@/server/storage/cleanup";
 const pathQuery = z.string().min(1).max(4096).startsWith("/");
 
 /**
- * GET /api/storage/usage?path=/mnt/hdd2 — the last finished scan of that folder (result: UsageResult)
+ * GET /api/storage/usage?path=/mnt/hdd2: the last finished scan of that folder (result: UsageResult)
  * and any scan in progress. Without ?path: running scans and Docker's own usage (images, containers,
  * volumes, build cache).
  */
@@ -17,7 +17,7 @@ export const GET = route({ auth: "admin", query: z.object({ path: pathQuery.opti
 });
 
 /**
- * POST /api/storage/usage { path } — start (or join) a scan; returns the job. Follow it with
+ * POST /api/storage/usage { path }: start (or join) a scan; returns the job. Follow it with
  * GET /api/storage/operations/:id/stream or poll GET /api/storage/operations/:id.
  */
 export const POST = route({ auth: "admin", body: z.object({ path: pathQuery }) }, async ({ body, user }) => ({ job: await startUsage(user, body.path) }));

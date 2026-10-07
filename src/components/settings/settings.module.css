@@ -151,3 +151,5 @@
 .platformState { min-width: 0; font-size: var(--text-xs); }
 .platformState :global(span) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 640px) { .plateExtra { display: none !important; } .plateBody { gap: 10px; } .plateTitle { font-size: var(--text-xl); } }
+.noticeRow { padding: 0 0 14px; }
+.charsInput { width: 64px; }

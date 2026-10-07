@@ -43,7 +43,7 @@ async function openableApps(userId: string, role: Role): Promise<AppSummary[]> {
 /**
  * Pinned apps are one `app` card each. Two older shapes become cards here:
  * - the single Apps block (`apps`) of personal layouts from before, showing the person's pinned apps (prefs.homeApps),
- *   the apps it was set to, or all of them — replaced once, in place, and saved with the next change;
+ *   the apps it was set to, or all of them: replaced once, in place, and saved with the next change;
  * - the "all your apps" placeholder in default layouts, expanded for whoever is reading it.
  * Defaults also drop cards for apps this person can't open (an admin's layout made the household default).
  */
