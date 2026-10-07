@@ -47,6 +47,13 @@ export interface SubdomainRoute extends Base {
   extra_paths?: ExtraPaths[];
   /** An XMPP chat server: `host` is its domain, `backend` its client (c2s) port. */
   xmpp?: XmppSettings;
+  /** The whole host redirects here (keeping the path); `backend` is then unused. */
+  redirect_to?: string;
+}
+
+/** A short link on the base domain, or a whole subdomain that redirects. */
+export function isRedirect(r: Route | null | undefined): r is RedirectRoute | (SubdomainRoute & { redirect_to: string }) {
+  return !!r && (r.type === "redirect" || (r.type === "subdomain" && !!r.redirect_to));
 }
 export interface XmppSettings {
   s2s_port: number | null;
@@ -179,7 +186,7 @@ export const coveredByWildcard = (host: string, base: string) => host.endsWith(`
 export function appLinks(routes: Route[]): [number, string][] {
   const links = new Map<number, string>();
   for (const r of routes) {
-    if (r.type !== "subdomain") continue;
+    if (r.type !== "subdomain" || r.redirect_to) continue;
     if (!r.only_paths?.length && r.backend.host === THIS_SERVER && !links.has(r.backend.port)) {
       links.set(r.backend.port, `https://${r.host}`);
     }
@@ -237,6 +244,10 @@ export function renderCaddyfile(cfg: RoutesConfig): string {
   for (const r of routes.filter((r): r is SubdomainRoute => r.type === "subdomain").sort((a, b) => a.host.localeCompare(b.host))) {
     const dns = coveredByWildcard(r.host, base) ? "A + AAAA via the wildcard record" : "needs its own DNS record";
     out.push("", `# ${commentSafe(r.name)}. DNS-only (grey cloud), ${dns}.`, ...noteLines(r, ""));
+    if (r.redirect_to) {
+      out.push(`# Everything here redirects to ${r.redirect_to}, keeping the path.`, `${r.host} {`, "\timport common", `\tredir ${r.redirect_to}{uri} 302`, "}");
+      continue;
+    }
     if (r.xmpp) {
       out.push(...xmppSiteLines(r, r.xmpp, tileMap));
       continue;
@@ -418,7 +429,14 @@ export function cleanConfig(raw: { routes: unknown[]; fallback?: RoutesConfig["f
         cleanExtras.push({ paths: xp, backend: cleanBackend(x.backend as Partial<Backend>, rid), ...(xn ? { note: xn } : {}) });
       }
       if (cleanExtras.length) out.extra_paths = cleanExtras;
-      if (r.xmpp && typeof r.xmpp === "object") {
+      if (typeof r.redirect_to === "string" && r.redirect_to.trim()) {
+        const target = r.redirect_to.trim().replace(/\/+$/, "");
+        if (!URL_RE.test(target)) invalid("Redirect target must be a plain http(s):// address.", rid, "redirect_to");
+        if (new URL(target).hostname.toLowerCase() === host) invalid("A domain can't redirect to itself.", rid, "redirect_to");
+        out.redirect_to = target;
+        delete out.only_paths;
+        delete out.extra_paths;
+      } else if (r.xmpp && typeof r.xmpp === "object") {
         out.xmpp = cleanXmpp(r.xmpp as Record<string, unknown>, out.backend as Backend, rid);
         // A chat server publishes its whole domain; path limits don't apply.
         delete out.only_paths;

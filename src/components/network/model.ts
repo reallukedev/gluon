@@ -1,7 +1,7 @@
 import type { AppSummary } from "@/server/docker/apps";
 import type { LineState } from "@/lib/types";
 import type { DdnsStatus, ExposureReport, InternetExposure, NetworkStatus, RouteStatus, RouteT, RoutesResponse } from "@/lib/network-types";
-import { FALLBACK_ID, bare } from "./shared";
+import { FALLBACK_ID, bare, isRedirectRoute, redirectTarget } from "./shared";
 
 /**
  * The Network page's model: one entry per app on the internet, with every address that leads to it
@@ -149,7 +149,7 @@ export function buildEntries(data: RoutesResponse, status: NetworkStatus | undef
   // 1. Group the routes that serve an app.
   const groups = new Map<string, RouteT[]>();
   for (const r of cfg.routes) {
-    if (r.type === "redirect") continue;
+    if (isRedirectRoute(r)) continue;
     const key = data.apps[r.id]?.appId ?? r.app ?? `route:${r.id}`;
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
@@ -159,8 +159,9 @@ export function buildEntries(data: RoutesResponse, status: NetworkStatus | undef
   const redirectsFor = new Map<string, RouteT[]>();
   const loose: RouteT[] = [];
   for (const r of cfg.routes) {
-    if (r.type !== "redirect") continue;
-    const key = hostToKey.get(hostOf(r.target)) ?? (r.app && groups.has(r.app) ? r.app : undefined);
+    const target = redirectTarget(r);
+    if (!target) continue;
+    const key = hostToKey.get(hostOf(target)) ?? (r.app && groups.has(r.app) ? r.app : undefined);
     if (key) redirectsFor.set(key, [...(redirectsFor.get(key) ?? []), r]);
     else loose.push(r);
   }
@@ -174,7 +175,7 @@ export function buildEntries(data: RoutesResponse, status: NetworkStatus | undef
     let worstH: ReturnType<typeof healthOf> = null;
     for (const a of all) {
       if (!a.enabled) continue;
-      const h = healthOf(a.status, a.route?.type === "redirect");
+      const h = healthOf(a.status, isRedirectRoute(a.route));
       if (!h) continue;
       if (!worstH || RANK[h.state] > RANK[worstH.state]) {
         worst = a;

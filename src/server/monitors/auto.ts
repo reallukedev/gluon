@@ -1,6 +1,6 @@
 import "server-only";
 import { all, now } from "../db";
-import { tryReadConfig, routeUrl } from "../caddy/routes";
+import { tryReadConfig, routeUrl, isRedirect } from "../caddy/routes";
 import { listApps, type AppSummary } from "../docker/apps";
 import { monitorConfigSchema, type MonitorConfig } from "@/lib/alerts-types";
 import { deleteMonitorRow, insertMonitor, listMonitorRows, updateMonitorRow } from "./store";
@@ -80,7 +80,7 @@ export async function syncAutoMonitors(): Promise<{ created: number; updated: nu
 
     if (routesCfg) {
       for (const r of routesCfg.routes ?? []) {
-        if (r.type === "redirect" || r.enabled === false) continue;
+        if (isRedirect(r) || r.enabled === false) continue;
         const app = (r.app ? apps.find((a) => a.id === r.app) : null) ?? apps.find((a) => a.routes.some((x) => x.id === r.id)) ?? null;
         let url = routeUrl(routesCfg, r);
         if (r.type === "subdomain" && r.only_paths?.length) {

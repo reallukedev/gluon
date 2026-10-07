@@ -26,6 +26,8 @@ export interface SubdomainRouteT extends RouteBase {
   extra_paths?: { paths: string[]; backend: { host: string; port: number; tls: boolean }; note?: string }[];
   /** Set when this address is an XMPP chat server; `host` is its domain and `backend` its client port. */
   xmpp?: XmppSettingsT;
+  /** The whole host redirects here, keeping the path; `backend` is then unused. */
+  redirect_to?: string;
 }
 
 export interface XmppSettingsT {

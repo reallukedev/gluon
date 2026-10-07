@@ -15,7 +15,7 @@ import { toast } from "@/components/ui/Toast";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { LoginCell } from "./AppList";
 import { healthOf, type Address, type AppEntry } from "./model";
-import { bare, copyText, THIS_SERVER, XMPP_CLIENT_PORTS } from "./shared";
+import { bare, copyText, isRedirectRoute, THIS_SERVER, XMPP_CLIENT_PORTS } from "./shared";
 import s from "./network.module.css";
 import c from "./chat.module.css";
 
@@ -139,7 +139,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
   const isChat = !!route?.xmpp;
   // A chat server published like a web app: Caddy sends browsers to a port that only speaks XMPP.
   const chatAsWeb = !!route && !route.xmpp && route.backend.host === THIS_SERVER && XMPP_CLIENT_PORTS.has(route.backend.port);
-  const links = isChat ? chatChain(main.status) : chain(main.status, main.route?.type === "redirect");
+  const links = isChat ? chatChain(main.status) : chain(main.status, isRedirectRoute(main.route));
   const [syncing, setSyncing] = React.useState(false);
   async function checkCertificate() {
     setSyncing(true);
@@ -234,7 +234,8 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
           <h3 className={s.dSub}>Addresses</h3>
           <ul className={s.addrs} role="list">
             {addresses.map((a) => {
-              const h = healthOf(a.status, a.route?.type === "redirect");
+              const h = healthOf(a.status, isRedirectRoute(a.route));
+              const sendsTo = a.route?.type === "subdomain" ? a.route.redirect_to : undefined;
               return (
                 <li key={a.id} className={s.addr} data-off={a.enabled ? undefined : ""}>
                   <span className={s.addrMain}>
@@ -242,7 +243,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
                       {a.role === "fallback" ? baseDomain : bare(a.url)}
                     </a>
                     <span className={s.cellSub}>
-                      {ROLE[a.role]} · {a.lane === "direct" ? "direct" : "through Cloudflare"}
+                      {sendsTo ? `Redirects to ${bare(sendsTo)}` : ROLE[a.role]} · {a.lane === "direct" ? "direct" : "through Cloudflare"}
                     </span>
                   </span>
                   <span className={s.addrState} title={h?.sentence}>

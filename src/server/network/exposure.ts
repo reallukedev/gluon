@@ -1,5 +1,5 @@
 import "server-only";
-import { tryReadConfig } from "../caddy/routes";
+import { tryReadConfig, isRedirect } from "../caddy/routes";
 import { listApps, type AppSummary } from "../docker/apps";
 import { containerIndex, ownerOfPid, isLoopback, stripMapped } from "../diagnostics/attribution";
 import { addressOwners } from "../diagnostics/interfaces";
@@ -141,7 +141,7 @@ async function build(force: boolean): Promise<ExposureReport> {
 
   const localBackends = (r: { backend: { host: string; port: number } }) => isLocalBackend(r.backend.host);
   const routesByPort = new Map<number, string[]>();
-  const pubRoutes = [...cfg.routes.filter((r) => r.enabled !== false && r.type !== "redirect"), { id: FALLBACK_ID, backend: cfg.fallback.backend }] as { id: string; backend: { host: string; port: number } }[];
+  const pubRoutes = [...cfg.routes.filter((r) => r.enabled !== false && !isRedirect(r)), { id: FALLBACK_ID, backend: cfg.fallback.backend }] as { id: string; backend: { host: string; port: number } }[];
   for (const r of pubRoutes) if (localBackends(r)) routesByPort.set(r.backend.port, [...(routesByPort.get(r.backend.port) ?? []), r.id]);
 
   const tcpListening = new Map<number, Group>();
@@ -209,7 +209,7 @@ async function build(force: boolean): Promise<ExposureReport> {
     { id: FALLBACK_ID, name: cfg.fallback.name, type: "fallback", host: cfg.base_domain, backend: cfg.fallback.backend, onlyPaths: null, chat: false },
   ];
   for (const r of cfg.routes) {
-    if (r.enabled === false || r.type === "redirect") continue;
+    if (r.enabled === false || isRedirect(r)) continue;
     const sub = r.type === "subdomain" ? r : null;
     entries.push({ id: r.id, name: r.name, type: r.type, host: sub ? sub.host : cfg.base_domain, backend: r.backend, onlyPaths: sub?.only_paths?.length ? sub.only_paths : null, chat: !!sub?.xmpp });
   }

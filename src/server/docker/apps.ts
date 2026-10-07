@@ -8,7 +8,7 @@ import { docker } from "./client";
 import { hostPath } from "../host/paths";
 import { host } from "../host/exec";
 import { all, now, one, run } from "../db";
-import { tryReadConfig, routeUrl, THIS_SERVER, type Route } from "../caddy/routes";
+import { tryReadConfig, routeUrl, THIS_SERVER, type Route, isRedirect } from "../caddy/routes";
 import type { LineState } from "@/lib/types";
 import { readMarker } from "../apps/marker";
 
@@ -579,7 +579,7 @@ async function buildApps(): Promise<AppSummary[]> {
   // stopped copy doesn't claim the address its replacement now serves.
   if (routesCfg) {
     for (const r of routesCfg.routes) {
-      if (r.type === "redirect") continue;
+      if (isRedirect(r)) continue;
       const b = r.backend;
       const port = b.host === THIS_SERVER ? b.port : null;
       const matches = apps.filter((a) => (r.app && r.app === a.id) || (port !== null && served.get(a.id)?.ports.has(port)));

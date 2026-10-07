@@ -35,6 +35,12 @@ export function saveRoutes(rev: string, routes: RouteT[], fallback?: RoutesConfi
   return api.put<RoutesSaveResponse>("/api/network/routes", { rev, routes, ...(fallback ? { fallback } : {}) });
 }
 
+/** A short link on the base domain, or a whole subdomain that redirects. */
+export const isRedirectRoute = (r: RouteT | null | undefined): boolean => !!r && (r.type === "redirect" || (r.type === "subdomain" && !!r.redirect_to));
+
+/** Where a redirect sends people, or null for anything else. */
+export const redirectTarget = (r: RouteT | null | undefined): string | null => (!r ? null : r.type === "redirect" ? r.target : r.type === "subdomain" ? (r.redirect_to ?? null) : null);
+
 export const bare = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 export function slug(s: string): string {

@@ -1,7 +1,7 @@
 import "server-only";
 import { listApps, type AppSummary } from "../docker/apps";
 import { one } from "../db";
-import { routeUrl, coveredByWildcard, THIS_SERVER, type Route, type RoutesConfig } from "../caddy/routes";
+import { routeUrl, coveredByWildcard, THIS_SERVER, type Route, type RoutesConfig, isRedirect } from "../caddy/routes";
 import { storedProbe, loginProbe } from "./login-probe";
 import { localBackendHost, isLocalBackend } from "./probes";
 import type { RouteAppRef, RouteWarning, RoutesResponse } from "@/lib/network-types";
@@ -39,7 +39,7 @@ export async function routeApps(cfg: RoutesConfig, apps?: AppSummary[]): Promise
     return running(named) ?? running(viaPort) ?? named ?? viaPort;
   };
   for (const r of cfg.routes) {
-    if (r.type === "redirect") continue;
+    if (isRedirect(r)) continue;
     const a = pick(r.app, r.backend) || list.find((x) => x.routes.some((rr) => rr.id === r.id));
     if (a) out[r.id] = ref(a);
     else if (r.app) {
@@ -97,7 +97,7 @@ export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | nul
   const unchecked = next.routes.filter(
     (r): r is Exclude<Route, { type: "redirect" }> =>
       r.enabled !== false &&
-      r.type !== "redirect" &&
+      !isRedirect(r) &&
       !(r.type === "subdomain" && r.xmpp) &&
       isLocalBackend(r.backend.host) &&
       (apps[r.id]?.hasLogin ?? "unknown") === "unknown" &&
@@ -109,11 +109,11 @@ export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | nul
       new Promise((res) => setTimeout(res, 6000)),
     ]);
   }
-  const wasPublic = new Set((prev?.routes ?? []).filter((r) => r.enabled !== false && r.type !== "redirect").flatMap((r) => [r.id, publicKey(r)]));
+  const wasPublic = new Set((prev?.routes ?? []).filter((r) => r.enabled !== false && !isRedirect(r)).flatMap((r) => [r.id, publicKey(r)]));
   const out: RouteWarning[] = [];
   const url = routeUrls(next);
   for (const r of next.routes) {
-    if (r.enabled === false || r.type === "redirect") continue;
+    if (r.enabled === false || isRedirect(r)) continue;
     if (r.type === "subdomain" && r.only_paths?.length) continue;
     // Chat accounts always need a password; the client port doesn't speak HTTP to probe anyway.
     if (r.type === "subdomain" && r.xmpp) continue;

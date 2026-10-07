@@ -55,3 +55,25 @@ describe("chat server addresses", () => {
     expect(() => cleanConfig({ routes: [chat(xmpp)] }, base)).toThrow(expect.objectContaining({ details: expect.objectContaining({ field }) }));
   });
 });
+
+describe("a domain that redirects", () => {
+  const route = (extra: Record<string, unknown> = {}) => ({ id: "old", type: "subdomain", name: "Old Gluon", enabled: true, host: "gluon.example.test", backend: { host: "host.docker.internal", port: 8130, tls: false }, redirect_to: "https://example.test/", ...extra });
+
+  test("sends every path to the new address and never proxies to its old app", () => {
+    const cfg = cleanConfig({ routes: [route()] }, base);
+    expect(cfg.routes[0]).toMatchObject({ redirect_to: "https://example.test" });
+    const site = block(renderCaddyfile(cfg), "gluon.example.test");
+    expect(site).toContain("redir https://example.test{uri} 302");
+    expect(site).not.toContain("reverse_proxy");
+    // Its old port isn't offered as an app tile link any more.
+    expect(renderCaddyfile(cfg)).not.toContain('[8130, "https://gluon.example.test"]');
+  });
+
+  test.each([
+    ["the target isn't an address", { redirect_to: "example.test" }],
+    ["it points at itself", { redirect_to: "https://gluon.example.test/x" }],
+  ])("is refused when %s", (_, extra) => {
+    expect(() => cleanConfig({ routes: [route(extra)] }, base)).toThrow(expect.objectContaining({ details: expect.objectContaining({ field: "redirect_to" }) }));
+  });
+});
+

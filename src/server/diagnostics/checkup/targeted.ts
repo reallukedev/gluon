@@ -1,5 +1,5 @@
 import "server-only";
-import { tryReadConfig, caddyRunning, routeUrl } from "../../caddy/routes";
+import { tryReadConfig, caddyRunning, routeUrl, isRedirect } from "../../caddy/routes";
 import { FALLBACK_ID } from "../../network/routes-meta";
 import { probeTls, probeHttpViaCaddy } from "../../network/probes";
 import { ddnsStatus } from "../../network/ddns";
@@ -62,7 +62,7 @@ async function findApp(id: string): Promise<AppSummary> {
 async function appPlan(appId: string): Promise<Plan> {
   const app = await findApp(appId);
   const cfg = tryReadConfig();
-  const route = cfg?.routes.find((r) => r.enabled !== false && r.type === "subdomain" && app.routes.some((x) => x.id === r.id)) ?? cfg?.routes.find((r) => r.enabled !== false && r.type !== "redirect" && app.routes.some((x) => x.id === r.id));
+  const route = cfg?.routes.find((r) => r.enabled !== false && r.type === "subdomain" && !r.redirect_to && app.routes.some((x) => x.id === r.id)) ?? cfg?.routes.find((r) => r.enabled !== false && r.type !== "redirect" && app.routes.some((x) => x.id === r.id));
   const publicHost = route && cfg ? (route.type === "subdomain" ? route.host : cfg.base_domain) : null;
   const specs: CheckSpec[] = [];
   const routeStatus = async (ctx: CheckCtx) => (await netStatus(ctx)).routes.find((r) => r.id === route!.id);
@@ -267,7 +267,7 @@ async function addressPlan(routeId: string): Promise<Plan> {
   const hostName = r?.type === "subdomain" ? r.host : cfg.base_domain;
   const url = r ? routeUrl(cfg, r) : `https://${cfg.base_domain}/`;
   const where = displayUrl(url);
-  const backend = r ? (r.type === "redirect" ? null : r.backend) : cfg.fallback.backend;
+  const backend = r ? (isRedirect(r) ? null : r.backend) : cfg.fallback.backend;
   const status = async (ctx: CheckCtx) => (await netStatus(ctx)).routes.find((x) => x.id === routeId);
   const certDays = getSetting("thresholds").certDays;
   const specs: CheckSpec[] = [

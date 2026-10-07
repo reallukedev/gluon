@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { tryReadConfig, caddyRunning, XMPP_C2S_PORT, XMPP_S2S_PORT, type RoutesConfig, type SubdomainRoute } from "../caddy/routes";
+import { tryReadConfig, caddyRunning, isRedirect, XMPP_C2S_PORT, XMPP_S2S_PORT, type RoutesConfig, type SubdomainRoute } from "../caddy/routes";
 import { AppError } from "../errors";
 import { getSetting } from "../settings";
 import { publish } from "../events";
@@ -189,7 +189,7 @@ async function build(): Promise<NetworkStatus> {
         const enabled = r ? r.enabled !== false : true;
         const hostName = r?.type === "subdomain" ? r.host : base;
         const type = r ? r.type : "fallback";
-        const backendCfg = r ? (r.type === "redirect" ? null : r.backend) : cfg.fallback.backend;
+        const backendCfg = r ? (isRedirect(r) ? null : r.backend) : cfg.fallback.backend;
         const common = { id, name: r?.name ?? cfg.fallback.name, type, url: urls[id]!, host: hostName, enabled, app: apps[id] ?? null } as const;
         if (!enabled) {
           const partial = { ...common, dns: null, tls: null, http: null, backend: null, xmpp: null };
@@ -200,14 +200,14 @@ async function build(): Promise<NetworkStatus> {
           tlsFor(hostName),
           probeHttpViaCaddy(hostName, probePath(r)),
           backendCfg ? probeBackend(backendCfg.host, backendCfg.port) : Promise.resolve(null),
-          r?.type === "subdomain" && r.xmpp ? chatStatus(r as SubdomainRoute & { xmpp: NonNullable<SubdomainRoute["xmpp"]> }, certDays) : Promise.resolve(null),
+          r?.type === "subdomain" && r.xmpp && !r.redirect_to ? chatStatus(r as SubdomainRoute & { xmpp: NonNullable<SubdomainRoute["xmpp"]> }, certDays) : Promise.resolve(null),
         ]);
         if (tls.status === "pending") {
           seenPending.add(hostName);
           if (!s.pendingSince.has(hostName)) s.pendingSince.set(hostName, Date.now());
         }
         const partial = { ...common, dns, tls, http, backend, xmpp };
-        return { ...partial, ...evaluate(partial, r?.type === "redirect", s.pendingSince.get(hostName) ?? null) };
+        return { ...partial, ...evaluate(partial, isRedirect(r), s.pendingSince.get(hostName) ?? null) };
       }),
     ),
   );

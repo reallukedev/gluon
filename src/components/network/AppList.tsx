@@ -8,7 +8,7 @@ import { StateLine } from "@/components/ui/StateLine";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { AppIcon } from "@/components/apps/AppIcon";
 import type { AppEntry, LoginWords } from "./model";
-import { bare } from "./shared";
+import { bare, redirectTarget } from "./shared";
 import s from "./network.module.css";
 
 /**
@@ -150,12 +150,12 @@ function Row({
               <a className={s.url} href={url} target="_blank" rel="noopener noreferrer" title={url}>
                 {e.isFallback ? baseDomain : bare(url)}
               </a>
-              <span className={s.lane}>{e.isRedirect ? "short link" : main.lane === "direct" ? "direct" : "through Cloudflare"}</span>
+              <span className={s.lane}>{e.isRedirect ? (main.route?.type === "subdomain" ? "redirect" : "short link") : main.lane === "direct" ? "direct" : "through Cloudflare"}</span>
             </span>
             {e.isFallback && <span className={s.alsoLine}>Answers anything on {baseDomain} no other address claims</span>}
-            {e.isRedirect && main.route?.type === "redirect" && (
+            {e.isRedirect && redirectTarget(main.route) && (
               <span className={s.alsoLine}>
-                <ArrowRight className={s.alsoArrow} aria-hidden /> <span className="mono">{bare(main.route.target)}</span>
+                <ArrowRight className={s.alsoArrow} aria-hidden /> <span className="mono">{bare(redirectTarget(main.route)!)}</span>
               </span>
             )}
             {also.length > 0 && (

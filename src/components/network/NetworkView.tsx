@@ -20,6 +20,7 @@ import { AppDetails } from "./AppDetails";
 import { HomeReach } from "./HomeReach";
 import { PublishFlow, type FlowTarget } from "./PublishFlow";
 import { ChatServerFlow, type ChatTarget } from "./ChatServerFlow";
+import { HostRedirectFlow, type HostRedirectTarget } from "./HostRedirectFlow";
 import { HistoryDialog } from "./HistoryDialog";
 import { CaddyfileDialog } from "./CaddyfileDialog";
 import { driftSentence } from "./DriftNotice";
@@ -52,6 +53,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [flow, setFlow] = React.useState<FlowTarget | null>(landing?.kind === "publish" ? { mode: "new", appId: landing.appId } : null);
   const [chat, setChat] = React.useState<ChatTarget | null>(null);
+  const [hostRedirect, setHostRedirect] = React.useState<HostRedirectTarget | null>(null);
   const [history, setHistory] = React.useState(false);
   const [caddyfile, setCaddyfile] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
@@ -263,7 +265,8 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
   const editRoute = (id: string) => {
     const r = data?.config.routes.find((x) => x.id === id);
     setDetailsOpen(false);
-    if (r?.type === "subdomain" && r.xmpp) setChat({ mode: "edit", id });
+    if (r?.type === "subdomain" && r.redirect_to) setHostRedirect({ mode: "edit", id });
+    else if (r?.type === "subdomain" && r.xmpp) setChat({ mode: "edit", id });
     else setFlow(r?.type === "redirect" ? { mode: "redirect", id } : { mode: "edit", id });
   };
 
@@ -345,6 +348,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
                 { label: "Check everything now", icon: <Refresh />, onSelect: () => void recheck(), disabled: checking },
                 { label: "Add a short link", description: `A path on ${data?.config.base_domain ?? "the main domain"} that redirects`, icon: <LinkIcon />, onSelect: () => setFlow({ mode: "redirect" }), disabled: !data },
                 { label: "Add a chat server", description: "An XMPP server people sign in to from chat apps", icon: <ChatBubble />, onSelect: () => setChat({ mode: "new" }), disabled: !data },
+                { label: "Redirect a domain", description: "Send a whole domain to another address", icon: <LinkIcon />, onSelect: () => setHostRedirect({ mode: "new" }), disabled: !data },
                 "separator",
                 { label: "History", description: "Earlier versions, restore one", icon: <ClockRotateRight />, onSelect: () => setHistory(true), disabled: !data },
                 { label: "Caddyfile", description: "The web server's settings file", icon: <Code />, onSelect: () => setCaddyfile(true), disabled: !data },
@@ -467,6 +471,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
           }}
         />
       )}
+      {data && hostRedirect && <HostRedirectFlow key={JSON.stringify(hostRedirect)} target={hostRedirect} data={data} commit={commit} onClose={() => setHostRedirect(null)} onReload={() => void routes.mutate()} />}
       {data && chat && <ChatServerFlow key={JSON.stringify(chat)} target={chat} data={data} status={status.data} commit={commit} onClose={() => setChat(null)} onReload={() => void routes.mutate()} />}
       {data && (
         <HistoryDialog
