@@ -38,6 +38,10 @@ ENV GLUON_VERSION=$GLUON_VERSION GLUON_COMMIT=$GLUON_COMMIT GLUON_BUILD=$GLUON_B
 # Tells net-zone that every request carries the peer stamp; a request without one is treated as
 # "away" (fails closed if server.js is ever started without the wrapper).
 ENV GLUON_PEER_HEADER=1
+# Coolify shares the Umbrel server and its daily cleanup runs docker rmi on every image no container
+# uses, unless it carries this label. Umbrel's app only builds a thin image FROM this one, so without
+# the label the base is deleted and the next app start can't rebuild.
+LABEL coolify.managed=true
 EXPOSE 8130
 # pid: host means tini is not PID 1, so it registers as a subreaper to still collect zombies.
 ENTRYPOINT ["/usr/bin/tini", "-s", "--"]

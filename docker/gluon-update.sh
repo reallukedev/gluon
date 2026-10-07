@@ -51,7 +51,8 @@ if [ "$action" = github ]; then
   [ -f "$WORK/docker/Dockerfile" ] || fail "That version of Gluon has no docker/Dockerfile to build."
 
   stage build "Building Gluon $version (this takes a few minutes)…"
-  docker build --progress=plain -t "gluon:$version" \
+  # Older commits' Dockerfiles lack the label that keeps Coolify's daily cleanup off the image.
+  docker build --progress=plain -t "gluon:$version" --label coolify.managed=true \
     --build-arg GLUON_VERSION="$version" --build-arg GLUON_COMMIT="$commit" --build-arg GLUON_BUILD="github" \
     -f "$WORK/docker/Dockerfile" "$WORK" 2>&1
   NEW="gluon:$version"
