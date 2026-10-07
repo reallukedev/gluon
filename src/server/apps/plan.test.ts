@@ -71,6 +71,14 @@ describe("finalizePlan", () => {
     expect(p.warnings[0]).toMatch(/couldn't measure/);
   });
 
+  it("refuses when an internet address reaches a port that loses Umbrel's login", () => {
+    const publicPorts = new Map([[5275, "umbrel.example.test/admin"]]);
+    const p = finalizePlan(input({ publicPorts }, { loginLostPort: 5275 }));
+    expect(p.blockers).toEqual([expect.stringMatching(/^umbrel\.example\.test\/admin sends people from the internet to port 5275/)]);
+    // Reachable only at home: the warning from the rewrite is enough.
+    expect(finalizePlan(input({ publicPorts: new Map([[2283, "photos.example.test"]]) }, { loginLostPort: 5275 })).blockers).toEqual([]);
+  });
+
   it("keeps its id while sizes change, and changes it when what the move does changes", () => {
     const a = finalizePlan(input());
     const b = finalizePlan(input({ free: 10 * GB }));

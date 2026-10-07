@@ -183,6 +183,25 @@ export const coveredByWildcard = (host: string, base: string) => host.endsWith(`
  * subdomain. Routes limited to some paths are left out, since the tile would open a page the
  * route doesn't publish. First route wins.
  */
+/**
+ * Ports on this server that people on the internet reach, each with one address that sends them
+ * there ("umbrel.example.com/admin"). Routes that are off or only redirect don't count.
+ */
+export function publicPorts(cfg: RoutesConfig): Map<number, string> {
+  const out = new Map<number, string>();
+  const add = (b: Backend, where: string) => {
+    if (b.host === THIS_SERVER && !out.has(b.port)) out.set(b.port, where);
+  };
+  for (const r of cfg.routes) {
+    if (r.enabled === false || isRedirect(r)) continue;
+    const where = routeUrl(cfg, r).replace(/^https?:\/\//, "").replace(/\/$/, "");
+    add(r.backend, r.type === "subdomain" && r.only_paths?.length ? `${where}${r.only_paths[0]!.replace(/\/?\*$/, "")}` : where);
+    if (r.type === "subdomain") for (const x of r.extra_paths ?? []) add(x.backend, `${r.host}${x.paths[0]?.replace(/\/?\*$/, "") ?? ""}`);
+  }
+  add(cfg.fallback.backend, cfg.base_domain);
+  return out;
+}
+
 export function appLinks(routes: Route[]): [number, string][] {
   const links = new Map<number, string>();
   for (const r of routes) {

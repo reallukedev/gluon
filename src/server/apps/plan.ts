@@ -23,6 +23,8 @@ export interface FinalizeInput {
   free: number | null;
   /** "8096/tcp" → who else publishes it right now (not counting this app's own containers). */
   portsInUse: Map<string, string>;
+  /** Ports on this server the internet reaches → an address that sends people there. */
+  publicPorts?: Map<number, string>;
   stops: MovePlan["stops"];
   /** Extra reasons found while gathering (folder taken, Umbrel unreachable). */
   blockers?: string[];
@@ -51,6 +53,9 @@ export function finalizePlan(input: FinalizeInput): MovePlan {
     const who = input.portsInUse.get(`${p.host}/${p.proto}`);
     if (who) blockers.push(`Port ${p.host} is already used by ${who}. Stop it, or change the port, before moving.`);
   }
+  const lost = r.loginLostPort ?? null;
+  const exposedBy = lost ? input.publicPorts?.get(lost) : undefined;
+  if (exposedBy) blockers.push(`${exposedBy} sends people from the internet to port ${lost}, where Umbrel asks for its login. The copy would answer there without it, putting ${input.name} on the internet unprotected. Take ${exposedBy} off the internet or point it elsewhere in Network first.`);
   const plan: Omit<MovePlan, "id"> = {
     appId: input.appId,
     name: input.name,

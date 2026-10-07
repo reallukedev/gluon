@@ -99,6 +99,8 @@ export interface Rewritten {
   stays: MoveStay[];
   sharedVolumes: string[];
   ports: MovePort[];
+  /** A port Umbrel's login guarded that the copy answers on directly. */
+  loginLostPort?: number | null;
   warnings: string[];
   blockers: string[];
 }
@@ -351,7 +353,7 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
     };
     const place = (abs: string, what: "folder" | "file", readOnly = false): string => {
       const own = input.ownDirs.find((d) => within(abs, d.path));
-      const others = own ? usersOf(abs, input.binds ?? [], mine) : [];
+      const others = own ? usersOf(abs, input.binds ?? [], mine, { broadParents: false }) : [];
       if (others.length) c.warn(`${abs} is also used by ${others.join(", ")}, so the copy uses it in place instead of copying it.`);
       if (!own || others.length) {
         c.stay(abs, name, readOnly);
@@ -571,6 +573,7 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
     stays: [...c.stays.values()],
     sharedVolumes: [...c.shared],
     ports: dedupePorts(ports),
+    loginLostPort: proxy?.auth && unguarded ? unguarded : null,
     warnings: c.warnings,
     blockers: c.blockers,
   };

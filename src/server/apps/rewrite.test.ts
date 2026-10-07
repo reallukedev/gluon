@@ -159,6 +159,7 @@ describe("rewriteCompose: Umbrel apps", () => {
     expect(r.warnings.filter((w) => w.includes("login"))).toEqual([
       "Umbrel asked for its login before opening Octo on port 5275. The copy answers on port 5275 directly, so anyone on your home network can open it without that login; only Octo's own login, if it has one, protects it.",
     ]);
+    expect(r.loginLostPort).toBe(5275);
     expect(r.stays.map((s) => s.path)).toEqual([music]);
     expect(r.stays[0]!.services.sort()).toEqual(["navidrome", "octo", "slskd", "yt-dlp-shim"]);
     expect(r.copies.every((c) => c.to.startsWith("/srv/gluon-apps/leech-octo/"))).toBe(true);
@@ -309,6 +310,8 @@ describe("rewriteCompose: CasaOS and plain compose", () => {
       binds: [
         { source: "/opt/arr/downloads", container: "arr-sonarr-1" },
         { source: "/opt/arr/downloads/movies", container: "radarr" },
+        // Sees everything under /opt without using any one app's data (like Umbrel's /srv/umbrel).
+        { source: "/opt", container: "backup" },
       ],
       meta: { name: "Arr", icon: null, description: null, webPort: null, path: null },
     });

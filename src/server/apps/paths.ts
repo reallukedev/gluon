@@ -75,9 +75,11 @@ export interface BindUse {
 
 /**
  * Containers outside `mine` that mount `p`, a folder inside it, or a folder above it (so they see
- * it). A mount of the whole disk ("/") doesn't count as using any one app's data.
+ * it). A mount of the whole disk ("/") doesn't count as using any one app's data. With
+ * `broadParents: false`, nor does any folder above it too general to be one app's (Umbrel mounting
+ * all of /srv/umbrel): fine for copying, where seeing isn't using, but not for deleting.
  */
-export function usersOf(p: string, binds: BindUse[], mine: Set<string>): string[] {
+export function usersOf(p: string, binds: BindUse[], mine: Set<string>, { broadParents = true }: { broadParents?: boolean } = {}): string[] {
   const n = norm(p);
   if (!n) return [];
   const out = new Set<string>();
@@ -85,6 +87,7 @@ export function usersOf(p: string, binds: BindUse[], mine: Set<string>): string[
     if (mine.has(b.container)) continue;
     const s = norm(b.source);
     if (!s || s === "/") continue;
+    if (!broadParents && s !== n && within(n, s) && isBroadPath(s)) continue;
     if (within(s, n) || within(n, s)) out.add(b.container);
   }
   return [...out].sort();

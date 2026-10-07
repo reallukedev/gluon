@@ -8,7 +8,7 @@ import { moveBlock } from "@/lib/app-move-types";
 import { formatBytes } from "@/lib/format";
 import { docker } from "../docker/client";
 import { getApp, invalidateApps, type AppSummary } from "../docker/apps";
-import { tryReadConfig } from "../caddy/routes";
+import { publicPorts, tryReadConfig } from "../caddy/routes";
 import { reassignRouteApp } from "../network/routes-service";
 import { invalidateMonitors } from "../monitors/runner";
 import { listJoin } from "@/lib/format";
@@ -218,6 +218,10 @@ async function prepare(id: string): Promise<Prepared> {
     measured,
     free,
     portsInUse,
+    publicPorts: (() => {
+      const cfg = tryReadConfig();
+      return cfg ? publicPorts(cfg) : undefined;
+    })(),
     stops: { name: app.name, containers: app.containers.map((c) => c.name), via },
     blockers: extraBlockers,
     warnings: extraWarnings,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cleanConfig, renderCaddyfile, type RoutesConfig } from "./routes";
+import { cleanConfig, publicPorts, renderCaddyfile, type RoutesConfig } from "./routes";
 
 const base: RoutesConfig = {
   base_domain: "example.test",
@@ -77,3 +77,22 @@ describe("a domain that redirects", () => {
   });
 });
 
+
+describe("publicPorts", () => {
+  test("names the address that reaches each port, through extra paths too, but not through redirects or routes that are off", () => {
+    const local = (port: number) => ({ host: "host.docker.internal", port, tls: false });
+    const cfg = cleanConfig(
+      {
+        routes: [
+          { id: "umbrel", type: "subdomain", name: "Umbrel", enabled: true, host: "umbrel.example.test", backend: local(8300), extra_paths: [{ paths: ["/admin", "/admin/*"], backend: local(5275) }] },
+          { id: "music", type: "subdomain", name: "Music", enabled: true, host: "music.example.test", backend: local(5274), only_paths: ["/rest/*"] },
+          { id: "old", type: "subdomain", name: "Old", enabled: true, host: "old.example.test", backend: local(8130), redirect_to: "https://example.test" },
+          { id: "off", type: "subdomain", name: "Off", enabled: false, host: "off.example.test", backend: local(9000) },
+        ],
+        fallback: { name: "Gluon", backend: local(8130) },
+      },
+      base,
+    );
+    expect(Object.fromEntries(publicPorts(cfg))).toEqual({ 8300: "umbrel.example.test", 5275: "umbrel.example.test/admin", 5274: "music.example.test/rest", 8130: "example.test" });
+  });
+});
