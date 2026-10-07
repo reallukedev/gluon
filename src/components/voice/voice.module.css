@@ -1,0 +1,288 @@
+/* The Voice server tab (Mumble): who's here, the channel tree, registered people, settings and the
+   certificate. Instrument Plate tokens only; the channel tree is drawn in the same 1px hairlines as
+   everything else. */
+
+.panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+
+/* ---------------------------------------------------------------- lead */
+.lead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.leadText { display: grid; gap: 6px; min-width: 0; flex: 1 1 320px; }
+.address {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.addressText {
+  font-family: var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  font-size: clamp(var(--text-lg), 0.95rem + 0.6vw, var(--text-xl));
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.addressText .port { color: var(--faint); }
+.sentence { margin: 0; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; max-width: 72ch; }
+.sentence b { color: var(--ink); font-weight: 620; }
+.facts { margin: 0; font-size: var(--text-xs); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.facts > span { white-space: nowrap; }
+.leadActions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Who's here and the channel tree side by side when there's room. */
+.pair { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1080px) {
+  .pair { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------------------------------------------------------------- shared list rows */
+.list { margin: 0; padding: 0; list-style: none; }
+.list > li + li { border-top: 1px solid var(--line); }
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 60px;
+  padding: 10px 10px 10px 18px;
+}
+.who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mark {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-family: var(--font-display);
+  font-stretch: 85%;
+  font-weight: 620;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+.mark[data-guest] { border-style: dashed; background: transparent; }
+.whoText { min-width: 0; display: grid; gap: 2px; }
+.name {
+  font-weight: 620;
+  color: var(--ink);
+  font-size: var(--text-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sub {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sub2 { font-size: var(--text-xs); color: var(--muted); display: flex; flex-wrap: wrap; gap: 0 10px; min-width: 0; }
+.sub2 > span { max-width: 100%; overflow-wrap: anywhere; }
+.end { display: flex; align-items: center; gap: 6px; }
+.flags { display: flex; align-items: center; gap: 2px; color: var(--muted); }
+.flag { display: inline-grid; place-items: center; width: 26px; height: 26px; }
+.flag svg { width: 17px; height: 17px; }
+.flag[data-by="admin"] { color: var(--ink); }
+.num { font-variant-numeric: tabular-nums; }
+
+.empty { padding: 26px 18px; display: grid; gap: 10px; justify-items: start; }
+.empty p { margin: 0; color: var(--ink-2); font-size: var(--text-md); max-width: 60ch; line-height: 1.5; }
+.hint { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 72ch; }
+.panelNote { padding: 12px 18px; border-top: 1px solid var(--line); }
+
+/* ---------------------------------------------------------------- channel tree */
+.tree { margin: 0; padding: 6px 0; list-style: none; }
+.node {
+  --depth: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 44px;
+  align-items: center;
+  column-gap: 10px;
+  padding: 0 10px 0 calc(18px + var(--depth) * 22px);
+}
+/* The hairline guides: one vertical per ancestor level and an elbow into this channel. */
+.guides { position: absolute; inset: 0; pointer-events: none; }
+.guides > span { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-strong); }
+/* The elbow meets the channel's name line (half the 44px row), whatever sits below it. */
+.guides > .elbow { bottom: auto; height: 22px; }
+.guides > .elbow::after { content: ""; position: absolute; top: 22px; left: 0; width: 12px; height: 1px; background: var(--line-strong); }
+.guides > .elbow[data-last="false"] { height: auto; bottom: 0; }
+/* From under a channel's name down to its first child. */
+.guides > .trunk { top: 32px; }
+.nodeMain { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.nodeName {
+  font-size: var(--text-md);
+  font-weight: 560;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.node[data-root] .nodeName { font-weight: 620; }
+.node[data-empty] .nodeName { color: var(--ink-2); font-weight: 450; }
+.count { font-size: var(--text-xs); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.landing { font-size: var(--text-xs); color: var(--muted); flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.landing svg { width: 13px; height: 13px; }
+/* On narrow screens the house icon alone marks it; its words stay for screen readers. */
+@media (max-width: 520px) {
+  .landingText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.nodePeople {
+  grid-column: 1 / -1;
+  margin: -8px 0 10px;
+  padding-left: 16px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  .node:hover { background: var(--panel-2); }
+}
+
+/* ---------------------------------------------------------------- settings */
+.settings { display: grid; }
+.settings > * + * { border-top: 1px solid var(--line); }
+.setting { padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: 10px 20px; align-items: start; }
+.settingText { display: grid; gap: 4px; min-width: 0; }
+.settingTitle { font-size: var(--text-md); font-weight: 620; color: var(--ink); }
+.settingDesc { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 64ch; }
+.source { margin: 2px 0 0; font-size: var(--text-xs); color: var(--muted); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.source code { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.95em; color: var(--ink-2); overflow-wrap: anywhere; }
+.linkButton {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-strong);
+  cursor: pointer;
+  border-radius: 3px;
+}
+.linkButton:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .linkButton:hover { color: var(--ink); text-decoration-color: currentColor; }
+}
+.settingControl { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: var(--control); min-width: 0; }
+.numberInput { width: 168px; max-width: 100%; }
+.textInput { width: min(320px, 100%); }
+.wide { grid-column: 1 / -1; display: grid; gap: 10px; min-width: 0; }
+.welcomeTabs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.welcomeArea { min-height: 120px; resize: vertical; font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-sm); line-height: 1.5; }
+.preview {
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--panel-2);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.preview a { color: var(--info); text-underline-offset: 3px; }
+.preview img { max-width: 100%; height: auto; }
+.preview p { margin: 0 0 0.6em; }
+.previewEmpty { color: var(--muted); }
+.secret { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.secretValue {
+  font-family: var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  padding: 6px 10px;
+  border-radius: var(--radius-control);
+  background: var(--sunk);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .setting { grid-template-columns: minmax(0, 1fr); }
+  .settingControl, .secret { justify-content: flex-start; }
+  .numberInput, .textInput { width: 100%; }
+}
+.saveBar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 10px 12px 10px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  animation: rise var(--dur-base, 200ms) var(--ease-out);
+}
+.saveBar p { margin: 0; font-size: var(--text-sm); color: var(--ink-2); }
+.saveActions { display: flex; gap: 8px; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .saveBar { animation: none; } }
+
+/* ---------------------------------------------------------------- certificate */
+.cert { display: grid; gap: 16px; }
+.certNow { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: baseline; }
+.certNow p { margin: 0; }
+.certLine { padding-top: 3px; }
+.certTitle { font-size: var(--text-md); color: var(--ink); line-height: 1.45; }
+.certMeta { font-size: var(--text-xs); color: var(--muted); grid-column: 2; overflow-wrap: anywhere; }
+.certControls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
+.certSelect { min-width: min(280px, 100%); flex: 0 1 320px; }
+
+/* ---------------------------------------------------------------- not managed yet */
+.facts2 { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 18px; font-size: var(--text-md); }
+.facts2 dt { color: var(--muted); font-size: var(--text-sm); padding-top: 1px; }
+.facts2 dd { margin: 0; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.facts2 .mono { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-sm); }
+@media (max-width: 480px) {
+  .facts2 { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .facts2 dd { margin-bottom: 10px; }
+}
+.changes { margin: 0; padding: 0 0 0 18px; display: grid; gap: 8px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; }
+.changes li::marker { color: var(--faint); }
+.dialogStack { display: grid; gap: 16px; }
+
+/* ---------------------------------------------------------------- install flow */
+.steps { display: grid; gap: 18px; }
+.portInput { width: min(200px, 100%); }
+.review { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 18px; font-size: var(--text-md); }
+.review dt { color: var(--muted); font-size: var(--text-sm); padding-top: 1px; }
+.review dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
+@media (max-width: 480px) {
+  .review { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .review dd { margin-bottom: 10px; }
+}
+.creds { margin: 0; display: grid; gap: 12px; min-width: 0; }
+.cred { display: grid; gap: 4px; min-width: 0; }
+.cred dt { font-size: var(--text-sm); color: var(--muted); font-weight: 560; }
+.cred dd { margin: 0; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.credValue {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  font-size: var(--text-lg);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  padding: 7px 11px;
+  border-radius: var(--radius-control);
+  background: var(--sunk);
+}

@@ -80,19 +80,25 @@ export function resolvedMessage(
   };
 }
 
-export function batchMessage(items: { title: string; severity: string | null }[], event: "problem" | "resolved"): Composed {
+export function batchMessage(items: { title: string; severity: string | null }[], event: "problem" | "resolved" | "update"): Composed {
   const server = getSetting("serverName");
   const rank = (sev: string | null) => (sev === "fault" ? 0 : sev === "attention" ? 1 : 2);
   const sorted = [...items].sort((a, b) => rank(a.severity) - rank(b.severity));
   const shown = sorted.slice(0, 8).map((i) => `• ${i.title.replace(/^Resolved: /, "")}`);
   if (items.length > shown.length) shown.push(`…and ${items.length - shown.length} more`);
   const worst = items.some((i) => i.severity === "fault") ? "fault" : items.some((i) => i.severity === "attention") ? "attention" : null;
+  const title =
+    event === "problem"
+      ? `${plural(items.length, "problem")} on ${server}`
+      : event === "resolved"
+        ? `${plural(items.length, "problem")} cleared on ${server}`
+        : `${plural(items.length, "update")} on ${server}`;
   return {
-    title: event === "problem" ? `${plural(items.length, "problem")} on ${server}` : `${plural(items.length, "problem")} cleared on ${server}`,
+    title,
     body: shown.join("\n"),
-    link: `${base()}/status`,
+    link: event === "update" ? `${base()}/apps` : `${base()}/status`,
     linkLabel: "Open Gluon",
-    severity: event === "problem" ? worst : null,
+    severity: event === "resolved" ? null : worst,
   };
 }
 

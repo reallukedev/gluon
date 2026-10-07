@@ -13,6 +13,7 @@ import {
   Settings,
   Link as LinkIcon,
   AppWindow,
+  Terminal,
 } from "iconoir-react";
 
 const MAP: Record<string, React.ComponentType<{ strokeWidth?: number }>> = {
@@ -24,6 +25,7 @@ const MAP: Record<string, React.ComponentType<{ strokeWidth?: number }>> = {
   storage: HardDrive,
   system: Cpu,
   diagnostics: AntennaSignal,
+  terminal: Terminal,
   people: Community,
   settings: Settings,
   link: LinkIcon,

@@ -85,6 +85,7 @@ export function staticGroups(i: StaticInput): StaticGroup[] {
         action: { url: "/api/search/action", body: { id: "checks.run" }, pending: "Checking everything…", failed: "Couldn't run the checks" },
       },
       { id: "act:checkup", label: "Run a checkup", hint: "Diagnostics · look for problems across the server", keywords: "diagnose doctor health test", icon: "diagnostics", href: "/diagnostics?start=full" },
+      { id: "act:terminal", label: "Open the terminal", hint: "Run commands on the server or in a container. Type $ and a command to run it", keywords: "shell ssh console command line bash exec prompt", icon: "terminal", href: "/terminal" },
     );
   }
   actions.push(

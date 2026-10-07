@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { openAppUrl } from "@/lib/client/open-link";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MoreHoriz, OpenNewWindow, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye, Pin, PinSlash, Import, Trash } from "iconoir-react";
@@ -397,7 +398,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                 </span>
                 <span role="cell" className={s.actions}>
                   {open && !a.copyOf && (
-                    <IconButton label={`Open ${a.name}`} size="sm" onClick={() => window.open(open, "_blank", "noopener")}>
+                    <IconButton label={`Open ${a.name}`} size="sm" onClick={() => openAppUrl(open)}>
                       <OpenNewWindow />
                     </IconButton>
                   )}

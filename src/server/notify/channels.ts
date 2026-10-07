@@ -4,7 +4,7 @@ import { decryptJson, encryptJson, id as newId } from "../crypto";
 import { AppError, conflict, forbidden, notFound } from "../errors";
 import { findById, type User } from "../auth/users";
 import { publicBaseUrl, getSetting } from "../settings";
-import { MEMBER_CHANNEL_KINDS, type ChannelKind, type ChannelView, type EmailConfig, type TestResult } from "@/lib/alerts-types";
+import { MEMBER_CHANNEL_KINDS, normalizeFilter, subscriptionFilterSchema, type ChannelKind, type ChannelView, type EmailConfig, type TestResult, type XmppConfig } from "@/lib/alerts-types";
 import { maskConfig, mergeConfig, summarize, validateConfig, type StoredConfig } from "./config";
 import { assertReachableTarget, configHosts, deliver, DeliveryError, type OutMessage, type SendContext } from "./transports";
 
@@ -114,6 +114,21 @@ function health(id: string): ChannelView["health"] {
   return { lastSentAt: h?.last_sent ?? null, lastFailedAt: h?.last_failed ?? null, lastError: failing ? latest!.last_error : null, failing };
 }
 
+function audience(id: string, viewer: User): ChannelView["audience"] {
+  const rows = all<{ user_id: string; filter: string }>("SELECT s.user_id, s.filter FROM subscriptions s JOIN users u ON u.id = s.user_id WHERE s.channel_id = ? AND u.disabled = 0", id);
+  const own = rows.find((r) => r.user_id === viewer.id);
+  let mine: ChannelView["audience"]["mine"] = null;
+  if (own) {
+    try {
+      const p = subscriptionFilterSchema.safeParse(JSON.parse(own.filter));
+      mine = p.success ? normalizeFilter(p.data).kinds : null;
+    } catch {
+      mine = null;
+    }
+  }
+  return { people: rows.length, mine };
+}
+
 export function viewChannel(ch: Channel, viewer: User): ChannelView {
   const { config, secrets } = maskConfig(ch.kind, ch.config);
   const via = ch.kind === "email" && (ch.config as unknown as EmailConfig).via ? getChannel((ch.config as unknown as EmailConfig).via!) : null;
@@ -131,6 +146,7 @@ export function viewChannel(ch: Channel, viewer: User): ChannelView {
     summary: ch.unreadable ? "Settings can't be read (the secret key changed). Enter them again." : summarize(ch.kind, ch.config, via?.name),
     health: health(ch.id),
     editable: canEdit(viewer, ch),
+    audience: audience(ch.id, viewer),
   };
 }
 
@@ -144,7 +160,10 @@ export function listChannelsFor(user: User): ChannelView[] {
 
 async function checkConfig(user: User, owner: string | null, kind: ChannelKind, cfg: StoredConfig, selfId?: string) {
   if (owner && user.role !== "admin" && !MEMBER_CHANNEL_KINDS.includes(kind)) {
-    throw forbidden("Household members can use ntfy, email or a webhook for their own alerts.");
+    throw forbidden("Household members can use ntfy, email, a webhook or this server's chat server for their own alerts.");
+  }
+  if (kind === "xmpp" && owner && isRestricted(owner) && (cfg as unknown as XmppConfig).mode !== "server") {
+    throw new AppError("invalid", "Personal XMPP channels send through this server's chat server. Ask an admin to set up any other account.", 400, { field: "config.mode" });
   }
   if (kind === "email") {
     const via = (cfg as unknown as EmailConfig).via;
@@ -186,7 +205,7 @@ export interface ChannelInput {
 export async function createChannel(user: User, input: ChannelInput): Promise<Channel> {
   if (input.scope === "server" && user.role !== "admin") throw forbidden("Only admins can add server-wide channels.");
   if (user.role !== "admin" && !MEMBER_CHANNEL_KINDS.includes(input.kind)) {
-    throw forbidden("Household members can use ntfy, email or a webhook for their own alerts.");
+    throw forbidden("Household members can use ntfy, email, a webhook or this server's chat server for their own alerts.");
   }
   const owner = input.scope === "server" ? null : user.id;
   const cfg = validateConfig(input.kind, mergeConfig(input.kind, null, input.config));
@@ -287,7 +306,14 @@ export async function testChannel(
   const t0 = performance.now();
   try {
     await deliver(kind, cfg, m, sendContext({ owner, kind, config: cfg }));
-    const where = kind === "email" ? "Check the inbox (and the spam folder)." : kind === "webhook" ? "Check the channel it posts to." : "Check your phone.";
+    const where =
+      kind === "email"
+        ? "Check the inbox (and the spam folder)."
+        : kind === "webhook"
+          ? "Check the channel it posts to."
+          : kind === "xmpp"
+            ? "Check your chat app. Messages from a new contact may wait under requests."
+            : "Check your phone.";
     return { ok: true, message: `Sent. ${where}`, latencyMs: Math.round(performance.now() - t0) };
   } catch (e) {
     const message = e instanceof DeliveryError ? e.message : `Sending failed: ${(e as Error).message}`;

@@ -35,7 +35,17 @@ export interface RunOptions {
 }
 
 const NSENTER = ["-t", "1", "-m", "-u", "-i", "-n", "-p", "--"];
-const HOST_ENV: NodeJS.ProcessEnv = { NODE_ENV: process.env.NODE_ENV, PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" };
+const NO_NSENTER = (process.env.GLUON_NO_NSENTER ?? process.env.TEND_NO_NSENTER) === "1";
+const SYSTEM_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+// Without nsenter (development on a laptop) "the host" is this machine, so keep its own PATH and
+// Docker settings; in the container the host's environment is never inherited.
+const HOST_ENV: NodeJS.ProcessEnv = {
+  NODE_ENV: process.env.NODE_ENV,
+  PATH: NO_NSENTER && process.env.PATH ? `${SYSTEM_PATH}:${process.env.PATH}` : SYSTEM_PATH,
+  LANG: "C.UTF-8",
+  LC_ALL: "C.UTF-8",
+  ...(NO_NSENTER ? Object.fromEntries(["DOCKER_HOST", "DOCKER_CONFIG", "HOME"].flatMap((k) => (process.env[k] ? [[k, process.env[k]]] : []))) : {}),
+};
 
 function runFile(file: string, args: string[], opts: RunOptions = {}): Promise<{ stdout: string; stderr: string }> {
   const label = [file, ...args].join(" ").slice(0, 300);

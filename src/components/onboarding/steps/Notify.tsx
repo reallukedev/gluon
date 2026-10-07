@@ -2,7 +2,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import type { ChannelKind, ChannelView, SubscriptionFilter, SubscriptionsResponse, TestResult } from "@/lib/alerts-types";
-import { CHANNEL_KINDS } from "@/lib/alerts-types";
+import { CHANNEL_KINDS, defaultKinds } from "@/lib/alerts-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
 import { KIND_ICON } from "@/components/alerts/kinds";
@@ -22,8 +22,9 @@ const SUBS_URL = "/api/alerts/subscriptions";
 /** The "Send through" choice for entering mail server details instead. */
 const OWN_SERVER = "own";
 
-/** What a new channel sends: every problem, when it clears, and household reports. Same as Settings. */
+/** What a new channel sends: Settings' "Problems only" (problems, when they clear, reports, sign-in warnings, a failed update). */
 const defaultFilter = (tz: string): Partial<SubscriptionFilter> => ({
+  kinds: defaultKinds("admin"),
   severities: ["fault", "attention"],
   subjects: "all",
   resolved: true,

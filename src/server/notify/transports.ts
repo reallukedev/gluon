@@ -4,7 +4,7 @@ import net from "node:net";
 import nodemailer from "nodemailer";
 import { isHomeIp, parseAddr } from "../net-zone";
 import { NetError, safeFetch } from "../integrations/net";
-import type { EmailConfig, NtfyConfig, PushoverConfig, WebhookConfig, ChannelKind } from "@/lib/alerts-types";
+import type { EmailConfig, NtfyConfig, PushoverConfig, WebhookConfig, ChannelKind, DeliveryEvent, XmppConfig } from "@/lib/alerts-types";
 import type { StoredConfig } from "./config";
 
 /**
@@ -31,7 +31,7 @@ export interface OutMessage {
   link: string | null;
   linkLabel: string | null;
   level: MessageLevel;
-  event: "problem" | "resolved" | "digest" | "report" | "test";
+  event: DeliveryEvent | "test";
   findingId?: string | null;
   severity?: string | null;
   subject?: string | null;
@@ -400,6 +400,16 @@ export async function deliver(kind: ChannelKind, config: StoredConfig, m: OutMes
       return sendEmail(config as unknown as EmailConfig, m, ctx);
     case "webhook":
       return sendWebhook(config as unknown as WebhookConfig, m, ctx);
+    case "xmpp": {
+      const x = config as unknown as XmppConfig;
+      // Household members' channels only send through this server's own chat server.
+      if (ctx.restricted && x.mode !== "server") throw new DeliveryError("Personal XMPP channels send through this server's chat server. Ask an admin to set up any other account.", true);
+      const { sendXmpp } = await import("./xmpp");
+      return sendXmpp(x, m);
+    }
+    default:
+      // Never report a message as sent when nothing knows how to send it.
+      throw new DeliveryError(`Gluon doesn't know how to send to a ${String(kind)} channel.`, true);
   }
 }
 
@@ -419,6 +429,7 @@ export function configHosts(kind: ChannelKind, c: StoredConfig): string[] {
       if (!e.host) return [];
       return [hostKey(e.host, e.port ?? (e.security === "tls" ? 465 : e.security === "starttls" ? 587 : 25))];
     }
+    // XMPP: members only send through this server's own chat server, so there's no host to vouch for.
   } catch {
     /* ignore */
   }

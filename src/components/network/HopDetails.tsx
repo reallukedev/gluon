@@ -22,10 +22,10 @@ function dnsLine(d: DnsResult): { state: LineState; label: string } {
   return { state: "unknown", label: "Lookup failed" };
 }
 
-function tlsLine(t: TlsResult): { state: LineState; label: string } {
+function tlsLine(t: TlsResult, own: boolean): { state: LineState; label: string } {
   switch (t.status) {
     case "ok":
-      return { state: "running", label: `Renews on its own · ${t.daysLeft} d left` };
+      return { state: "running", label: own ? `Yours · ${t.daysLeft} d left` : `Renews on its own · ${t.daysLeft} d left` };
     case "expiring":
       return { state: "attention", label: `Ends in ${t.daysLeft} d` };
     case "expired":
@@ -71,7 +71,7 @@ export function DnsDetails({ status, statusError, onRecheck, checking }: { statu
   return (
     <div className={s.hopBody}>
       <p className={s.hopLead}>
-        When someone types an address, Cloudflare&rsquo;s DNS tells their browser where to go. Direct names point at your router; <span className="mono">{status?.baseDomain ?? "the main domain"}</span> points at Cloudflare, which passes visits on.
+        When someone types an address, DNS tells their browser where to go. Direct names point at your router{status?.base?.proxied ? <>; <span className="mono">{status.baseDomain}</span> points at Cloudflare, which passes visits on</> : null}. Names outside <span className="mono">{status?.baseDomain ?? "the main domain"}</span> need records wherever their own DNS is managed.
       </p>
       {statusError && !status && (
         <Notice tone="fault" title="Couldn't check DNS" action={<Button size="sm" onClick={onRecheck}>Try again</Button>}>
@@ -210,7 +210,7 @@ export function CaddyDetails({
   return (
     <div className={s.hopBody}>
       <p className={s.hopLead}>
-        Caddy is the web server on this machine that answers every visit: it holds the HTTPS certificates (from Let&rsquo;s Encrypt, renewed on their own) and hands each address to its app. Gluon writes its settings file, the Caddyfile, every time you save.
+        Caddy is the web server on this machine that answers every visit: it holds the HTTPS certificates (from Let&rsquo;s Encrypt and renewed on their own, unless you supplied your own) and hands each address to its app. Gluon writes its settings file, the Caddyfile, every time you save.
       </p>
       <p className={s.hopState}>
         <StateLine state={data.caddyRunning ? "running" : "unhealthy"} label={data.caddyRunning ? "Answering on ports 80 and 443" : "Not answering: Gluon can't reach it, so changes can't be applied"} />
@@ -233,7 +233,7 @@ export function CaddyDetails({
             <span role="columnheader">State</span>
           </div>
           {certs.map((c) => {
-            const l = tlsLine(c.tls);
+            const l = tlsLine(c.tls, c.own);
             return (
               <div role="row" key={c.host} className={`${s.trow} ${s.certGrid}`}>
                 <span role="cell" className={s.cellMain}>

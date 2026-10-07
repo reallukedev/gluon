@@ -18,6 +18,6 @@ export default async function AppPage({ params, searchParams }: { params: Promis
   const detail = await appDetail(decodeURIComponent(id)).catch(() => null);
   if (!detail) notFound();
   const members = listUsers().filter((u) => u.role === "member").map((u) => ({ id: u.id, name: u.displayName }));
-  const tab = sp.tab === "logs" || sp.tab === "compose" || sp.tab === "settings" ? sp.tab : "overview";
+  const tab = sp.tab === "logs" || sp.tab === "compose" || sp.tab === "settings" || sp.tab === "chat" || sp.tab === "voice" ? sp.tab : "overview";
   return <AppDetailView initial={detail} tab={tab} container={sp.container ?? null} members={members} />;
 }

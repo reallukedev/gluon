@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { linkTarget } from "@/lib/client/open-link";
 import { mutate } from "swr";
 import { ArrowUpRight, Play } from "iconoir-react";
 import type { WidgetProps } from "./types";
@@ -102,7 +103,7 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
   const hint = appHints(data).get(app.id) ?? null;
   const name = shortName(app.name, serverName);
   const href = url(app.urls);
-  const target = prefs.openLinks === "new" ? "_blank" : undefined;
+  const target = linkTarget(href, prefs.openLinks === "new");
   const stopped = app.line === "stopped";
   const word = stateWord(app);
   const uptime = !stopped ? uptimeOf(app) : null;

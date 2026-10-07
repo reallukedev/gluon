@@ -60,7 +60,7 @@ export function AlertsSettings({ tab, monitorId, channelId }: { tab: AlertsTab; 
         hrefFor={(v) => alertsHref(v)}
         items={[
           { value: "watching", label: "Watching", count: down || undefined, attention: down > 0 },
-          { value: "notifications", label: "Notifications" },
+          { value: "notifications", label: "Channels" },
           { value: "history", label: "Past problems" },
         ]}
         aria-label="Alerts sections"
@@ -71,7 +71,7 @@ export function AlertsSettings({ tab, monitorId, channelId }: { tab: AlertsTab; 
           <>
             <ChannelsTab highlight={channelId} />
             <div className={s.sentSection}>
-              <Section title="Sent" meta="Every alert, all-clear and daily summary, and whether it got through">
+              <Section title="Sent" meta="Every message Gluon sent, and whether it got through">
                 <div className={s.stackBody}>
                   <SentTab />
                 </div>

@@ -99,7 +99,9 @@ export function healthOf(st: RouteStatus | undefined, redirect: boolean): { stat
       return { state: "starting", label: "Getting its certificate", sentence: st.summary };
     case "fault": {
       let label = "Not working";
+      const reach = st.xmpp?.reach ?? st.voice?.reach;
       if (st.backend && !st.backend.reachable) label = `${st.app?.name ?? "The app"} isn't answering`;
+      else if (reach?.state === "blocked") label = "Router doesn't let it in";
       else if (st.dns?.status === "missing") label = "No DNS record";
       else if (st.tls?.status === "expired") label = "Certificate expired";
       else if (st.http?.status && st.http.status >= 500) label = `Error page (${st.http.status})`;
@@ -108,7 +110,8 @@ export function healthOf(st: RouteStatus | undefined, redirect: boolean): { stat
     }
     case "attention": {
       let label = "Needs a look";
-      if (st.tls?.issueError) label = "No certificate yet";
+      if ((st.xmpp?.reach ?? st.voice?.reach)?.state === "blocked") label = "Partly blocked by the router";
+      else if (st.tls?.issueError) label = "No certificate yet";
       else if (st.dns?.status === "mismatch") label = "DNS points elsewhere";
       else if (st.tls?.status === "expiring") label = `Certificate ends in ${days} d`;
       else if (st.tls?.status === "invalid") label = "Certificate problem";
@@ -329,6 +332,8 @@ export interface CertRow {
   host: string;
   tls: NonNullable<RouteStatus["tls"]>;
   names: string[];
+  /** The person supplied it, so it doesn't renew on its own. */
+  own: boolean;
 }
 
 export function certRows(status: NetworkStatus | undefined): CertRow[] {
@@ -339,7 +344,7 @@ export function certRows(status: NetworkStatus | undefined): CertRow[] {
     const who = r.app?.name ?? r.name;
     if (c) {
       if (!c.names.includes(who)) c.names.push(who);
-    } else certs.push({ host: r.host, tls: r.tls, names: [who] });
+    } else certs.push({ host: r.host, tls: r.tls, names: [who], own: r.https === "own" });
   }
   return certs.sort((a, b) => (a.tls.daysLeft ?? 999) - (b.tls.daysLeft ?? 999) || a.host.localeCompare(b.host));
 }
@@ -355,7 +360,9 @@ export function caddyHop(status: NetworkStatus | undefined, caddyRunning: boolea
   const failing = certs.find((c) => c.tls.issueError || c.tls.status === "invalid" || c.tls.status === "expiring");
   if (failing) return { state: "attention", label: failing.tls.status === "expiring" ? `Certificate ends in ${failing.tls.daysLeft} d` : "A certificate needs a look", sentence: failing.tls.issueError ?? failing.tls.message, certs: certs.length, nextDays };
   if (certs.some((c) => c.tls.status === "pending")) return { state: "starting", label: "Getting a certificate", sentence: "Caddy is fetching a certificate. This usually takes under a minute.", certs: certs.length, nextDays };
-  return { state: "running", label: "Answering", sentence: `Serving ${certs.length} certificate${certs.length === 1 ? "" : "s"}; they renew on their own.`, certs: certs.length, nextDays };
+  const own = certs.filter((c) => c.own).length;
+  const renew = !own ? "they renew on their own" : own === certs.length ? "you supplied them, so replace each before it ends" : `Caddy renews its own; you replace the ${own} you supplied`;
+  return { state: "running", label: "Answering", sentence: `Serving ${certs.length} certificate${certs.length === 1 ? "" : "s"}; ${renew}.`, certs: certs.length, nextDays };
 }
 
 export function appsHop(entries: AppEntry[] | null): HopState & { count: number } {

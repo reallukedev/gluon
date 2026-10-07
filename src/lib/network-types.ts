@@ -28,6 +28,42 @@ export interface SubdomainRouteT extends RouteBase {
   xmpp?: XmppSettingsT;
   /** The whole host redirects here, keeping the path; `backend` is then unused. */
   redirect_to?: string;
+  /** A voice server (Mumble): apps connect straight to `voice.port`; the web address shows a mumble:// link. */
+  voice?: { port: number };
+  /** Who handles HTTPS for this name. Absent: Caddy gets a certificate on its own. */
+  https?: HttpsSettingsT;
+}
+
+/** "auto": Caddy gets and renews a certificate (the default, stored as no setting at all). */
+export type HttpsModeT = "auto" | "own" | "http" | "none";
+export interface HttpsSettingsT {
+  mode: Exclude<HttpsModeT, "auto">;
+  /** Own certificate copied from these files on the server whenever they change (certbot's live folder). */
+  files?: { cert: string; key: string };
+}
+
+/** A certificate the person supplied. The key never leaves the server. */
+export interface OwnCertInfo {
+  host: string;
+  names: string[];
+  issuer: string | null;
+  validFrom: string;
+  validTo: string;
+  daysLeft: number;
+  fingerprint: string;
+  /** Signed by itself: browsers and apps only accept it if told to trust it. */
+  selfSigned: boolean;
+  /** Plain sentences worth showing next to it (ends soon, self-signed). */
+  warnings: string[];
+}
+
+/** Where a route's own certificate stands on the server. */
+export interface OwnCertState {
+  /** What Caddy serves from, null when the file is missing. */
+  stored: OwnCertInfo | null;
+  /** For certificates copied from files: when Gluon last copied, and what went wrong last time. */
+  copiedAt: number | null;
+  error: string | null;
 }
 
 export interface XmppSettingsT {
@@ -80,6 +116,8 @@ export interface RoutesResponse {
   apps: Record<string, RouteAppRef>;
   /** The wildcard *.base covers it, so no DNS change is needed. Per subdomain route id. */
   coveredByWildcard: Record<string, boolean>;
+  /** Own certificates per route id (routes with https.mode "own"). */
+  certs: Record<string, OwnCertState>;
 }
 
 export interface DriftInfo {
@@ -98,6 +136,9 @@ export interface RouteWarning {
   /** Published (or re-enabled) by this save, as opposed to already public before. */
   isNew: boolean;
 }
+
+/** Certificates pasted in the editor, sent with the save that uses them (by host). */
+export type CertUploads = Record<string, { cert: string; key: string }>;
 
 export interface RoutesSaveResponse extends Omit<RoutesResponse, "caddyRunning"> {
   warnings: RouteWarning[];
@@ -180,12 +221,17 @@ export interface RouteStatus {
   host: string;
   enabled: boolean;
   app: RouteAppRef | null;
+  /** Who handles HTTPS for the name ("auto" for path addresses and the base domain). */
+  https: HttpsModeT;
   dns: DnsResult | null;
+  /** Null when Caddy holds no certificate for it (plain HTTP, or no web side). */
   tls: TlsResult | null;
   http: HttpResult | null;
   backend: BackendResult | null;
   /** Chat server checks, for XMPP addresses. */
   xmpp: XmppStatus | null;
+  /** Voice server checks, for Mumble addresses. */
+  voice: VoiceStatus | null;
   state: ProbeState;
   /** Plain sentence: "Working", "Immich isn't answering on port 2283." */
   summary: string;
@@ -235,6 +281,65 @@ export interface XmppStatus {
   /** Anyone can create an account (in-band registration is open). null = couldn't tell. */
   openRegistration: boolean | null;
   certSync: XmppCertSync | null;
+  /** Whether people outside can reach its ports through the router. */
+  reach: PublicReach | null;
+}
+
+/** Mumble's answer to a UDP ping. */
+export interface MumblePing {
+  reachable: boolean;
+  ms: number | null;
+  version: string | null;
+  users: number | null;
+  maxUsers: number | null;
+}
+
+export interface VoiceStatus {
+  host: string;
+  port: number;
+  /** Mumble answers on TCP from inside. */
+  tcp: BackendResult;
+  /** Mumble answers its UDP ping from inside. */
+  udp: MumblePing;
+  /** The certificate Mumble presents on its TCP port. */
+  tls: TlsResult | null;
+  reach: PublicReach | null;
+}
+
+// ---------------------------------------------------------------- reaching the router from inside
+
+/**
+ * same: the public address leads to this server (verified by certificate or protocol reply).
+ * other: something answers on the public address, but not this server.
+ * none: nothing answers there.
+ */
+export type ReachOutcome = "same" | "other" | "none";
+
+export interface PortReach {
+  port: number;
+  proto: "tcp" | "udp";
+  /** What uses the port: "Chat apps sign in". */
+  label: string;
+  /** People can't use the service at all without it (sign-in, voice), as opposed to extras like federation. */
+  primary: boolean;
+  lan: boolean;
+  outside: ReachOutcome | null;
+  verdict: "reachable" | "not-forwarded" | "elsewhere" | "unknown" | "down";
+  message: string;
+}
+
+export interface PublicReach {
+  checkedAt: number;
+  publicIp: string | null;
+  /** This server's address on the home network, to forward ports to. */
+  lanIp: string | null;
+  /** The router, from the default route. */
+  gateway: string | null;
+  /** Something answered on the public address, so the router lets devices inside use it. */
+  hairpin: boolean | null;
+  state: "ok" | "blocked" | "unknown";
+  ports: PortReach[];
+  summary: string;
 }
 
 export interface NetworkStatus {
@@ -262,6 +367,19 @@ export interface ChatServerCandidate {
   certDir: string;
   /** Gluon knows how to reload this server after copying a certificate. */
   canSync: boolean;
+}
+
+/** A container on this server that looks like a Mumble voice server. */
+export interface VoiceServerCandidate {
+  container: string;
+  image: string;
+  project: string | null;
+  running: boolean;
+  /** Host port mapped to Mumble's port (TCP), and whether UDP is published too. */
+  port: number | null;
+  udp: boolean;
+  /** Every host port the container publishes. */
+  ports: number[];
 }
 
 export interface ChatServersResponse {

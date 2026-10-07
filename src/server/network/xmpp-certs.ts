@@ -2,11 +2,13 @@ import "server-only";
 import { docker } from "../docker/client";
 import { listApps } from "../docker/apps";
 import { execInContainer } from "../dockerx/containers";
-import { tryReadConfig, type SubdomainRoute } from "../caddy/routes";
+import { httpsMode, tryReadConfig, type SubdomainRoute } from "../caddy/routes";
 import { audit } from "../audit";
 import { getSetting } from "../settings";
-import { readTar, writeTar, type TarEntry } from "./tarball";
-import { certInfo, decideCopy, pickCaddyPair } from "./xmpp-cert-choice";
+import { writeTar, type TarEntry } from "./tarball";
+import { CADDY_CONTAINER, readArchive, readCaddyStore } from "./caddy-certs";
+import { readOwnCert } from "./own-certs";
+import { certInfo, decideCopy, pickCaddyPair, type CertInfo } from "./xmpp-cert-choice";
 import { probeXmpp } from "./xmpp-probe";
 import type { XmppCertSync } from "@/lib/network-types";
 
@@ -19,21 +21,6 @@ import type { XmppCertSync } from "@/lib/network-types";
  * Prosody runs under tini and runuser in its official image, so a SIGHUP would most likely kill
  * runuser rather than reach Prosody. The reload goes through prosodyctl's admin shell instead.
  */
-
-const CADDY_CONTAINER = (process.env.GLUON_CADDY_CONTAINER ?? process.env.TEND_CADDY_CONTAINER) ?? "caddy";
-const CADDY_CERTS = "/data/caddy/certificates";
-
-async function readArchive(container: string, path: string): Promise<TarEntry[] | null> {
-  try {
-    const stream = (await docker().getContainer(container).getArchive({ path })) as NodeJS.ReadableStream;
-    const chunks: Buffer[] = [];
-    for await (const c of stream) chunks.push(Buffer.from(c as Buffer));
-    return readTar(Buffer.concat(chunks));
-  } catch (e) {
-    if ((e as { statusCode?: number }).statusCode === 404) return null;
-    throw e;
-  }
-}
 
 async function reloadChatServer(container: string): Promise<{ ok: boolean; output: string }> {
   const ctr = await docker().getContainer(container).inspect();
@@ -108,9 +95,15 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
   base.container = resolved.name;
 
   const before = await served(r);
-  const caddy = await caddyCerts();
-  if (!caddy) return { ...base, message: `Gluon can't find Caddy's certificates in the ${CADDY_CONTAINER} container.` };
-  const src = pickCaddyPair(caddy, host);
+  // An address with its own certificate hands that one on, not whatever Caddy has in its store.
+  const own = httpsMode(r) === "own";
+  let src: { crt: Buffer; key: Buffer; info: CertInfo } | null;
+  if (own) src = readOwnCert(host);
+  else {
+    const caddy = await caddyCerts();
+    if (!caddy) return { ...base, message: `Gluon can't find Caddy's certificates in the ${CADDY_CONTAINER} container.` };
+    src = pickCaddyPair(caddy, host);
+  }
 
   const inChat = await readArchive(target.container, target.dir);
   if (!inChat) return { ...base, message: `${target.dir} doesn't exist in ${target.container}. Check the folder the chat server reads its certificate from.` };
@@ -119,7 +112,7 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
   const oldCrt = inChat.find((e) => e.name === `${dirName}/${host}.crt`);
   const oldKey = inChat.find((e) => e.name === `${dirName}/${host}.key`);
   const onDisk = oldCrt ? certInfo(oldCrt.data, host) : null;
-  const decision = decideCopy(src?.info ?? null, onDisk, host, Date.now(), before.tls ? before.tls.trusted : null);
+  const decision = decideCopy(src?.info ?? null, onDisk, host, Date.now(), before.tls ? before.tls.trusted : null, own ? "own" : "caddy");
 
   if (!decision.copy) {
     // The file can be right while the server still presents an older one (a reload that didn't
@@ -152,11 +145,12 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
 
   const reload = await reloadChatServer(target.container).catch((e: Error) => ({ ok: false, output: e.message }));
   const after = await served(r);
-  if (after.tls?.fingerprint === src!.info.fingerprint) return { ...base, copiedAt: Date.now(), ok: true, message: `Copied Caddy's certificate (valid until ${until}) and the chat server is using it.` };
+  const whose = own ? "your certificate" : "Caddy's certificate";
+  if (after.tls?.fingerprint === src!.info.fingerprint) return { ...base, copiedAt: Date.now(), ok: true, message: `Copied ${whose} (valid until ${until}) and the chat server is using it.` };
   const why = reload.ok
     ? "the chat server still presents the old one. If restarting doesn't help, check that Prosody can read the key file."
     : `the chat server didn't reload${reload.output.trim() ? ` (${reload.output.trim().slice(0, 160)})` : ""}.`;
-  return { ...base, copiedAt: Date.now(), message: `Copied Caddy's certificate, but ${why} Restart ${target.container} to load it.` };
+  return { ...base, copiedAt: Date.now(), message: `Copied ${whose}, but ${why} Restart ${target.container} to load it.` };
 }
 
 const RECHECK_OK_MS = 6 * 60 * 60_000;
@@ -173,10 +167,11 @@ export function syncChatCertificates(opts: { onlyDue?: boolean } = {}): Promise<
   s.runningFull = !opts.onlyDue;
   // Caddy's certificate tree is read once per pass, however many chat addresses there are.
   let caddyTree: Promise<TarEntry[] | null> | null = null;
-  const caddyCerts: CaddyCerts = () => (caddyTree ??= readArchive(CADDY_CONTAINER, CADDY_CERTS));
+  const caddyCerts: CaddyCerts = () => (caddyTree ??= readCaddyStore());
   s.running = (async () => {
     const cfg = tryReadConfig();
-    const routes = (cfg?.routes ?? []).filter((r): r is ChatRoute => r.type === "subdomain" && r.enabled !== false && !!r.xmpp?.cert_sync);
+    // Plain-HTTP and no-web-side addresses have no certificate here to copy.
+    const routes = (cfg?.routes ?? []).filter((r): r is ChatRoute => r.type === "subdomain" && r.enabled !== false && !!r.xmpp?.cert_sync && (httpsMode(r) === "auto" || httpsMode(r) === "own"));
     const keep = new Set(routes.map((r) => r.id));
     for (const id of [...s.state.keys()]) if (!keep.has(id)) s.state.delete(id);
     for (const r of routes) {

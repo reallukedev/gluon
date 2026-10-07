@@ -147,6 +147,9 @@ textarea.input { height: auto; min-height: 88px; padding: 9px 11px; line-height:
 }
 @media (pointer: coarse) {
   .checkbox::before { content: ""; position: absolute; inset: -12px; }
+  /* At least 44px tall to tap (WCAG 2.5.5), without changing how they look. */
+  .switch::before { inset: -12px -6px; }
+  .segment::before { content: ""; position: absolute; inset: -6px 0; }
 }
 
 /* Segmented control: a sunk well; the raised plate slides between segments. */

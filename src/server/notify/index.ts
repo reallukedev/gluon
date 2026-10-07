@@ -6,6 +6,7 @@ import { rank } from "@/lib/search-match";
 import { alertsHref } from "@/lib/settings-links";
 import { followUps, kick, tick, TICK_MS } from "./dispatcher";
 import { allChannels, canSee } from "./channels";
+import { runWatchers } from "./watchers";
 
 /** Side-effect module: the notification dispatcher and channel search. */
 
@@ -14,6 +15,8 @@ onStart("notify", () => {
   // half-evaluated findings.
   setTimeout(() => {
     every(TICK_MS, () => tick(), { immediate: true });
+    // Not awaited: a slow registry or chat server mustn't hold up the next look at the activity log.
+    every(30_000, () => void runWatchers(), { immediate: true });
     subscribe("findings", onFinding);
   }, 20_000);
   function onFinding(data: unknown) {

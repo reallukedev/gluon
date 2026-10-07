@@ -20,6 +20,13 @@ together: one calm web app for everything running on the box, however it got the
   it asks for a login, drawn as a map from the visitor to the app. Manages Caddy routes. XMPP chat
   servers (Prosody and friends) get their own kind of address: sign-in, federation and certificate
   checks, and Gluon copies Caddy's certificate into the chat server before its own can expire.
+- **Chat and voice.** Gluon sets up and runs a Prosody chat (XMPP) server and a Mumble voice
+  server for you, or takes over the ones you have. For chat: accounts and the devices they're
+  signed in on, invite links with a page that says which app to get, group chats, photo and file
+  sharing, phone notifications, voice and video calls that work between homes (Gluon sets up a
+  coturn relay and hands chat apps expiring logins for it), and a list of what chat apps can do
+  with the server, each gap one switch away. Settings go in a file of their own next to Prosody's config, which you can still
+  edit by hand (Gluon checks it with Prosody first).
 - **System.** OS updates, services, power, who's signed in over SSH, temperatures and memory by app.
 - **Diagnostics.** A checkup that runs 60+ checks in seconds, targeted checks for "an app won't open"
   or "the internet is slow", and live traffic, connections, requests, processes and logs.

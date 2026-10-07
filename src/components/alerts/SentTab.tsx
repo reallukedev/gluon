@@ -17,7 +17,15 @@ import s from "./alerts.module.css";
 
 type Show = "all" | DeliveryStatus;
 
-const EVENT: Record<DeliveryEntry["event"], string> = { problem: "Alert", resolved: "All clear", digest: "Daily summary", report: "Report reply" };
+const EVENT: Record<DeliveryEntry["event"], string> = {
+  problem: "Alert",
+  resolved: "All clear",
+  digest: "Daily summary",
+  report: "Report reply",
+  update: "Update",
+  security: "Sign-in or security",
+  chat: "Chat server",
+};
 const LINE: Record<DeliveryStatus, { line: LineState; label: string }> = {
   sent: { line: "running", label: "Sent" },
   pending: { line: "starting", label: "Waiting" },
@@ -121,7 +129,7 @@ export function SentTab({ compact }: { compact?: boolean }) {
         ) : items.length === 0 ? (
           <Empty title={show === "failed" ? "Nothing failed" : show === "pending" ? "Nothing is waiting" : "Nothing sent yet"}>
             {show === "all"
-              ? "Every alert, all-clear and daily summary Gluon sends is listed here, with whether it got through. Messages held back by quiet hours wait here too."
+              ? "Every message Gluon sends is listed here, with whether it got through. Messages held back by quiet hours wait here too."
               : "Try another filter."}
           </Empty>
         ) : (
@@ -142,6 +150,7 @@ export function SentTab({ compact }: { compact?: boolean }) {
                       <span className={s.histText}>
                         <span className={s.histTitle}>{d.title}</span>
                         <span className={s.histSub}>
+                          <Time ts={d.createdAt} kind="time" className={`${s.phoneTime} num`} />
                           <span>{EVENT[d.event]}</span>
                           <span>to {d.channelName}</span>
                           <span>{st.label}</span>

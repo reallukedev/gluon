@@ -11,6 +11,7 @@ const healthy: XmppStatus = {
   web: null,
   openRegistration: false,
   certSync: { container: "prosody", checkedAt: 1, copiedAt: null, ok: true, message: "" },
+  reach: null,
 };
 const without = (patch: Partial<XmppStatus>) => xmppVerdict({ ...healthy, ...patch });
 

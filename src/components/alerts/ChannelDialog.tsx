@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
 import { Plus, Trash } from "iconoir-react";
-import type { ChannelKind, ChannelView, TestResult } from "@/lib/alerts-types";
-import { api, ApiError } from "@/lib/client/api";
+import type { ChannelKind, ChannelView, TestResult, XmppServersResponse } from "@/lib/alerts-types";
+import { api, ApiError, useApi } from "@/lib/client/api";
 import { Dialog } from "@/components/ui/Dialog";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -19,6 +19,7 @@ export const KIND_INFO: Record<ChannelKind, { label: string; hint: string }> = {
   pushover: { label: "Pushover", hint: "Push to the Pushover app" },
   email: { label: "Email", hint: "Messages to an inbox" },
   webhook: { label: "Webhook", hint: "Discord, Slack or your own" },
+  xmpp: { label: "XMPP chat", hint: "Messages in your chat app" },
 };
 
 const NTFY_PRIORITIES = [
@@ -67,11 +68,22 @@ interface Draft {
   format: "json" | "discord" | "slack";
   url: string;
   headers: { name: string; value: string; saved: boolean }[];
+  // xmpp
+  xmode: "server" | "account";
+  /** "<app>|<domain>" of a chat server Gluon runs. */
+  xfrom: string;
+  jid: string;
+  xpass: string;
+  xserver: string;
+  allowUntrusted: boolean;
+  xto: string;
+  xrooms: string;
+  nick: string;
 }
 
 type Cfg = Record<string, unknown>;
 /** Fields that render their own error message. */
-const FIELDS = new Set(["name", ...["server", "topic", "token", "username", "password", "userKey", "appToken", "device", "to", "via", "host", "port", "user", "pass", "from", "url", "headers"].map((f) => `config.${f}`)]);
+const FIELDS = new Set(["name", ...["server", "topic", "token", "username", "password", "userKey", "appToken", "device", "to", "via", "host", "port", "user", "pass", "from", "url", "headers", "app", "domain", "jid", "rooms", "nick", "mode"].map((f) => `config.${f}`)]);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 const priOf = (v: unknown, d: Pri): Pri => {
   const o = (v ?? {}) as Record<string, number>;
@@ -108,8 +120,19 @@ function draftFrom(ch: ChannelView | null, kind: ChannelKind, vias: { id: string
     format: (str(c.format) as Draft["format"]) || "json",
     url: "",
     headers: Array.isArray(c.headers) ? (c.headers as { name: string; value: string | null }[]).map((h) => ({ name: h.name, value: "", saved: !!h.value })) : [],
+    xmode: kind === "xmpp" && str(c.mode) === "account" ? "account" : "server",
+    xfrom: str(c.app) && str(c.domain) ? `${str(c.app)}|${str(c.domain)}` : "",
+    jid: str(c.jid),
+    xpass: "",
+    xserver: kind === "xmpp" ? str(c.server) : "",
+    allowUntrusted: !!c.allowUntrusted,
+    xto: Array.isArray(c.to) && kind === "xmpp" ? (c.to as string[]).join(", ") : "",
+    xrooms: Array.isArray(c.rooms) ? (c.rooms as string[]).join(", ") : "",
+    nick: str(c.nick) || "Gluon",
   };
 }
+
+const list = (v: string) => v.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
 
 /** Build the config to send. Secrets left empty are omitted (the server keeps the saved one). */
 function configOf(d: Draft, editing: boolean): Cfg {
@@ -152,6 +175,12 @@ function configOf(d: Draft, editing: boolean): Cfg {
         url: secret(d.url),
         headers: d.format === "json" ? d.headers.filter((h) => h.name.trim()).map((h) => ({ name: h.name.trim(), value: h.value.trim() ? h.value.trim() : h.saved ? undefined : null })) : [],
       };
+    case "xmpp": {
+      const [app, domain] = d.xfrom.split("|");
+      const common = { to: list(d.xto), rooms: list(d.xrooms), nick: d.nick.trim() || "Gluon" };
+      if (d.xmode === "server") return { mode: "server", app: app || null, domain: domain || null, ...common };
+      return { mode: "account", jid: d.jid.trim(), password: secret(d.xpass), server: d.xserver.trim() || null, allowUntrusted: d.allowUntrusted, ...common };
+    }
   }
 }
 
@@ -216,7 +245,7 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
         const r = editing
           ? await api.patch<ChannelView>(`/api/alerts/channels/${encodeURIComponent(channel!.id)}`, { name, config })
           : await api.post<ChannelView>("/api/alerts/channels", { kind: d.kind, name, scope, enabled: true, config });
-        toast.success(editing ? `Saved “${r.name}”` : `Added “${r.name}”`, { description: editing ? undefined : scope === "personal" ? "Choose what it tells you below." : "Choose who gets what in Settings → Notifications." });
+        toast.success(editing ? `Saved “${r.name}”` : `Added “${r.name}”`, { description: editing ? undefined : scope === "personal" ? (admin ? "It sends you problems only. Change that below." : "It tells you when your apps stop working. Change that below.") : "It sends you problems only. Change that in Settings → Notifications." });
         onSaved(r);
         onOpenChange(false);
       }
@@ -229,7 +258,15 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
   }
 
   const unknownErr = err && (!err.field || !FIELDS.has(err.field)) ? err.message : null;
-  const title = editing ? `Edit “${channel!.name}”` : picked ? `Add ${KIND_INFO[picked].label}` : scope === "server" ? "Add a server-wide channel" : "Add a way to reach you";
+  const title = editing
+    ? `Edit “${channel!.name}”`
+    : picked === "xmpp"
+      ? "Send alerts to a chat app"
+      : picked
+        ? `Add ${KIND_INFO[picked].label}`
+        : scope === "server"
+          ? "Add a server-wide channel"
+          : "Add a way to reach you";
 
   return (
     <Dialog
@@ -301,7 +338,7 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
                 </div>
               </div>
               {d.server.includes("ntfy.sh") && (
-                <p className={s.muted} style={{ fontSize: "var(--text-sm)" }}>
+                <p className={s.note}>
                   Topics on ntfy.sh are public: anyone who guesses the name can read them. Use a long, random topic or an access token.
                 </p>
               )}
@@ -396,7 +433,7 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
               ) : (
                 <>
                   <div className={s.row3}>
-                    <div data-field="config.host" style={{ gridColumn: "span 2" }}>
+                    <div data-field="config.host" className={s.span2}>
                       <Field label="Mail server (SMTP)" error={fe("host")}>
                         <Input mono value={d.host} onChange={(e) => set("host", e.target.value)} placeholder="smtp.fastmail.com" spellCheck={false} autoCapitalize="off" />
                       </Field>
@@ -514,8 +551,10 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
             </>
           )}
 
+          {d.kind === "xmpp" && <XmppFields d={d} set={set} fe={fe} admin={admin} secretHint={secretHint} saved={saved} />}
+
           {editing && d.kind === "ntfy" && d.auth === "none" && (channel!.secrets.token || channel!.secrets.password) && (
-            <p className={s.muted} style={{ fontSize: "var(--text-sm)" }}>
+            <p className={s.note}>
               Saving removes the stored sign-in.
             </p>
           )}
@@ -524,6 +563,12 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
               {unknownErr}
             </p>
           )}
+          {/* Phones show the dialog as a sheet without the footer's left side, so the test lives here too. */}
+          <div className={s.phoneTest}>
+            <Button block onClick={() => void run("test")} loading={busy === "test"} disabled={busy === "save"}>
+              Send a test
+            </Button>
+          </div>
           {test && (
             <div className={s.testResult}>
               <Notice tone={test.ok ? "neutral" : "fault"} title={test.ok ? "Test sent" : "The test didn't go through"}>
@@ -572,5 +617,183 @@ function defaultName(d: Draft): string {
       return d.to.split(/[\s,;]+/)[0] || "Email";
     case "webhook":
       return d.format === "discord" ? "Discord" : d.format === "slack" ? "Slack" : "Webhook";
+    case "xmpp": {
+      const first = list(d.xrooms)[0] ?? list(d.xto)[0];
+      return first ? `Chat · ${first.split("@")[0]}` : "Chat";
+    }
   }
+}
+
+type SetDraft = <K extends keyof Draft>(k: K, v: Draft[K]) => void;
+
+function XmppFields({
+  d,
+  set,
+  fe,
+  admin,
+  secretHint,
+  saved,
+}: {
+  d: Draft;
+  set: SetDraft;
+  fe: (...f: string[]) => string | null;
+  admin: boolean;
+  secretHint: (k: string) => string | undefined;
+  saved: (k: string) => boolean;
+}) {
+  const { data, error, isLoading } = useApi<XmppServersResponse>("/api/alerts/xmpp");
+  const servers = data?.servers ?? [];
+  const choices = servers.flatMap((sv) => sv.domains.map((dm) => ({ value: `${sv.app}|${dm.domain}`, label: servers.length > 1 || sv.domains.length > 1 ? `${dm.domain} (${sv.name})` : dm.domain, sv, dm })));
+  const chosen = choices.find((c) => c.value === d.xfrom) ?? null;
+  const none = !isLoading && choices.length === 0;
+
+  // Pick the only chat server there is; with none, an admin starts on "an account".
+  React.useEffect(() => {
+    if (d.xmode !== "server" || isLoading) return;
+    if (!d.xfrom && choices[0]) set("xfrom", choices[0].value);
+    else if (none && admin && !d.xfrom) set("xmode", "account");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, choices.length]);
+
+  const sender = chosen ? `gluon@${chosen.dm.domain}` : null;
+  const people = d.xmode === "server" ? (chosen?.dm.accounts ?? []) : [];
+  const rooms = d.xmode === "server" ? (chosen?.dm.rooms ?? []) : [];
+  const stopped = servers.filter((sv) => sv.problem);
+
+  return (
+    <>
+      {admin && (
+        <Field label="Send from" description={d.xmode === "account" ? "Gluon signs in as this account to send. A separate account just for alerts works best." : undefined}>
+          <Segmented
+            aria-label="Send from"
+            value={d.xmode}
+            onChange={(v) => set("xmode", v)}
+            options={[
+              { value: "server", label: "This server's chat server" },
+              { value: "account", label: "An XMPP account" },
+            ]}
+          />
+        </Field>
+      )}
+
+      {d.xmode === "server" ? (
+        none ? (
+          <Notice tone="attention" title={stopped.length ? `${stopped[0]!.name} can't be reached` : "No chat server here yet"}>
+            {stopped.length
+              ? `${stopped[0]!.problem} Start it, then come back.`
+              : admin
+                ? "Gluon sends through a Prosody chat server it runs. Set one up from Apps, or send from an XMPP account you already have."
+                : "Ask whoever looks after the server to set up a chat server. Until then, use ntfy or email."}
+          </Notice>
+        ) : error && !data ? (
+          <Notice tone="fault" title="Couldn't read the chat servers">
+            {error.message}
+          </Notice>
+        ) : (
+          <div data-field="config.domain">
+            <Field
+              label="Chat server"
+              error={fe("app", "domain")}
+              description={
+                sender
+                  ? `Messages come from ${sender}. Gluon creates that account the first time it sends, so people can add it as a contact. If this chat server stops, it can't tell you so: keep a second channel too, like ntfy or email.`
+                  : "Loading the chat servers…"
+              }
+            >
+              {choices.length > 1 ? (
+                <Select aria-label="Chat server" value={d.xfrom} onChange={(v) => set("xfrom", v)} options={choices.map((c) => ({ value: c.value, label: c.label }))} />
+              ) : (
+                <p className={s.staticValue}>
+                  <span className="mono">{chosen?.dm.domain ?? "…"}</span>
+                  {chosen && <span className={s.muted}> on {chosen.sv.name}</span>}
+                </p>
+              )}
+            </Field>
+          </div>
+        )
+      ) : (
+        <>
+          <div className={s.row2}>
+            <div data-field="config.jid">
+              <Field label="Address" error={fe("jid")}>
+                <Input mono value={d.jid} onChange={(e) => set("jid", e.target.value)} placeholder="alerts@chat.example.com" autoCapitalize="off" spellCheck={false} autoComplete="off" inputMode="email" />
+              </Field>
+            </div>
+            <div data-field="config.password">
+              <Field label="Password" error={fe("password")} description={secretHint("password")}>
+                <Input type="password" autoComplete="new-password" value={d.xpass} onChange={(e) => set("xpass", e.target.value)} placeholder={saved("password") ? "••••••••" : undefined} />
+              </Field>
+            </div>
+          </div>
+          <Disclosure summary="Connection" defaultOpen={!!d.xserver || d.allowUntrusted} variant="panel">
+            <div className={s.disclosureBody}>
+              <div data-field="config.server">
+                <Field label="Server" optional error={fe("server")} description="Leave empty to find it from the address, like chat apps do.">
+                  <Input mono value={d.xserver} onChange={(e) => set("xserver", e.target.value)} placeholder="chat.example.com:5222" autoCapitalize="off" spellCheck={false} />
+                </Field>
+              </div>
+              <Checkbox checked={d.allowUntrusted} onChange={(v) => set("allowUntrusted", v)}>
+                Accept its certificate even if it isn&apos;t trusted (a self-signed one on your own server)
+              </Checkbox>
+            </div>
+          </Disclosure>
+        </>
+      )}
+
+      {(d.xmode === "account" || !none) && (
+        <>
+          <div data-field="config.to">
+            <Field
+              label="Send to"
+              error={fe("to")}
+              description={admin ? (people.length ? "Tick people on this server, or type any chat address. Each gets its own chat." : "One or more chat addresses, separated by commas. Each gets its own chat.") : "Your chat address."}
+            >
+              <Input mono value={d.xto} onChange={(e) => set("xto", e.target.value)} placeholder={`you@${chosen?.dm.domain ?? "chat.example.com"}`} autoCapitalize="off" spellCheck={false} inputMode="email" />
+            </Field>
+            {admin && people.length > 0 && <Picks known={people} value={d.xto} onChange={(v) => set("xto", v)} label="People on this chat server" />}
+          </div>
+          {admin && (
+            <div data-field="config.rooms">
+              <Field
+                label="Group chats"
+                optional
+                error={fe("rooms")}
+                description={d.xmode === "server" ? "Also post in a group chat on this server, like a household one." : "Also post in a group chat. Gluon joins just long enough to post, and needs to be a member of members-only ones."}
+              >
+                <Input mono value={d.xrooms} onChange={(e) => set("xrooms", e.target.value)} placeholder={rooms[0] ?? "family@rooms.chat.example.com"} autoCapitalize="off" spellCheck={false} />
+              </Field>
+              {rooms.length > 0 && <Picks known={rooms} value={d.xrooms} onChange={(v) => set("xrooms", v)} label="Group chats on this chat server" />}
+            </div>
+          )}
+          {admin && list(d.xrooms).length > 0 && (
+            <div data-field="config.nick">
+              <Field label="Name in group chats" error={fe("nick")}>
+                <Input value={d.nick} onChange={(e) => set("nick", e.target.value)} maxLength={40} />
+              </Field>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+/** Known addresses as checkboxes that add to or take from the typed list, which stays the one source of truth. */
+function Picks({ known, value, onChange, label }: { known: string[]; value: string; onChange: (v: string) => void; label: string }) {
+  const chosen = list(value);
+  return (
+    <div className={s.picks} role="group" aria-label={label}>
+      {known.map((jid) => {
+        const [user, host] = jid.split("@");
+        return (
+          <Checkbox key={jid} checked={chosen.includes(jid)} onChange={(v) => onChange((v ? [...chosen, jid] : chosen.filter((x) => x !== jid)).join(", "))}>
+            <span className={s.pickText} title={jid}>
+              {user}
+              <span className={s.muted}>@{host}</span>
+            </span>
+          </Checkbox>
+        );
+      })}
+    </div>
+  );
 }

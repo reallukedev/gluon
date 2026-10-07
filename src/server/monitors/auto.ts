@@ -3,6 +3,7 @@ import { all, now } from "../db";
 import { tryReadConfig, routeUrl, isRedirect } from "../caddy/routes";
 import { listApps, type AppSummary } from "../docker/apps";
 import { monitorConfigSchema, type MonitorConfig } from "@/lib/alerts-types";
+import { serviceKind } from "@/lib/service-kind";
 import { deleteMonitorRow, insertMonitor, listMonitorRows, updateMonitorRow } from "./store";
 import { clearFindings, invalidateMonitors } from "./runner";
 
@@ -76,11 +77,17 @@ export async function syncAutoMonitors(): Promise<{ created: number; updated: nu
       /* Docker unavailable: keep app monitors as they are */
     }
     const granted = new Set(all<{ app_id: string }>("SELECT DISTINCT app_id FROM app_access").map((r) => r.app_id));
+    // Mumble has no web page and bans an address that connects 10 times in 2 minutes, so an HTTP
+    // monitor would lock Gluon (and everything behind the same Docker gateway) out. Network checks
+    // voice servers with Mumble's own ping instead.
+    const isMumble = (a: AppSummary) => serviceKind(a.containers.map((c) => c.image)) === "mumble";
+    const mumblePorts = new Set(apps.filter(isMumble).flatMap((a) => a.containers.flatMap((c) => c.ports.map((p) => p.host))));
     const wanted = new Map<string, Desired>();
 
     if (routesCfg) {
       for (const r of routesCfg.routes ?? []) {
         if (isRedirect(r) || r.enabled === false) continue;
+        if (r.type === "subdomain" && !r.xmpp && mumblePorts.has(r.backend.port)) continue;
         const app = (r.app ? apps.find((a) => a.id === r.app) : null) ?? apps.find((a) => a.routes.some((x) => x.id === r.id)) ?? null;
         let url = routeUrl(routesCfg, r);
         if (r.type === "subdomain" && r.only_paths?.length) {
@@ -97,7 +104,7 @@ export async function syncAutoMonitors(): Promise<{ created: number; updated: nu
     }
     if (appsOk) {
       for (const a of apps) {
-        if (a.self) continue;
+        if (a.self || isMumble(a)) continue;
         const target = lanTarget(a);
         if (!target) continue;
         const household = a.household || granted.has(a.id);

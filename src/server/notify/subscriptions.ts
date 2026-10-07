@@ -6,8 +6,9 @@ import { getPrefs } from "../prefs";
 import { getSetting } from "../settings";
 import type { User } from "../auth/users";
 import type { Finding } from "../findings";
-import { subscriptionFilterSchema, type SubscriptionFilter, type SubscriptionsResponse } from "@/lib/alerts-types";
+import { kindsFor, normalizeFilter, subscriptionFilterSchema, type NotifyKind, type SubscriptionFilter, type SubscriptionsResponse } from "@/lib/alerts-types";
 import { allChannels, getChannel, type Channel } from "./channels";
+import { wantsFinding } from "./filter";
 
 // ---------------------------------------------------------------- time zones & quiet hours
 
@@ -78,7 +79,7 @@ export function parseFilter(raw: string | null, userId: string): SubscriptionFil
     obj = {};
   }
   const parsed = subscriptionFilterSchema.safeParse(obj);
-  const f = parsed.success ? parsed.data : subscriptionFilterSchema.parse({});
+  const f = normalizeFilter(parsed.success ? parsed.data : subscriptionFilterSchema.parse({}));
   if (!validTz(f.tz)) f.tz = defaultTz(userId);
   return f;
 }
@@ -129,21 +130,25 @@ async function sanitize(user: User, input: Partial<SubscriptionFilter>): Promise
       field: `filter.${issue?.path.join(".") ?? ""}`,
     });
   }
-  const f = parsed.data;
-  if (!validTz(f.tz)) throw new AppError("invalid", "That time zone isn't recognised.", 400, { field: "filter.tz" });
+  const raw = parsed.data;
+  if (!validTz(raw.tz)) throw new AppError("invalid", "That time zone isn't recognised.", 400, { field: "filter.tz" });
   if (user.role !== "admin") {
-    f.severities = ["fault", "attention"];
-    f.digest = false;
-    if (f.subjects !== "all") {
+    // Older clients don't send kinds; members always got "my app is down" both ways.
+    if (!raw.kinds) raw.severities = ["fault", "attention"];
+    if (raw.subjects !== "all") {
       const visible = new Set((await appsForMember(user.id)).map((a) => a.id));
-      const bad = f.subjects.filter((s) => !visible.has(s));
+      const bad = raw.subjects.filter((s) => !visible.has(s));
       if (bad.length) throw forbidden("You can only follow apps you can see.");
     }
   }
-  if (f.severities.length === 0 && user.role === "admin" && !f.reports && !f.digest) {
-    throw new AppError("invalid", "Pick at least one kind of alert, or remove this subscription.", 400, { field: "filter.severities" });
+  const allowed = new Set<NotifyKind>(kindsFor(user.role));
+  const f = normalizeFilter(raw);
+  f.kinds = f.kinds.filter((k) => allowed.has(k));
+  const out = normalizeFilter({ ...f });
+  if (out.kinds.length === 0) {
+    throw new AppError("invalid", "Pick at least one thing to be told about, or turn this channel off for you.", 400, { field: "filter.kinds" });
   }
-  return f;
+  return out;
 }
 
 export async function setSubscription(user: User, channelId: string, input: Partial<SubscriptionFilter>): Promise<SubscriptionFilter> {
@@ -193,22 +198,9 @@ export function activeSubscriptions(): ActiveSub[] {
   return out;
 }
 
-/** Finding kinds a household member may hear about (their apps being down, and back). */
-export const MEMBER_KINDS = new Set(["app.broken", "monitor.down"]);
-export const REPORT_KIND = "household.report";
-
-/**
- * Does this subscription want this finding? `memberApps` = app ids the member can see (members only).
- */
+/** Does this subscription want this finding? `memberApps` = app ids the member can see (members only). */
 export function wants(sub: ActiveSub, f: Pick<Finding, "kind" | "severity" | "subject">, memberApps: Set<string> | null): boolean {
-  const flt = sub.filter;
-  if (sub.role !== "admin") {
-    if (!MEMBER_KINDS.has(f.kind) || !f.subject || !memberApps?.has(f.subject)) return false;
-    return flt.subjects === "all" || flt.subjects.includes(f.subject);
-  }
-  if (f.kind === REPORT_KIND) return flt.reports;
-  if (f.severity !== "fault" && f.severity !== "attention") return false;
-  if (!flt.severities.includes(f.severity)) return false;
-  if (flt.subjects === "all") return true;
-  return !!f.subject && flt.subjects.includes(f.subject);
+  return wantsFinding(sub.role, sub.filter, f, memberApps);
 }
+
+export const hasKind = (sub: Pick<ActiveSub, "filter">, k: NotifyKind) => sub.filter.kinds.includes(k);

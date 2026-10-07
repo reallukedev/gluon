@@ -10,6 +10,9 @@ import { Notice, Skeleton } from "@/components/ui/Surface";
 import { FlowSteps } from "@/components/ui/FlowSteps";
 import type { Commit } from "./NetworkView";
 import { bare, newRouteId, THIS_SERVER, useChatServers } from "./shared";
+import { HttpsSetting } from "./HttpsSetting";
+import { DnsHelp } from "./DnsHelp";
+import { certUploads, hasNewCert, httpsFieldOf, httpsFormFrom, httpsSetting, httpsSummary, verifyHttps, type HttpsForm } from "./https-form";
 import f from "./flow.module.css";
 import c from "./chat.module.css";
 
@@ -41,6 +44,7 @@ interface Form {
   sync: boolean;
   syncDir: string;
   app: string | null;
+  https: HttpsForm;
 }
 
 const portOk = (p: string) => /^\d{1,5}$/.test(p) && Number(p) >= 1 && Number(p) <= 65535;
@@ -60,6 +64,7 @@ function fromRoute(r: SubdomainRouteT, convert: boolean): Form {
     sync: !!x?.cert_sync,
     syncDir: x?.cert_sync?.dir ?? "/etc/prosody/certs",
     app: r.app ?? null,
+    https: httpsFormFrom(r),
   };
 }
 
@@ -88,13 +93,14 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
   const [form, setForm] = React.useState<Form>(() =>
     existing
       ? fromRoute(existing, converting)
-      : { container: null, backendHost: THIS_SERVER, c2s: "5222", domain: `chat.${base}`, name: "Chat", federation: true, s2s: "5269", web: false, http: "5280", sync: false, syncDir: "/etc/prosody/certs", app: null },
+      : { container: null, backendHost: THIS_SERVER, c2s: "5222", domain: `chat.${base}`, name: "Chat", federation: true, s2s: "5269", web: false, http: "5280", sync: false, syncDir: "/etc/prosody/certs", app: null, https: httpsFormFrom(undefined) },
   );
   const [step, setStep] = React.useState<Step>(existing && !converting ? "review" : "server");
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [general, setGeneral] = React.useState<string | null>(null);
   const [stale, setStale] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [checkingCert, setCheckingCert] = React.useState(false);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm((x) => ({ ...x, [k]: v }));
     setErrors((e) => {
@@ -141,6 +147,14 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
   const takenBy = cfg.routes.find((r) => r.type === "subdomain" && r.id !== existing?.id && r.host === domain);
   const domainChanged = !!existing && !converting && existing.host !== domain;
   const knownDns = status?.routes.find((r) => r.host === domain && r.dns)?.dns ?? null;
+  const mode = form.https.mode;
+  // Without a certificate in Caddy there's nothing to copy, and with no web side nothing to publish.
+  const canSync = mode === "auto" || mode === "own";
+  const sync = form.sync && canSync;
+  const web = form.web && mode !== "none";
+  const storedCert = existing ? data.certs?.[existing.id] : undefined;
+  const prevRoute = existing;
+  const newCert = hasNewCert(form.https, prevRoute, storedCert, domain);
 
   function check(s: Step): Record<string, string> {
     const e: Record<string, string> = {};
@@ -156,17 +170,35 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
     if (s === "options") {
       if (form.federation && !portOk(form.s2s)) e.s2s = "Enter the port other servers connect to, usually 5269.";
       else if (form.federation && form.s2s === form.c2s) e.s2s = "This can't be the same port chat apps sign in on.";
-      if (form.web && !portOk(form.http)) e.http = "Enter the chat server's web port, usually 5280.";
-      else if (form.web && form.http === form.c2s) e.http = "This can't be the same port chat apps sign in on.";
-      else if (form.web && form.federation && form.http === form.s2s) e.http = "This can't be the same port other servers connect to.";
-      if (form.sync && !form.container) e.sync = "Pick the chat server's container on the first step, or turn this off.";
-      if (form.sync && !DIR_RE.test(form.syncDir.trim())) e.syncDir = "Enter a folder inside the container, like /etc/prosody/certs.";
+      if (web && !portOk(form.http)) e.http = "Enter the chat server's web port, usually 5280.";
+      else if (web && form.http === form.c2s) e.http = "This can't be the same port chat apps sign in on.";
+      else if (web && form.federation && form.http === form.s2s) e.http = "This can't be the same port other servers connect to.";
+      if (sync && !form.container) e.sync = "Pick the chat server's container on the first step, or turn this off.";
+      if (sync && !DIR_RE.test(form.syncDir.trim())) e.syncDir = "Enter a folder inside the container, like /etc/prosody/certs.";
     }
     return e;
   }
 
   const idx = STEPS.indexOf(step);
-  function go(to: Step) {
+
+  async function verifyCert(): Promise<HttpsForm | null> {
+    if (!newCert) return form.https;
+    setCheckingCert(true);
+    try {
+      const r = await verifyHttps(form.https, domain);
+      if ("errors" in r) {
+        setErrors(r.errors);
+        setStep("options");
+        return null;
+      }
+      setForm((x) => ({ ...x, https: r.form }));
+      return r.form;
+    } finally {
+      setCheckingCert(false);
+    }
+  }
+
+  async function go(to: Step) {
     const i = STEPS.indexOf(to);
     if (i > idx) {
       for (const s of STEPS.slice(0, i)) {
@@ -177,6 +209,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
           return;
         }
       }
+      if (STEPS.indexOf("options") < i && !(await verifyCert())) return;
     }
     setErrors({});
     setStep(to);
@@ -194,9 +227,10 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
       backend: { host: form.backendHost, port: Number(form.c2s), tls: false },
       xmpp: {
         s2s_port: form.federation ? Number(form.s2s) : null,
-        http_port: form.web ? Number(form.http) : null,
-        cert_sync: form.sync && form.container ? { container: form.container, dir: form.syncDir.trim() } : null,
+        http_port: web ? Number(form.http) : null,
+        cert_sync: sync && form.container ? { container: form.container, dir: form.syncDir.trim() } : null,
       },
+      ...(httpsSetting(form.https) ? { https: httpsSetting(form.https) } : {}),
     };
     return existing ? cfg.routes.map((r) => (r.id === existing.id ? route : r)) : [...cfg.routes, route];
   }
@@ -211,14 +245,19 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
         return;
       }
     }
+    const checked = await verifyCert();
+    if (!checked) return;
     setSaving(true);
     try {
       const success = converting ? `${domain} is set up as a chat server.` : existing ? `Saved ${domain}.` : `${domain} is a chat server now. Its certificate arrives within a minute.`;
-      await commit(build(), { success });
+      await commit(build(), { success, certs: certUploads(checked, domain, newCert) });
       setOpen(false);
     } catch (e) {
       if (e instanceof ApiError && e.code === "stale") setStale(true);
-      else if (e instanceof ApiError && e.field) {
+      else if (e instanceof ApiError && httpsFieldOf(e.field)) {
+        setErrors({ [httpsFieldOf(e.field)!]: e.message });
+        setStep("options");
+      } else if (e instanceof ApiError && e.field) {
         const map: Record<string, [string, Step]> = {
           host: ["domain", "address"],
           name: ["name", "address"],
@@ -256,7 +295,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
       footer={
         <>
           {idx > 0 ? (
-            <Button variant="ghost" onClick={() => go(STEPS[idx - 1]!)} disabled={saving}>
+            <Button variant="ghost" onClick={() => void go(STEPS[idx - 1]!)} disabled={saving}>
               Back
             </Button>
           ) : (
@@ -264,7 +303,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
               Cancel
             </Button>
           )}
-          <Button variant="primary" loading={saving} onClick={() => (last ? void save() : go(STEPS[idx + 1]!))}>
+          <Button variant="primary" loading={saving || checkingCert} onClick={() => (last ? void save() : void go(STEPS[idx + 1]!))}>
             {primary}
           </Button>
         </>
@@ -275,7 +314,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
         onSubmit={(e) => {
           e.preventDefault();
           if (last) void save();
-          else go(STEPS[idx + 1]!);
+          else void go(STEPS[idx + 1]!);
         }}
       >
         <FlowSteps label="Steps" steps={STEPS.map((k) => ({ key: k, label: STEP_NAME[k] }))} current={step} working={saving} />
@@ -377,15 +416,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                   <Input value={form.domain} onChange={(e) => set("domain", e.target.value.replace(/\s/g, ""))} mono placeholder={`chat.${base}`} spellCheck={false} autoCapitalize="off" />
                 </Field>
                 {HOST_RE.test(domain) && !takenBy && domain !== base && (
-                  <p className={f.faint}>
-                    {knownDns?.status === "ok" && knownDns.proxied === false
-                      ? `${domain} already points at your router, so DNS needs nothing new.`
-                      : knownDns?.proxied
-                        ? `${domain} goes through Cloudflare's proxy, which only carries web traffic. Turn the proxy off for it (grey cloud) so chat apps can connect.`
-                        : covered
-                          ? `The *.${base} record already points ${domain} at your router, so DNS needs nothing new.`
-                          : `${domain} needs its own DNS record pointing at your router. Keep Cloudflare's proxy off (grey cloud): it only carries web traffic, not chat.`}
-                  </p>
+                  <DnsHelp host={domain} baseDomain={base} purpose="chat" known={knownDns ?? (covered && status?.wildcard?.status === "ok" ? status.wildcard : null)} publicIp={status?.publicIp ?? null} />
                 )}
                 {domainChanged && (
                   <Notice tone="attention" title="This changes everyone's chat address">
@@ -420,32 +451,54 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                       Sends {domain || "the domain"}&rsquo;s web traffic to the chat server&rsquo;s own web port, for browser chat apps (BOSH, WebSocket) and shared files. Turn on only if the server has those modules enabled.
                     </span>
                   </div>
-                  <Switch checked={form.web} onChange={(v) => set("web", v)} aria-label="Web chat and file uploads" />
-                  {form.web && (
+                  <Switch checked={web} onChange={(v) => set("web", v)} disabled={mode === "none"} aria-label="Web chat and file uploads" />
+                  {mode === "none" && <span className={`${f.faint} ${c.optionField}`}>Off while there&rsquo;s no web side here (see HTTPS below).</span>}
+                  {web && (
                     <Field label="Chat server's web port" error={errors.http} className={c.optionField}>
                       <Input value={form.http} onChange={(e) => set("http", e.target.value.replace(/\D/g, "").slice(0, 5))} inputMode="numeric" mono placeholder="5280" />
                     </Field>
                   )}
                 </div>
 
+                <HttpsSetting
+                  host={domain}
+                  kind="chat"
+                  value={form.https}
+                  onChange={(v) => {
+                    set("https", v);
+                    setErrors({});
+                  }}
+                  stored={prevRoute?.host === domain ? storedCert : undefined}
+                  errors={errors}
+                  checking={checkingCert}
+                  onCheck={() => {
+                    setErrors({});
+                    void verifyCert();
+                  }}
+                />
+
                 <div className={c.option}>
                   <div className={c.optionText}>
                     <span className={c.optionTitle}>Keep its certificate current</span>
-                    <span className={f.faint}>
-                      {form.container
-                        ? `Caddy renews ${domain || "the domain"}'s certificate on its own. If the one in ${form.container} gets close to expiring, Gluon copies Caddy's in and reloads it, so chat apps never see an expired one. A certificate that another tool keeps current is left alone.`
-                        : "Pick the chat server's container on the first step to turn this on."}
+                    <span className={f.faint} hidden={!canSync}>
+                      {!form.container
+                        ? "Pick the chat server's container on the first step to turn this on."
+                        : mode === "own"
+                          ? `If the certificate in ${form.container} gets close to expiring, Gluon copies yours in and reloads it. A certificate that another tool keeps current is left alone.`
+                          : `Caddy renews ${domain || "the domain"}'s certificate on its own. If the one in ${form.container} gets close to expiring, Gluon copies Caddy's in and reloads it, so chat apps never see an expired one. A certificate that another tool keeps current is left alone.`}
                     </span>
                     {errors.sync && <span className={f.error}>{errors.sync}</span>}
                   </div>
-                  <Switch checked={form.sync} onChange={(v) => set("sync", v)} disabled={!form.sync && (!form.container || (picked ? !picked.canSync : false))} aria-label="Keep its certificate current" />
-                  {form.sync && form.container && (
+                  <Switch checked={sync} onChange={(v) => set("sync", v)} disabled={!canSync || (!form.sync && (!form.container || (picked ? !picked.canSync : false)))} aria-label="Keep its certificate current" />
+                  {!canSync && <span className={`${f.faint} ${c.optionField}`}>{mode === "none" ? "Off: the chat server handles its own certificate." : "Off: with plain HTTP there's no certificate here to copy."}</span>}
+                  {sync && form.container && (
                     <Field label="Certificate folder in the container" error={errors.syncDir} className={c.optionField} description={`Gluon writes ${domain || "domain"}.crt and .key here.`}>
                       <Input value={form.syncDir} onChange={(e) => set("syncDir", e.target.value.trim())} mono spellCheck={false} autoCapitalize="off" />
                     </Field>
                   )}
                   {picked && !picked.canSync && <span className={f.faint}>Gluon can only reload Prosody for now, so {picked.container} keeps managing its own certificate.</span>}
                 </div>
+
               </div>
             )}
 
@@ -464,13 +517,13 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                   </span>
                 </div>
                 <dl className={f.recap}>
-                  <Recap label="Server" onChange={() => go("server")}>
+                  <Recap label="Server" onChange={() => void go("server")}>
                     {form.container ?? "On this server"} <span className={`${f.dim} mono`}>:{form.c2s}</span>
                   </Recap>
-                  <Recap label="Domain" onChange={() => go("address")}>
+                  <Recap label="Domain" onChange={() => void go("address")}>
                     {domain}
                   </Recap>
-                  <Recap label="Federation" onChange={() => go("options")}>
+                  <Recap label="Federation" onChange={() => void go("options")}>
                     {form.federation ? (
                       <>
                         On <span className={`${f.dim} mono`}>:{form.s2s}</span>
@@ -479,25 +532,33 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                       "Off, only people on this server"
                     )}
                   </Recap>
-                  <Recap label="Web side" onChange={() => go("options")}>
-                    {form.web ? (
+                  <Recap label="Web side" onChange={() => void go("options")}>
+                    {web ? (
                       <>
                         BOSH and WebSocket <span className={`${f.dim} mono`}>:{form.http}</span>
                       </>
+                    ) : mode === "none" ? (
+                      "None here"
                     ) : (
                       "A short page that says it's a chat server"
                     )}
                   </Recap>
-                  <Recap label="Certificate" onChange={() => go("options")}>
-                    {form.sync && form.container ? `Gluon copies Caddy's into ${form.container} before it can expire` : "The chat server manages its own"}
+                  <Recap label="HTTPS" onChange={() => void go("options")}>
+                    {httpsSummary(form.https, prevRoute?.host === domain ? storedCert : undefined)}
+                  </Recap>
+                  <Recap label="Certificate" onChange={() => void go("options")}>
+                    {sync && form.container ? `Gluon copies ${mode === "own" ? "yours" : "Caddy's"} into ${form.container} before it can expire` : "The chat server manages its own"}
                   </Recap>
                 </dl>
                 <ul className={c.after} aria-label="What happens when you save">
                   <li>
                     <Lock aria-hidden />
                     <span>
-                      Caddy keeps a certificate for {domain}
-                      {form.sync && form.container ? `. Gluon checks ${form.container}'s every six hours and copies Caddy's in before it can expire.` : "."}
+                      {mode === "none"
+                        ? `The web server doesn't answer for ${domain} at all, so the chat server needs its own certificate for it.`
+                        : mode === "http"
+                          ? `${domain}'s web page is plain HTTP; whatever is in front of this server handles HTTPS. The chat server needs its own certificate.`
+                          : `${mode === "own" ? `The web server serves your certificate for ${domain}` : `Caddy keeps a certificate for ${domain}`}${sync && form.container ? `. Gluon checks ${form.container}'s every six hours and copies ${mode === "own" ? "yours" : "Caddy's"} in before it can expire.` : "."}`}
                     </span>
                   </li>
                   <li>
@@ -510,10 +571,10 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                           <span className="mono">{p}</span>
                         </React.Fragment>
                       ))}{" "}
-                      to this server. Gluon checks the chat server from inside your network, so it can&rsquo;t see whether the router lets chat apps in. Try signing in from your phone on mobile data.
+                      to this server. Once it&rsquo;s saved, Gluon tries them through your internet address and tells you if one doesn&rsquo;t get through.
                     </span>
                   </li>
-                  {converting && (
+                  {converting && mode !== "none" && (
                     <li>
                       <Server aria-hidden />
                       <span>Web visitors to {domain} see a short page saying it&rsquo;s a chat server, instead of an error.</span>

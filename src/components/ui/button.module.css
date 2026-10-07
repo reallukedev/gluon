@@ -100,15 +100,19 @@
 
 .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
 
-/* Touch: small buttons keep their look but get a thumb-sized hit area. */
+/* Touch: buttons keep their look but get a hit area at least 44px tall (WCAG 2.5.5). Controls are
+   40px on touch screens and small ones 32px, so the area grows mostly up and down; sideways it
+   stops at half the usual 8px gap, so neighbours never cover each other. */
 @media (pointer: coarse) {
-  .sm::before, .icon::before {
+  .button::before {
     content: "";
     position: absolute;
-    inset: -4px;
+    inset: -2px -4px;
     border-radius: inherit;
   }
+  .sm::before, .icon.sm::before { inset: -6px -4px; }
   .lg { height: 46px; }
+  .lg::before { inset: 0; }
 }
 
 /* Loading: the label stays put (no layout shift); a hairline sweeps along the bottom edge. */

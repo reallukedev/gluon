@@ -77,13 +77,13 @@ export function ChannelsTab({ highlight }: { highlight: string | null }) {
             </div>
           </div>
         ) : (
-          <ChannelList channels={server} onEdit={edit} onChange={() => void mutate()} highlight={highlight} />
+          <ChannelList channels={server} onEdit={edit} onChange={() => void mutate()} highlight={highlight} showAudience />
         )}
       </Panel>
 
       {server.length > 0 && (
-        <p className={s.muted} style={{ fontSize: "var(--text-sm)" }}>
-          Choose which alerts reach you, quiet hours and the daily summary in <Link href="/settings/notifications">Settings → Notifications</Link>.
+        <p className={s.note}>
+          Choose what each channel sends you, and quiet hours, in <Link href="/settings/notifications">Settings → Notifications</Link>.
         </p>
       )}
 
@@ -113,4 +113,5 @@ const NEEDS: Record<ChannelKind, string> = {
   pushover: "Paid app. Needs your user key and an app token.",
   email: "Any mail account. Needs its mail server details.",
   webhook: "Discord, Slack or your own service.",
+  xmpp: "Messages in Conversations, Monal or any XMPP chat app.",
 };

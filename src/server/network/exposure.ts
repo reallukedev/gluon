@@ -9,6 +9,7 @@ import { routeApps, routeUrls, FALLBACK_ID } from "./routes-meta";
 import { ddnsStatus } from "./ddns";
 import { localBackendHost, isLocalBackend, LOCAL_HOST } from "./probes";
 import { NOT_CONFIGURED } from "./status";
+import { mumblePorts } from "./voice-servers";
 import { plural, listJoin } from "@/lib/format";
 import type { ExposureFlag, ExposureReport, InternetExposure, LanExposure, ListenScope, LoginInfo, RouteAppRef } from "@/lib/network-types";
 
@@ -48,6 +49,7 @@ const KNOWN_PORTS: Record<number, { label: string; login?: LoginProbe["result"];
   5269: { label: "XMPP federation (other chat servers)", login: "login", evidence: "Other chat servers have to prove who they are with a certificate." },
   5280: { label: "XMPP chat server web side (BOSH, WebSocket, uploads)" },
   5281: { label: "XMPP chat server web side (HTTPS)" },
+  64738: { label: "Mumble voice", login: "unknown", evidence: "Mumble lets anyone join unless it has a server password or only allows registered users." },
   5347: { label: "XMPP components", login: "login", evidence: "Components need the shared secret from the chat server's config." },
 };
 
@@ -107,6 +109,8 @@ async function build(force: boolean): Promise<ExposureReport> {
     ddnsStatus().catch(() => null),
   ]);
   const rApps = await routeApps(cfg, apps);
+  // Mumble bans addresses that connect too often, and its port doesn't speak HTTP anyway.
+  const mumble = mumblePorts(apps);
   const urls = routeUrls(cfg);
   const limit = limiter(6);
   const probeAge = force ? 10 * 60_000 : 6 * 3_600_000;
@@ -175,7 +179,7 @@ async function build(force: boolean): Promise<ExposureReport> {
           const declared = app ? app.hasLogin : null;
           if (known?.login) login = loginInfo(declared, null, { result: known.login, evidence: known.evidence ?? "" });
           else if (known?.db || (pub && KNOWN_PORTS[pub.container]?.db)) login = loginInfo(declared, null, { result: "unknown", evidence: "Databases usually need a password, but Gluon can't check that from outside." });
-          else if (NON_HTTP.has(gr.port)) login = loginInfo(declared, null);
+          else if (NON_HTTP.has(gr.port) || mumble.has(gr.port)) login = loginInfo(declared, null, mumble.has(gr.port) ? { result: "unknown", evidence: KNOWN_PORTS[64738]!.evidence! } : undefined);
           else {
             const probe = await loginProbe(LOCAL_HOST, gr.port, { maxAgeMs: probeAge }).catch(() => null);
             login = loginInfo(declared === "unknown" ? "unknown" : declared, probe);
@@ -205,13 +209,14 @@ async function build(force: boolean): Promise<ExposureReport> {
 
   // ---- Internet
   const proxiedNames = new Set(ddns?.config.proxiedDomains ?? []);
-  const entries: { id: string; name: string; type: InternetExposure["type"]; host: string; backend: { host: string; port: number; tls: boolean }; onlyPaths: string[] | null; chat: boolean }[] = [
-    { id: FALLBACK_ID, name: cfg.fallback.name, type: "fallback", host: cfg.base_domain, backend: cfg.fallback.backend, onlyPaths: null, chat: false },
+  const entries: { id: string; name: string; type: InternetExposure["type"]; host: string; backend: { host: string; port: number; tls: boolean }; onlyPaths: string[] | null; chat: boolean; voice: boolean }[] = [
+    { id: FALLBACK_ID, name: cfg.fallback.name, type: "fallback", host: cfg.base_domain, backend: cfg.fallback.backend, onlyPaths: null, chat: false, voice: false },
   ];
   for (const r of cfg.routes) {
     if (r.enabled === false || isRedirect(r)) continue;
     const sub = r.type === "subdomain" ? r : null;
-    entries.push({ id: r.id, name: r.name, type: r.type, host: sub ? sub.host : cfg.base_domain, backend: r.backend, onlyPaths: sub?.only_paths?.length ? sub.only_paths : null, chat: !!sub?.xmpp });
+    const toMumble = isLocalBackend(r.backend.host) && mumble.has(r.backend.port);
+    entries.push({ id: r.id, name: r.name, type: r.type, host: sub ? sub.host : cfg.base_domain, backend: r.backend, onlyPaths: sub?.only_paths?.length ? sub.only_paths : null, chat: !!sub?.xmpp, voice: (!!sub?.voice || toMumble) && !sub?.xmpp });
   }
   const internet: InternetExposure[] = await Promise.all(
     entries.map((e) =>
@@ -226,13 +231,18 @@ async function build(force: boolean): Promise<ExposureReport> {
           named && appById.has(named.appId) ? named : listenerApp ? { appId: listenerApp.id, name: listenerApp.name, hasLogin: listenerApp.hasLogin } : (named ?? null);
         const probeHost = localBackendHost(e.backend.host);
         // A chat server's client port speaks XMPP, not HTTP, and its accounts always need a password.
-        const probe = e.chat ? null : await loginProbe(probeHost, e.backend.port, { tls: e.backend.tls, maxAgeMs: probeAge }).catch(() => null);
-        const login = e.chat ? loginInfo(app?.hasLogin ?? null, null, { result: "login", evidence: "Chat accounts need a password to sign in." }) : loginInfo(app?.hasLogin ?? null, probe);
+        // Mumble's port doesn't speak HTTP either; whether it asks for a password lives in its own config.
+        const probe = e.chat || e.voice ? null : await loginProbe(probeHost, e.backend.port, { tls: e.backend.tls, maxAgeMs: probeAge }).catch(() => null);
+        const login = e.chat
+          ? loginInfo(app?.hasLogin ?? null, null, { result: "login", evidence: "Chat accounts need a password to sign in." })
+          : e.voice
+            ? loginInfo(app?.hasLogin ?? null, null, { result: "unknown", evidence: "Mumble lets anyone join unless it has a server password or only allows registered users." })
+            : loginInfo(app?.hasLogin ?? null, probe);
         // Judge by what the app is, not its image: platforms like Umbrel wrap ordinary apps in their own images.
         // Gluon itself is the admin tool for this whole server; it's recognised by its own flag, since
         // apps from Gluon's store are named "Gluon <something>" too.
         const self = !!(app && appById.get(app.appId)?.self);
-        const adminUi = !e.chat && (self || ADMIN_RE.test(`${app?.appId ?? ""} ${app?.name ?? ""} ${e.name}`) || (!!probe?.admin && !/umbrel|casaos/i.test(probe.fingerprint ?? "")));
+        const adminUi = !e.chat && !e.voice && (self || ADMIN_RE.test(`${app?.appId ?? ""} ${app?.name ?? ""} ${e.name}`) || (!!probe?.admin && !/umbrel|casaos/i.test(probe.fingerprint ?? "")));
         const listenerOwner = listener?.owner;
         return {
           routeId: e.id,
@@ -255,7 +265,7 @@ async function build(force: boolean): Promise<ExposureReport> {
   // ---- Flags
   const flags: ExposureFlag[] = [];
   for (const x of internet) {
-    const where = x.url.replace(/^https:\/\//, "").replace(/\/$/, "");
+    const where = x.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
     const partial = x.onlyPaths ? ` (only ${listJoin(x.onlyPaths)})` : "";
     if (x.login.verdict === "no-login" && !x.onlyPaths) {
       flags.push({

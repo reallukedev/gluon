@@ -21,6 +21,7 @@ export const NAV: NavItem[] = [
   { id: "network", label: "Network", href: "/network", admin: true, hint: "Public addresses, DNS, exposure", key: "n" },
   { id: "system", label: "System", href: "/system", admin: true, hint: "Updates, services, sign-ins, power", key: "y" },
   { id: "diagnostics", label: "Diagnostics", href: "/diagnostics", admin: true, hint: "Checkups, live traffic, logs", key: "x" },
+  { id: "terminal", label: "Terminal", href: "/terminal", admin: true, hint: "Run commands on the server and in containers", key: "t" },
 ];
 
 /** Settings lives in the account menu, not the list, but has a jump key too. */

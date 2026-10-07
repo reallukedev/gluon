@@ -20,7 +20,9 @@ import { describeConfig, describeChanges, routeWarnings } from "./routes-meta";
 import { invalidateStatus, NOT_CONFIGURED } from "./status";
 import { invalidateExposure } from "./exposure";
 import { syncChatCertificates } from "./xmpp-certs";
-import type { DriftInfo, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
+import { stageOwnCerts } from "./own-certs";
+import { caddySide } from "./caddy-certs";
+import type { CertUploads, DriftInfo, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
 
 /**
  * Saving public addresses. Optimistic concurrency: the client sends the `rev` it loaded; if routes.json
@@ -43,6 +45,7 @@ export function currentConfig(): RoutesConfig {
 
 export async function routesResponse(): Promise<RoutesResponse> {
   const cfg = currentConfig();
+  await caddySide();
   const [meta, running] = await Promise.all([describeConfig(cfg), caddyRunning()]);
   const drift = caddyfileDrift(cfg);
   return { config: cfg, rev: configRev(cfg), drift, driftInfo: drift ? driftInfo(cfg) : null, caddyRunning: running, ...meta };
@@ -92,8 +95,10 @@ interface Where {
   zone: string;
 }
 
-async function save(user: User, where: Where, rev: string, raw: { routes: unknown[]; fallback?: RoutesConfig["fallback"] }, reason: string, action: string, summaryPrefix: string): Promise<RoutesSaveResponse> {
+async function save(user: User, where: Where, rev: string, raw: { routes: unknown[]; fallback?: RoutesConfig["fallback"] }, reason: string, action: string, summaryPrefix: string, uploads: CertUploads = {}): Promise<RoutesSaveResponse> {
   return serial(async () => {
+    // Renders certificate lines with the folder Caddy really sees, before comparing or loading.
+    const caddy = await caddySide();
     const current = currentConfig();
     if (configRev(current) !== rev) throw staleError(current);
     let next: RoutesConfig;
@@ -104,10 +109,19 @@ async function save(user: User, where: Where, rev: string, raw: { routes: unknow
       throw e;
     }
     const changes = describeChanges(current, next);
+    let staged: ReturnType<typeof stageOwnCerts>;
+    try {
+      staged = stageOwnCerts(next, current, uploads, caddy.uid);
+    } catch (e) {
+      audit(user, { action, summary: `${summaryPrefix} (rejected: ${(e as Error).message})`, target: current.base_domain, outcome: "failed" }, where);
+      throw e;
+    }
     let saved: RoutesConfig;
     try {
-      saved = await applyConfig(next, reason);
+      // New certificate files under an unchanged Caddyfile still need Caddy to load them.
+      saved = await applyConfig(next, reason, { force: staged.changed });
     } catch (e) {
+      staged.rollback();
       audit(user, { action, summary: `${summaryPrefix}: failed (${(e as Error).message})`, target: current.base_domain, detail: { changes }, outcome: "failed" }, where);
       throw e;
     }
@@ -118,7 +132,8 @@ async function save(user: User, where: Where, rev: string, raw: { routes: unknow
         action,
         summary: `${summaryPrefix}: ${changes.charAt(0).toLowerCase()}${changes.slice(1)}`,
         target: saved.base_domain,
-        detail: { changes, warnings: warnings.filter((w) => w.isNew).map((w) => w.message), rev: configRev(saved) },
+        // Which hosts got a new certificate, never the certificate or key themselves.
+        detail: { changes, warnings: warnings.filter((w) => w.isNew).map((w) => w.message), rev: configRev(saved), ...(Object.keys(uploads).length ? { certificates: Object.keys(uploads) } : {}) },
       },
       where,
     );
@@ -137,8 +152,8 @@ async function save(user: User, where: Where, rev: string, raw: { routes: unknow
   });
 }
 
-export function saveRoutes(user: User, where: Where, body: { rev: string; routes: unknown[]; fallback?: RoutesConfig["fallback"] }) {
-  return save(user, where, body.rev, { routes: body.routes, fallback: body.fallback }, `Saved by ${user.username} in Gluon`, "network.routes.save", "Changed public addresses");
+export function saveRoutes(user: User, where: Where, body: { rev: string; routes: unknown[]; fallback?: RoutesConfig["fallback"]; certs?: CertUploads }) {
+  return save(user, where, body.rev, { routes: body.routes, fallback: body.fallback }, `Saved by ${user.username} in Gluon`, "network.routes.save", "Changed public addresses", body.certs ?? {});
 }
 
 export function restoreRoutes(user: User, where: Where, body: { id: string; rev: string }) {
@@ -160,4 +175,16 @@ export async function reassignRouteApp(user: User, where: Where, from: string, t
   const routes = current.routes.map((r) => (r.app === from ? { ...r, app: to } : r));
   await save(user, where, configRev(current), { routes, fallback: fallback ? { ...current.fallback, app: to } : current.fallback }, `Moved ${from} to ${to} in Gluon`, "network.routes.save", `Pointed public addresses at ${to}`);
   return ids.length + (fallback ? 1 : 0);
+}
+
+/**
+ * Point a chat address's web side (BOSH, WebSocket, file sharing) at the chat server's HTTP port,
+ * or turn it off with null. Same checked, audited save as the Network page.
+ */
+export async function setChatWebPort(user: User, where: Where, routeId: string, port: number | null): Promise<RoutesSaveResponse> {
+  const current = currentConfig();
+  const r = current.routes.find((x) => x.id === routeId);
+  if (!r || r.type !== "subdomain" || !r.xmpp) throw new AppError("not_found", "That chat address doesn't exist (any more).", 404);
+  const routes = current.routes.map((x) => (x.id === routeId && x.type === "subdomain" && x.xmpp ? { ...x, xmpp: { ...x.xmpp, http_port: port } } : x));
+  return save(user, where, configRev(current), { routes, fallback: current.fallback }, `Chat web port changed by ${user.username} in Gluon`, "network.routes.save", port ? `Sent ${r.host}'s web side to port ${port}` : `Turned off ${r.host}'s web side`);
 }

@@ -1,0 +1,57 @@
+/* Who handles HTTPS for an address: one quiet line, with the choices behind "Change". */
+
+.wrap { display: grid; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--panel); min-width: 0; }
+.row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; padding: 6px 6px 6px 14px; }
+.icon { display: inline-flex; color: var(--muted); }
+.icon svg { width: 16px; height: 16px; }
+.rowText { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex-wrap: wrap; row-gap: 2px; }
+.rowLabel { font-size: var(--text-sm); font-weight: 600; color: var(--ink); }
+.rowValue { font-size: var(--text-sm); color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
+
+.panel { display: grid; gap: 14px; padding: 14px; border-top: 1px solid var(--line); min-width: 0; }
+
+.options { display: grid; gap: 2px; margin: 0 -6px; }
+.opt {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 9px 8px;
+  border-radius: 7px;
+  text-align: left;
+  min-width: 0;
+  transition: background-color var(--dur-fast) ease;
+}
+@media (hover: hover) and (pointer: fine) { .opt:hover { background: var(--panel-2); } }
+.radio { position: relative; margin-top: 2px; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--panel); transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
+.radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--inverse); transform: scale(0.4); opacity: 0; transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-fast) ease; }
+.opt[data-on] .radio { border-color: var(--ink); background: var(--ink); }
+.opt[data-on] .radio::after { transform: scale(1); opacity: 1; }
+.optText { display: grid; gap: 2px; min-width: 0; }
+.optTitle { font-size: var(--text-md); font-weight: 600; color: var(--ink); line-height: 1.3; }
+.optSub { font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
+
+.own { display: grid; gap: 14px; min-width: 0; }
+.own > :first-child { justify-self: start; }
+.pem { display: grid; position: relative; min-width: 0; }
+/* "Open a file" sits on the label's line, at the right. */
+.open { position: absolute; top: -6px; right: -6px; }
+.pemText { min-height: 92px; font-size: var(--text-xs); line-height: 1.45; resize: vertical; }
+.stored { display: grid; gap: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.check > .facts { flex: 1 1 100%; }
+
+.facts { display: grid; gap: 10px; padding: 12px 14px; border-radius: var(--radius-control); background: var(--sunk); min-width: 0; }
+.dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+.dl > div { display: grid; gap: 1px; min-width: 0; }
+.dl dt { font-size: var(--text-xs); color: var(--muted); font-weight: 560; }
+.dl dd { margin: 0; font-size: var(--text-sm); color: var(--ink); overflow-wrap: anywhere; }
+.fp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 520px) { .dl { grid-template-columns: minmax(0, 1fr); } }
+.warn { display: flex; min-width: 0; }
+.warn > span { align-items: flex-start; }
+.warn > span > span:last-child { line-height: 1.45; white-space: normal; font-size: var(--text-sm); color: var(--ink-2); }
+
+.faint { color: var(--muted); font-size: var(--text-sm); line-height: 1.45; }
+.error { color: var(--fault); font-size: var(--text-sm); line-height: 1.45; }

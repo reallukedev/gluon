@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, MoreHoriz, ClockRotateRight, Code, Refresh, Link as LinkIcon, ChatBubble } from "iconoir-react";
-import type { ExposureReport, NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
+import { Plus, MoreHoriz, ClockRotateRight, Code, Refresh, Link as LinkIcon, ChatBubble, Headset } from "iconoir-react";
+import type { CertUploads, ExposureReport, NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
 import { api, ApiError } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Notice, Panel, Skeleton } from "@/components/ui/Surface";
@@ -11,7 +11,7 @@ import { Menu } from "@/components/ui/Menu";
 import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { prefersReducedMotion } from "@/lib/client/motion";
-import { useRoutes, useNetStatus, useExposure, useDdns, useAppList, saveRoutes, bare } from "./shared";
+import { useRoutes, useNetStatus, useExposure, useDdns, useAppList, saveRoutes, bare, voicePorts } from "./shared";
 import { buildEntries, entryFor, dnsHop, routerHop, caddyHop, appsHop, type Address, type AppEntry, type HopId } from "./model";
 import { NetworkMap, type MapModel } from "./NetworkMap";
 import { DnsDetails, RouterDetails, CaddyDetails } from "./HopDetails";
@@ -21,6 +21,7 @@ import { HomeReach } from "./HomeReach";
 import { PublishFlow, type FlowTarget } from "./PublishFlow";
 import { ChatServerFlow, type ChatTarget } from "./ChatServerFlow";
 import { HostRedirectFlow, type HostRedirectTarget } from "./HostRedirectFlow";
+import { VoiceServerFlow, type VoiceTarget } from "./VoiceServerFlow";
 import { HistoryDialog } from "./HistoryDialog";
 import { CaddyfileDialog } from "./CaddyfileDialog";
 import { driftSentence } from "./DriftNotice";
@@ -29,11 +30,11 @@ import s from "./network.module.css";
 export type Landing = { kind: "publish"; appId: string } | { kind: "route"; id: string } | { kind: "hop"; hop: HopId } | { kind: "list" };
 
 export interface Commit {
-  (routes: RouteT[], opts?: { fallback?: RoutesConfigT["fallback"]; quiet?: boolean; success?: string }): Promise<RoutesSaveResponse>;
+  (routes: RouteT[], opts?: { fallback?: RoutesConfigT["fallback"]; quiet?: boolean; success?: string; certs?: CertUploads }): Promise<RoutesSaveResponse>;
 }
 
 const HOP_TITLE: Record<Exclude<HopId, "apps">, string> = {
-  dns: "Cloudflare DNS",
+  dns: "DNS",
   router: "Your router and internet address",
   caddy: "Web server (Caddy) and certificates",
 };
@@ -54,6 +55,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
   const [flow, setFlow] = React.useState<FlowTarget | null>(landing?.kind === "publish" ? { mode: "new", appId: landing.appId } : null);
   const [chat, setChat] = React.useState<ChatTarget | null>(null);
   const [hostRedirect, setHostRedirect] = React.useState<HostRedirectTarget | null>(null);
+  const [voice, setVoice] = React.useState<VoiceTarget | null>(null);
   const [history, setHistory] = React.useState(false);
   const [caddyfile, setCaddyfile] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
@@ -94,7 +96,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
       const cur = routes.data;
       if (!cur) throw new Error("The addresses haven't loaded yet.");
       try {
-        const res = await saveRoutes(cur.rev, next, opts.fallback);
+        const res = await saveRoutes(cur.rev, next, opts.fallback, opts.certs);
         await routes.mutate({ ...cur, ...res, driftInfo: null, caddyRunning: true }, { revalidate: true });
         void status.mutate();
         void exposure.mutate();
@@ -267,6 +269,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     setDetailsOpen(false);
     if (r?.type === "subdomain" && r.redirect_to) setHostRedirect({ mode: "edit", id });
     else if (r?.type === "subdomain" && r.xmpp) setChat({ mode: "edit", id });
+    else if (r?.type === "subdomain" && r.voice) setVoice({ mode: "edit", id });
     else setFlow(r?.type === "redirect" ? { mode: "redirect", id } : { mode: "edit", id });
   };
 
@@ -348,6 +351,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
                 { label: "Check everything now", icon: <Refresh />, onSelect: () => void recheck(), disabled: checking },
                 { label: "Add a short link", description: `A path on ${data?.config.base_domain ?? "the main domain"} that redirects`, icon: <LinkIcon />, onSelect: () => setFlow({ mode: "redirect" }), disabled: !data },
                 { label: "Add a chat server", description: "An XMPP server people sign in to from chat apps", icon: <ChatBubble />, onSelect: () => setChat({ mode: "new" }), disabled: !data },
+                { label: "Add a voice server", description: "A Mumble server people join from voice apps", icon: <Headset />, onSelect: () => setVoice({ mode: "new" }), disabled: !data },
                 { label: "Redirect a domain", description: "Send a whole domain to another address", icon: <LinkIcon />, onSelect: () => setHostRedirect({ mode: "new" }), disabled: !data },
                 "separator",
                 { label: "History", description: "Earlier versions, restore one", icon: <ClockRotateRight />, onSelect: () => setHistory(true), disabled: !data },
@@ -446,6 +450,12 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
             setDetailsOpen(false);
             setChat({ mode: "convert", id });
           }}
+          voicePorts={voicePorts(apps.data)}
+          publicIp={status.data?.publicIp ?? null}
+          onSetUpVoice={(id) => {
+            setDetailsOpen(false);
+            setVoice({ mode: "convert", id });
+          }}
           onToggleAddress={toggleAddress}
           onRemoveAddress={removeAddress}
           onRemoveApp={removeApp}
@@ -461,6 +471,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
           apps={apps.data}
           exposure={exposure.data}
           publicIp={status.data?.publicIp.v4 ?? null}
+          status={status.data}
           commit={commit}
           onClose={() => setFlow(null)}
           onReload={() => void routes.mutate()}
@@ -471,7 +482,8 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
           }}
         />
       )}
-      {data && hostRedirect && <HostRedirectFlow key={JSON.stringify(hostRedirect)} target={hostRedirect} data={data} commit={commit} onClose={() => setHostRedirect(null)} onReload={() => void routes.mutate()} />}
+      {data && hostRedirect && <HostRedirectFlow key={JSON.stringify(hostRedirect)} target={hostRedirect} data={data} status={status.data} commit={commit} onClose={() => setHostRedirect(null)} onReload={() => void routes.mutate()} />}
+      {data && voice && <VoiceServerFlow key={JSON.stringify(voice)} target={voice} data={data} status={status.data} commit={commit} onClose={() => setVoice(null)} onReload={() => void routes.mutate()} />}
       {data && chat && <ChatServerFlow key={JSON.stringify(chat)} target={chat} data={data} status={status.data} commit={commit} onClose={() => setChat(null)} onReload={() => void routes.mutate()} />}
       {data && (
         <HistoryDialog

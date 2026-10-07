@@ -2,8 +2,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { Plus } from "iconoir-react";
-import type { ChannelKind, ChannelView, SubscriptionFilter, SubscriptionsResponse, TestResult } from "@/lib/alerts-types";
-import { CHANNEL_KINDS, MEMBER_CHANNEL_KINDS } from "@/lib/alerts-types";
+import type { ChannelKind, ChannelView, KindPreset, NotifyKind, SubscriptionFilter, SubscriptionsResponse, TestResult } from "@/lib/alerts-types";
+import { CHANNEL_KINDS, KIND_GROUPS, KIND_INFO, MEMBER_CHANNEL_KINDS, MEMBER_KIND_INFO, NOTIFY_KINDS, defaultKinds, kindsFor, presetOf } from "@/lib/alerts-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
 import { Empty, Notice, Panel, Skeleton } from "@/components/ui/Surface";
@@ -51,6 +51,9 @@ export function Notifications() {
 
   return (
     <div className={s.stack}>
+      {/* Admins mostly use server-wide channels, so what they're told comes first; members need a way to be reached first. */}
+      {admin && subs.data && <WhatYouGet data={subs.data} onChange={refresh} />}
+
       <Panel
         title={admin ? "Your own channels" : "Where to reach you"}
         meta={
@@ -69,15 +72,15 @@ export function Notifications() {
         ) : mine.length === 0 ? (
           <Empty title={admin ? "No personal channels" : "Nowhere to reach you yet"} action={<Button onClick={() => edit(null)}>Add a way to reach you</Button>}>
             {admin
-              ? "Server-wide channels (Settings → Alerts → Notifications) are usually enough. Add one here for alerts only you should get, like your own phone."
-              : "Get a message on your phone (with the free ntfy app) or by email when one of your apps stops working, and when someone replies to a problem you reported."}
+              ? "Server-wide channels (Settings → Alerts → Channels) are usually enough. Add one here for alerts only you should get, like your own phone."
+              : "Get a message on your phone (with the free ntfy app), by email or in your chat app when one of your apps stops working, and when someone replies to a problem you reported."}
           </Empty>
         ) : (
           <ChannelList channels={mine} onEdit={edit} onChange={refresh} />
         )}
       </Panel>
 
-      {subs.data && <WhatYouGet data={subs.data} onChange={refresh} />}
+      {!admin && subs.data && <WhatYouGet data={subs.data} onChange={refresh} />}
 
       {!admin && mine.length > 0 && <SentTab compact />}
 
@@ -89,32 +92,14 @@ export function Notifications() {
         admin={admin}
         kinds={admin ? [...CHANNEL_KINDS] : MEMBER_CHANNEL_KINDS}
         emailVias={subs.data?.mailSetups ?? []}
-        onSaved={async (c) => {
-          refresh();
-          // A new personal channel is only useful once it's switched on for something.
-          if (!editing) {
-            try {
-              await api.put(SUBS_URL, { channelId: c.id, filter: defaults(admin, Intl.DateTimeFormat().resolvedOptions().timeZone) });
-              void subs.mutate();
-            } catch {
-              /* the switch below still works */
-            }
-          }
-        }}
+        onSaved={() => refresh()}
       />
     </div>
   );
 }
 
-const defaults = (_admin: boolean, tz: string): Partial<SubscriptionFilter> => ({
-  severities: ["fault", "attention"],
-  subjects: "all",
-  resolved: true,
-  reports: true,
-  digest: false,
-  quiet: null,
-  tz,
-});
+/** A new subscription: problems only (admins) or "my apps" (members). Stated in the UI as the default. */
+export const defaults = (role: "admin" | "member", tz: string): Partial<SubscriptionFilter> => ({ kinds: defaultKinds(role), subjects: "all", quiet: null, tz });
 
 function WhatYouGet({ data, onChange }: { data: SubscriptionsResponse; onChange: () => void }) {
   const admin = data.role === "admin";
@@ -122,7 +107,7 @@ function WhatYouGet({ data, onChange }: { data: SubscriptionsResponse; onChange:
     return admin ? (
       <Panel title="What you're told">
         <p className={s.hint}>
-          Add a channel first, here or in <Link href={alertsHref("notifications")}>Alerts → Notifications</Link>. Then choose here which alerts it sends you.
+          Add a channel first, here or in <Link href={alertsHref("notifications")}>Alerts → Channels</Link>. Then choose here what it sends you.
         </p>
       </Panel>
     ) : null;
@@ -151,27 +136,38 @@ function SubscriptionRow({
 }) {
   const { timeZone } = usePrefs();
   const fmt = useFormat();
-  const admin = data.role === "admin";
+  const role = data.role;
+  const admin = role === "admin";
   const tz = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const [draft, setDraft] = React.useState<SubscriptionFilter | null>(sub);
   const [busy, setBusy] = React.useState<"toggle" | "save" | "test" | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
   const [tested, setTested] = React.useState<TestResult | null>(null);
+  /** "Choose" stays picked while someone ticks boxes, even when the ticks happen to match a preset. */
+  const [choosing, setChoosing] = React.useState(false);
+  /** The editor is folded away until someone wants to change it; the line under the name says what it sends. */
+  const [open, setOpen] = React.useState(false);
   const on = !!sub;
 
   // Reset only when the saved filter really changes: saving another channel hands every row a new
   // (equal) object, and an identity dependency would wipe this row's unsaved edits.
   const subKey = JSON.stringify(sub);
-  React.useEffect(() => setDraft(sub), [subKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    setDraft(sub);
+    setChoosing(!!sub && presetOf(sub.kinds, role) === "custom");
+  }, [subKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const dirty = JSON.stringify(draft) !== JSON.stringify(sub);
   const set = <K extends keyof SubscriptionFilter>(k: K, v: SubscriptionFilter[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d));
+  const setKinds = (next: NotifyKind[]) => set("kinds", NOTIFY_KINDS.filter((k) => next.includes(k)));
+  const toggleKinds = (keys: NotifyKind[], v: boolean) => draft && setKinds(v ? [...new Set([...draft.kinds, ...keys])] : draft.kinds.filter((k) => !keys.includes(k)));
 
   async function toggle(next: boolean) {
     setBusy("toggle");
     setErr(null);
     try {
-      if (next) await api.put(SUBS_URL, { channelId: channel.id, filter: defaults(admin, tz) });
+      if (next) await api.put(SUBS_URL, { channelId: channel.id, filter: defaults(role, tz) });
       else await api.del(SUBS_URL, { channelId: channel.id });
+      setOpen(next);
       onChange();
     } catch (e) {
       if (!(e instanceof ApiError && e.code === "reauth_cancelled")) toast.error(e instanceof Error ? e.message : "Couldn't change that.");
@@ -184,8 +180,9 @@ function SubscriptionRow({
     setBusy("save");
     setErr(null);
     try {
-      await api.put(SUBS_URL, { channelId: channel.id, filter: { ...draft, tz } });
+      await api.put(SUBS_URL, { channelId: channel.id, filter: { kinds: draft.kinds, subjects: draft.subjects, quiet: draft.quiet, tz } });
       toast.success(`Saved what “${channel.name}” tells you`);
+      setOpen(false);
       onChange();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn't save that.");
@@ -205,9 +202,10 @@ function SubscriptionRow({
     }
   }
 
-  const title = channel.name;
   const switchLabel = admin ? `Send alerts to ${channel.name}` : `Tell me on ${channel.name} when my apps stop working`;
   const digestAt = fmt.time(new Date(2000, 0, 1, data.digest.hour, 0));
+  const preset: KindPreset = !draft ? "problems" : choosing ? "custom" : presetOf(draft.kinds, role);
+  const aboutApps = !!draft && draft.kinds.some((k) => KIND_INFO[k].apps);
 
   return (
     <li className={s.sub}>
@@ -216,16 +214,14 @@ function SubscriptionRow({
           {KIND_ICON[channel.kind as ChannelKind]}
         </span>
         <span className={s.subText}>
-          <span className={s.subName} title={title}>
-            {title}
+          <span className={s.subName} title={channel.name}>
+            {channel.name}
           </span>
           <span className={s.subSub}>
             {!channel.enabled
               ? "This channel is turned off."
               : on
-                ? admin
-                  ? describeAdmin(sub!)
-                  : "Tells you when your apps stop working."
+                ? describe(sub!, role)
                 : admin
                   ? channel.owner
                     ? "Your channel. Not sending you anything yet."
@@ -233,82 +229,137 @@ function SubscriptionRow({
                   : "Not telling you anything yet."}
           </span>
         </span>
-        <Switch checked={on} onChange={(v) => void toggle(v)} disabled={busy === "toggle" || !channel.enabled} aria-label={switchLabel} />
+        <span className={s.subActions}>
+          {on && channel.enabled && (
+            // Hidden, not removed, while there are unsaved changes: the row keeps its shape.
+            <Button size="sm" variant="ghost" className={s.change} data-hidden={dirty ? "" : undefined} aria-hidden={dirty || undefined} tabIndex={dirty ? -1 : undefined} aria-expanded={open} aria-controls={`${channel.id}-edit`} onClick={() => setOpen((o) => !o)}>
+              {open ? "Close" : "Change"}
+            </Button>
+          )}
+          <Switch checked={on} onChange={(v) => void toggle(v)} disabled={busy === "toggle" || !channel.enabled} aria-label={switchLabel} />
+        </span>
       </div>
 
-      {on && draft && channel.enabled && (
-        <div className={s.subBody}>
+      {on && draft && channel.enabled && (open || dirty) && (
+        <div className={s.subBody} id={`${channel.id}-edit`}>
           {admin ? (
             <div className={s.group}>
-              <span className="label">Send me</span>
-              <div className={s.checks}>
-                <Checkbox checked={draft.severities.includes("fault")} onChange={(v) => set("severities", v ? [...new Set([...draft.severities, "fault" as const])] : draft.severities.filter((x) => x !== "fault"))}>
-                  When something is broken
+              <span className="label" id={`${channel.id}-about`}>
+                Tell me about
+              </span>
+              <Segmented
+                aria-label="Tell me about"
+                value={preset}
+                onChange={(v) => {
+                  if (v === "custom") return setChoosing(true);
+                  setChoosing(false);
+                  setKinds(v === "all" ? kindsFor("admin") : defaultKinds("admin"));
+                }}
+                options={[
+                  { value: "problems", label: "Problems only" },
+                  { value: "all", label: "Everything" },
+                  { value: "custom", label: "Choose" },
+                ]}
+              />
+              {preset === "problems" && (
+                <p className={s.hint}>Things that broke or need you, warnings about sign-ins, failed Gluon updates and household reports, and a message when each problem clears. This is the default.</p>
+              )}
+              {preset === "all" && (
+                <p className={s.hint}>All of that, plus available and installed updates{data.digest.enabled ? ", the daily summary" : ""} and new chat accounts.</p>
+              )}
+              {preset === "custom" && (
+                <div className={s.kindGroups}>
+                  {KIND_GROUPS.map((g) => (
+                    <fieldset key={g.key} className={s.kindGroup}>
+                      <legend className="label">{g.label}</legend>
+                      {NOTIFY_KINDS.filter((k) => KIND_INFO[k].group === g.key).map((k) => {
+                        const digestOff = k === "digest" && !data.digest.enabled;
+                        return (
+                          <Checkbox key={k} checked={draft.kinds.includes(k)} disabled={digestOff && !draft.kinds.includes(k)} onChange={(v) => toggleKinds([k], v)}>
+                            <span className={s.kindText}>
+                              <span>{KIND_INFO[k].label}</span>
+                              <small>
+                                {k === "digest" ? (
+                                  digestOff ? (
+                                    <>
+                                      Turned off for the server. Turn it on in <Link href="/settings/server">Settings → Server</Link>.
+                                    </>
+                                  ) : (
+                                    `Every day at ${digestAt}: what's open, uptime and anything notable.`
+                                  )
+                                ) : (
+                                  KIND_INFO[k].hint
+                                )}
+                              </small>
+                            </span>
+                          </Checkbox>
+                        );
+                      })}
+                    </fieldset>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={s.group}>
+              <span className="label">Tell me</span>
+              <div className={s.memberKinds}>
+                <Checkbox checked={draft.kinds.includes("fault") || draft.kinds.includes("attention")} onChange={(v) => toggleKinds(["fault", "attention"], v)}>
+                  <span className={s.kindText}>
+                    <span>When my apps stop working</span>
+                    <small>Gluon tells whoever looks after the server too.</small>
+                  </span>
                 </Checkbox>
-                <Checkbox
-                  checked={draft.severities.includes("attention")}
-                  onChange={(v) => set("severities", v ? [...new Set([...draft.severities, "attention" as const])] : draft.severities.filter((x) => x !== "attention"))}
-                >
-                  When something needs attention
-                </Checkbox>
+                {(["resolved", "reports", "app.updated"] as const).map((k) => (
+                  <Checkbox key={k} checked={draft.kinds.includes(k)} onChange={(v) => toggleKinds([k], v)}>
+                    <span className={s.kindText}>
+                      <span>{MEMBER_KIND_INFO[k]!.label}</span>
+                      <small>{MEMBER_KIND_INFO[k]!.hint}</small>
+                    </span>
+                  </Checkbox>
+                ))}
               </div>
             </div>
-          ) : null}
+          )}
 
-          <div className={s.group}>
-            <span className="label">{admin ? "About" : "Which apps"}</span>
-            <Segmented
-              aria-label="Which apps"
-              value={draft.subjects === "all" ? "all" : "some"}
-              onChange={(v) => set("subjects", v === "all" ? "all" : draft.subjects === "all" ? [] : draft.subjects)}
-              options={[
-                { value: "all", label: admin ? "Everything" : "All my apps" },
-                { value: "some", label: "Only some apps" },
-              ]}
-            />
-            {draft.subjects !== "all" &&
-              (data.subjects.length === 0 ? (
-                <p className={s.hint}>{admin ? "No apps found." : "No apps have been shared with you yet."}</p>
-              ) : (
-                <div className={s.apps}>
-                  {data.subjects.map((a) => {
-                    const list = draft.subjects as string[];
-                    return (
-                      <Checkbox key={a.id} checked={list.includes(a.id)} onChange={(v) => set("subjects", v ? [...list, a.id] : list.filter((x) => x !== a.id))}>
-                        <span className={s.appCheck}>
-                          <span title={a.name}>{a.name}</span>
-                        </span>
-                      </Checkbox>
-                    );
-                  })}
-                </div>
-              ))}
-            {admin && draft.subjects !== "all" && <p className={s.hint}>Problems that aren't about an app (disks, memory, updates) aren't sent with this choice.</p>}
-          </div>
+          {aboutApps && (
+            <div className={s.group}>
+              <span className="label" id={`${channel.id}-apps`}>
+                {admin ? "Which apps" : "About"}
+              </span>
+              <Segmented
+                aria-label="Which apps"
+                value={draft.subjects === "all" ? "all" : "some"}
+                onChange={(v) => set("subjects", v === "all" ? "all" : draft.subjects === "all" ? [] : draft.subjects)}
+                options={[
+                  { value: "all", label: admin ? "All apps" : "All my apps" },
+                  { value: "some", label: "Only some apps" },
+                ]}
+              />
+              {draft.subjects !== "all" &&
+                (data.subjects.length === 0 ? (
+                  <p className={s.hint}>{admin ? "No apps found." : "No apps have been shared with you yet."}</p>
+                ) : (
+                  <div className={s.apps}>
+                    {data.subjects.map((a) => {
+                      const picked = draft.subjects as string[];
+                      return (
+                        <Checkbox key={a.id} checked={picked.includes(a.id)} onChange={(v) => set("subjects", v ? [...picked, a.id] : picked.filter((x) => x !== a.id))}>
+                          <span className={s.appCheck}>
+                            <span title={a.name}>{a.name}</span>
+                          </span>
+                        </Checkbox>
+                      );
+                    })}
+                  </div>
+                ))}
+              {admin && draft.subjects !== "all" && (
+                <p className={s.hint}>Narrows problems and app updates. Problems that aren&apos;t about an app (disks, memory) stop coming; sign-in, Gluon and chat server messages still do.</p>
+              )}
+            </div>
+          )}
 
           <div className={s.rows}>
-            <SettingRow label={admin ? "When a problem clears" : "Tell me when they're working again"} description={admin ? "A short “resolved” message after each alert." : undefined}>
-              <Switch checked={draft.resolved} onChange={(v) => set("resolved", v)} aria-label="When a problem clears" />
-            </SettingRow>
-            <SettingRow label={admin ? "Problem reports from the household" : "Tell me when someone replies to my reports"}>
-              <Switch checked={draft.reports} onChange={(v) => set("reports", v)} aria-label="Problem reports" />
-            </SettingRow>
-            {admin && (
-              <SettingRow
-                label="Daily summary"
-                description={
-                  data.digest.enabled ? (
-                    `Every day at ${digestAt}: what's open, uptime and anything notable.`
-                  ) : (
-                    <>
-                      The daily summary is turned off for the server. Turn it on in <Link href="/settings/server">Settings → Server</Link>.
-                    </>
-                  )
-                }
-              >
-                <Switch checked={draft.digest} onChange={(v) => set("digest", v)} disabled={!data.digest.enabled} aria-label="Daily summary" />
-              </SettingRow>
-            )}
             <SettingRow label="Quiet hours" description={draft.quiet ? undefined : "Hold messages overnight and send them in the morning."}>
               <Switch checked={!!draft.quiet} onChange={(v) => set("quiet", v ? { from: "22:00", to: "07:00", bypassFaults: admin } : null)} aria-label="Quiet hours" />
             </SettingRow>
@@ -323,11 +374,12 @@ function SubscriptionRow({
                 <Input type="time" className={`${s.time} num`} value={draft.quiet.to} onChange={(e) => e.target.value && set("quiet", { ...draft.quiet!, to: e.target.value })} aria-label="Quiet hours end" />
               </div>
               <Checkbox checked={draft.quiet.bypassFaults} onChange={(v) => set("quiet", { ...draft.quiet!, bypassFaults: v })}>
-                {admin ? "Still tell me straight away when something is broken" : "Still tell me straight away if an app stops working"}
+                {admin ? "Still tell me straight away when something breaks" : "Still tell me straight away if an app stops working"}
               </Checkbox>
               <p className={s.hint}>
                 Times are in {tz.replace(/_/g, " ")}
-                {sub?.tz && sub.tz !== tz ? ` (saved as ${sub.tz.replace(/_/g, " ")}; saving updates it)` : ""}. Messages held during quiet hours are sent when they end, unless the problem has already cleared.
+                {sub?.tz && sub.tz !== tz ? ` (saved as ${sub.tz.replace(/_/g, " ")}; saving updates it)` : ""}. Messages held overnight go out when quiet hours end, unless the problem has already cleared.
+                {admin ? " Updates and everything else wait too." : ""}
               </p>
             </div>
           )}
@@ -345,15 +397,31 @@ function SubscriptionRow({
                   {tested.ok ? tested.message : `Didn't go through. ${tested.message}`}
                 </span>
               ) : dirty ? (
-                "You have unsaved changes."
+                draft.kinds.length === 0 ? (
+                  "Nothing is chosen. Pick something, or turn this channel off for you."
+                ) : (
+                  "You have unsaved changes."
+                )
               ) : (
                 ""
               )}
             </span>
+            {dirty && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setDraft(sub);
+                  setChoosing(!!sub && presetOf(sub.kinds, role) === "custom");
+                }}
+              >
+                Undo changes
+              </Button>
+            )}
             <Button size="sm" loading={busy === "test"} onClick={() => void test()}>
               Send a test
             </Button>
-            <Button size="sm" variant="primary" disabled={!dirty} loading={busy === "save"} onClick={() => void save()}>
+            <Button size="sm" variant="primary" disabled={!dirty || draft.kinds.length === 0} loading={busy === "save"} onClick={() => void save()}>
               Save
             </Button>
           </div>
@@ -363,12 +431,27 @@ function SubscriptionRow({
   );
 }
 
-function describeAdmin(f: SubscriptionFilter): string {
-  const sev = f.severities.length === 2 ? "Every alert" : f.severities[0] === "fault" ? "Broken things" : f.severities[0] === "attention" ? "Things needing attention" : "No alerts";
-  const bits = [f.subjects === "all" ? sev : `${sev} about ${f.subjects.length} app${f.subjects.length === 1 ? "" : "s"}`];
-  if (f.reports) bits.push("household reports");
-  if (f.digest) bits.push("daily summary");
-  let out = bits.join(", ");
+/** One line for the row: what this channel tells you. */
+export function describe(f: SubscriptionFilter, role: "admin" | "member"): string {
+  let out: string;
+  if (role !== "admin") {
+    const bits: string[] = [];
+    if (f.kinds.includes("fault") || f.kinds.includes("attention")) bits.push("when your apps stop working");
+    if (f.kinds.includes("resolved")) bits.push("when they're back");
+    if (f.kinds.includes("app.updated")) bits.push("when they're updated");
+    if (f.kinds.includes("reports")) bits.push("replies to your reports");
+    out = bits.length ? `Tells you ${bits.join(", ")}` : "Tells you nothing";
+  } else {
+    const preset = presetOf(f.kinds, role);
+    if (preset === "all") out = "Everything";
+    else if (preset === "problems") out = "Problems only";
+    else {
+      const groups = KIND_GROUPS.filter((g) => f.kinds.some((k) => KIND_INFO[k].group === g.key)).map((g) => g.label.toLowerCase());
+      out = `Chosen: ${groups.join(", ")}`;
+      out = out.charAt(0).toUpperCase() + out.slice(1);
+    }
+  }
+  if (f.subjects !== "all") out += `, about ${f.subjects.length} app${f.subjects.length === 1 ? "" : "s"}`;
   if (f.quiet) out += `. Quiet ${f.quiet.from}–${f.quiet.to}`;
   return `${out}.`;
 }

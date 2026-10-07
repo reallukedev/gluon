@@ -4,10 +4,11 @@ import { getSetting } from "../settings";
 import { findById } from "../auth/users";
 import { listApps, appsForMember } from "../docker/apps";
 import { getFinding, markNotified, needsNotification, raise, resolve, type Finding } from "../findings";
-import type { ChannelKind, DeliveryEvent } from "@/lib/alerts-types";
+import type { ChannelKind, DeliveryEvent, NotifyKind } from "@/lib/alerts-types";
 import { alertsHref } from "@/lib/settings-links";
 import { getChannel, sendContext, type Channel } from "./channels";
-import { activeSubscriptions, localParts, quietState, wants, type ActiveSub } from "./subscriptions";
+import { activeSubscriptions, hasKind, localParts, quietState, wants, type ActiveSub } from "./subscriptions";
+import { eventOf, wantsEvent } from "./filter";
 import { batchMessage, digestMessage, problemMessage, reportReplyMessage, resolvedMessage, type Composed } from "./messages";
 import { deliver, DeliveryError, type MessageLevel, type OutMessage } from "./transports";
 
@@ -125,10 +126,7 @@ const appName = (subject: string | null) => (subject ? (appNames.get(subject) ??
 
 // ---------------------------------------------------------------- fan out
 
-async function fanOut() {
-  const findings = needsNotification();
-  if (!findings.length) return;
-  const subs = activeSubscriptions();
+async function memberAppsOf(subs: ActiveSub[]): Promise<Map<string, Set<string>>> {
   const memberApps = new Map<string, Set<string>>();
   for (const s of subs) {
     if (s.role === "admin" || memberApps.has(s.userId)) continue;
@@ -138,6 +136,14 @@ async function fanOut() {
       memberApps.set(s.userId, new Set());
     }
   }
+  return memberApps;
+}
+
+async function fanOut() {
+  const findings = needsNotification();
+  if (!findings.length) return;
+  const subs = activeSubscriptions();
+  const memberApps = await memberAppsOf(subs);
   const t = now();
   const channels = byChannel(subs);
   for (const f of findings) {
@@ -199,7 +205,7 @@ export function followUps() {
     }
     const cleanlyResolved = r.status === "sent" && r.f_id && r.resolved_at !== null && r.dismissed_at === null && r.first_seen === r.episode;
     if (!cleanlyResolved || !r.channel_id) continue;
-    const interested = (subs.get(r.channel_id) ?? []).filter((s) => s.filter.resolved);
+    const interested = (subs.get(r.channel_id) ?? []).filter((s) => hasKind(s, "resolved"));
     if (!interested.length) continue;
     const lead = interested.find((s) => s.role === "admin") ?? interested[0]!;
     enqueue({
@@ -220,7 +226,7 @@ export function followUps() {
 function digests() {
   const d = getSetting("digest");
   if (!d.enabled) return;
-  const subs = activeSubscriptions().filter((s) => s.role === "admin" && s.filter.digest);
+  const subs = activeSubscriptions().filter((s) => s.role === "admin" && hasKind(s, "digest"));
   if (!subs.length) return;
   const t = now();
   let msg: Composed | null = null;
@@ -242,7 +248,7 @@ function digests() {
 /** Tell the person who reported a problem that an admin replied. */
 export function notifyReportReply(report: { id: string; userId: string | null; appName: string | null; reply: string; repliedAt: number }, adminName: string) {
   if (!report.userId) return;
-  const subs = activeSubscriptions().filter((s) => s.userId === report.userId && s.filter.reports);
+  const subs = activeSubscriptions().filter((s) => s.userId === report.userId && hasKind(s, "reports"));
   const t = now();
   for (const s of subs) {
     enqueue({
@@ -257,12 +263,56 @@ export function notifyReportReply(report: { id: string; userId: string | null; a
   kick();
 }
 
+// ---------------------------------------------------------------- noticed events (updates, sign-ins, chat)
+
+export interface Notice {
+  kind: NotifyKind;
+  /** What makes this event itself: the same kind + key is only ever sent once per channel. */
+  key: string;
+  /** App id, for "only some apps" and for household members. */
+  subject?: string | null;
+  title: string;
+  body: string;
+  link: string | null;
+  linkLabel: string | null;
+  /** How loud: a failed update or a security event needs attention; the rest is information. */
+  severity: "attention" | "info";
+}
+
+/**
+ * Queue a noticed event for every channel whose subscribers want it. Never breaks through quiet
+ * hours. Returns how many channels it was queued for.
+ */
+export async function notifyEvent(n: Notice): Promise<number> {
+  const subs = activeSubscriptions();
+  const memberApps = await memberAppsOf(subs.filter((s) => s.role !== "admin"));
+  const t = now();
+  let queued = 0;
+  for (const [channelId, chSubs] of byChannel(subs)) {
+    const interested = chSubs.filter((s) => wantsEvent(s.role, s.filter, n, memberApps.get(s.userId) ?? null));
+    if (!interested.length) continue;
+    const lead = interested.find((s) => s.role === "admin") ?? interested[0]!;
+    const ok = enqueue({
+      channel: lead.channel,
+      userId: lead.userId,
+      event: eventOf(n.kind),
+      dedupe: `${channelId}|${n.kind}|${n.key}`,
+      msg: { title: n.title, body: n.body, link: n.link, linkLabel: n.linkLabel, severity: n.severity },
+      notBefore: releaseAt(interested, t, null, false),
+    });
+    if (ok) queued++;
+  }
+  if (queued) kick(500);
+  return queued;
+}
+
 // ---------------------------------------------------------------- sending
 
 function level(r: Pick<DeliveryRow, "event" | "severity">): MessageLevel {
   if (r.event === "resolved") return "resolved";
   if (r.event === "digest") return "digest";
   if (r.event === "report") return "info";
+  if (r.event === "update" || r.event === "security" || r.event === "chat") return r.severity === "attention" ? "attention" : "info";
   return r.severity === "fault" ? "fault" : r.severity === "attention" ? "attention" : "info";
 }
 
@@ -352,17 +402,16 @@ async function sendGroup(channelId: string, rows: DeliveryRow[]) {
 
   // Oldest first; stop at the first failure and push the rest back with it (don't hammer a dead channel).
   const queue: { rows: DeliveryRow[]; msg: OutMessage }[] = [];
-  for (const ev of ["problem", "resolved"] as const) {
+  const batched = ["problem", "resolved", "update"] as const;
+  for (const ev of batched) {
     const of = live.filter((r) => r.event === ev);
     if (of.length >= BATCH_AT) {
       const b = batchMessage(of.map((r) => ({ title: r.title, severity: r.severity })), ev);
-      queue.push({
-        rows: of,
-        msg: { title: b.title, body: b.body, link: b.link, linkLabel: b.linkLabel, level: ev === "resolved" ? "resolved" : b.severity === "fault" ? "fault" : "attention", event: ev, at: t, serverName: getSetting("serverName") },
-      });
+      const lvl: MessageLevel = ev === "resolved" ? "resolved" : ev === "update" ? (b.severity === "attention" ? "attention" : "info") : b.severity === "fault" ? "fault" : "attention";
+      queue.push({ rows: of, msg: { title: b.title, body: b.body, link: b.link, linkLabel: b.linkLabel, level: lvl, event: ev, at: t, serverName: getSetting("serverName") } });
     } else for (const r of of) queue.push({ rows: [r], msg: outOf(r, subjects.get(r.id) ?? null) });
   }
-  for (const r of live.filter((x) => x.event !== "problem" && x.event !== "resolved")) queue.push({ rows: [r], msg: outOf(r, null) });
+  for (const r of live.filter((x) => !(batched as readonly string[]).includes(x.event))) queue.push({ rows: [r], msg: outOf(r, null) });
   queue.sort((a, b) => a.rows[0]!.id - b.rows[0]!.id);
 
   for (let i = 0; i < queue.length; i++) {

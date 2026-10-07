@@ -4,7 +4,7 @@ export const FINDINGS_URL = "/api/findings?view=all";
 export const MONITORS_URL = "/api/alerts/monitors";
 export const CHANNELS_URL = "/api/alerts/channels";
 
-export const KIND_LABEL: Record<ChannelKind, string> = { ntfy: "ntfy", pushover: "Pushover", email: "Email", webhook: "Webhook" };
+export const KIND_LABEL: Record<ChannelKind, string> = { ntfy: "ntfy", pushover: "Pushover", email: "Email", webhook: "Webhook", xmpp: "XMPP" };
 
 /** Group items into days (newest first), keyed by the viewer's local calendar day. */
 export function byDay<T>(items: T[], at: (t: T) => number, dayOf: (ts: number) => string): { day: string; ts: number; items: T[] }[] {

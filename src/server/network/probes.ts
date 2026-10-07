@@ -2,6 +2,7 @@ import "server-only";
 import dns from "node:dns";
 import net from "node:net";
 import tls from "node:tls";
+import http from "node:http";
 import https from "node:https";
 import { isCloudflareIp } from "./cloudflare";
 import type { BackendResult, DnsResult, HttpResult, TlsResult } from "@/lib/network-types";
@@ -13,6 +14,8 @@ import type { BackendResult, DnsResult, HttpResult, TlsResult } from "@/lib/netw
 
 export const CADDY_HOST = (process.env.GLUON_CADDY_PROBE_HOST ?? process.env.TEND_CADDY_PROBE_HOST) ?? "127.0.0.1";
 export const CADDY_PORT = Number((process.env.GLUON_CADDY_PROBE_PORT ?? process.env.TEND_CADDY_PROBE_PORT) ?? 443);
+/** Caddy's plain-HTTP port, for addresses where something in front handles HTTPS. */
+export const CADDY_HTTP_PORT = Number(process.env.GLUON_CADDY_PROBE_HTTP_PORT ?? 80);
 export const PROBE_UA = "Gluon-status/1";
 
 /** Where this machine's own ports are reached from Gluon (host networking → loopback). */
@@ -174,9 +177,9 @@ export function probeTls(servername: string, certDays: number, timeoutMs = 5000)
 
 // ---------------------------------------------------------------- HTTP through Caddy
 
-/** Request `path` from Caddy with the right SNI/Host, without following redirects. */
-export function probeHttpViaCaddy(host: string, path: string, timeoutMs = 6000): Promise<HttpResult> {
-  const url = `https://${host}${path}`;
+/** Request `path` from Caddy with the right SNI/Host, without following redirects. `plain` uses port 80 without TLS. */
+export function probeHttpViaCaddy(host: string, path: string, timeoutMs = 6000, plain = false): Promise<HttpResult> {
+  const url = `${plain ? "http" : "https"}://${host}${path}`;
   const t0 = Date.now();
   return new Promise((resolve) => {
     let done = false;
@@ -185,11 +188,11 @@ export function probeHttpViaCaddy(host: string, path: string, timeoutMs = 6000):
       done = true;
       resolve(r);
     };
-    const req = https.request(
+    const req = (plain ? http : https).request(
       {
         host: CADDY_HOST,
-        port: CADDY_PORT,
-        servername: host,
+        port: plain ? CADDY_HTTP_PORT : CADDY_PORT,
+        ...(plain ? {} : { servername: host }),
         path,
         method: "GET",
         headers: { Host: host, "User-Agent": PROBE_UA, Accept: "text/html,*/*", Connection: "close" },
@@ -206,7 +209,7 @@ export function probeHttpViaCaddy(host: string, path: string, timeoutMs = 6000):
     );
     req.on("timeout", () => req.destroy(Object.assign(new Error("timeout"), { code: "ETIMEDOUT" })));
     req.on("error", (e: NodeJS.ErrnoException) => {
-      const error = e.code === "ETIMEDOUT" ? "Caddy didn't answer in time." : e.code === "ECONNREFUSED" ? "Nothing is answering on port 443." : /alert|EPROTO/i.test(e.message + (e.code ?? "")) ? "TLS handshake failed (no certificate for this name yet)." : e.message;
+      const error = e.code === "ETIMEDOUT" ? "Caddy didn't answer in time." : e.code === "ECONNREFUSED" ? `Nothing is answering on port ${plain ? CADDY_HTTP_PORT : 443}.` : /alert|EPROTO/i.test(e.message + (e.code ?? "")) ? "TLS handshake failed (no certificate for this name yet)." : e.message;
       finish({ url, status: null, location: null, ms: null, error });
     });
     req.end();

@@ -4,7 +4,10 @@ import { tryReadConfig, routeUrl } from "../caddy/routes";
 import { every, onStart } from "../jobs";
 import { invalidateStatus, networkStatus } from "./status";
 import { syncChatCertificates } from "./xmpp-certs";
+import { syncOwnCertFiles } from "./own-certs";
+import { caddySide } from "./caddy-certs";
 import "./checks";
+import "../voice/schedule";
 
 /** Network domain: checks (./checks), search provider, and a warm status cache at start-up. */
 
@@ -26,7 +29,7 @@ registerSearch((user, q) => {
     items.push({
       id: `route:${r.id}`,
       label: r.name,
-      hint: `${url.replace(/^https:\/\//, "")}${r.enabled === false ? " · off" : to ? ` → ${to.replace(/^https?:\/\//, "")}` : ""}`,
+      hint: `${url.replace(/^https?:\/\//, "")}${r.enabled === false ? " · off" : to ? ` → ${to.replace(/^https?:\/\//, "")}` : ""}`,
       icon: "globe",
       href: `/network?route=${encodeURIComponent(r.id)}`,
     });
@@ -45,4 +48,11 @@ onStart("xmpp-certs", () => {
   // still waiting for Caddy, a reload that didn't take) every 15 minutes. The first run waits for Caddy.
   setTimeout(() => void syncChatCertificates().then(invalidateStatus).catch(() => undefined), 60_000).unref?.();
   every(15 * 60_000, () => syncChatCertificates({ onlyDue: true }).then(invalidateStatus));
+});
+
+onStart("own-certs", () => {
+  // Certificates kept in files (certbot renews them in place) are copied for Caddy when they change.
+  const run = () => caddySide().then((c) => syncOwnCertFiles(c.uid)).then(invalidateStatus);
+  setTimeout(() => void run().catch(() => undefined), 45_000).unref?.();
+  every(15 * 60_000, run);
 });

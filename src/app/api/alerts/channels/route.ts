@@ -3,8 +3,9 @@ import { route } from "@/server/api";
 import { AppError } from "@/server/errors";
 import { hasRecentAuth } from "@/server/auth/session";
 import { audit } from "@/server/audit";
-import { CHANNEL_KINDS } from "@/lib/alerts-types";
+import { CHANNEL_KINDS, defaultKinds } from "@/lib/alerts-types";
 import { createChannel, listChannelsFor, viewChannel } from "@/server/notify/channels";
+import { setSubscription } from "@/server/notify/subscriptions";
 
 /** Channels the viewer can see: admins every channel, members their own. */
 export const GET = route({ auth: "user" }, ({ user }) => listChannelsFor(user));
@@ -22,5 +23,7 @@ export const POST = route({ auth: "user", body }, async ({ user, session, body, 
   if (body.scope === "server" && !hasRecentAuth(session)) throw new AppError("reauth", "Confirm it's you to continue.", 403);
   const ch = await createChannel(user, body);
   audit(user, { action: "notify.channel_created", target: ch.id, summary: `Added ${body.scope === "server" ? "server-wide " : ""}${ch.kind} channel “${ch.name}”` }, { ip, zone });
+  // A channel nobody subscribes to sends nothing: whoever adds one gets the default straight away.
+  await setSubscription(user, ch.id, { kinds: defaultKinds(user.role) }).catch(() => undefined);
   return viewChannel(ch, user);
 });

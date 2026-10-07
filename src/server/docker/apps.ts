@@ -1,4 +1,5 @@
 import "server-only";
+import { serviceKind } from "@/lib/service-kind";
 import { activePlatform } from "../platform";
 import { umbrelApps, umbrelAppState, umbrelStores, type UmbrelAppState, type UmbrelInstalledApp } from "../platform/umbrel";
 import fs from "node:fs";
@@ -469,6 +470,9 @@ async function buildApps(): Promise<AppSummary[]> {
 
   // Ports each app serves, for matching public addresses to the app that answers them.
   const served = new Map<string, { ports: Set<number>; running: boolean }>();
+  // Mumble apps and the port their voice service is published on; chat servers.
+  const voiceApps = new Map<string, number>();
+  const chatApps = new Set<string>();
   const apps: AppSummary[] = [];
   // Guessing an icon can ask the icon CDN (once per name): every app asks at once, not one after another.
   const guesses: Promise<void>[] = [];
@@ -500,7 +504,14 @@ async function buildApps(): Promise<AppSummary[]> {
     }
 
     const allPorts = containers.flatMap((c) => c.ports.filter((p) => p.proto === "tcp").map((p) => p.host));
-    const webPort = meta?.portMap ?? allPorts.find((p) => KNOWN_WEB.has(p)) ?? allPorts[0] ?? null;
+    // A port published only on loopback can't be opened from another device, so it's never the web page.
+    const openable = containers.flatMap((c) => c.ports.filter((p) => p.proto === "tcp" && p.ip !== "127.0.0.1" && p.ip !== "::1").map((p) => p.host));
+    // Mumble and chat servers have no web page of their own: a browser on Mumble's port counts
+    // towards its connection ban, and Prosody's ports are for chat apps (a saved port often maps
+    // to 5222). Mumble's address opens the Mumble app instead.
+    const kind = serviceKind(containers.map((c) => c.image));
+    const noWeb = kind === "mumble" || kind === "prosody";
+    const webPort = noWeb ? null : (meta?.portMap ?? openable.find((p) => KNOWN_WEB.has(p)) ?? openable[0] ?? null);
     const running = containers.some((c) => c.state === "running");
     // Host-network containers publish nothing, but answer on the app's own port.
     const ports = new Set(allPorts);
@@ -509,7 +520,11 @@ async function buildApps(): Promise<AppSummary[]> {
 
     const scheme = meta?.scheme ?? "http";
     const index = meta?.index && meta.index !== "/" ? meta.index : "";
-    const home = pref?.url_home || (webPort ? `${scheme}://${lan}:${webPort}${index}` : null);
+    // Mumble's address opens the Mumble app instead of a browser.
+    const voicePort = kind === "mumble" ? (containers.flatMap((c) => c.ports).find((p) => p.proto === "tcp" && p.container === 64738)?.host ?? openable[0] ?? null) : null;
+    if (kind === "prosody") chatApps.add(id);
+    if (voicePort) voiceApps.set(id, voicePort);
+    const home = pref?.url_home || (webPort ? `${scheme}://${lan}:${webPort}${index}` : voicePort ? `mumble://${lan}:${voicePort}` : null);
     const baseName = pref?.display_name || meta?.title || (umbrel && id === "umbrelc" ? "Umbrel services" : titleCase(isStack ? id.replace(/\.(casaos|compose)$/, "") : main.name));
 
     const app: AppSummary = {
@@ -588,7 +603,17 @@ async function buildApps(): Promise<AppSummary[]> {
       for (const a of answering.length ? answering : matches) a.routes.push(ref);
     }
     for (const a of apps) {
-      const awayRoute = a.routes.find((r) => r.enabled && r.type === "subdomain" && !r.onlyPaths?.length) ?? a.routes.find((r) => r.enabled && r.type === "path");
+      const voicePort = voiceApps.get(a.id);
+      if (voicePort) {
+        // A voice server's public name leads to Mumble on its own port, not to the web page Caddy shows.
+        const v = routesCfg.routes.find((r) => r.type === "subdomain" && r.enabled !== false && !!r.voice && (r.app === a.id || r.voice.port === voicePort));
+        a.urls.away ||= v && v.type === "subdomain" && v.voice ? `mumble://${v.host}:${v.voice.port}` : null;
+        continue;
+      }
+      // A chat server's address is a page saying it's a chat server, unless it serves web chat.
+      const webChat = (id: string) => routesCfg.routes.some((r) => r.id === id && r.type === "subdomain" && !!r.xmpp?.http_port);
+      const usable = (r: AppRouteRef) => !chatApps.has(a.id) || webChat(r.id);
+      const awayRoute = a.routes.find((r) => r.enabled && r.type === "subdomain" && !r.onlyPaths?.length && usable(r)) ?? a.routes.find((r) => r.enabled && r.type === "path" && usable(r));
       a.urls.away ||= awayRoute?.url ?? null;
     }
   }

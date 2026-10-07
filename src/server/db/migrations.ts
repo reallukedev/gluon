@@ -420,4 +420,14 @@ export const migrations: string[] = [
     hidden INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, updated_by TEXT
   );
   `,
+
+  /* 15 · notifications about updates, sign-ins and the chat server: what each watcher has already seen
+     (notify_state), and the daily registry check of app images (app_image_checks). Idempotent:
+     server/notify/state.ts creates the same tables on first use. */ `
+  CREATE TABLE IF NOT EXISTS notify_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL) WITHOUT ROWID;
+  CREATE TABLE IF NOT EXISTS app_image_checks (
+    ref TEXT NOT NULL, image_id TEXT NOT NULL, status TEXT NOT NULL, remote_digest TEXT, error TEXT,
+    checked_at INTEGER NOT NULL, PRIMARY KEY (ref, image_id)
+  ) WITHOUT ROWID;
+  `,
 ];

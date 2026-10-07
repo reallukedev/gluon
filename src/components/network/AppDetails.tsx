@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
-import { MoreHoriz, Copy, OpenNewWindow, EditPencil, Trash, AppWindow, ChatBubble } from "iconoir-react";
-import type { RouteStatus, XmppStatus } from "@/lib/network-types";
+import { MoreHoriz, Copy, OpenNewWindow, EditPencil, Trash, AppWindow, ChatBubble, Headset } from "iconoir-react";
+import type { PublicReach, RouteStatus, VoiceStatus, XmppStatus } from "@/lib/network-types";
 import { api } from "@/lib/client/api";
 import type { LineState } from "@/lib/types";
 import { Dialog } from "@/components/ui/Dialog";
@@ -11,11 +11,13 @@ import { Menu } from "@/components/ui/Menu";
 import { Notice, Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
+import { CopyButton } from "@/components/ui/CopyButton";
 import { toast } from "@/components/ui/Toast";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { LoginCell } from "./AppList";
 import { healthOf, type Address, type AppEntry } from "./model";
-import { bare, copyText, isRedirectRoute, THIS_SERVER, XMPP_CLIENT_PORTS } from "./shared";
+import { bare, copyText, isRedirectRoute, MUMBLE_PORT, THIS_SERVER, XMPP_CLIENT_PORTS } from "./shared";
+import { DnsHelp } from "./DnsHelp";
 import s from "./network.module.css";
 import c from "./chat.module.css";
 
@@ -35,6 +37,10 @@ interface Props {
   onEdit: (routeId: string) => void;
   onEditFallback: () => void;
   onSetUpChat: (routeId: string) => void;
+  /** Ports a Mumble server answers on here, to spot a voice server set up as a web app. */
+  voicePorts: Set<number>;
+  publicIp: { v4: string | null; v6: string[] } | null;
+  onSetUpVoice: (routeId: string) => void;
   onRecheck: () => void;
   onToggleAddress: (a: Address, on: boolean) => void;
   onRemoveAddress: (a: Address) => void;
@@ -84,7 +90,61 @@ function chatChain(st: RouteStatus | undefined): Link[] | null {
   const out = [dnsLink(st.dns), portLink("Sign-in", x.c2s)];
   if (x.s2s) out.push(portLink("Other servers", x.s2s));
   if (x.certSync) out.push({ name: "Certificate copy", state: x.certSync.ok ? "running" : "attention", label: x.certSync.ok ? "Up to date" : "Needs a look", title: x.certSync.message });
+  if (x.reach) out.push(reachLink(x.reach));
   return out;
+}
+
+/** Whether people outside get through the router, as one hop of the chain. */
+function reachLink(r: PublicReach): Link {
+  if (r.state === "ok") return { name: "From outside", state: "running", label: "Gets through your router", title: r.summary };
+  if (r.state === "blocked") {
+    const bad = r.ports.filter((p) => p.verdict === "not-forwarded" || p.verdict === "elsewhere");
+    const primary = bad.some((p) => p.primary);
+    const ports = [...new Set(bad.map((p) => `${p.port}${p.proto === "udp" ? " UDP" : ""}`))].join(", ");
+    return { name: "From outside", state: primary ? "unhealthy" : "attention", label: bad.every((p) => p.verdict === "not-forwarded") ? `Router doesn't forward ${ports}` : `Port ${ports} goes elsewhere`, title: r.summary };
+  }
+  return { name: "From outside", state: "unknown", label: "Can't tell from inside", title: r.summary };
+}
+
+/** How a voice app reaches Mumble: the name, its port (TCP, then UDP for the voice itself), the router. */
+function voiceChain(st: RouteStatus | undefined): Link[] | null {
+  if (!st?.enabled || !st.voice) return null;
+  const v = st.voice;
+  const out = [dnsLink(st.dns), certLink(st)];
+  const t = v.tls;
+  out.push(
+    !v.tcp.reachable
+      ? { name: "Mumble", state: "unhealthy", label: `Not answering on :${v.port}`, title: v.tcp.error ?? "" }
+      : { name: "Mumble", state: t?.status === "expired" ? "attention" : "running", label: `Answering on :${v.port}`, title: t?.message ?? "" },
+  );
+  out.push(v.udp.reachable ? { name: "Voice (UDP)", state: "running", label: `Answers in ${v.udp.ms} ms`, title: "Mumble answered its UDP ping." } : { name: "Voice (UDP)", state: "unknown", label: "No answer", title: "Mumble didn't answer its UDP ping from here. Voice still works over TCP, with more delay." });
+  if (v.reach) out.push(reachLink(v.reach));
+  return out;
+}
+
+function certLink(st: RouteStatus): Link {
+  const t = st.tls;
+  if (st.https === "http") return { name: "Certificate", state: "running", label: "Plain HTTP", title: "Something in front of this server handles HTTPS, so the web server holds no certificate for this name." };
+  if (st.https === "own") {
+    if (!t) return { name: "Certificate", state: "unknown", label: "Not checked", title: "" };
+    if (t.status === "expired") return { name: "Certificate", state: "unhealthy", label: "Your own has expired", title: t.message };
+    if (t.status === "invalid" || t.status === "pending") return { name: "Certificate", state: "attention", label: "Yours isn't being served", title: t.message };
+    if (t.status === "error") return { name: "Certificate", state: "attention", label: "Check failed", title: t.message };
+    return { name: "Certificate", state: t.status === "expiring" ? "attention" : "running", label: `Your own, ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`, title: t.message };
+  }
+  return !t
+    ? { name: "Certificate", state: "unknown", label: "Not checked", title: "" }
+    : t.status === "ok"
+      ? { name: "Certificate", state: "running", label: `${t.daysLeft} days left`, title: `${t.message}${t.issuer ? ` (${t.issuer})` : ""}` }
+      : t.status === "expiring"
+        ? { name: "Certificate", state: "attention", label: `Ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`, title: t.message }
+        : t.status === "expired"
+          ? { name: "Certificate", state: "unhealthy", label: "Expired", title: t.message }
+          : t.status === "pending"
+            ? t.issueError
+              ? { name: "Certificate", state: "attention", label: "Couldn't be issued", title: t.issueError }
+              : { name: "Certificate", state: "starting", label: "Being issued", title: t.message }
+            : { name: "Certificate", state: "attention", label: t.status === "invalid" ? "Not trusted" : "Check failed", title: t.message };
 }
 
 function chain(st: RouteStatus | undefined, redirect: boolean): Link[] | null {
@@ -92,22 +152,7 @@ function chain(st: RouteStatus | undefined, redirect: boolean): Link[] | null {
   if (!st.enabled) return null;
   const out: Link[] = [];
   out.push(dnsLink(st.dns));
-  const t = st.tls;
-  out.push(
-    !t
-      ? { name: "Certificate", state: "unknown", label: "Not checked", title: "" }
-      : t.status === "ok"
-        ? { name: "Certificate", state: "running", label: `${t.daysLeft} days left`, title: `${t.message}${t.issuer ? ` (${t.issuer})` : ""}` }
-        : t.status === "expiring"
-          ? { name: "Certificate", state: "attention", label: `Ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`, title: t.message }
-          : t.status === "expired"
-            ? { name: "Certificate", state: "unhealthy", label: "Expired", title: t.message }
-            : t.status === "pending"
-              ? t.issueError
-                ? { name: "Certificate", state: "attention", label: "Couldn't be issued", title: t.issueError }
-                : { name: "Certificate", state: "starting", label: "Being issued", title: t.message }
-              : { name: "Certificate", state: "attention", label: t.status === "invalid" ? "Not trusted" : "Check failed", title: t.message },
-  );
+  out.push(certLink(st));
   const h = st.http;
   out.push(
     !h
@@ -133,13 +178,18 @@ function chain(st: RouteStatus | undefined, redirect: boolean): Link[] | null {
   return out;
 }
 
-export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, statusLoading, checkedAt, onEdit, onEditFallback, onSetUpChat, onRecheck, onToggleAddress, onRemoveAddress, onRemoveApp, onMarkLogin, onHomeOnly }: Props) {
+export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, statusLoading, checkedAt, onEdit, onEditFallback, onSetUpChat, voicePorts, publicIp, onSetUpVoice, onRecheck, onToggleAddress, onRemoveAddress, onRemoveApp, onMarkLogin, onHomeOnly }: Props) {
   const main = e.main;
   const route = main.route?.type === "subdomain" ? main.route : null;
   const isChat = !!route?.xmpp;
+  const isVoice = !!route?.voice && !isChat;
+  const plainWeb = !!route && !route.xmpp && !route.voice && !route.redirect_to && route.backend.host === THIS_SERVER;
   // A chat server published like a web app: Caddy sends browsers to a port that only speaks XMPP.
-  const chatAsWeb = !!route && !route.xmpp && route.backend.host === THIS_SERVER && XMPP_CLIENT_PORTS.has(route.backend.port);
-  const links = isChat ? chatChain(main.status) : chain(main.status, isRedirectRoute(main.route));
+  const chatAsWeb = plainWeb && XMPP_CLIENT_PORTS.has(route!.backend.port);
+  // The same for Mumble: a web address pointed at a port that only voice apps understand.
+  const voiceAsWeb = plainWeb && !chatAsWeb && voicePorts.has(route!.backend.port);
+  const links = isChat ? chatChain(main.status) : isVoice ? voiceChain(main.status) : chain(main.status, isRedirectRoute(main.route) || !!main.status?.voice);
+  const dnsBroken = route && main.status?.dns && (main.status.dns.status === "missing" || main.status.dns.status === "mismatch") ? main.status.dns : null;
   const [syncing, setSyncing] = React.useState(false);
   async function checkCertificate() {
     setSyncing(true);
@@ -174,8 +224,8 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
       footer={
         <>
           {e.appId && (
-            <LinkButton variant="ghost" href={`/apps/${encodeURIComponent(e.appId)}`} icon={<AppWindow />}>
-              Go to the app
+            <LinkButton variant="ghost" href={`/apps/${encodeURIComponent(e.appId)}${isChat ? "?tab=chat" : ""}`} icon={<AppWindow />}>
+              {isChat ? "Manage accounts" : "Go to the app"}
             </LinkButton>
           )}
           <Button variant="primary" icon={<EditPencil />} onClick={() => (e.isFallback ? onEditFallback() : onEdit(main.id))}>
@@ -198,10 +248,23 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
             Browsers that open {bare(main.url)} are sent to port {route!.backend.port}, which only chat apps understand, so they get an error. Gluon can publish it the way XMPP expects and keep its certificate current.
           </Notice>
         )}
+        {voiceAsWeb && (
+          <Notice
+            tone="attention"
+            title="This is a voice server set up as a web app"
+            action={
+              <Button size="sm" icon={<Headset />} onClick={() => onSetUpVoice(main.id)}>
+                Set up as a voice server
+              </Button>
+            }
+          >
+            Browsers that open {bare(main.url)} are sent to port {route!.backend.port}, where Mumble answers, so they get an error. Set up as a voice server, browsers get a page with a link that opens Mumble, and Gluon checks that people outside can get through.
+          </Notice>
+        )}
         {e.on && (
-          <section className={s.dSection} aria-label={isChat ? "How chat apps connect" : "How a visit gets there"}>
+          <section className={s.dSection} aria-label={isChat ? "How chat apps connect" : isVoice ? "How voice apps connect" : "How a visit gets there"}>
             <div className={s.dHead}>
-              <h3 className={s.dSub}>{isChat ? "How chat apps connect" : "How a visit gets there"}</h3>
+              <h3 className={s.dSub}>{isChat ? "How chat apps connect" : isVoice ? "How voice apps connect" : "How a visit gets there"}</h3>
               {checkedAt && (
                 <span className={s.faint}>
                   Checked <Time ts={checkedAt} />
@@ -225,10 +288,12 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
               </ol>
             )}
             {e.health.state && e.health.state !== "running" && e.health.sentence && <p className={s.dSentence}>{e.health.sentence}</p>}
+            {dnsBroken && route && <DnsHelp host={route.host} baseDomain={baseDomain} purpose={isChat ? "chat" : isVoice ? "voice" : "web"} known={dnsBroken} publicIp={publicIp} />}
           </section>
         )}
 
         {isChat && e.on && main.status?.xmpp && <ChatFacts x={main.status.xmpp} syncing={syncing} onCheck={() => void checkCertificate()} />}
+        {isVoice && e.on && main.status?.voice && <VoiceFacts v={main.status.voice} />}
 
         <section className={s.dSection}>
           <h3 className={s.dSub}>Addresses</h3>
@@ -293,7 +358,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
           </ul>
         </section>
 
-        {!e.isRedirect && !isChat && (
+        {!e.isRedirect && !isChat && !isVoice && (
           <section className={s.dSection}>
             <h3 className={s.dSub}>Login</h3>
             <div className={s.dLogin}>
@@ -419,7 +484,90 @@ function ChatFacts({ x, syncing, onCheck }: { x: XmppStatus; syncing: boolean; o
             </dd>
           </div>
         )}
+        {x.reach && <ReachFact r={x.reach} />}
       </dl>
     </section>
+  );
+}
+
+function VoiceFacts({ v }: { v: VoiceStatus }) {
+  const link = `mumble://${v.host}${v.port === MUMBLE_PORT ? "" : `:${v.port}`}/`;
+  return (
+    <section className={s.dSection}>
+      <h3 className={s.dSub}>Voice server</h3>
+      <dl className={c.facts}>
+        <div className={c.fact}>
+          <dt>Connect with</dt>
+          <dd>
+            <span className={c.copyRow}>
+              <a className="mono" href={link}>
+                {link}
+              </a>
+              <CopyButton value={link} label="Copy the Mumble link" />
+            </span>
+            <span className={c.factNote}>
+              Or add a server in Mumble with the address <span className="mono">{v.host}</span> and port <span className="mono">{v.port}</span>.
+            </span>
+          </dd>
+        </div>
+        {v.udp.reachable && (
+          <div className={c.fact}>
+            <dt>On now</dt>
+            <dd>
+              <span className="num">
+                {v.udp.users ?? 0} {v.udp.users === 1 ? "person" : "people"}
+                {v.udp.maxUsers ? ` of ${v.udp.maxUsers}` : ""}
+              </span>
+              {v.udp.version && <span className={c.factNote}>Mumble {v.udp.version}</span>}
+            </dd>
+          </div>
+        )}
+        {v.tls && (
+          <div className={c.fact}>
+            <dt>Mumble&rsquo;s certificate</dt>
+            <dd>
+              <span className={c.factNote}>{v.tls.message}</span>
+            </dd>
+          </div>
+        )}
+        {v.reach && <ReachFact r={v.reach} />}
+      </dl>
+    </section>
+  );
+}
+
+/** Whether people outside get through, with what to forward when they don't. */
+function ReachFact({ r }: { r: PublicReach }) {
+  const bad = r.ports.filter((p) => p.verdict === "not-forwarded" || p.verdict === "elsewhere");
+  return (
+    <div className={c.fact}>
+      <dt>From outside</dt>
+      <dd>
+        {r.state === "ok" ? (
+          <StateLine state="running" label="People outside get through your router" />
+        ) : r.state === "blocked" ? (
+          <>
+            {bad.map((p) => (
+              <span key={`${p.proto}${p.port}`} className={c.reachLine}>
+                <StateLine state={p.primary ? "unhealthy" : "attention"} label={p.message} />
+              </span>
+            ))}
+            {r.lanIp && (
+              <span className={c.copyRow}>
+                <span className={c.factNote}>
+                  This server is <span className="mono">{r.lanIp}</span> on your network
+                </span>
+                <CopyButton value={r.lanIp} label="Copy this server's address" />
+              </span>
+            )}
+          </>
+        ) : (
+          <span className={c.factNote}>{r.summary}</span>
+        )}
+        <span className={c.factNote}>
+          Checked through <span className="mono">{r.publicIp ?? "your internet address"}</span> <Time ts={r.checkedAt} />
+        </span>
+      </dd>
+    </div>
   );
 }

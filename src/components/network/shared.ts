@@ -1,6 +1,6 @@
 "use client";
 import type { AppSummary } from "@/server/docker/apps";
-import type { NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse, ExposureReport, DdnsStatus, ChatServersResponse } from "@/lib/network-types";
+import type { NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse, ExposureReport, DdnsStatus, ChatServersResponse, CertUploads, DnsResult, VoiceServerCandidate } from "@/lib/network-types";
 import { api, useApi } from "@/lib/client/api";
 
 export const FALLBACK_ID = "__fallback__";
@@ -28,11 +28,31 @@ export function useChatServers(on: boolean) {
   return useApi<ChatServersResponse>(on ? "/api/network/xmpp" : null, { refresh: 60_000 });
 }
 
+/** Voice servers (Mumble) Gluon can see. Only fetched while needed. */
+export function useVoiceServers(on: boolean) {
+  return useApi<{ servers: VoiceServerCandidate[] }>(on ? "/api/network/voice" : null, { refresh: 60_000 });
+}
+
+/** What public DNS says about a name right now, for the help next to a new address. */
+export function useDnsLookup(name: string | null) {
+  return useApi<{ dns: DnsResult; publicIp: { v4: string | null; v6: string[] } }>(name ? `/api/network/dns?name=${encodeURIComponent(name)}` : null, { refresh: 0 });
+}
+
 /** The STARTTLS port XMPP apps sign in on; a web address pointed at it is a chat server set up as a web app. */
 export const XMPP_CLIENT_PORTS = new Set([5222]);
 
-export function saveRoutes(rev: string, routes: RouteT[], fallback?: RoutesConfigT["fallback"]) {
-  return api.put<RoutesSaveResponse>("/api/network/routes", { rev, routes, ...(fallback ? { fallback } : {}) });
+export const MUMBLE_PORT = 64738;
+const MUMBLE_IMAGE = /(^|\/)(mumble-server|mumblevoip\/mumble-server|murmur)[^/]*(:|$)|murmur/i;
+
+/** Ports Mumble answers on here: its usual port and anything a Mumble container publishes. */
+export function voicePorts(apps: AppSummary[] | undefined): Set<number> {
+  const out = new Set([MUMBLE_PORT]);
+  for (const a of apps ?? []) for (const c of a.containers) if (MUMBLE_IMAGE.test(c.image)) for (const p of c.ports) out.add(p.host);
+  return out;
+}
+
+export function saveRoutes(rev: string, routes: RouteT[], fallback?: RoutesConfigT["fallback"], certs?: CertUploads) {
+  return api.put<RoutesSaveResponse>("/api/network/routes", { rev, routes, ...(fallback ? { fallback } : {}), ...(certs && Object.keys(certs).length ? { certs } : {}) });
 }
 
 /** A short link on the base domain, or a whole subdomain that redirects. */

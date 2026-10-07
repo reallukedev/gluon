@@ -23,3 +23,21 @@
 .rows { display: grid; }
 .tested { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
 .tested:not([data-ok]) { color: var(--fault); }
+/* What a subscription is told about: groups of kinds, two columns when there's room. */
+.kindGroups { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 18px 28px; padding-top: 4px; }
+.kindGroup { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 10px; align-content: start; }
+.kindGroup legend { padding: 0; margin-bottom: 10px; }
+.kindText { display: grid; gap: 1px; min-width: 0; }
+.kindText small { font-size: var(--text-sm); color: var(--muted); line-height: 1.4; }
+.memberKinds { display: grid; gap: 10px; }
+/* Segmented controls hug their options instead of stretching across the row. */
+.group > [role="group"] { justify-self: start; max-width: 100%; }
+.subActions { display: flex; align-items: center; gap: 10px; }
+/* Phones: "Change" drops under the name so the summary keeps its width. */
+@media (max-width: 560px) {
+  .subActions { display: contents; }
+  .subActions > .change { grid-column: 2; grid-row: 2; justify-self: start; margin: -6px 0 0 -11px; }
+  .subActions > :not(.change) { grid-column: 3; grid-row: 1; }
+}
+.change[data-hidden] { visibility: hidden; }
+@media (max-width: 560px) { .subHead > .kindIcon { align-self: start; } }

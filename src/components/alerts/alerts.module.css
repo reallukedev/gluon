@@ -194,7 +194,7 @@
 .testLine { grid-column: 2 / -1; min-width: 0; }
 .testLine:empty { display: none; }
 .testResultLine { display: flex; gap: 8px; align-items: baseline; font-size: var(--text-sm); color: var(--ink-2); overflow-wrap: anywhere; }
-.testResultLine > :first-child { align-self: center; }
+.testResultLine > :first-child { align-self: flex-start; margin-top: 3px; }
 .testResultLine b { font-weight: 620; color: var(--ink); }
 .testResultLine:not([data-ok]) b { color: var(--fault); }
 @media (max-width: 640px) {
@@ -219,12 +219,16 @@
 @media (hover: hover) and (pointer: fine) { .kindChoice:hover:not([aria-pressed="true"]) { border-color: var(--line-strong); } }
 .headerList { display: grid; gap: 8px; }
 .headerRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 8px; align-items: center; }
+@media (max-width: 560px) {
+  .headerRow { grid-template-columns: minmax(0, 1fr) auto; }
+  .headerRow > :nth-child(2) { grid-column: 1; grid-row: 2; }
+}
 
 /* ---------------------------------------------------------------- sent log */
 .sentRow { display: grid; grid-template-columns: 76px 14px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 11px 12px 11px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
 .day + .sentRow { border-top: 0; }
 .sentRow[data-status="cancelled"] .histTitle { color: var(--muted); }
-.sentBody { margin-top: 6px; white-space: pre-wrap; font-size: var(--text-sm); color: var(--ink-2); max-width: 70ch; }
+.sentBody { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-sm); color: var(--ink-2); max-width: 70ch; }
 .sentErr { color: var(--fault); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .sentEnd { display: flex; gap: 6px; align-items: center; }
 @media (max-width: 640px) {
@@ -237,3 +241,16 @@
   .toolbarEnd { margin-left: 0; width: 100%; }
   .toolbarEnd > :last-child { flex: 1; }
 }
+.channelAudience { font-size: var(--text-xs); color: var(--ink-2); overflow-wrap: anywhere; }
+.channelAudience a { color: inherit; text-underline-offset: 2px; }
+.staticValue { font-size: var(--text-md); color: var(--ink); min-height: 20px; overflow-wrap: anywhere; }
+.note { font-size: var(--text-sm); color: var(--muted); }
+.span2 { grid-column: span 2; }
+@media (max-width: 560px) { .span2 { grid-column: auto; } }
+.phoneTest { display: none; }
+@media (max-width: 640px) { .phoneTest { display: block; } }
+.phoneTime { display: none; }
+@media (max-width: 640px) { .phoneTime { display: inline; } }
+.picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px 16px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-control); max-height: 200px; overflow: auto; }
+.pickText { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-md); }
+@media (max-width: 640px) { .channel > .kindIcon { align-self: start; } }

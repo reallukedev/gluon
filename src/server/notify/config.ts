@@ -9,7 +9,9 @@ import {
   type NtfyConfig,
   type PushoverConfig,
   type WebhookConfig,
+  type XmppConfig,
 } from "@/lib/alerts-types";
+import { splitServer } from "./xmpp-format";
 
 /**
  * Channel configuration: validation, secret masking and "keep the stored secret unless a new one was
@@ -23,10 +25,12 @@ const SECRET_FIELDS: Record<ChannelKind, string[]> = {
   pushover: ["userKey", "appToken"],
   email: ["pass"],
   webhook: ["url"],
+  xmpp: ["password"],
 };
 
 function maskValue(v: unknown, kind: ChannelKind, field: string): string | null {
   if (typeof v !== "string" || !v) return null;
+  if (kind === "xmpp") return MASK;
   if (kind === "webhook" && field === "url") {
     try {
       const u = new URL(v);
@@ -62,6 +66,8 @@ const DESTINATION_FIELDS: Record<ChannelKind, string[]> = {
   pushover: [],
   email: ["host", "port"],
   webhook: ["url"],
+  // A password saved for one account or server is never sent to another.
+  xmpp: ["jid", "server", "mode"],
 };
 
 /**
@@ -163,6 +169,27 @@ export function validateConfig(kind: ChannelKind, merged: Record<string, unknown
       for (const h of w.headers) need(h.value, "headers", `Enter a value for the ${h.name} header.`);
       break;
     }
+    case "xmpp": {
+      const x = c as unknown as XmppConfig;
+      if (x.mode === "server") {
+        need(x.app, "app", "Choose the chat server to send from.");
+        need(x.domain && /^[a-z0-9.-]+$/.test(x.domain), "domain", "Choose which of its domains sends.");
+        x.jid = null;
+        x.password = null;
+        x.server = null;
+        x.allowUntrusted = false;
+      } else {
+        need(x.jid && /^[^\s@/]+@[a-z0-9.-]+$/i.test(x.jid), "jid", "Enter the address to send from, like alerts@chat.example.com.");
+        need(x.password, "password", `Enter the password for ${x.jid}.`);
+        if (x.server) need(splitServer(x.server), "server", "Enter a server like chat.example.com or chat.example.com:5222, or leave it empty.");
+        x.app = null;
+        x.domain = null;
+      }
+      need(x.to.length + x.rooms.length > 0, "to", "Add at least one address to send to.");
+      const self = x.mode === "account" ? x.jid : null;
+      if (self) need(!x.to.includes(self), "to", "That's the address it sends from. Send to your own, separate address.");
+      break;
+    }
   }
   return c;
 }
@@ -197,6 +224,12 @@ export function summarize(kind: ChannelKind, c: StoredConfig, viaName?: string |
       } catch {
         return label;
       }
+    }
+    case "xmpp": {
+      const x = c as unknown as XmppConfig;
+      const all = [...x.to, ...x.rooms];
+      const to = all.length === 1 ? all[0]! : `${all.length} addresses`;
+      return `to ${to}, from ${x.mode === "server" ? `gluon@${x.domain}` : x.jid}`;
     }
   }
 }

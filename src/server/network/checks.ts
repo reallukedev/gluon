@@ -1,7 +1,7 @@
 import "server-only";
 import { registerCheck } from "../alerts/engine";
 import { raise, resolveMissing, type Remedy } from "../findings";
-import { tryReadConfig } from "../caddy/routes";
+import { coveredByWildcard, tryReadConfig } from "../caddy/routes";
 import { listApps } from "../docker/apps";
 import { getSetting } from "../settings";
 import { networkStatus, pendingFor, xmppVerdict } from "./status";
@@ -17,6 +17,7 @@ import { FALLBACK_ID } from "./routes-meta";
  *  net.ddns     the dynamic DNS updater is stopped or reporting errors
  *  net.exposed  an app with no login of its own is on the internet
  *  net.xmpp     a chat server people can't sign in to, or whose certificate or federation needs work (2 checks in a row)
+ *  net.reach    the router doesn't let people outside reach a chat or voice port (2 checks in a row)
  */
 
 const PENDING_GRACE = 30 * 60_000;
@@ -33,6 +34,7 @@ registerCheck("network-status", 120_000, async () => {
   const openBackend = new Set<string>();
   const openDns = new Set<string>();
   const openXmpp = new Set<string>();
+  const openReach = new Set<string>();
   const seenHosts = new Set<string>();
 
   for (const r of status.routes) {
@@ -75,7 +77,22 @@ registerCheck("network-status", 120_000, async () => {
       const t = r.tls;
       const id = `net.cert:${r.host}`;
       const pendingMs = pendingFor(r.host) ?? 0;
-      if (t.status === "expired" || (t.status === "expiring" && (t.daysLeft ?? 99) < certDays)) {
+      if (r.https === "own") {
+        // Gluon can't renew these, so "ends soon" is news three weeks out, not when renewal fails.
+        if (t.status === "expired" || t.status === "expiring" || t.status === "invalid") {
+          openCert.add(id);
+          raise({
+            id,
+            kind: "net.cert",
+            severity: t.status === "expired" || (t.daysLeft ?? 0) < 3 ? "fault" : "attention",
+            subject: r.host,
+            title: t.status === "expired" ? `Your certificate for ${r.host} has expired` : t.status === "invalid" ? `Caddy isn't serving your certificate for ${r.host}` : `Your certificate for ${r.host} ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`,
+            cause: t.status === "invalid" ? t.message : `${t.status === "expired" ? "Browsers now show a security warning." : "Browsers will show a security warning after that."} You supplied this certificate, so Gluon can't renew it: replace it in the address's HTTPS settings, or point Gluon at the files your renewal tool keeps current.`,
+            detail: { host: r.host, daysLeft: t.daysLeft, issuer: t.issuer, validTo: t.validTo, own: true },
+            remedy: { action: "", label: "Replace the certificate", href: addressHref(r.id) },
+          });
+        }
+      } else if (t.status === "expired" || (t.status === "expiring" && (t.daysLeft ?? 99) < certDays)) {
         openCert.add(id);
         raise({
           id,
@@ -118,8 +135,8 @@ registerCheck("network-status", 120_000, async () => {
           title: r.dns.status === "missing" ? `${r.host} has no DNS record` : `${r.host} points somewhere else`,
           cause:
             r.dns.status === "missing"
-              ? `Nobody can reach it by name. ${status.wildcard?.status === "missing" ? `There's no wildcard record for *.${status.baseDomain} either; add one in Cloudflare or add this name to the DDNS updater's DOMAINS.` : "Add a record for it in Cloudflare, or add it to the DDNS updater's DOMAINS."}`
-              : `${r.dns.message} The dynamic DNS updater should fix this within a few minutes; if it doesn't, check its log.`,
+              ? `Nobody can reach it by name. ${dnsFix(r.host, status)}`
+              : `${r.dns.message} ${r.host === status.baseDomain || r.host.endsWith(`.${status.baseDomain}`) ? "The dynamic DNS updater should fix this within a few minutes; if it doesn't, check its log." : `Change its A record to ${status.publicIp.v4 ?? "this network's public address"} wherever the domain's DNS is managed.`}`,
           detail: { host: r.host, a: r.dns.a, aaaa: r.dns.aaaa, publicIp: status.publicIp },
           remedy: { action: "", label: "See DNS", href: "/network?hop=dns" },
         });
@@ -147,16 +164,56 @@ registerCheck("network-status", 120_000, async () => {
         });
       }
     }
+
+    // ---- the router lets chat or voice apps in (debounced: one lost packet isn't news)
+    const reach = r.xmpp?.reach ?? r.voice?.reach ?? null;
+    if (reach) {
+      const key = `reach:${r.id}`;
+      const blocked = reach.state === "blocked" ? reach.ports.filter((p) => p.verdict === "not-forwarded" || p.verdict === "elsewhere") : [];
+      if (blocked.length) failures.set(key, (failures.get(key) ?? 0) + 1);
+      else failures.delete(key);
+      if (blocked.length && (failures.get(key) ?? 0) >= 2) {
+        const id = `net.reach:${r.id}`;
+        openReach.add(id);
+        const what = r.voice ? "voice" : "chat";
+        const primary = blocked.some((p) => p.primary);
+        raise({
+          id,
+          kind: "net.reach",
+          severity: primary ? "fault" : "attention",
+          subject: r.app?.appId ?? r.id,
+          title: primary ? `People outside can't reach the ${what} server at ${r.host}` : `Part of the ${what} server at ${r.host} is blocked from outside`,
+          cause: blocked.map((p) => p.message).join(" "),
+          detail: { route: r.id, publicIp: reach.publicIp, lanIp: reach.lanIp, gateway: reach.gateway, ports: blocked.map((p) => ({ port: p.port, proto: p.proto, verdict: p.verdict })) },
+          remedy: { action: "", label: "See what to forward", href: addressHref(r.id) },
+        });
+      }
+    }
   }
   for (const k of [...failures.keys()]) {
-    const chat = k.startsWith("xmpp:");
-    if (!status.routes.some((r) => r.id === k.replace(/^xmpp:/, "") && r.enabled && (!chat || r.xmpp))) failures.delete(k);
+    const [kind, ...rest] = k.split(":");
+    const id = kind === "xmpp" || kind === "reach" ? rest.join(":") : k;
+    if (!status.routes.some((r) => r.id === id && r.enabled && (kind === "xmpp" ? r.xmpp : kind === "reach" ? r.xmpp?.reach || r.voice?.reach : true))) failures.delete(k);
   }
   resolveMissing("net.backend", openBackend);
   resolveMissing("net.cert", openCert);
   resolveMissing("net.dns", openDns);
   resolveMissing("net.xmpp", openXmpp);
+  resolveMissing("net.reach", openReach);
 });
+
+/** What to add so a name resolves: the DDNS updater for names under the base domain, plain records anywhere else. */
+function dnsFix(host: string, status: Awaited<ReturnType<typeof networkStatus>>): string {
+  const base = status.baseDomain;
+  const v4 = status.publicIp.v4;
+  const v6 = status.publicIp.v6[0];
+  if (host === base || host.endsWith(`.${base}`)) {
+    if (coveredByWildcard(host, base) && status.wildcard?.status === "missing") return `There's no wildcard record for *.${base} either; add one, or add this name to the DDNS updater's DOMAINS.`;
+    return "Add a record for it where the domain's DNS is managed, or add it to the DDNS updater's DOMAINS.";
+  }
+  const records = [`an A record for ${host} pointing at ${v4 ?? "this network's public address"}`, ...(v6 ? [`an AAAA record pointing at ${v6}`] : [])];
+  return `Add ${records.join(" and ")} wherever ${host}'s DNS is managed.`;
+}
 
 registerCheck("network-ddns", 300_000, async () => {
   const d = await ddnsStatus(true);

@@ -17,6 +17,7 @@ import { announce, buildSections, CLEAR_RECENT, flatten, type PaletteItem, type 
 import { staticGroups } from "./paletteStatic";
 import { usePaletteSearch, useRecentSearches } from "./usePaletteSearch";
 import { PaletteIcon } from "./PaletteIcon";
+import { terminalItems } from "./paletteTerminal";
 import s from "./palette.module.css";
 
 
@@ -90,10 +91,18 @@ export function CommandPalette({ open, onOpenChange, nav, pins }: { open: boolea
     const list = buildSections({ query, scope, statics, stream, recent, perGroup: scope === "all" ? 5 : 10 });
     const searching = !!query.folded && (!stream ? query.compact.length >= 2 : !stream.done);
     const empty = !!query.folded && !searching && !flatten(list).length && !list.some((x) => x.loading);
+    // Something that reads like a command: offer to run it (first when it clearly is one).
+    if (admin && scope === "all") {
+      const run = terminalItems(q, viewer.id, router);
+      if (run) {
+        const at = run.strong ? 0 : list.length;
+        list.splice(at, 0, { key: "terminal", name: "Terminal", tier: "local", items: run.items });
+      }
+    }
     // Nothing here: offer to look everywhere instead.
     if (empty && scope !== "all") list.push({ key: "widen", name: "", tier: "local", items: [{ id: "widen", label: `Search everything for “${q.trim()}”`, icon: "search" }] });
     return list;
-  }, [query, scope, statics, stream, recent, q]);
+  }, [query, scope, statics, stream, recent, q, admin, viewer.id, router]);
   const flat = React.useMemo(() => flatten(sections), [sections]);
   const found = activeId ? flat.findIndex((it) => it.id === activeId) : -1;
   const activeIndex = found >= 0 ? found : 0;

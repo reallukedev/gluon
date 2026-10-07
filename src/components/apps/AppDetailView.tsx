@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { isWebUrl, openAppUrl } from "@/lib/client/open-link";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,16 +35,25 @@ import { reduceUmbrelStream, umbrelBusy } from "./umbrelStream";
 import { MoveDialog } from "./MoveDialog";
 import { useMoveWatch } from "./useMoveWatch";
 import { UninstallDialog } from "./UninstallDialog";
+import { serviceKind } from "@/lib/service-kind";
 import s from "./detail.module.css";
 
+const ChatPanel = dynamic(() => import("@/components/chat/ChatPanel").then((m) => m.ChatPanel), {
+  ssr: false,
+  loading: () => <Skeleton height={420} radius={12} />,
+});
+const VoicePanel = dynamic(() => import("@/components/voice/VoicePanel").then((m) => m.VoicePanel), {
+  ssr: false,
+  loading: () => <Skeleton height={420} radius={12} />,
+});
 const ComposeEditor = dynamic(() => import("./ComposeEditor").then((m) => m.ComposeEditor), {
   ssr: false,
   loading: () => <Skeleton height={420} radius={12} />,
 });
 
-type Tab = "overview" | "logs" | "compose" | "settings";
+type Tab = "overview" | "chat" | "voice" | "logs" | "compose" | "settings";
 
-export function AppDetailView({ initial, tab, container, members }: { initial: AppDetail; tab: Tab; container: string | null; members: { id: string; name: string }[] }) {
+export function AppDetailView({ initial, tab: asked, container, members }: { initial: AppDetail; tab: Tab; container: string | null; members: { id: string; name: string }[] }) {
   const router = useRouter();
   const { viewer } = usePrefs();
   const { data: app = initial, mutate } = useApi<AppDetail>(`/api/apps/${encodeURIComponent(initial.id)}`, { refresh: 8000, fallbackData: initial });
@@ -134,6 +144,9 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
   const moving = !!app.moving && !!moveState?.job && !moveState.job.finishedAt;
   const moveWhy = moveBlock(app) ?? (moving ? "It's moving right now" : null);
   const un = uninstallRoute(app);
+  const kind = app.self ? null : serviceKind(app.details.map((d) => d.image));
+  // A link to a tab this app doesn't have (Chat server on a non-Prosody app) lands on Overview.
+  const tab: Tab = (asked === "chat" && kind !== "prosody") || (asked === "voice" && kind !== "mumble") ? "overview" : asked;
 
   const confirmUpdate = () =>
     confirm({
@@ -246,8 +259,8 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
               </IconButton>
             )}
             {open && !app.copyOf && (
-              <Button icon={<OpenNewWindow />} onClick={() => window.open(open, "_blank", "noopener")}>
-                Open
+              <Button icon={<OpenNewWindow />} onClick={() => openAppUrl(open)}>
+                {open.startsWith("mumble:") ? "Open in Mumble" : "Open"}
               </Button>
             )}
             {!app.copyOf && (
@@ -361,6 +374,8 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
         hrefFor={(v) => (v === "overview" ? base : `${base}?tab=${v}`)}
         items={[
           { value: "overview", label: "Overview" },
+          ...(kind === "prosody" ? [{ value: "chat" as const, label: "Chat server" }] : []),
+          ...(kind === "mumble" ? [{ value: "voice" as const, label: "Voice server" }] : []),
           { value: "logs", label: "Logs" },
           ...(app.configFile ? [{ value: "compose" as const, label: "Compose file" }] : []),
           { value: "settings", label: "Settings" },
@@ -369,6 +384,8 @@ export function AppDetailView({ initial, tab, container, members }: { initial: A
       />
       <div className={s.tabBody}>
         {tab === "overview" && <Overview app={app} busy={busy} onContainer={(n, a) => void containerAct(n, a)} />}
+        {tab === "chat" && kind === "prosody" && <ChatPanel appId={app.id} appName={app.name} running={!stopped} />}
+        {tab === "voice" && kind === "mumble" && <VoicePanel appId={app.id} appName={app.name} running={!stopped} />}
         {tab === "logs" && <LogViewer appId={app.id} containers={app.details.map((d) => ({ name: d.name, label: d.service ?? d.name }))} initialContainer={container} />}
         {tab === "compose" && app.configFile && <ComposeEditor appId={app.id} onApplied={() => void mutate()} />}
         {tab === "settings" && <AppSettings app={app} members={members} onSaved={() => void mutate()} />}
@@ -554,7 +571,7 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
             )}
           </dd>
           <dt>Your home network</dt>
-          <dd>{app.urls.home ? <a href={app.urls.home} target="_blank" rel="noopener noreferrer" className="mono">{app.urls.home.replace(/^https?:\/\//, "")}</a> : <span className={s.faint}>No web page</span>}</dd>
+          <dd>{app.urls.home ? <a href={app.urls.home} target={isWebUrl(app.urls.home) ? "_blank" : undefined} rel="noopener noreferrer" className="mono">{app.urls.home.replace(/^https?:\/\//, "")}</a> : <span className={s.faint}>No web page</span>}</dd>
           <dt>Household</dt>
           <dd>
             {app.household ? "Everyone sees it on their home page." : app.access.length ? `${fmt.plural(app.access.length, "person", "people")} can see it.` : <span className={s.faint}>Only admins see it.</span>}{" "}

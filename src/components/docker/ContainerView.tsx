@@ -1,18 +1,20 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Journal, Play } from "iconoir-react";
-import { useApi, streamPost, ApiError } from "@/lib/client/api";
+import { useApi, ApiError } from "@/lib/client/api";
+import { requestAutorun, terminalHref } from "@/lib/terminal/palette";
+import { containerTarget } from "@/lib/terminal/types";
 import { useFormat } from "@/components/PrefsProvider";
 import { Page, PageHeader, Panel, Notice, Skeleton, Empty } from "@/components/ui/Surface";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
-import { Select } from "@/components/ui/Select";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { StateLine } from "@/components/ui/StateLine";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Time } from "@/components/ui/Time";
-import type { ContainerInspect, ExecEvent } from "@/lib/docker-types";
+import type { ContainerInspect } from "@/lib/docker-types";
 import { LoadError, appHref, appWords, firstError, type InitialError } from "./shared";
 import s from "./docker.module.css";
 
@@ -250,65 +252,23 @@ function Networks({ c }: { c: ContainerInspect }) {
 
 // ---------------------------------------------------------------- run a command
 
-type Out = { text: string; err: boolean };
-
+/** A way into the Terminal for this container: type a command here and it runs there, or open a shell. */
 function RunCommand({ c }: { c: ContainerInspect }) {
-  const fmt = useFormat();
+  const router = useRouter();
   const [command, setCommand] = React.useState("");
-  const [user, setUser] = React.useState("");
-  const [workdir, setWorkdir] = React.useState("");
-  const [limit, setLimit] = React.useState<"30" | "60" | "300" | "600">("60");
-  const [running, setRunning] = React.useState(false);
-  const [out, setOut] = React.useState<Out[]>([]);
-  const [done, setDone] = React.useState<Extract<ExecEvent, { type: "done" }> | null>(null);
-  const [failure, setFailure] = React.useState<string | null>(null);
-  const [fieldErr, setFieldErr] = React.useState<{ field?: string; message: string } | null>(null);
-  const abort = React.useRef<AbortController | null>(null);
-  const pre = React.useRef<HTMLPreElement>(null);
+  const target = containerTarget(c.name);
+  const blocked = c.self ? "Gluon doesn't run commands inside its own container. For the server itself, use the Terminal on this server." : c.state !== "running" ? `${c.name} isn't running. Start it (from its app) to run a command in it.` : null;
 
-  React.useEffect(() => {
-    const el = pre.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [out.length]);
-
-  const blocked = c.self ? "Gluon doesn't run commands inside its own container. Use the server's terminal for that." : c.state !== "running" ? `${c.name} isn't running. Start it (from its app) to run a command in it.` : null;
-
-  async function run(e?: React.FormEvent) {
-    e?.preventDefault();
-    if (!command.trim()) {
-      setFieldErr({ field: "command", message: "Type a command to run." });
-      return;
-    }
-    setRunning(true);
-    setOut([]);
-    setDone(null);
-    setFailure(null);
-    setFieldErr(null);
-    const ac = new AbortController();
-    abort.current = ac;
-    try {
-      await streamPost<ExecEvent>(
-        `/api/docker/containers/${encodeURIComponent(c.id)}/exec`,
-        { command, user: user || null, workdir: workdir || null, timeoutSec: Number(limit) },
-        (ev) => {
-          if (ev.type === "out" || ev.type === "err") setOut((cur) => [...cur.slice(-3000), { text: ev.text, err: ev.type === "err" }]);
-          else if (ev.type === "done") setDone(ev);
-          else if (ev.type === "error") setFailure(ev.message);
-        },
-        ac.signal,
-      );
-    } catch (x) {
-      if (x instanceof ApiError && x.code === "reauth_cancelled") return;
-      if (x instanceof ApiError && x.field) setFieldErr({ field: x.field, message: x.message });
-      else if (!ac.signal.aborted) setFailure(x instanceof Error ? x.message : "The command didn't run.");
-    } finally {
-      setRunning(false);
-      abort.current = null;
-    }
+  function run(e: React.FormEvent) {
+    e.preventDefault();
+    const cmd = command.trim();
+    if (!cmd) return router.push(terminalHref(target));
+    requestAutorun(target, cmd);
+    router.push(terminalHref(target, cmd));
   }
 
   return (
-    <Panel title="Run a command" meta="One command, no terminal: pipes and variables need sh -c '…'">
+    <Panel title="Run a command" meta={c.self ? <Link href={terminalHref("host")}>Terminal on this server</Link> : blocked ? undefined : <Link href={terminalHref(target, undefined, "terminal")}>Open a shell</Link>}>
       {blocked ? (
         <p className={s.faint} style={{ margin: 0 }}>
           {blocked}
@@ -320,73 +280,14 @@ function RunCommand({ c }: { c: ContainerInspect }) {
               Commands here can change how Umbrel works. Stick to reading things unless you know what the change does.
             </Notice>
           )}
-          <Field label="Command" error={fieldErr?.field === "command" || (fieldErr && !fieldErr.field) ? fieldErr.message : null} description="Runs inside the container with its own programs, like ls -la /config or cat /etc/os-release.">
+          <Field label="Command" description="Opens the Terminal and runs it there, in this container's shell, where pipes, cd and Tab completion work.">
             <div className={s.execLine}>
-              <Input mono value={command} onChange={(e) => setCommand(e.target.value)} placeholder="ls -la /config" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} maxLength={2000} disabled={running} />
-              {running ? (
-                <Button onClick={() => abort.current?.abort()}>Stop</Button>
-              ) : (
-                <Button type="submit" variant="primary" icon={<Play />}>
-                  Run
-                </Button>
-              )}
+              <Input mono value={command} onChange={(e) => setCommand(e.target.value)} placeholder="ls -la /config" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} maxLength={2000} enterKeyHint="go" />
+              <Button type="submit" variant="primary" icon={<Play />}>
+                Run
+              </Button>
             </div>
           </Field>
-          <Disclosure summary="Options" meta={user || workdir || limit !== "60" ? "changed" : undefined}>
-            <div className={s.formRow} style={{ paddingTop: 8 }}>
-              <Field label="As user" optional error={fieldErr?.field === "user" ? fieldErr.message : null}>
-                <Input mono value={user} onChange={(e) => setUser(e.target.value)} placeholder={c.user ?? "default"} autoComplete="off" spellCheck={false} maxLength={65} />
-              </Field>
-              <Field label="In folder" optional error={fieldErr?.field === "workdir" ? fieldErr.message : null}>
-                <Input mono value={workdir} onChange={(e) => setWorkdir(e.target.value)} placeholder={c.workingDir ?? "/"} autoComplete="off" spellCheck={false} maxLength={400} />
-              </Field>
-              <Field label="Stop it after">
-                <Select
-                  aria-label="Time limit"
-                  value={limit}
-                  onChange={setLimit}
-                  options={[
-                    { value: "30", label: "30 seconds" },
-                    { value: "60", label: "1 minute" },
-                    { value: "300", label: "5 minutes" },
-                    { value: "600", label: "10 minutes" },
-                  ]}
-                />
-              </Field>
-            </div>
-          </Disclosure>
-          {(out.length > 0 || running || done) && (
-            <pre ref={pre} className={s.execOut} aria-live="polite" aria-label="Output">
-              {out.length === 0 ? <span className={s.faint}>{running ? "Running…" : "It printed nothing."}</span> : out.map((o, i) => (o.err ? <span key={i} data-err="">{o.text}</span> : <React.Fragment key={i}>{o.text}</React.Fragment>))}
-            </pre>
-          )}
-          {done && (
-            <p className={s.execMeta} role="status">
-              <span className={done.exitCode ? s.execBad : undefined}>
-                {done.timedOut ? (
-                  <b>Stopped at the time limit</b>
-                ) : done.exitCode === null ? (
-                  "Finished"
-                ) : done.exitCode === 0 ? (
-                  <>
-                    Finished, exit code <b className="num">0</b>
-                  </>
-                ) : (
-                  <>
-                    Failed, exit code <b className="num">{done.exitCode}</b>
-                    {EXIT[done.exitCode] ? ` (${EXIT[done.exitCode]})` : ""}
-                  </>
-                )}
-              </span>
-              <span className="num">{fmt.duration(Math.max(1, Math.round(done.ms / 1000)))}</span>
-              {done.truncated && <span>Output past 1 MB was left out</span>}
-            </p>
-          )}
-          {failure && (
-            <Notice tone="fault" title="The command didn't run">
-              {failure}
-            </Notice>
-          )}
         </form>
       )}
     </Panel>

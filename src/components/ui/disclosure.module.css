@@ -19,7 +19,7 @@
 @media (hover: hover) and (pointer: fine) {
   .trigger:hover:not([data-disabled]) { color: var(--ink); }
 }
-@media (pointer: coarse) { .trigger { min-height: 40px; } }
+@media (pointer: coarse) { .trigger { min-height: 44px; } }
 .chevron {
   flex: none;
   width: 14px;

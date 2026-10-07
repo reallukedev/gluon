@@ -1,0 +1,394 @@
+/* Terminal: a page that fills the window, a header, and one workspace panel holding either the
+   command blocks with their prompt, or the xterm.js terminal. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1480px;
+  height: 100dvh;
+  min-height: 540px;
+  margin: 0 auto;
+  padding: 28px var(--gutter) 24px;
+}
+@media (max-width: 900px) {
+  .page { height: calc(100dvh - 56px - env(safe-area-inset-top)); min-height: 480px; padding-bottom: 16px; }
+}
+
+.header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 14px 24px; margin-bottom: 20px; }
+.headText { flex: 1 1 380px; min-width: 0; }
+.title { font-family: var(--font-display); font-stretch: 80%; font-size: var(--text-3xl); font-weight: 540; line-height: 1.02; letter-spacing: -0.012em; }
+.summary { margin-top: 10px; max-width: 70ch; font-size: var(--text-base); line-height: 1.5; color: var(--ink-2); text-wrap: pretty; }
+.summary b { color: var(--ink); font-weight: 620; }
+.headActions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+
+@media (max-width: 720px) {
+  .page { padding-top: 18px; }
+  .title { font-size: var(--text-2xl); }
+  .header { margin-bottom: 14px; }
+  .headActions { width: 100%; }
+  .headActions > :first-child { flex: 1 1 150px; max-width: none; }
+  .headActions > :last-child { flex: none; }
+  .pickSub { display: none; }
+}
+
+/* The workspace and the colours output is drawn in. ANSI's 16 slots come from the plate's own
+   tokens, so light and dark (and the contrast setting) carry through to programs' colours. */
+.workspace {
+  --term-bg: var(--panel);
+  --ansi-0: var(--ink);
+  --ansi-1: var(--fault);
+  --ansi-2: var(--ok);
+  --ansi-3: color-mix(in oklab, var(--attn-strong) 62%, var(--ink));
+  --ansi-4: var(--info);
+  --ansi-5: color-mix(in oklab, var(--fault) 48%, var(--info));
+  --ansi-6: color-mix(in oklab, var(--info) 55%, var(--ok));
+  --ansi-7: var(--muted);
+  --ansi-8: var(--faint);
+  --ansi-9: color-mix(in oklab, var(--fault) 85%, var(--ink));
+  --ansi-10: color-mix(in oklab, var(--ok) 85%, var(--ink));
+  --ansi-11: color-mix(in oklab, var(--attn-strong) 70%, var(--ink));
+  --ansi-12: color-mix(in oklab, var(--info) 85%, var(--ink));
+  --ansi-13: color-mix(in oklab, var(--fault) 55%, var(--info));
+  --ansi-14: color-mix(in oklab, var(--info) 60%, var(--ok));
+  --ansi-15: var(--ink-2);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+}
+/* Under the lamp, "black" is a dim grey and "white" the bright ink, as dark terminals draw them. */
+:global(:root[data-theme="dark"]) .workspace {
+  --ansi-0: var(--faint);
+  --ansi-3: color-mix(in oklab, var(--attn) 82%, var(--ink));
+  --ansi-7: var(--ink-2);
+  --ansi-8: var(--muted);
+  --ansi-11: var(--attn-strong);
+  --ansi-15: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root[data-theme="system"]) .workspace {
+    --ansi-0: var(--faint);
+    --ansi-3: color-mix(in oklab, var(--attn) 82%, var(--ink));
+    --ansi-7: var(--ink-2);
+    --ansi-8: var(--muted);
+    --ansi-11: var(--attn-strong);
+    --ansi-15: var(--ink);
+  }
+}
+
+/* ---------------------------------------------------------------- Commands */
+
+.commands { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.commands[hidden], .termPane[hidden] { display: none; }
+
+.blocks { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.measure { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; white-space: pre; font-family: var(--font-mono); font-size: 13px; }
+
+.intro { display: grid; gap: 10px; max-width: 620px; padding: 28px 24px; }
+.introTitle { font-family: var(--font-display); font-stretch: 90%; font-size: var(--text-lg); font-weight: 600; }
+.introText { font-size: var(--text-md); line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+.introText code { padding: 1px 5px; border-radius: var(--radius-small); background: var(--sunk); color: var(--ink); }
+.examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding: 0; list-style: none; }
+.example {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-sm);
+  max-width: 100%;
+  padding: 3px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.example:disabled { opacity: 0.5; cursor: default; }
+.example:active:not(:disabled) { background: var(--panel-2); }
+@media (hover: hover) and (pointer: fine) {
+  .example:hover:not(:disabled) { background: var(--panel-2); color: var(--ink); }
+}
+
+/* A block: the command, what it printed, how it ended. */
+.block + .block { border-top: 1px solid var(--line); }
+.blockHead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 12px 10px 6px 18px;
+  background: var(--panel);
+}
+/* The state line and the actions sit on the command's first line, however many it wraps to. */
+.blockLine { display: grid; place-items: center; height: 19px; }
+.blockCommand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.45; }
+.blockCwd { color: var(--muted); overflow-wrap: anywhere; }
+.blockText { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; white-space: pre-wrap; }
+.blockMeta { display: flex; align-items: center; gap: 4px; margin-block: -5px; color: var(--muted); font-size: var(--text-xs); white-space: nowrap; }
+.blockMeta > .num:not(:empty) { margin-right: 6px; }
+
+.output {
+  padding: 0 18px 12px 42px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 8;
+  outline-offset: -2px;
+}
+.chunk { content-visibility: auto; }
+.line { min-height: 1.45em; }
+.dropped { margin-bottom: 8px; font-family: var(--font-sans); font-size: var(--text-sm); color: var(--muted); white-space: normal; }
+
+.output [data-fg="0"] { color: var(--ansi-0); }
+.output [data-fg="1"] { color: var(--ansi-1); }
+.output [data-fg="2"] { color: var(--ansi-2); }
+.output [data-fg="3"] { color: var(--ansi-3); }
+.output [data-fg="4"] { color: var(--ansi-4); }
+.output [data-fg="5"] { color: var(--ansi-5); }
+.output [data-fg="6"] { color: var(--ansi-6); }
+.output [data-fg="7"] { color: var(--ansi-7); }
+.output [data-fg="8"] { color: var(--ansi-8); }
+.output [data-fg="9"] { color: var(--ansi-9); }
+.output [data-fg="10"] { color: var(--ansi-10); }
+.output [data-fg="11"] { color: var(--ansi-11); }
+.output [data-fg="12"] { color: var(--ansi-12); }
+.output [data-fg="13"] { color: var(--ansi-13); }
+.output [data-fg="14"] { color: var(--ansi-14); }
+.output [data-fg="15"] { color: var(--ansi-15); }
+.output [data-bg] { color: var(--term-bg); border-radius: 3px; }
+.output [data-bg="-1"] { background: var(--ink); }
+.output [data-bg="0"] { background: var(--ansi-0); }
+.output [data-bg="1"] { background: var(--ansi-1); }
+.output [data-bg="2"] { background: var(--ansi-2); }
+.output [data-bg="3"] { background: var(--ansi-3); }
+.output [data-bg="4"] { background: var(--ansi-4); }
+.output [data-bg="5"] { background: var(--ansi-5); }
+.output [data-bg="6"] { background: var(--ansi-6); }
+.output [data-bg="7"] { background: var(--ansi-7); }
+.output [data-bg="8"] { background: var(--ansi-8); }
+.output [data-bg="9"] { background: var(--ansi-9); }
+.output [data-bg="10"] { background: var(--ansi-10); }
+.output [data-bg="11"] { background: var(--ansi-11); }
+.output [data-bg="12"] { background: var(--ansi-12); }
+.output [data-bg="13"] { background: var(--ansi-13); }
+.output [data-bg="14"] { background: var(--ansi-14); }
+.output [data-bg="15"] { background: var(--ansi-15); }
+.output [data-fg="-1"] { color: var(--term-bg); }
+.b { font-weight: 700; }
+.dim { opacity: 0.68; }
+.i { font-style: italic; }
+.u { text-decoration: underline; text-underline-offset: 2px; }
+
+.blockEnd { display: flex; align-items: baseline; gap: 10px; padding: 0 18px 12px 42px; font-size: var(--text-sm); line-height: 1.45; color: var(--ink-2); text-wrap: pretty; }
+.blockEnd[data-tone="fault"] { color: var(--ink); }
+.endMark { flex: none; align-self: center; width: 2px; height: 12px; margin-left: -16px; margin-right: 4px; background: var(--ink-2); }
+.blockEnd[data-tone="fault"] .endMark { height: 6px; align-self: flex-end; margin-bottom: 4px; background: var(--fault); }
+.blockQuiet { padding: 0 18px 12px 42px; font-size: var(--text-sm); color: var(--muted); }
+.blockNotice { padding: 0 18px 12px 42px; }
+
+@media (max-width: 720px) {
+  .blockHead { grid-template-columns: 14px minmax(0, 1fr); padding: 12px 12px 4px 14px; row-gap: 4px; }
+  .blockMeta { grid-column: 2; justify-content: flex-start; margin: 0 0 0 -8px; }
+  .blockMeta > .num:not(:empty) { margin-left: 8px; }
+  .output, .blockEnd, .blockQuiet, .blockNotice { padding-left: 38px; padding-right: 12px; }
+  .output { font-size: 12.5px; }
+}
+
+/* The dock: where you are, and the prompt. */
+.dock { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 12px calc(12px + env(safe-area-inset-bottom)) 18px; border-top: 1px solid var(--line); background: var(--panel); }
+.askRow { padding-bottom: 4px; }
+.dockHead { display: flex; align-items: center; gap: 10px; min-height: 28px; font-size: var(--text-xs); color: var(--muted); }
+.dockCwd { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); color: var(--ink-2); }
+.dockWho { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.promptRow { display: flex; align-items: center; gap: 8px; }
+.inputGroup {
+  --ring: color-mix(in oklab, var(--ink) 10%, transparent);
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  height: var(--control);
+  padding-left: 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.inputGroup:focus-within { border-color: var(--ink-2); box-shadow: 0 0 0 3px var(--ring); }
+.inputGroup[data-disabled] { background: var(--sunk); opacity: 0.6; }
+.inputGroup[data-running] { border-style: dashed; }
+.inputGroup[data-running]:focus-within { border-style: solid; }
+.sigil { flex: none; width: 12px; font-family: var(--font-mono); font-size: 14px; color: var(--muted); }
+.input { flex: 1; min-width: 0; height: 100%; padding: 0 10px 0 6px; border: 0; outline: 0; background: transparent; color: var(--ink); font-family: var(--font-mono); font-size: 14px; }
+.input::placeholder { color: var(--faint); opacity: 1; font-family: var(--font-sans); font-size: var(--text-md); }
+.input:focus-visible { outline: 0; }
+.runButton { flex: none; }
+/* Narrow phones: Run and Stop keep their icon and lose the word (the name stays for screen readers). */
+@media (max-width: 420px) {
+  .runButton { width: var(--control); padding: 0; justify-content: center; }
+  .runButton > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (pointer: coarse) {
+  .input { font-size: max(16px, 1rem); }
+}
+
+/* Suggestions: opened on every keystroke, so they appear without animation (like the palette). */
+.suggestPositioner { z-index: 60; outline: 0; }
+.suggestPopup {
+  display: flex;
+  flex-direction: column;
+  width: min(680px, calc(100vw - 16px), max(var(--anchor-width), 360px));
+  max-height: min(340px, var(--available-height, 340px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  outline: 0;
+}
+.suggestList { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 5px; }
+.suggestItem {
+  display: grid;
+  grid-template-columns: 16px minmax(0, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+  scroll-margin: 5px;
+}
+.suggestItem[data-highlighted] { background: color-mix(in oklab, var(--ink) 7%, transparent); }
+.suggestIcon { display: grid; place-items: center; color: var(--muted); }
+.suggestIcon svg { width: 15px; height: 15px; }
+.suggestItem[data-highlighted] .suggestIcon { color: var(--ink); }
+.suggestLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 13px; }
+.suggestDesc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-xs); color: var(--muted); }
+.suggestFoot { display: flex; align-items: center; gap: 14px; padding: 6px 12px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+.suggestFoot kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-right: 3px; padding: 0 4px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--panel); font-size: 10.5px; color: var(--ink-2); }
+.suggestLoading { margin-left: auto; }
+@media (pointer: coarse) {
+  .suggestItem { min-height: 42px; }
+  .suggestFoot { display: none; }
+}
+
+/* ---------------------------------------------------------------- the target picker */
+
+.pickTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: var(--control);
+  max-width: min(340px, 100%);
+  min-width: 0;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: var(--text-md);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+.pickTrigger[data-popup-open] { border-color: var(--ink-2); }
+.pickTrigger:active { background: var(--panel-2); }
+@media (hover: hover) and (pointer: fine) {
+  .pickTrigger:hover:not([data-popup-open]) { border-color: var(--faint); }
+}
+.pickIcon { display: grid; place-items: center; flex: none; width: 20px; height: 20px; color: var(--muted); }
+.pickIcon svg { width: 17px; height: 17px; }
+.pickText { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; overflow: hidden; }
+.pickName { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 560; }
+.pickSub { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--text-sm); }
+.pickChevron { flex: none; width: 14px; height: 14px; color: var(--muted); transition: transform var(--dur-base) var(--ease-out); }
+.pickTrigger[data-popup-open] .pickChevron { transform: rotate(calc(180deg * var(--motion))); }
+
+.pickPopup { display: flex; flex-direction: column; width: min(400px, calc(100vw - 16px)); max-width: none; max-height: min(480px, var(--available-height, 480px)); padding: 0; overflow: hidden; }
+.pickSearch { padding: 8px; border-bottom: 1px solid var(--line); }
+.pickInput {
+  width: 100%;
+  height: var(--control);
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: var(--text-md);
+  outline: 0;
+}
+.pickInput:focus { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+.pickInput::placeholder { color: var(--faint); }
+@media (pointer: coarse) {
+  .pickInput { font-size: max(16px, 1rem); }
+}
+.pickList { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 5px; }
+.pickGroup + .pickGroup { margin-top: 4px; }
+.pickGroupLabel { display: flex; align-items: center; gap: 8px; }
+.pickItem { min-height: 36px; }
+.pickItemText { display: grid; flex: 1; min-width: 0; }
+.pickItemName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 13px; }
+.pickItemWhy { font-size: var(--text-xs); color: var(--muted); }
+.pickEmpty { padding: 14px 14px 10px; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
+
+/* ---------------------------------------------------------------- Terminal mode */
+
+.termPane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.termBar { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 5px 8px 5px 18px; border-bottom: 1px solid var(--line); }
+.termStatus { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); color: var(--ink-2); }
+.termActions { display: flex; align-items: center; gap: 4px; flex: none; }
+.termHost { position: relative; flex: 1; min-height: 0; overflow: hidden; padding: 8px 6px 6px 14px; background: var(--term-bg); transition: opacity var(--dur-base) ease; }
+.termHost[data-ended] { opacity: 0.7; }
+.termHost :global(.xterm) { height: 100%; }
+.termHost :global(.xterm .xterm-viewport) { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.termHost :global(.xterm-screen) { outline: 0; }
+.termLoading { flex: 1; min-height: 0; display: flex; }
+
+.keyBar { display: none; gap: 6px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); overflow-x: auto; }
+.key {
+  flex: none;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.key:active:not(:disabled) { background: var(--panel-2); }
+.key:disabled { opacity: 0.45; }
+@media (pointer: coarse) {
+  .keyBar { display: flex; }
+}
+
+/* At least 44px to tap on touch screens (WCAG 2.5.5), without changing how they look. Chips sit
+   6px apart, so their tap areas grow up and down, not into each other. */
+@media (pointer: coarse) {
+  .examples { row-gap: 12px; }
+  .example { position: relative; }
+  .example::before { content: ""; position: absolute; inset: -6px 0; }
+  .pickTrigger { position: relative; }
+  .pickTrigger::before { content: ""; position: absolute; inset: -3px 0; }
+}

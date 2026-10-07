@@ -43,3 +43,8 @@
 @media (max-width: 520px) {
   .fact { grid-template-columns: minmax(0, 1fr); }
 }
+.copyRow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; }
+.copyRow > a { overflow-wrap: anywhere; }
+.reachLine { display: flex; min-width: 0; }
+.reachLine > span { align-items: flex-start; }
+.reachLine > span > span:last-child { line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }

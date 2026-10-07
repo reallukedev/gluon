@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Lock, LockSlash, Cloud, CloudSync, Internet, HomeSimpleDoor, Server, Search } from "iconoir-react";
 import type { AppSummary } from "@/server/docker/apps";
-import type { ExposureReport, RouteT, RoutesConfigT, RoutesResponse, SubdomainRouteT, RedirectRouteT } from "@/lib/network-types";
+import type { ExposureReport, NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, SubdomainRouteT, RedirectRouteT } from "@/lib/network-types";
 import { api, ApiError } from "@/lib/client/api";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,9 @@ import { toast } from "@/components/ui/Toast";
 import { AppIcon } from "@/components/apps/AppIcon";
 import type { Commit } from "./NetworkView";
 import { suggestLabel, newRouteId, bare, tcpPorts, isRedirectRoute, THIS_SERVER } from "./shared";
+import { HttpsSetting } from "./HttpsSetting";
+import { DnsHelp } from "./DnsHelp";
+import { certUploads, hasNewCert, httpsFieldOf, httpsFormFrom, httpsSetting, httpsSummary, verifyHttps, type HttpsForm } from "./https-form";
 import f from "./flow.module.css";
 
 /**
@@ -56,6 +59,7 @@ interface Form {
   enabled: boolean;
   ack: boolean;
   target: string;
+  https: HttpsForm;
 }
 
 const hostOf = (url: string) => {
@@ -88,6 +92,7 @@ function blank(): Form {
     enabled: true,
     ack: false,
     target: "",
+    https: httpsFormFrom(undefined),
   };
 }
 
@@ -119,6 +124,7 @@ function fromRoute(r: RouteT, cfg: RoutesConfigT, knownApp: string | null): Form
     f.label = underBase ? r.host.slice(0, -base.length - 1) : r.host;
     f.customHost = !underBase;
     f.scope = r.only_paths?.length ? "some" : "all";
+    f.https = httpsFormFrom(r);
     f.onlyPaths = (r.only_paths ?? []).join(" ");
     const link = linksTo(cfg.routes, r.host)[0];
     if (link) {
@@ -139,6 +145,8 @@ interface Props {
   apps: AppSummary[] | undefined;
   exposure: ExposureReport | undefined;
   publicIp: string | null;
+  /** Live checks: the IPv6 address and what DNS says about saved names. */
+  status: NetworkStatus | undefined;
   commit: Commit;
   onClose: () => void;
   onReload: () => void;
@@ -146,7 +154,7 @@ interface Props {
   onLoginChanged: () => void;
 }
 
-export function PublishFlow({ target, data, apps, exposure, publicIp, commit, onClose, onReload, onEditInstead, onLoginChanged }: Props) {
+export function PublishFlow({ target, data, apps, exposure, publicIp, status, commit, onClose, onReload, onEditInstead, onLoginChanged }: Props) {
   const cfg = data.config;
   const base = cfg.base_domain;
   const existing = target.mode === "edit" || (target.mode === "redirect" && target.id) ? cfg.routes.find((r) => r.id === (target as { id: string }).id) : undefined;
@@ -185,6 +193,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
   const [filter, setFilter] = React.useState("");
   const [loginOverride, setLoginOverride] = React.useState<"yes" | "no" | null>(null);
   const [marking, setMarking] = React.useState(false);
+  const [checkingCert, setCheckingCert] = React.useState(false);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm((x) => ({ ...x, [k]: v }));
@@ -244,7 +253,12 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
   const direct = mode === "app" && form.lane === "direct";
   const host = direct ? (form.customHost ? form.label.trim().toLowerCase() : `${form.label.trim().toLowerCase()}.${base}`) : base;
   const pathPart = direct ? "" : `/${cleanPath(form.path)}`;
-  const url = mode === "fallback" ? `https://${base}` : `https://${host}${pathPart}`;
+  const plainHttp = direct && form.https.mode === "http";
+  const url = mode === "fallback" ? `https://${base}` : `${plainHttp ? "http" : "https"}://${host}${pathPart}`;
+  const prevSub = existing?.type === "subdomain" ? existing : undefined;
+  const storedCert = existing ? data.certs?.[existing.id] : undefined;
+  const newCert = direct && hasNewCert(form.https, prevSub, storedCert, host);
+  const knownDns = status?.routes.find((r) => r.host === host && r.dns)?.dns ?? null;
   const appName =
     mode === "redirect"
       ? null
@@ -276,7 +290,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
       if (form.customHost ? !HOST_RE.test(l) : !LABEL_RE.test(l)) return { state: "unhealthy", text: form.customHost ? "Enter a full name, like photos.example.com." : "Use letters, numbers and dashes; it can't start or end with a dash." };
       if (form.customHost && (l === base || l.endsWith(`.${base}`))) return { state: "unhealthy", text: `Use the box without “more options” for names under ${base}.` };
       if (takenHost) return { state: "unhealthy", text: `Already used by ${nameOf(takenHost)}.` };
-      return { state: "running", text: form.customHost ? `Free. It needs its own DNS record pointing to ${publicIp ?? "your internet address"}.` : "Free. The wildcard DNS record already covers it, so there's nothing to set up in Cloudflare." };
+      return { state: "running", text: form.customHost ? "Free." : "Free. The wildcard DNS record already covers it, so there's nothing to set up." };
     }
     const p = cleanPath(form.path);
     if (!p) return null;
@@ -356,7 +370,31 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
   }
 
   const idx = steps.indexOf(step);
-  function go(to: Step) {
+
+  /** A new certificate is checked on the server before moving on; nothing is stored until the save. */
+  async function verifyCert(): Promise<HttpsForm | null> {
+    if (!newCert) return form.https;
+    setCheckingCert(true);
+    try {
+      const r = await verifyHttps(form.https, host);
+      if ("errors" in r) {
+        setErrors(r.errors);
+        setStep("address");
+        return null;
+      }
+      setForm((x) => ({ ...x, https: r.form }));
+      return r.form;
+    } finally {
+      setCheckingCert(false);
+    }
+  }
+
+  async function checkCertNow() {
+    setErrors({});
+    await verifyCert();
+  }
+
+  async function go(to: Step) {
     const i = steps.indexOf(to);
     if (i > idx) {
       // Validate every step up to the target.
@@ -368,6 +406,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
           return;
         }
       }
+      if (steps.indexOf("address") >= 0 && steps.indexOf("address") < i && !(await verifyCert())) return;
     }
     setErrors({});
     setStep(to);
@@ -396,7 +435,8 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
     if (direct) {
       // Extra paths have no editor; carry them through untouched instead of dropping them.
       const extra = existing?.type === "subdomain" && existing.extra_paths?.length ? { extra_paths: existing.extra_paths } : {};
-      route = { id, type: "subdomain", ...common, ...appRef, host, backend, ...(form.scope === "some" && onlyPaths.length ? { only_paths: onlyPaths } : {}), ...extra } as SubdomainRouteT;
+      const https = httpsSetting(form.https);
+      route = { id, type: "subdomain", ...common, ...appRef, host, backend, ...(form.scope === "some" && onlyPaths.length ? { only_paths: onlyPaths } : {}), ...extra, ...(https ? { https } : {}) } as SubdomainRouteT;
     } else {
       route = { id, type: "path", ...common, ...appRef, path: pathPart, backend, strip_prefix: form.stripPrefix };
     }
@@ -437,23 +477,29 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
         return;
       }
     }
+    const checked = await verifyCert();
+    if (!checked) return;
     const { routes, fallback } = build();
     setSaving(true);
     try {
       const where = bare(url);
       await commit(routes, {
         fallback,
+        certs: direct ? certUploads(checked, host, newCert) : undefined,
         success:
           mode === "fallback"
             ? `${fallback?.name ?? "It"} now answers ${where}.`
             : existing
               ? `Saved ${where}.`
-              : `${where} is on the internet. Its certificate arrives within a minute.`,
+              : `${where} is on the internet.${direct && form.https.mode !== "auto" ? "" : " Its certificate arrives within a minute."}`,
       });
       setOpen(false);
     } catch (e) {
       if (e instanceof ApiError && e.code === "stale") setStale(true);
-      else if (e instanceof ApiError && e.field) {
+      else if (e instanceof ApiError && httpsFieldOf(e.field)) {
+        setErrors({ [httpsFieldOf(e.field)!]: e.message });
+        setStep("address");
+      } else if (e instanceof ApiError && e.field) {
         const map: Record<string, [string, Step]> = {
           backend_host: ["backendHost", "address"],
           only_paths: ["onlyPaths", "protection"],
@@ -496,7 +542,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
       footer={
         <>
           {idx > 0 ? (
-            <Button variant="ghost" onClick={() => go(steps[idx - 1]!)} disabled={saving}>
+            <Button variant="ghost" onClick={() => void go(steps[idx - 1]!)} disabled={saving}>
               Back
             </Button>
           ) : (
@@ -504,7 +550,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
               Cancel
             </Button>
           )}
-          <Button variant="primary" loading={saving} onClick={() => (last ? void save() : go(steps[idx + 1]!))}>
+          <Button variant="primary" loading={saving || checkingCert} onClick={() => (last ? void save() : void go(steps[idx + 1]!))}>
             {primaryLabel}
           </Button>
         </>
@@ -515,7 +561,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
         onSubmit={(e) => {
           e.preventDefault();
           if (last) void save();
-          else go(steps[idx + 1]!);
+          else void go(steps[idx + 1]!);
         }}
       >
         {steps.length > 2 && <FlowSteps label="Steps" steps={steps.map((k) => ({ key: k, label: STEP_NAME[k] }))} current={step} working={saving} />}
@@ -699,7 +745,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
                 )}
                 <div className={f.preview} aria-live="polite">
                   <span className={f.previewUrl}>
-                    <span className={f.dim}>https://</span>
+                    <span className={f.dim}>{plainHttp ? "http://" : "https://"}</span>
                     {direct ? (
                       form.customHost ? (
                         <span>{form.label || "…"}</span>
@@ -718,6 +764,9 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
                   </span>
                   {availability && !errors.label ? <Availability a={availability} /> : <span className={f.faint}>Type a name to see if it&rsquo;s free.</span>}
                 </div>
+                {direct && form.customHost && availability?.state === "running" && (
+                  <DnsHelp host={host} baseDomain={base} purpose="web" known={knownDns} publicIp={status?.publicIp ?? (publicIp ? { v4: publicIp, v6: [] } : null)} />
+                )}
               </div>
 
               {direct && (
@@ -739,6 +788,22 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
                 </div>
               )}
 
+              {direct && (
+                <HttpsSetting
+                  host={host}
+                  kind="web"
+                  value={form.https}
+                  onChange={(v) => {
+                    set("https", v);
+                    setErrors({});
+                  }}
+                  stored={prevSub?.host === host ? storedCert : undefined}
+                  errors={errors}
+                  checking={checkingCert}
+                  onCheck={() => void checkCertNow()}
+                />
+              )}
+
               <Disclosure summary="More options" open={more} onOpenChange={setMore}>
                 <div className={f.more}>
                   <Field label="Name in Gluon" error={errors.name} description="Also written as a comment in the Caddyfile.">
@@ -747,7 +812,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
                   {direct && (
                     <Checkbox checked={form.customHost} onChange={(v) => set("customHost", v)}>
                       Use a name outside {base}
-                      <span className={f.hint}>It needs its own DNS record pointing at your router before a certificate can be issued.</span>
+                      <span className={f.hint}>It needs its own DNS record pointing at your router.</span>
                     </Checkbox>
                   )}
                   {!direct && (
@@ -873,18 +938,23 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
               {steps.length > 1 && (
                 <dl className={f.recap}>
                   {steps.includes("app") && (
-                    <RecapRow label="App" onChange={() => go("app")}>
+                    <RecapRow label="App" onChange={() => void go("app")}>
                       {(mode === "fallback" && form.other ? form.name : appName) || "Something else"} <span className={`${f.dim} mono`}>:{form.port || "…"}</span>
                     </RecapRow>
                   )}
                   {steps.includes("address") && (
-                    <RecapRow label="Address" onChange={() => go("address")}>
+                    <RecapRow label="Address" onChange={() => void go("address")}>
                       <span className="mono">{bare(url)}</span>{" "}
                       <span className={f.dim}>{mode === "redirect" ? "short link" : direct ? "direct" : "through Cloudflare"}</span>
                     </RecapRow>
                   )}
+                  {direct && (
+                    <RecapRow label="HTTPS" onChange={() => void go("address")}>
+                      {httpsSummary(form.https, prevSub?.host === host ? storedCert : undefined)}
+                    </RecapRow>
+                  )}
                   {steps.includes("protection") && (
-                    <RecapRow label="Protection" onChange={() => go("protection")}>
+                    <RecapRow label="Protection" onChange={() => void go("protection")}>
                       {direct && form.scope === "some" ? "Only some paths" : loginVerdict === "login" ? "Its own login" : loginVerdict === "none" ? "No login" : "Not sure it has a login"}
                     </RecapRow>
                   )}
@@ -908,12 +978,16 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, commit, on
                     <li>
                       {direct
                         ? form.customHost
-                          ? `Needs a DNS record for ${host} pointing to ${publicIp ?? "your internet address"} before it works.`
-                          : "The wildcard DNS record already covers this name; nothing to set up in Cloudflare."
+                          ? knownDns?.status === "ok" && knownDns.matchesPublicIp !== false
+                            ? `${host} already points at this network.`
+                            : `Needs an A record for ${host} pointing at ${status?.publicIp.v4 ?? publicIp ?? "your internet address"} before it works.`
+                          : "The wildcard DNS record already covers this name; nothing to set up."
                         : `${base} already points at Cloudflare; nothing to set up.`}
                     </li>
                     <li>{direct ? "Direct: video and big uploads work; visitors can see your home's internet address." : "Through Cloudflare: your address stays hidden, but uploads over 100 MB fail and video isn't allowed."}</li>
-                    {(!existing || (existing.type === "subdomain" ? existing.host !== host : true)) && <li>The web server fetches an HTTPS certificate within a minute of saving.</li>}
+                    {direct && form.https.mode === "own" && <li>The web server serves your certificate as it is. Gluon can&rsquo;t renew it, so it warns you three weeks before it ends.</li>}
+                    {direct && form.https.mode === "http" && <li>It&rsquo;s served over plain HTTP. Browsers call it not secure unless whatever is in front of this server adds HTTPS.</li>}
+                    {(!direct || form.https.mode === "auto") && (!existing || (existing.type === "subdomain" ? existing.host !== host || existing.https : true)) && <li>The web server fetches an HTTPS certificate within a minute of saving.</li>}
                     <li>
                       {direct && form.scope === "some"
                         ? `Only ${onlyPaths.join(", ")} ${onlyPaths.length === 1 ? "is" : "are"} reachable; everything else answers “not found”.`

@@ -103,6 +103,7 @@ a.item { cursor: pointer; }
 
 /* Select */
 .selectTrigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -121,6 +122,8 @@ a.item { cursor: pointer; }
   transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .selectTrigger[data-popup-open] { border-color: var(--ink-2); }
+/* A 44px tall tap area on touch screens (the trigger is 40px there). */
+@media (pointer: coarse) { .selectTrigger::before { content: ""; position: absolute; inset: -3px 0; } }
 .selectTrigger:focus-visible { outline: 0; border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 12%, transparent); }
 .selectTrigger[data-invalid] { border-color: var(--fault); }
 .selectTrigger[data-disabled] { opacity: 0.5; cursor: not-allowed; background: var(--sunk); }

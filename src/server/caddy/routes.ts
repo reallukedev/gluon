@@ -18,6 +18,19 @@ const ROUTES_FILE = path.join(CADDY_DIR, "routes.json");
 const CADDYFILE = path.join(CADDY_DIR, "Caddyfile");
 const HISTORY_DIR = path.join(CADDY_DIR, "history");
 const HISTORY_KEEP = 40;
+export const CERTS_DIR = path.join(CADDY_DIR, "certs");
+/** Where Caddy's container sees Gluon's Caddy folder (read-only bind of the same host folder). */
+export const DEFAULT_CADDY_MOUNT = "/etc/caddy";
+const MOUNT_RE = /^(\/[A-Za-z0-9._-]+)+$/;
+let caddyMount = (() => {
+  const env = process.env.GLUON_CADDY_MOUNT;
+  return env && MOUNT_RE.test(env) ? env : DEFAULT_CADDY_MOUNT;
+})();
+/** Set from the Caddy container's mounts (see network/caddy-certs.ts). */
+export function setCaddyMount(p: string) {
+  if (MOUNT_RE.test(p)) caddyMount = p;
+}
+export const currentCaddyMount = () => caddyMount;
 export const THIS_SERVER = "host.docker.internal";
 
 export interface Backend {
@@ -49,6 +62,36 @@ export interface SubdomainRoute extends Base {
   xmpp?: XmppSettings;
   /** The whole host redirects here (keeping the path); `backend` is then unused. */
   redirect_to?: string;
+  /** A voice server (Mumble): apps connect straight to `voice.port`; the web address shows a page with a mumble:// link. */
+  voice?: VoiceSettings;
+  /** Who handles HTTPS for this name. Absent: Caddy gets a certificate on its own. */
+  https?: HttpsSettings;
+}
+
+export interface VoiceSettings {
+  /** Mumble's port (TCP and UDP), usually 64738. */
+  port: number;
+}
+
+/**
+ * own: a certificate the person supplies, stored in ./certs next to the Caddyfile. With `files`,
+ *   Gluon copies it from those host paths (e.g. certbot's live folder) whenever they change.
+ * http: plain HTTP; a proxy, tunnel or load balancer in front handles HTTPS.
+ * none: chat addresses only. No web side here at all, so Caddy never asks for a certificate.
+ */
+export type HttpsMode = "auto" | "own" | "http" | "none";
+export interface HttpsSettings {
+  mode: Exclude<HttpsMode, "auto">;
+  files?: { cert: string; key: string };
+}
+
+export const httpsMode = (r: Route | null | undefined): HttpsMode => (r?.type === "subdomain" && r.https ? r.https.mode : "auto");
+
+export const MUMBLE_PORT = 64738;
+
+/** Where Gluon keeps a person's own certificate for `host`, as Gluon sees the folder. */
+export function ownCertFiles(host: string): { crt: string; key: string } {
+  return { crt: path.join(CERTS_DIR, `${host}.crt`), key: path.join(CERTS_DIR, `${host}.key`) };
 }
 
 /** A short link on the base domain, or a whole subdomain that redirects. */
@@ -111,9 +154,9 @@ function stableStringify(v: unknown): string {
   return JSON.stringify(v);
 }
 
-/** Public URL for a route. */
+/** Public URL for a route. Plain-HTTP names are http://; whatever is in front may still add HTTPS. */
 export function routeUrl(cfg: RoutesConfig, r: Route): string {
-  return r.type === "subdomain" ? `https://${r.host}` : `https://${cfg.base_domain}${r.path}`;
+  return r.type === "subdomain" ? `${httpsMode(r) === "http" ? "http" : "https"}://${r.host}` : `https://${cfg.base_domain}${r.path}`;
 }
 
 // ---------------------------------------------------------------- rendering
@@ -195,6 +238,11 @@ export function publicPorts(cfg: RoutesConfig): Map<number, string> {
   for (const r of cfg.routes) {
     if (r.enabled === false || isRedirect(r)) continue;
     const where = routeUrl(cfg, r).replace(/^https?:\/\//, "").replace(/\/$/, "");
+    // Chat and voice ports are reached directly, not through Caddy; only a chat server's web side is.
+    if (r.type === "subdomain" && (r.xmpp || r.voice)) {
+      if (r.xmpp?.http_port && httpsMode(r) !== "none") add({ ...r.backend, port: r.xmpp.http_port }, where);
+      continue;
+    }
     add(r.backend, r.type === "subdomain" && r.only_paths?.length ? `${where}${r.only_paths[0]!.replace(/\/?\*$/, "")}` : where);
     if (r.type === "subdomain") for (const x of r.extra_paths ?? []) add(x.backend, `${r.host}${x.paths[0]?.replace(/\/?\*$/, "") ?? ""}`);
   }
@@ -205,18 +253,19 @@ export function publicPorts(cfg: RoutesConfig): Map<number, string> {
 export function appLinks(routes: Route[]): [number, string][] {
   const links = new Map<number, string>();
   for (const r of routes) {
-    if (r.type !== "subdomain" || r.redirect_to) continue;
-    if (!r.only_paths?.length && r.backend.host === THIS_SERVER && !links.has(r.backend.port)) {
-      links.set(r.backend.port, `https://${r.host}`);
-    }
+    if (r.type !== "subdomain" || r.redirect_to || r.voice || httpsMode(r) === "none") continue;
+    const url = `${httpsMode(r) === "http" ? "http" : "https"}://${r.host}`;
+    // A chat server's client port speaks XMPP, not HTTP: only its web side gets a tile link.
+    const port = r.xmpp ? r.xmpp.http_port : r.only_paths?.length ? null : r.backend.port;
+    if (port && r.backend.host === THIS_SERVER && !links.has(port)) links.set(port, url);
     for (const x of r.extra_paths ?? []) {
-      if (x.backend.host === THIS_SERVER && !links.has(x.backend.port)) links.set(x.backend.port, `https://${r.host}`);
+      if (x.backend.host === THIS_SERVER && !links.has(x.backend.port)) links.set(x.backend.port, url);
     }
   }
   return [...links.entries()].sort((a, b) => a[0] - b[0]);
 }
 
-export function renderCaddyfile(cfg: RoutesConfig): string {
+export function renderCaddyfile(cfg: RoutesConfig, mount = caddyMount): string {
   const base = cfg.base_domain;
   const routes = cfg.routes.filter((r) => r.enabled !== false);
   const out: string[] = [HEAD.replaceAll("__BASE__", base)];
@@ -261,17 +310,28 @@ export function renderCaddyfile(cfg: RoutesConfig): string {
   }
   out.push(`\t# Everything else -> ${commentSafe(cfg.fallback.name)}`, "\thandle {", ...backendLines(cfg.fallback.backend, 2), "\t}", "}");
   for (const r of routes.filter((r): r is SubdomainRoute => r.type === "subdomain").sort((a, b) => a.host.localeCompare(b.host))) {
-    const dns = coveredByWildcard(r.host, base) ? "A + AAAA via the wildcard record" : "needs its own DNS record";
-    out.push("", `# ${commentSafe(r.name)}. DNS-only (grey cloud), ${dns}.`, ...noteLines(r, ""));
+    const mode = httpsMode(r);
+    const dns = coveredByWildcard(r.host, base) ? "The wildcard DNS record covers it (A + AAAA)" : "Needs its own DNS record";
+    out.push("", `# ${commentSafe(r.name)}. ${dns}.`, ...noteLines(r, ""));
+    if (mode === "none" && r.xmpp) {
+      // Not a site at all, so Caddy never asks for a certificate (the domain's website may live elsewhere).
+      out.push(`# A chat server with no web side here: chat apps connect straight to port ${r.backend.port}`, "# and it handles its own certificate.");
+      continue;
+    }
+    const open = siteOpen(r, mode, mount);
     if (r.redirect_to) {
-      out.push(`# Everything here redirects to ${r.redirect_to}, keeping the path.`, `${r.host} {`, "\timport common", `\tredir ${r.redirect_to}{uri} 302`, "}");
+      out.push(`# Everything here redirects to ${r.redirect_to}, keeping the path.`, ...open, `\tredir ${r.redirect_to}{uri} 302`, "}");
       continue;
     }
     if (r.xmpp) {
-      out.push(...xmppSiteLines(r, r.xmpp, tileMap));
+      out.push(...xmppSiteLines(r, r.xmpp, tileMap, open));
       continue;
     }
-    out.push(`${r.host} {`, "\timport common");
+    if (r.voice) {
+      out.push(...voiceSiteLines(r, r.voice, open));
+      continue;
+    }
+    out.push(...open);
     out.push("", "\t# App-tile map for dashboards served here (see the base domain block).", "\theader /_domains/app-links.js >Cache-Control no-store", ...tileMap);
     (r.extra_paths ?? []).forEach((x, i) => {
       const note = x.note ? wrap(x.note, 76).map((l) => `\t# ${commentSafe(l)}`) : [];
@@ -301,14 +361,15 @@ export function renderCaddyfile(cfg: RoutesConfig): string {
  * the client port, other servers to the federation port); this block exists so Caddy holds a
  * certificate for the domain, which Gluon copies into the chat server, and to front its HTTP side.
  */
-function xmppSiteLines(r: SubdomainRoute, x: XmppSettings, tileMap: string[]): string[] {
+function xmppSiteLines(r: SubdomainRoute, x: XmppSettings, tileMap: string[], open: string[]): string[] {
   const h = r.host;
+  const mode = httpsMode(r);
+  const scheme = mode === "http" ? "http" : "https";
   const ports = [`${r.backend.port}`, ...(x.s2s_port ? [`other servers to ${x.s2s_port}`] : [])].join(" and ");
   const out = [
     `# Chat apps connect straight to port ${ports}, not through Caddy.`,
-    "# Caddy holds the certificate Gluon copies into the chat server.",
-    `${h} {`,
-    "\timport common",
+    mode === "http" ? "# Plain HTTP here: whatever is in front handles HTTPS." : mode === "own" ? "# Caddy serves your own certificate for it." : "# Caddy holds the certificate Gluon copies into the chat server.",
+    ...open,
     "",
     "\t# App-tile map for dashboards served here (see the base domain block).",
     "\theader /_domains/app-links.js >Cache-Control no-store",
@@ -316,8 +377,8 @@ function xmppSiteLines(r: SubdomainRoute, x: XmppSettings, tileMap: string[]): s
     "",
   ];
   if (x.http_port) {
-    const bosh = `https://${h}/http-bind`;
-    const ws = `wss://${h}/xmpp-websocket`;
+    const bosh = `${scheme}://${h}/http-bind`;
+    const ws = `${scheme === "http" ? "ws" : "wss"}://${h}/xmpp-websocket`;
     out.push(
       "\t# Web chat apps look up the connection endpoints here (XEP-0156).",
       "\t@xmpp_discovery path /.well-known/host-meta /.well-known/host-meta.json",
@@ -331,6 +392,8 @@ function xmppSiteLines(r: SubdomainRoute, x: XmppSettings, tileMap: string[]): s
       `\t\trespond \`{"links":[{"rel":"urn:xmpp:alt-connections:xbosh","href":"${bosh}"},{"rel":"urn:xmpp:alt-connections:websocket","href":"${ws}"}]}\` 200`,
       "\t}",
       "",
+      // No request_body limit and the Host header passes through as-is: file uploads (XEP-0363)
+      // can be large and the chat server sets its own CORS headers on them.
       "\t# BOSH, WebSocket and file uploads: the chat server's own web port.",
       "\thandle {",
       ...backendLines({ host: r.backend.host, port: x.http_port, tls: false }, 2),
@@ -346,6 +409,43 @@ function xmppSiteLines(r: SubdomainRoute, x: XmppSettings, tileMap: string[]): s
   }
   out.push("}");
   return out;
+}
+
+/** The opening of a site block: plain HTTP or HTTPS, with the person's own certificate when they gave one. */
+function siteOpen(r: SubdomainRoute, mode: HttpsMode, mount: string): string[] {
+  const out = [`${mode === "http" ? "http://" : ""}${r.host} {`, "\timport common"];
+  if (mode === "own") out.push(`\ttls ${mount}/certs/${r.host}.crt ${mount}/certs/${r.host}.key`);
+  return out;
+}
+
+/**
+ * A voice server's web address. Mumble itself never goes through Caddy; this block keeps a
+ * certificate for the name (Mumble can use it) and tells browsers how to connect instead of
+ * proxying them to a port that only speaks Mumble.
+ */
+function voiceSiteLines(r: SubdomainRoute, v: VoiceSettings, open: string[]): string[] {
+  const h = r.host;
+  const link = `mumble://${h}${v.port === MUMBLE_PORT ? "" : `:${v.port}`}/`;
+  const page = [
+    '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark">',
+    `<title>${h}</title>`,
+    '<body style="font:16px/1.5 system-ui,sans-serif;max-width:34rem;margin:12vh auto;padding:0 1.5rem">',
+    `<h1 style="font-size:1.3rem;font-weight:600">${h} is a voice server</h1>`,
+    `<p><a href="${link}">Open it in Mumble</a></p>`,
+    `<p>Or add a server in Mumble with the address <b>${h}</b> and port <b>${v.port}</b>.</p>`,
+    "</body></html>",
+  ].join("");
+  return [
+    `# Voice apps (Mumble) connect straight to port ${v.port}, TCP and UDP, not through Caddy.`,
+    "# Browsers get a page with a mumble:// link instead.",
+    ...open,
+    "",
+    "\thandle {",
+    '\t\theader Content-Type "text/html; charset=utf-8"',
+    `\t\trespond \`${page}\` 200`,
+    "\t}",
+    "}",
+  ];
 }
 
 // ---------------------------------------------------------------- validation
@@ -400,6 +500,32 @@ function cleanXmpp(raw: Record<string, unknown>, backend: Backend, rid: string):
     sync = { container, dir };
   }
   return { s2s_port: s2s, http_port: httpPort, cert_sync: sync };
+}
+
+const FILE_RE = /^(\/[A-Za-z0-9._@+-]+)+$/;
+
+function cleanFile(v: unknown, rid: string, field: string, what: string): string {
+  const p = String(v ?? "").trim();
+  if (!FILE_RE.test(p) || p.length > 400 || p.split("/").includes("..")) invalid(`Enter the full path to the ${what} on this server, like /etc/letsencrypt/live/example.com/${what === "key" ? "privkey" : "fullchain"}.pem.`, rid, field);
+  return p;
+}
+
+type SiteKind = "web" | "chat" | "voice" | "redirect";
+
+function cleanHttps(raw: unknown, rid: string, kind: SiteKind): HttpsSettings | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const h = raw as Record<string, unknown>;
+  const mode = h.mode;
+  if (mode === undefined || mode === "auto") return undefined;
+  if (mode === "http") return { mode };
+  if (mode === "none") {
+    if (kind !== "chat") invalid("Only a chat server can go without a web side. Choose another way to handle HTTPS.", rid, "https");
+    return { mode };
+  }
+  if (mode !== "own") invalid("Choose how HTTPS is handled for this address.", rid, "https");
+  const f = h.files as Record<string, unknown> | null | undefined;
+  if (!f || typeof f !== "object") return { mode };
+  return { mode, files: { cert: cleanFile(f.cert, rid, "cert_file", "certificate"), key: cleanFile(f.key, rid, "key_file", "key") } };
 }
 
 /** Validate a full config from the client. Base domain always comes from the stored config. */
@@ -460,6 +586,23 @@ export function cleanConfig(raw: { routes: unknown[]; fallback?: RoutesConfig["f
         // A chat server publishes its whole domain; path limits don't apply.
         delete out.only_paths;
         delete out.extra_paths;
+      } else if (r.voice && typeof r.voice === "object") {
+        const b = out.backend as Backend;
+        const port = cleanPort((r.voice as Record<string, unknown>).port, rid, "voice_port", "The voice server's port") ?? b.port;
+        out.voice = { port };
+        // Apps connect to the voice port itself; keep backend in step so app matching by port works.
+        out.backend = { host: b.host, port, tls: false };
+        delete out.only_paths;
+        delete out.extra_paths;
+      }
+      const kind: SiteKind = out.redirect_to ? "redirect" : out.xmpp ? "chat" : out.voice ? "voice" : "web";
+      const https = cleanHttps(r.https, rid, kind);
+      if (https) {
+        out.https = https;
+        const x = out.xmpp as XmppSettings | undefined;
+        if (x && https.mode === "none" && x.http_port !== null) invalid("With no web side here, the chat server's web port can't be published. Turn off web chat, or let Caddy handle HTTPS.", rid, "http_port");
+        // Without a certificate in Caddy there's nothing for Gluon to copy into the chat server.
+        if (x && (https.mode === "none" || https.mode === "http")) x.cert_sync = null;
       }
     } else if (r.type === "path" || r.type === "redirect") {
       const p = "/" + String(r.path ?? "").trim().replace(/^\/+|\/+$/g, "");
@@ -489,7 +632,7 @@ export class CaddyUnreachable extends AppError {
   }
 }
 
-export function caddyAdmin(method: string, urlPath: string, body?: string, contentType?: string): Promise<{ status: number; body: string }> {
+export function caddyAdmin(method: string, urlPath: string, body?: string, contentType?: string, extra: Record<string, string> = {}): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
@@ -497,7 +640,7 @@ export function caddyAdmin(method: string, urlPath: string, body?: string, conte
         path: urlPath,
         method,
         // Caddy only accepts Host "", 127.0.0.1 or ::1 on unix-socket admin endpoints.
-        headers: { Host: "127.0.0.1", ...(contentType ? { "Content-Type": contentType } : {}) },
+        headers: { Host: "127.0.0.1", ...(contentType ? { "Content-Type": contentType } : {}), ...extra },
         timeout: 60_000,
       },
       (res) => {
@@ -514,8 +657,9 @@ export function caddyAdmin(method: string, urlPath: string, body?: string, conte
   });
 }
 
-async function caddyLoad(caddyfile: string) {
-  const r = await caddyAdmin("POST", "/load", caddyfile, "text/caddyfile");
+/** `force` reloads even when the text is unchanged, so Caddy re-reads certificate files. */
+async function caddyLoad(caddyfile: string, force = false) {
+  const r = await caddyAdmin("POST", "/load", caddyfile, "text/caddyfile", force ? { "Cache-Control": "must-revalidate" } : {});
   if (r.status !== 200) {
     let msg = r.body;
     try {
@@ -575,6 +719,11 @@ function snapshot(reason: string): string {
   return dir;
 }
 
+/** Load the saved Caddyfile again so Caddy picks up certificate files that changed on disk. */
+export async function reloadCaddy(): Promise<void> {
+  await caddyLoad(fs.readFileSync(CADDYFILE, "utf8"), true);
+}
+
 export function caddyfileDrift(cfg: RoutesConfig): boolean {
   try {
     return fs.readFileSync(CADDYFILE, "utf8") !== renderCaddyfile(cfg);
@@ -584,9 +733,9 @@ export function caddyfileDrift(cfg: RoutesConfig): boolean {
 }
 
 /** Push to Caddy first; persist only after Caddy accepted. Roll Caddy back if persisting fails. */
-export async function applyConfig(cfg: RoutesConfig, reason: string): Promise<RoutesConfig> {
+export async function applyConfig(cfg: RoutesConfig, reason: string, opts: { force?: boolean } = {}): Promise<RoutesConfig> {
   const text = renderCaddyfile(cfg);
-  await caddyLoad(text);
+  await caddyLoad(text, opts.force);
   let snap: string | null = null;
   try {
     snap = snapshot(reason);

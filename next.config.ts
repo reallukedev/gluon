@@ -7,7 +7,7 @@ const config: NextConfig = {
   devIndicators: false,
   // Dev only: lets the dev server be tested from a second local origin (e.g. a member session).
   allowedDevOrigins: ["127.0.0.1", "localhost"],
-  serverExternalPackages: ["better-sqlite3", "dockerode", "@node-rs/argon2", "ssh2", "cpu-features", "nodemailer", "archiver", "unzipper", "sharp"],
+  serverExternalPackages: ["better-sqlite3", "dockerode", "@node-rs/argon2", "ssh2", "cpu-features", "nodemailer", "archiver", "unzipper", "sharp", "ice"],
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
     optimizePackageImports: ["iconoir-react"],

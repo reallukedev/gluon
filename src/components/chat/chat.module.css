@@ -1,0 +1,234 @@
+/* The Chat server tab (Prosody): people and their devices, invite links, what chat apps can do,
+   group chats, settings and the config file. Built on the Instrument Plate tokens. */
+
+.panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+
+/* ---------------------------------------------------------------- lead */
+.lead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.leadText { display: grid; gap: 6px; min-width: 0; flex: 1 1 320px; }
+.domain {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  font-size: clamp(var(--text-lg), 0.95rem + 0.6vw, var(--text-xl));
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.domain .at { color: var(--faint); }
+.sentence { margin: 0; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; max-width: 72ch; }
+.leadActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.facts { margin: 0; font-size: var(--text-xs); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.facts span { white-space: nowrap; }
+
+/* ---------------------------------------------------------------- accounts table */
+/* Sits flush inside its Panel, which draws the frame. */
+.table { container: chatpeople / inline-size; }
+.headRow, .row {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) 96px minmax(120px, 1fr) minmax(170px, 1.3fr) 40px;
+  align-items: center;
+  gap: 16px;
+  padding: 0 10px 0 18px;
+}
+.headRow {
+  height: 38px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  font-family: var(--font-display);
+  font-stretch: 85%;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.row { min-height: 60px; border-top: 1px solid var(--line); font-size: var(--text-md); }
+.headRow + .row { border-top: 0; }
+.row > * { min-width: 0; }
+.row[data-off] .who { opacity: 0.62; }
+.who { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 0; }
+.mark {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-family: var(--font-display);
+  font-stretch: 85%;
+  font-weight: 620;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+.whoText { min-width: 0; display: grid; gap: 1px; }
+.whoName { font-weight: 620; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.whoSub { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell { font-size: var(--text-sm); color: var(--ink-2); }
+.cellLabel { display: none; }
+.muted { color: var(--muted); }
+.devices { display: grid; gap: 3px; }
+.deviceList { margin: 0; padding: 0; list-style: none; font-size: var(--text-xs); color: var(--muted); display: flex; flex-wrap: wrap; gap: 0 10px; }
+.deviceList li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.menuCell { display: flex; justify-content: flex-end; }
+
+@container chatpeople (max-width: 760px) {
+  .headRow { display: none; }
+  .row {
+    grid-template-columns: minmax(0, 1fr) 40px;
+    grid-template-areas: "who menu" "state menu" "meta menu";
+    row-gap: 4px;
+    padding: 12px 10px 12px 16px;
+  }
+  .who { grid-area: who; padding: 0; }
+  .row > .roleCell { display: none; }
+  .row > .seenCell { grid-area: meta; padding-left: 44px; }
+  .row > .stateCell { grid-area: state; padding-left: 44px; }
+  .menuCell { grid-area: menu; align-self: center; }
+  .cellLabel { display: inline; color: var(--muted); margin-right: 6px; }
+  .roleInline { display: inline; }
+}
+.roleInline { display: none; }
+
+.empty { padding: 28px 18px; display: grid; gap: 10px; justify-items: start; }
+.empty p { margin: 0; color: var(--ink-2); font-size: var(--text-md); max-width: 60ch; line-height: 1.5; }
+
+/* ---------------------------------------------------------------- invites */
+.invites { margin: 0; padding: 0; list-style: none; }
+.invite { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 14px; padding: 12px 10px 12px 18px; border-top: 1px solid var(--line); }
+.invite:first-child { border-top: 0; }
+.inviteText { display: grid; gap: 2px; min-width: 0; }
+.inviteName { font-size: var(--text-md); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inviteSub { font-size: var(--text-xs); color: var(--muted); }
+.inviteActions { display: flex; align-items: center; gap: 4px; }
+
+/* ---------------------------------------------------------------- credentials card */
+.card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px 22px; align-items: start; }
+.qr { width: 156px; height: 156px; padding: 12px; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
+.qr svg { display: block; width: 100%; height: 100%; }
+.qrCol { display: grid; gap: 8px; justify-items: center; }
+.qrHint { font-size: var(--text-xs); color: var(--muted); text-align: center; max-width: 160px; line-height: 1.4; }
+.creds { margin: 0; display: grid; gap: 12px; min-width: 0; }
+.cred { display: grid; gap: 4px; min-width: 0; }
+.cred dt { font-size: var(--text-sm); color: var(--muted); font-weight: 560; }
+.cred dd { margin: 0; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.credValue {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  font-size: var(--text-lg);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  padding: 7px 11px;
+  border-radius: var(--radius-control);
+  background: var(--sunk);
+}
+.credValue .at { color: var(--faint); }
+.apps { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--text-sm); color: var(--ink-2); }
+.apps li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.apps b { font-weight: 620; color: var(--ink); }
+.apps a { color: inherit; text-underline-offset: 3px; }
+.link { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.link input { flex: 1; min-width: 0; }
+.cardNote { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
+@media (max-width: 560px) {
+  .card { grid-template-columns: minmax(0, 1fr); }
+  .qrCol { justify-items: start; }
+}
+
+/* ---------------------------------------------------------------- forms in dialogs */
+.form { display: grid; gap: 16px; }
+.row2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 14px; }
+.hint { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
+
+/* ---------------------------------------------------------------- what chat apps can do */
+.caps { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.cap {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 3px 10px;
+  align-content: start;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  margin-top: -1px;
+}
+.capMark { grid-row: 1 / span 2; padding-top: 7px; }
+.capHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.capLabel { font-size: var(--text-md); font-weight: 620; color: var(--ink); }
+.cap[data-off] .capLabel { color: var(--ink-2); }
+.capSpecs { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-2xs); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.capDetail { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
+.capFix { grid-column: 2; margin-top: 6px; }
+.capsWrap { overflow: hidden; border-radius: 0 0 var(--radius-panel) var(--radius-panel); }
+
+/* ---------------------------------------------------------------- rooms */
+.rooms { margin: 0; padding: 0; list-style: none; }
+.room { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 16px; padding: 12px 10px 12px 18px; border-top: 1px solid var(--line); }
+.room:first-child { border-top: 0; }
+.roomText { display: grid; gap: 2px; min-width: 0; }
+.roomName { font-weight: 620; font-size: var(--text-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roomSub { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roomCount { font-size: var(--text-sm); color: var(--ink-2); white-space: nowrap; }
+@media (max-width: 520px) {
+  .room { grid-template-columns: minmax(0, 1fr) auto; }
+  .roomCount { grid-column: 1; grid-row: 2; }
+}
+
+/* ---------------------------------------------------------------- settings */
+.settings { display: grid; }
+.settings > * + * { border-top: 1px solid var(--line); }
+.setting { padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 20px; align-items: start; }
+.settingText { display: grid; gap: 4px; min-width: 0; }
+.settingTitle { font-size: var(--text-md); font-weight: 620; color: var(--ink); }
+.settingDesc { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 68ch; }
+.settingControl { display: flex; align-items: center; justify-content: flex-end; min-height: var(--control); }
+.settingMore { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 280px)); gap: 12px 16px; }
+.settingWide { grid-column: 1 / -1; }
+.signUp { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+  .setting:not([data-toggle]) { grid-template-columns: minmax(0, 1fr); }
+  .setting:not([data-toggle]) .settingControl { justify-content: flex-start; }
+}
+.saveBar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 10px 12px 10px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  animation: rise var(--dur-base, 200ms) var(--ease-out);
+}
+.saveBar p { margin: 0; font-size: var(--text-sm); color: var(--ink-2); }
+.saveActions { display: flex; gap: 8px; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .saveBar { animation: none; } }
+
+/* ---------------------------------------------------------------- config file */
+.configBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 18px; border-bottom: 1px solid var(--line); }
+.configBar p { margin: 0; font-size: var(--text-sm); color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.configActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.configResult { padding: 12px 18px; border-top: 1px solid var(--line); }
+.configEditor { min-height: 320px; }
+.settingFlat { padding: 0; }
+/* Segmented controls hug their choices instead of stretching across a form's grid cell. */
+.form [role="group"], .settingMore [role="group"], .signUp [role="group"] { justify-self: start; max-width: 100%; }
+
+/* ---------------------------------------------------------------- calls */
+.facts2 { margin: 0; display: grid; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.facts2 > div { display: grid; grid-template-columns: minmax(120px, 0.6fr) minmax(0, 1.4fr); gap: 4px 14px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); font-size: var(--text-sm); }
+.facts2 > div:first-child { border-top: 0; }
+.facts2 dt { color: var(--muted); font-weight: 560; }
+.facts2 dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { .facts2 > div { grid-template-columns: minmax(0, 1fr); } }

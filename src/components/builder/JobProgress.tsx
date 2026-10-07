@@ -10,7 +10,7 @@ import s from "./builder.module.css";
  * own percentage while it downloads, the full output, and how it ended. Nothing advances on a
  * timer; every stage comes from the server.
  */
-export function JobProgress({ view, stages, running, openOutput, label }: { view: JobView; stages: { key: string; label: string }[]; running: boolean; openOutput?: boolean; label: string }) {
+export function JobProgress({ view, stages, running, openOutput, label, closeNote = "This keeps going if you close it. Your apps list shows how it went." }: { view: JobView; stages: { key: string; label: string }[]; running: boolean; openOutput?: boolean; label: string; closeNote?: string | null }) {
   const current = view.stage ?? stages[0]?.key ?? "";
   const ok = view.result?.ok === true;
   const failed = view.result?.ok === false;
@@ -71,7 +71,7 @@ export function JobProgress({ view, stages, running, openOutput, label }: { view
           </pre>
         </Disclosure>
       )}
-      {running && !view.result && <p className={s.closeNote}>This keeps going if you close it. Your apps list shows how it went.</p>}
+      {running && !view.result && closeNote && <p className={s.closeNote}>{closeNote}</p>}
     </div>
   );
 }

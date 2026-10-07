@@ -3,6 +3,8 @@ import { listApps, type AppSummary } from "../docker/apps";
 import { one } from "../db";
 import { routeUrl, coveredByWildcard, THIS_SERVER, type Route, type RoutesConfig, isRedirect } from "../caddy/routes";
 import { storedProbe, loginProbe } from "./login-probe";
+import { ownCertStates } from "./own-certs";
+import { mumblePorts } from "./voice-servers";
 import { localBackendHost, isLocalBackend } from "./probes";
 import type { RouteAppRef, RouteWarning, RoutesResponse } from "@/lib/network-types";
 
@@ -69,8 +71,8 @@ export function wildcardCoverage(cfg: RoutesConfig): Record<string, boolean> {
   return out;
 }
 
-export async function describeConfig(cfg: RoutesConfig): Promise<Pick<RoutesResponse, "urls" | "apps" | "coveredByWildcard">> {
-  return { urls: routeUrls(cfg), apps: await routeApps(cfg), coveredByWildcard: wildcardCoverage(cfg) };
+export async function describeConfig(cfg: RoutesConfig): Promise<Pick<RoutesResponse, "urls" | "apps" | "coveredByWildcard" | "certs">> {
+  return { urls: routeUrls(cfg), apps: await routeApps(cfg), coveredByWildcard: wildcardCoverage(cfg), certs: ownCertStates(cfg) };
 }
 
 /** Login verdict for an app behind a route: the admin's declaration wins, then Gluon's own probe. */
@@ -92,14 +94,18 @@ function publicKey(r: Route): string {
  * (unless only some paths are published). `isNew` marks the ones this save published.
  */
 export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | null): Promise<RouteWarning[]> {
-  const apps = await routeApps(next);
+  const list = await listApps().catch(() => [] as AppSummary[]);
+  const apps = await routeApps(next, list);
+  // Never HTTP-probe Mumble: it bans addresses that connect too often.
+  const mumble = mumblePorts(list);
   // Look at apps Gluon hasn't checked yet (e.g. the one just published), within a few seconds.
   const unchecked = next.routes.filter(
     (r): r is Exclude<Route, { type: "redirect" }> =>
       r.enabled !== false &&
       !isRedirect(r) &&
-      !(r.type === "subdomain" && r.xmpp) &&
+      !(r.type === "subdomain" && (r.xmpp || r.voice)) &&
       isLocalBackend(r.backend.host) &&
+      !mumble.has(r.backend.port) &&
       (apps[r.id]?.hasLogin ?? "unknown") === "unknown" &&
       !storedProbe(`${localBackendHost(r.backend.host)}:${r.backend.port}`),
   );
@@ -116,7 +122,7 @@ export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | nul
     if (r.enabled === false || isRedirect(r)) continue;
     if (r.type === "subdomain" && r.only_paths?.length) continue;
     // Chat accounts always need a password; the client port doesn't speak HTTP to probe anyway.
-    if (r.type === "subdomain" && r.xmpp) continue;
+    if (r.type === "subdomain" && (r.xmpp || r.voice)) continue;
     const app = apps[r.id] ?? null;
     const v = loginVerdictFor(app, r.backend);
     if (v.verdict !== "no-login") continue;
@@ -138,7 +144,7 @@ export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | nul
 
 /** "Added x; removed y; changed z" between two configs, for the audit log. */
 export function describeChanges(prev: RoutesConfig | null, next: RoutesConfig): string {
-  const url = (cfg: RoutesConfig, r: Route) => routeUrl(cfg, r).replace(/^https:\/\//, "");
+  const url = (cfg: RoutesConfig, r: Route) => routeUrl(cfg, r).replace(/^https?:\/\//, "");
   if (!prev) return `Saved ${next.routes.length} public addresses`;
   const before = new Map(prev.routes.map((r) => [r.id, r]));
   const after = new Map(next.routes.map((r) => [r.id, r]));

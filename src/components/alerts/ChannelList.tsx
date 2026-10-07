@@ -1,7 +1,9 @@
 "use client";
 import * as React from "react";
 import { MoreHoriz, EditPencil, Trash, Pause, Play } from "iconoir-react";
+import Link from "next/link";
 import type { ChannelView, TestResult } from "@/lib/alerts-types";
+import { presetOf } from "@/lib/alerts-types";
 import { api, ApiError } from "@/lib/client/api";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Menu } from "@/components/ui/Menu";
@@ -14,7 +16,38 @@ import { errorMessage } from "./shared";
 import s from "./alerts.module.css";
 
 /** A list of channels with health, a test button and edit/turn off/remove. */
-export function ChannelList({ channels, onEdit, onChange, showOwner, highlight }: { channels: ChannelView[]; onEdit: (c: ChannelView) => void; onChange: () => void; showOwner?: boolean; highlight?: string | null }) {
+/** Who a server-wide channel reaches, from the viewing admin's side. */
+function audienceText(c: ChannelView): React.ReactNode {
+  const { people, mine } = c.audience;
+  const others = people - (mine ? 1 : 0);
+  if (!mine && people === 0)
+    return (
+      <>
+        Sends nothing yet: nobody chose it. <Link href="/settings/notifications">Choose what it sends you</Link>
+      </>
+    );
+  const what = mine ? presetOf(mine, "admin") : null;
+  const yours = what === "all" ? "everything" : what === "problems" ? "problems only" : "what you chose";
+  if (!mine) return `Sends to ${others === 1 ? "1 other admin" : `${others} other admins`}, not you`;
+  return `Sends you ${yours}${others > 0 ? `, and ${others === 1 ? "1 other admin" : `${others} other admins`}` : ""}`;
+}
+
+export function ChannelList({
+  channels,
+  onEdit,
+  onChange,
+  showOwner,
+  showAudience,
+  highlight,
+}: {
+  channels: ChannelView[];
+  onEdit: (c: ChannelView) => void;
+  onChange: () => void;
+  showOwner?: boolean;
+  /** Say who it sends to (server-wide channels, seen by an admin). */
+  showAudience?: boolean;
+  highlight?: string | null;
+}) {
   const [busy, setBusy] = React.useState<string | null>(null);
   /** The last test per channel, shown right under it. */
   const [tests, setTests] = React.useState<Record<string, TestResult & { at: number }>>({});
@@ -94,6 +127,7 @@ export function ChannelList({ channels, onEdit, onChange, showOwner, highlight }
                   )}
                 </span>
                 {c.enabled && h.failing && h.lastError && <span className={s.channelErr}>{h.lastError}</span>}
+                {showAudience && c.enabled && <span className={s.channelAudience}>{audienceText(c)}</span>}
               </div>
               <div className={s.channelActions}>
                 <Button size="sm" loading={busy === c.id} disabled={!c.enabled} onClick={() => void test(c)}>

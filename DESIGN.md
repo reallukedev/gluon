@@ -322,7 +322,7 @@ A fixed 236px sidebar (collapsible to a 64px icon rail) on the ground colour, an
 
 Panels arrange in two-column grids (for example 1.25fr / 1fr on Status) that collapse to one column under 1080px. Data tables are single panels with a 38px micro-caps head row and 60px rows; under 980px they restack into two-line rows. Sections sit 36px apart; panel bodies pad 16px 18px.
 
-Under 900px the sidebar becomes a solid top bar (56px plus the safe area) with a swipeable drawer. Under 720px rows grow to 48px for thumbs. Under 640px dialogs become bottom sheets and their footer buttons share the width.
+Under 900px the sidebar becomes a solid top bar (56px plus the safe area) with a swipeable drawer. Under 720px rows grow to 48px for thumbs. On touch screens controls are 40px (small ones 32px) and every one has a tap area at least 44px tall: an invisible `::before` that grows up and down, and sideways only into half the gap, so neighbours never cover each other. Under 640px dialogs become bottom sheets and their footer buttons share the width.
 
 The person controls density (comfortable or compact: rows 44 to 36px, controls 34 to 30px), text size (93.75%, 100% or 112.5% of the root) and motion (system or reduced), and all of it flows through the same tokens.
 
