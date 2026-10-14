@@ -16,22 +16,23 @@ import SASLFactory from "saslmechanisms";
 import scramsha1 from "@xmpp/sasl-scram-sha-1";
 import plain from "@xmpp/sasl-plain";
 import { AppError } from "../errors";
-import { listApps } from "../docker/apps";
-import { prosodyFor, prosodyLua, chatSnapshot } from "../chat/prosody";
+import { prosodyFor, prosodyLua } from "../chat/prosody";
+import { createQuarkAccount, quarkFor, sendQuarkMessage, type QuarkTarget } from "../chat/quark";
+import { chatApps, chatKindOfApp, chatSnapshot } from "../chat/backend";
+import { getApp } from "../docker/apps";
 import type { XmppConfig, XmppServersResponse } from "@/lib/alerts-types";
 import { DeliveryError } from "./transports";
 import { xmppText, splitServer, XMPP_SENDER as SENDER, type XmppOut } from "./xmpp-format";
 
 /**
  * XMPP channels. Two ways to send:
- *  - server: through a Prosody that Gluon runs, from gluon@<domain>, injected with its admin console.
- *    No password; the account is created on first use with a random one nobody needs.
+ *  - server: through a Prosody or Quark that Gluon runs, from gluon@<domain>, injected with its admin
+ *    console. No password; the account is created on first use with a random one nobody needs.
  *  - account: sign in to any XMPP account with xmpp.js, send, sign out. TLS is required; an
  *    untrusted certificate is refused unless the channel says to accept it.
  */
 
 const TIMEOUT_MS = 20_000;
-const PROSODY_IMAGE = /(^|\/)(prosody|prosodyim)\/|(^|\/)prosody(:|$)/i;
 
 // ---------------------------------------------------------------- through this server's Prosody
 
@@ -57,8 +58,49 @@ for _,r in ipairs(A.rooms) do local h=r:match("@([^/]+)$"); local mh=h and proso
   room:broadcast_message(st.message({from=r.."/"..A.nick,type="groupchat",id=id.medium()}):text_tag("body",A.text)) end end;
 return {created=created, missing=missing}`;
 
+/**
+ * Through Quark's `message.send`, from gluon@<domain>/notify, one message per address. The sender
+ * account is made once (so people can add it as a contact); group chats get the message from
+ * <room>/<nick>, the same as Prosody broadcasts it.
+ */
+async function sendThroughQuark(c: XmppConfig & { app: string; domain: string }, text: string): Promise<void> {
+  let t: QuarkTarget;
+  try {
+    t = await quarkFor(c.app);
+  } catch (e) {
+    const msg = e instanceof AppError ? e.message : (e as Error).message;
+    throw new DeliveryError(`${msg}`, e instanceof AppError && e.code === "not_found");
+  }
+  try {
+    await createQuarkAccount(t, { host: c.domain, user: SENDER, password: crypto.randomBytes(24).toString("base64url"), role: "member" });
+  } catch (e) {
+    const code = e instanceof AppError ? e.code : "";
+    if (code === "not_found" || code === "invalid") throw new DeliveryError(`${t.app.name} doesn't serve ${c.domain} any more. Pick another domain.`, true);
+    if (code !== "exists") throw new DeliveryError(`${t.app.name} wouldn't create ${SENDER}@${c.domain} to send from: ${(e as Error).message}`, true);
+  }
+  const missing: string[] = [];
+  const failed: string[] = [];
+  const send = async (from: string, to: string) => {
+    try {
+      await sendQuarkMessage(t, { from, to, body: text });
+    } catch (e) {
+      if (e instanceof AppError && e.code === "not_found") missing.push(to);
+      else failed.push(`${to} (${(e as Error).message})`);
+    }
+  };
+  for (const to of c.to) await send(`${SENDER}@${c.domain}/notify`, to);
+  for (const room of c.rooms) await send(`${room}/${c.nick}`, room);
+  if (failed.length) throw new DeliveryError(`${t.app.name} couldn't send it to ${failed.join(", ")}`);
+  if (missing.length) {
+    const sent = c.to.length + c.rooms.length - missing.length;
+    throw new DeliveryError(`${missing.join(", ")} ${missing.length === 1 ? "doesn't" : "don't"} exist on ${t.app.name}${sent ? `. The others got it` : ""}. Check the address${missing.length === 1 ? "" : "es"}.`, true);
+  }
+}
+
 async function sendThroughServer(c: XmppConfig, text: string): Promise<void> {
   if (!c.app || !c.domain) throw new DeliveryError("Choose the chat server and domain to send from.", true);
+  const app = await getApp(c.app).catch(() => null);
+  if (app && chatKindOfApp(app) === "quark") return sendThroughQuark({ ...c, app: c.app, domain: c.domain }, text);
   let t;
   try {
     t = await prosodyFor(c.app);
@@ -93,10 +135,9 @@ async function sendThroughServer(c: XmppConfig, text: string): Promise<void> {
 
 /** Chat servers Gluon runs, with their domains, accounts and group chats, for the channel form. */
 export async function xmppServers(): Promise<XmppServersResponse> {
-  const apps = (await listApps()).filter((a) => a.containers.some((c) => PROSODY_IMAGE.test(c.image)));
+  const apps = await chatApps();
   const servers = await Promise.all(
-    apps.map(async (a) => {
-      const running = a.containers.some((c) => PROSODY_IMAGE.test(c.image) && c.state === "running");
+    apps.map(async ({ app: a, running }) => {
       if (!running) return { app: a.id, name: a.name, running, problem: `${a.name} isn't running.`, domains: [] };
       try {
         const snap = await chatSnapshot(a.id);

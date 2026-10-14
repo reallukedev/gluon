@@ -393,7 +393,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                   </div>
                 )}
                 {servers.error && <p className={f.faint}>Gluon couldn&rsquo;t look for chat servers ({servers.error.message}). Enter the port it listens on instead.</p>}
-                {list && list.length === 0 && <p className={f.faint}>Gluon didn&rsquo;t find a Prosody, ejabberd or Snikket container on this server. If yours runs here under another image, enter its client port.</p>}
+                {list && list.length === 0 && <p className={f.faint}>Gluon didn&rsquo;t find a Quark, Prosody, ejabberd or Snikket container on this server. If yours runs here under another image, enter its client port.</p>}
                 {picked && !picked.ports.c2s && (
                   <Notice tone="attention" title={`${picked.container} doesn't publish a client port`}>
                     Chat apps need to reach port 5222 on this server. Publish it in the app&rsquo;s settings, or enter the port it uses below.
@@ -496,7 +496,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                       <Input value={form.syncDir} onChange={(e) => set("syncDir", e.target.value.trim())} mono spellCheck={false} autoCapitalize="off" />
                     </Field>
                   )}
-                  {picked && !picked.canSync && <span className={f.faint}>Gluon can only reload Prosody for now, so {picked.container} keeps managing its own certificate.</span>}
+                  {picked && !picked.canSync && <span className={f.faint}>Gluon can only reload Prosody and Quark for now, so {picked.container} keeps managing its own certificate.</span>}
                 </div>
 
               </div>

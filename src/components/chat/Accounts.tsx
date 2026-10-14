@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { MoreHoriz, Key, LogOut, Prohibition, Play, Trash, UserCrown, User, Copy } from "iconoir-react";
-import type { ChatAccount, ChatHostSnapshot } from "@/lib/chat-types";
+import { CHAT_SERVER_NAME, type ChatAccount, type ChatHostSnapshot, type ChatServerKind } from "@/lib/chat-types";
 import { api, ApiError } from "@/lib/client/api";
 import { copyText } from "@/lib/client/clipboard";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -26,7 +26,7 @@ function deviceWords(a: ChatAccount): string {
   return names.length <= 2 ? names.join(", ") : `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`;
 }
 
-export function Accounts({ appId, host, onChanged, onAdd }: { appId: string; host: ChatHostSnapshot; onChanged: () => void; onAdd: () => void }) {
+export function Accounts({ appId, host, server, onChanged, onAdd }: { appId: string; host: ChatHostSnapshot; server: ChatServerKind; onChanged: () => void; onAdd: () => void }) {
   const [confirm, confirmNode] = useConfirm();
   const [reset, setReset] = React.useState<ChatAccount | null>(null);
 
@@ -145,7 +145,7 @@ export function Accounts({ appId, host, onChanged, onAdd }: { appId: string; hos
                   {a.sender && <span className={s.whoSub}>Sends Gluon&rsquo;s notifications. Removing it stops chat alerts.</span>}
                 </span>
               </span>
-              <span role="cell" className={`${s.cell} ${s.roleCell}`} title={a.fromConfig ? "Listed in admins in Prosody's config file" : (a.roleName ?? undefined)}>
+              <span role="cell" className={`${s.cell} ${s.roleCell}`} title={a.fromConfig ? `Listed in admins in ${CHAT_SERVER_NAME[server]}'s config file` : (a.roleName ?? undefined)}>
                 {a.sender ? "Gluon" : ROLE_WORD[a.role]}
               </span>
               <span role="cell" className={`${s.cell} ${s.seenCell}`}>

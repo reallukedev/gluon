@@ -1,0 +1,1 @@
+Error: couldn't connect to /var/lib/quark/admin.sock: No such file or directory (os error 2)

@@ -10,6 +10,8 @@ import { CADDY_CONTAINER, readArchive, readCaddyStore } from "./caddy-certs";
 import { readOwnCert } from "./own-certs";
 import { certInfo, decideCopy, pickCaddyPair, type CertInfo } from "./xmpp-cert-choice";
 import { probeXmpp } from "./xmpp-probe";
+import { chatServerOf } from "@/lib/service-kind";
+import { reloadQuark } from "../chat/quark";
 import type { XmppCertSync } from "@/lib/network-types";
 
 /**
@@ -20,9 +22,20 @@ import type { XmppCertSync } from "@/lib/network-types";
  *
  * Prosody runs under tini and runuser in its official image, so a SIGHUP would most likely kill
  * runuser rather than reach Prosody. The reload goes through prosodyctl's admin shell instead.
+ * Quark picks new certificates up by itself; `quark ctl` reload makes it happen now.
  */
 
-async function reloadChatServer(container: string): Promise<{ ok: boolean; output: string }> {
+type ChatKind = "prosody" | "quark";
+
+async function reloadChatServer(container: string, kind: ChatKind): Promise<{ ok: boolean; output: string }> {
+  if (kind === "quark") {
+    try {
+      const r = await reloadQuark({ id: container });
+      return { ok: true, output: `reloaded ${r.certs} certificate${r.certs === 1 ? "" : "s"}` };
+    } catch (e) {
+      return { ok: false, output: (e as Error).message };
+    }
+  }
   const ctr = await docker().getContainer(container).inspect();
   let output = "";
   for (const argv of [
@@ -50,17 +63,17 @@ export function certSyncState(routeId: string): XmppCertSync | null {
   return st().state.get(routeId) ?? null;
 }
 
-/** uid/gid of the `prosody` user inside the container, so a key Gluon writes is readable by it. */
-async function prosodyOwner(container: string): Promise<{ uid: number; gid: number } | null> {
+/** uid/gid of the server's user (`prosody` or `quark`) inside the container, so a key Gluon writes is readable by it. */
+async function serverOwner(container: string, kind: ChatKind): Promise<{ uid: number; gid: number } | null> {
   const passwd = await readArchive(container, "/etc/passwd").catch(() => null);
-  const line = passwd?.find((e) => e.type === "file")?.data.toString().split("\n").find((l) => l.startsWith("prosody:"));
+  const line = passwd?.find((e) => e.type === "file")?.data.toString().split("\n").find((l) => l.startsWith(`${kind}:`));
   const [, , uid, gid] = line?.split(":") ?? [];
   return uid && gid && /^\d+$/.test(uid) && /^\d+$/.test(gid) ? { uid: Number(uid), gid: Number(gid) } : null;
 }
 
 type ChatRoute = SubdomainRoute & { xmpp: NonNullable<SubdomainRoute["xmpp"]> };
 
-/** The configured container if it's running, else the running Prosody container of the route's app. */
+/** The configured container if it's running, else the running Prosody or Quark container of the route's app. */
 async function resolveContainer(name: string, appId: string | null): Promise<{ name: string; image: string } | null> {
   try {
     const info = await docker().getContainer(name).inspect();
@@ -71,7 +84,7 @@ async function resolveContainer(name: string, appId: string | null): Promise<{ n
   if (!appId) return null;
   const apps = await listApps().catch(() => []);
   const app = apps.find((a) => a.id === appId) ?? apps.find((a) => a.containers.some((c) => c.name === name));
-  const c = app?.containers.find((x) => x.state === "running" && /prosody/i.test(x.image));
+  const c = app?.containers.find((x) => x.state === "running" && (/prosody/i.test(x.image) || chatServerOf(x.image) === "quark"));
   return c ? { name: c.name, image: c.image } : null;
 }
 
@@ -89,7 +102,9 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
 
   const resolved = await resolveContainer(target.container, r.app ?? null);
   if (!resolved) return { ...base, message: `There's no running container called ${target.container} any more. Edit the chat address to pick the right one.` };
-  if (!/prosody/i.test(resolved.image)) return { ...base, message: `Gluon only keeps Prosody's certificate current, and ${resolved.name} runs ${resolved.image}.` };
+  const kind: ChatKind | null = chatServerOf(resolved.image) === "quark" ? "quark" : /prosody/i.test(resolved.image) ? "prosody" : null;
+  if (!kind) return { ...base, message: `Gluon only keeps Prosody's and Quark's certificates current, and ${resolved.name} runs ${resolved.image}.` };
+  const serverName = kind === "quark" ? "Quark" : "Prosody";
   // An app moved to Gluon gets new container names; follow it instead of the stopped original.
   target.container = resolved.name;
   base.container = resolved.name;
@@ -118,7 +133,7 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
     // The file can be right while the server still presents an older one (a reload that didn't
     // take): only call it done when what chat apps see matches what's on disk.
     if (decision.ok && onDisk && before.tls?.fingerprint && before.tls.fingerprint !== onDisk.fingerprint) {
-      const reload = await reloadChatServer(target.container).catch(() => ({ ok: false, output: "" }));
+      const reload = await reloadChatServer(target.container, kind).catch(() => ({ ok: false, output: "" }));
       const after = await served(r);
       if (after.tls?.fingerprint === onDisk.fingerprint) return { ...base, ok: true, message: `${decision.reason} Gluon reloaded the chat server so it uses it.` };
       return { ...base, message: `The certificate file is current, but the chat server still presents an older one${reload.ok ? "" : " and didn't reload"}. Restart ${target.container} to load it.` };
@@ -126,9 +141,9 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
     return { ...base, ok: decision.ok, message: decision.reason };
   }
 
-  const prosody = await prosodyOwner(target.container);
-  const crtOwner = oldCrt ?? (prosody ? { ...prosody, mode: 0o644 } : folder);
-  const keyOwner = oldKey ?? (prosody ? { ...prosody, mode: 0o600 } : folder);
+  const owner = await serverOwner(target.container, kind);
+  const crtOwner = oldCrt ?? (owner ? { ...owner, mode: 0o644 } : folder);
+  const keyOwner = oldKey ?? (owner ? { ...owner, mode: 0o600 } : folder);
   const tar = writeTar([
     { name: `${host}.crt`, data: src!.crt, mode: oldCrt?.mode ?? 0o644, uid: crtOwner?.uid ?? 0, gid: crtOwner?.gid ?? 0 },
     { name: `${host}.key`, data: src!.key, mode: oldKey?.mode ?? 0o600, uid: keyOwner?.uid ?? 0, gid: keyOwner?.gid ?? 0 },
@@ -143,12 +158,12 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
     outcome: "ok",
   });
 
-  const reload = await reloadChatServer(target.container).catch((e: Error) => ({ ok: false, output: e.message }));
+  const reload = await reloadChatServer(target.container, kind).catch((e: Error) => ({ ok: false, output: e.message }));
   const after = await served(r);
   const whose = own ? "your certificate" : "Caddy's certificate";
   if (after.tls?.fingerprint === src!.info.fingerprint) return { ...base, copiedAt: Date.now(), ok: true, message: `Copied ${whose} (valid until ${until}) and the chat server is using it.` };
   const why = reload.ok
-    ? "the chat server still presents the old one. If restarting doesn't help, check that Prosody can read the key file."
+    ? `the chat server still presents the old one. If restarting doesn't help, check that ${serverName} can read the key file.`
     : `the chat server didn't reload${reload.output.trim() ? ` (${reload.output.trim().slice(0, 160)})` : ""}.`;
   return { ...base, copiedAt: Date.now(), message: `Copied ${whose}, but ${why} Restart ${target.container} to load it.` };
 }

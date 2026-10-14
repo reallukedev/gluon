@@ -15,6 +15,7 @@ import { cleanLuaError, list, parseShellOutput, rawLine } from "./lua";
 import { CUSTOM_FILE, GLUON_CONFIG, MANAGED_MODULES, hasInclude, historyFrom, readGluonConfig, renderGluonConfig, signUpFrom, withInclude } from "./settings";
 import { capabilities } from "./capabilities";
 import { clientName, roleOf } from "./names";
+import { PROSODY_IMAGE_RE } from "@/lib/service-kind";
 import type { ChatAccount, ChatConfigFiles, ChatHostSnapshot, ChatInvite, ChatRole, ChatRoom, ChatSettings, ChatSnapshot } from "@/lib/chat-types";
 
 /**
@@ -23,7 +24,7 @@ import type { ChatAccount, ChatConfigFiles, ChatHostSnapshot, ChatInvite, ChatRo
  * or open ports. Settings are written to gluon.cfg.lua next to the person's own config.
  */
 
-const PROSODY_IMAGE = /(^|\/)(prosody|prosodyim)\/|(^|\/)prosody(:|$)/i;
+const PROSODY_IMAGE = PROSODY_IMAGE_RE;
 
 export interface ProsodyTarget {
   app: AppSummary;
@@ -340,6 +341,7 @@ export async function chatSnapshot(appId: string): Promise<ChatSnapshot> {
     .sort((a, b) => Number(b.host === route?.host) - Number(a.host === route?.host) || b.accounts.length - a.accounts.length || a.host.localeCompare(b.host));
   return {
     app: { id: t.app.id, name: t.app.name },
+    server: "prosody",
     container: t.name,
     version: raw.version,
     major: majorOf(raw.version),
@@ -348,6 +350,7 @@ export async function chatSnapshot(appId: string): Promise<ChatSnapshot> {
     routeHost: route?.host ?? null,
     config,
     publicBase: getSetting("publicHost").trim() ? publicBaseUrl() : null,
+    builtInRelay: null,
     checkedAt: Date.now(),
   };
 }

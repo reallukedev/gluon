@@ -1,5 +1,5 @@
 import "server-only";
-import { serviceKind } from "@/lib/service-kind";
+import { isChatKind, serviceKind } from "@/lib/service-kind";
 import { activePlatform } from "../platform";
 import { umbrelApps, umbrelAppState, umbrelStores, type UmbrelAppState, type UmbrelInstalledApp } from "../platform/umbrel";
 import fs from "node:fs";
@@ -507,10 +507,10 @@ async function buildApps(): Promise<AppSummary[]> {
     // A port published only on loopback can't be opened from another device, so it's never the web page.
     const openable = containers.flatMap((c) => c.ports.filter((p) => p.proto === "tcp" && p.ip !== "127.0.0.1" && p.ip !== "::1").map((p) => p.host));
     // Mumble and chat servers have no web page of their own: a browser on Mumble's port counts
-    // towards its connection ban, and Prosody's ports are for chat apps (a saved port often maps
+    // towards its connection ban, and Prosody's and Quark's ports are for chat apps (a saved port often maps
     // to 5222). Mumble's address opens the Mumble app instead.
     const kind = serviceKind(containers.map((c) => c.image));
-    const noWeb = kind === "mumble" || kind === "prosody";
+    const noWeb = kind === "mumble" || isChatKind(kind);
     const webPort = noWeb ? null : (meta?.portMap ?? openable.find((p) => KNOWN_WEB.has(p)) ?? openable[0] ?? null);
     const running = containers.some((c) => c.state === "running");
     // Host-network containers publish nothing, but answer on the app's own port.
@@ -522,7 +522,7 @@ async function buildApps(): Promise<AppSummary[]> {
     const index = meta?.index && meta.index !== "/" ? meta.index : "";
     // Mumble's address opens the Mumble app instead of a browser.
     const voicePort = kind === "mumble" ? (containers.flatMap((c) => c.ports).find((p) => p.proto === "tcp" && p.container === 64738)?.host ?? openable[0] ?? null) : null;
-    if (kind === "prosody") chatApps.add(id);
+    if (isChatKind(kind)) chatApps.add(id);
     if (voicePort) voiceApps.set(id, voicePort);
     const home = pref?.url_home || (webPort ? `${scheme}://${lan}:${webPort}${index}` : voicePort ? `mumble://${lan}:${voicePort}` : null);
     const baseName = pref?.display_name || meta?.title || (umbrel && id === "umbrelc" ? "Umbrel services" : titleCase(isStack ? id.replace(/\.(casaos|compose)$/, "") : main.name));

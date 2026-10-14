@@ -1,0 +1,117 @@
+{
+  "server": "quark",
+  "version": "0.1.0",
+  "startedAt": 1760000000000,
+  "configFile": "/etc/quark/quark.toml",
+  "certDir": "/etc/quark/certs",
+  "hosts": [
+    {
+      "host": "other.example.org",
+      "settings": {
+        "signUp": "closed",
+        "history": "1w",
+        "groups": { "on": false, "host": "rooms.other.example.org", "whoCreates": "everyone" },
+        "files": { "on": false, "host": "upload.other.example.org", "maxMb": 100, "keepDays": 30 },
+        "push": false,
+        "federation": false,
+        "web": false,
+        "calls": { "on": false, "host": "other.example.org" },
+        "welcome": null,
+        "contact": null
+      },
+      "admins": [],
+      "accounts": [
+        { "user": "a", "role": "member", "enabled": true, "created": null, "passwordChanged": null, "lastActive": null, "devices": [] },
+        { "user": "b", "role": "member", "enabled": true, "created": null, "passwordChanged": null, "lastActive": null, "devices": [] },
+        { "user": "c", "role": "member", "enabled": true, "created": null, "passwordChanged": null, "lastActive": null, "devices": [] }
+      ],
+      "invites": [],
+      "rooms": [],
+      "groupsHost": null,
+      "filesHost": null,
+      "modules": ["tls", "saslauth", "roster", "disco", "ping"],
+      "requireEncryption": true,
+      "tls": null
+    },
+    {
+      "host": "chat.example.com",
+      "settings": {
+        "signUp": "invite",
+        "history": "3m",
+        "groups": { "on": true, "host": "rooms.chat.example.com", "whoCreates": "everyone" },
+        "files": { "on": true, "host": "upload.chat.example.com", "maxMb": 100, "keepDays": 30 },
+        "push": true,
+        "federation": true,
+        "web": false,
+        "calls": { "on": true, "host": "chat.example.com" },
+        "welcome": "Welcome!",
+        "contact": "luke@chat.example.com"
+      },
+      "admins": ["luke@chat.example.com"],
+      "accounts": [
+        {
+          "user": "sam",
+          "role": "admin",
+          "enabled": true,
+          "created": 1750000000000,
+          "passwordChanged": 1750000000000,
+          "lastActive": 1760000500000,
+          "devices": []
+        },
+        {
+          "user": "luke",
+          "role": "member",
+          "enabled": true,
+          "created": 1740000000000,
+          "passwordChanged": null,
+          "lastActive": 1760000900000,
+          "devices": [
+            { "resource": "Gajim.x1", "client": null, "ip": "192.168.1.20", "secure": true, "since": 1760000100000, "resumable": false, "inactive": false },
+            { "resource": "Conversations.Qqth", "client": null, "ip": "10.0.0.5", "secure": true, "since": 1760000800000, "resumable": true, "inactive": true }
+          ]
+        },
+        { "user": "gluon", "role": "member", "enabled": true, "created": 1755000000000, "passwordChanged": null, "lastActive": null, "devices": [] },
+        { "user": "old", "role": "member", "enabled": false, "created": 1700000000000, "passwordChanged": null, "lastActive": null, "devices": [] }
+      ],
+      "invites": [
+        {
+          "token": "aaaaaaaaaaaa",
+          "username": null,
+          "role": "member",
+          "created": 1760000000000,
+          "expires": 1760604800000,
+          "uri": "xmpp:chat.example.com?register;preauth=aaaaaaaaaaaa",
+          "page": null,
+          "reusable": true,
+          "reset": false
+        },
+        {
+          "token": "bbbbbbbbbbbb",
+          "username": "jo",
+          "role": "admin",
+          "created": 1760000300000,
+          "expires": 1760604800000,
+          "uri": "xmpp:jo@chat.example.com?register;preauth=bbbbbbbbbbbb",
+          "page": "https://chat.example.com/invite/bbbbbbbbbbbb",
+          "reusable": false,
+          "reset": false
+        }
+      ],
+      "rooms": [
+        { "jid": "quiet@rooms.chat.example.com", "name": "Quiet", "description": null, "public": false, "membersOnly": true, "persistent": true, "occupants": 0 },
+        { "jid": "family@rooms.chat.example.com", "name": "Family", "description": "Everyone", "public": true, "membersOnly": false, "persistent": true, "occupants": 3 }
+      ],
+      "groupsHost": "rooms.chat.example.com",
+      "filesHost": "upload.chat.example.com",
+      "modules": [
+        "tls", "saslauth", "carbons", "pep", "bookmarks", "smacks", "csi_simple", "mam", "muc", "muc_mam", "http_file_share",
+        "cloud_notify", "s2s", "invites", "invites_register", "server_contact_info", "turn_external", "external_services",
+        "blocklist", "vcard4", "register", "ping", "roster", "disco", "welcome"
+      ],
+      "requireEncryption": true,
+      "tls": { "selfSigned": false, "notAfter": 1767000000000, "issuer": "Let's Encrypt" }
+    }
+  ],
+  "turn": { "builtIn": true, "port": 3478, "relayMin": 49160, "relayMax": 49200, "running": true },
+  "stats": { "c2s": 2, "s2sIn": 1, "s2sOut": 1, "stanzasIn": 1200, "stanzasOut": 1500 }
+}

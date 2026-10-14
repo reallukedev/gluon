@@ -1,4 +1,8 @@
-/** Types shared by the chat server (Prosody) API and its screens. No server imports. */
+/** Types shared by the chat server (Prosody or Quark) API and its screens. No server imports. */
+
+/** Which XMPP server an app runs: both are managed through the same screens. */
+export type ChatServerKind = "prosody" | "quark";
+export const CHAT_SERVER_NAME: Record<ChatServerKind, string> = { prosody: "Prosody", quark: "Quark" };
 
 /** Who can make an account: only the admin (in Gluon), people with an invite, or anyone. */
 export type SignUp = "closed" | "invite" | "open";
@@ -119,9 +123,11 @@ export interface ChatHostSnapshot {
 
 export interface ChatSnapshot {
   app: { id: string; name: string };
+  /** Prosody (settings in Lua files, some changes restart it) or Quark (every setting applies live). */
+  server: ChatServerKind;
   container: string;
   version: string;
-  /** Major version, e.g. 13. Settings need 13 or newer. */
+  /** Prosody's major version, e.g. 13. Settings need 13 or newer. Always null for Quark. */
   major: number | null;
   startedAt: number | null;
   hosts: ChatHostSnapshot[];
@@ -131,6 +137,8 @@ export interface ChatSnapshot {
   config: { file: string | null; hostPath: string | null; writable: boolean; reason: string | null; managed: boolean; layout: "main" | "confd"; rev: string };
   /** Gluon's public address, for invite pages. */
   publicBase: string | null;
+  /** Quark's built-in call relay. null for Prosody, which uses a coturn app. */
+  builtInRelay: { builtIn: boolean; running: boolean; port: number; relayMin: number; relayMax: number } | null;
   checkedAt: number;
 }
 
@@ -140,12 +148,26 @@ export interface ChatConfigFiles {
   file: string;
 }
 
+/** What the config editor gets: the file, what it's written in, and whether Gluon can save it. */
+export interface ChatConfigView extends ChatConfigFiles {
+  server: ChatServerKind;
+  /** Prosody's config is Lua; Quark's is TOML. */
+  language: "lua" | "toml";
+  writable: boolean;
+  reason: string | null;
+  /** Quark applies a saved config on its own, so there's no restart to offer. */
+  canRestart: boolean;
+}
+
 /** Calls across networks: the TURN relay and whether people outside can reach it. */
 export interface ChatCallsStatus {
   on: boolean;
   /** The name chat apps are given for the relay (the chat domain, pointing at your home). */
   host: string | null;
   relay: { appId: string; name: string; running: boolean } | null;
+  /** The relay is part of the chat server itself (Quark), so there's nothing to install. */
+  builtIn: boolean;
+  server: ChatServerKind;
   /** STUN answers from the relay on this server's address, and through the router's public one. null: not checked. */
   answers: { here: boolean | null; outside: boolean | null };
   lanIp: string | null;

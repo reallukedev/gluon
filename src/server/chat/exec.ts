@@ -4,7 +4,7 @@ import { dockerError } from "../dockerx/core";
 
 /**
  * Run a command in a container with something on its standard input, and collect what it prints.
- * Used to feed prosodyctl's console.
+ * Used to feed prosodyctl's console, and Quark's `quark ctl`.
  */
 export async function execWithInput(
   containerId: string,

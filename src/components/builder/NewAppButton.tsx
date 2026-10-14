@@ -31,7 +31,7 @@ export function NewAppButton({ variant = "secondary", label = "Make an app" }: {
           { label: "From a GitHub repository", description: "Gluon builds it on this server", icon: <Github />, onSelect: () => router.push("/apps/new?from=github") },
           "separator",
           { kind: "label", label: "Set up and managed by Gluon" },
-          { label: "Chat server", description: "Prosody, for XMPP chat apps", icon: <ChatBubble />, onSelect: () => setFlow("chat") },
+          { label: "Chat server", description: "Quark or Prosody, for XMPP chat apps", icon: <ChatBubble />, onSelect: () => setFlow("chat") },
           { label: "Voice chat server", description: "Mumble, for group voice calls", icon: <Headset />, onSelect: () => setFlow("voice") },
         ]}
       />

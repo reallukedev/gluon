@@ -1,8 +1,8 @@
-import type { ChatCapability, ChatSettings } from "@/lib/chat-types";
+import type { ChatCapability, ChatServerKind, ChatSettings } from "@/lib/chat-types";
 
 /**
  * What chat apps can do with this server, by what a person notices, mapped from the modules Prosody
- * has loaded. Follows the XMPP Compliance Suites (XEP-0479): the pieces modern apps like
+ * has loaded (Quark reports the same module names for what it has on). Follows the XMPP Compliance Suites (XEP-0479): the pieces modern apps like
  * Conversations, Monal and Gajim expect. Pure, so it's tested without a chat server.
  */
 
@@ -25,8 +25,11 @@ export function capabilities(c: {
   webSide: boolean;
   settings: ChatSettings;
   requireEncryption: boolean;
+  /** Only changes the advice for a gap: Prosody's is a config line, Quark's an update or its config file. */
+  server?: ChatServerKind;
 }): ChatCapability[] {
   const has = (m: string) => c.modules.has(m);
+  const quark = c.server === "quark";
   const out: ChatCapability[] = [];
 
   const secure = has("tls") && has("saslauth") && c.requireEncryption;
@@ -34,7 +37,11 @@ export function capabilities(c: {
     key: "secure",
     label: "Encrypted sign-in",
     on: secure,
-    detail: secure ? "Apps must use TLS, and passwords are checked without being sent in the clear." : "Prosody lets apps connect without encryption. Set c2s_require_encryption = true in its config.",
+    detail: secure
+      ? "Apps must use TLS, and passwords are checked without being sent in the clear."
+      : quark
+        ? "Quark lets apps connect without encryption. Require it in Quark's config file below."
+        : "Prosody lets apps connect without encryption. Set c2s_require_encryption = true in its config.",
     specs: ["RFC 6120", "RFC 7590", "XEP-0440"],
     fix: null,
   });
@@ -54,7 +61,11 @@ export function capabilities(c: {
     key: "devices",
     label: "Every device in sync",
     on: devices,
-    detail: devices ? "Messages you send from one device show up on the others, along with your contacts, avatar and group chats." : "Add carbons, pep and bookmarks to modules_enabled so devices stay in step.",
+    detail: devices
+      ? "Messages you send from one device show up on the others, along with your contacts, avatar and group chats."
+      : quark
+        ? "This version of Quark doesn't keep devices in step. Updating it should."
+        : "Add carbons, pep and bookmarks to modules_enabled so devices stay in step.",
     specs: ["XEP-0280", "XEP-0163", "XEP-0402", "XEP-0398"],
     fix: null,
   });
@@ -64,7 +75,11 @@ export function capabilities(c: {
     key: "mobile",
     label: "Phones on patchy networks",
     on: mobile,
-    detail: mobile ? "Phones reconnect without losing messages and save battery while the app is in the background." : "Add smacks and csi_simple to modules_enabled so phones don't miss messages.",
+    detail: mobile
+      ? "Phones reconnect without losing messages and save battery while the app is in the background."
+      : quark
+        ? "This version of Quark can't hold messages for phones that drop off. Updating it should."
+        : "Add smacks and csi_simple to modules_enabled so phones don't miss messages.",
     specs: ["XEP-0198", "XEP-0352"],
     fix: null,
   });

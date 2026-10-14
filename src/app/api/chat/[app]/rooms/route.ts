@@ -3,7 +3,7 @@ import { route } from "@/server/api";
 import { param } from "@/app/api/docker/params";
 import { audit } from "@/server/audit";
 import { AppError } from "@/server/errors";
-import { createRoom, destroyRoom, prosodyFor } from "@/server/chat/prosody";
+import { chatTarget, createRoom, destroyRoom } from "@/server/chat/backend";
 
 const post = z.object({
   service: z.string().regex(/^[a-z0-9.-]{1,253}$/),
@@ -21,7 +21,7 @@ const post = z.object({
 
 export const POST = route({ auth: "admin", recent: true, body: post, burst: { limit: 30, windowMs: 60_000 } }, async ({ params, body, user, ip, zone }) => {
   const appId = param(params.app);
-  const t = await prosodyFor(appId);
+  const t = await chatTarget(appId);
   if (body.owner && !/^[^@/\s]+@[a-z0-9.-]+$/.test(body.owner)) throw new AppError("invalid", "The owner must be a chat address like you@example.com.", 400, { field: "owner" });
   const r = await createRoom(t, { ...body, description: body.description || null, owner: body.owner || null });
   audit(user, { action: "chat.room.create", target: appId, summary: `Created group chat ${r.jid}` }, { ip, zone });
@@ -32,7 +32,7 @@ const del = z.object({ jid: z.string().regex(/^[^@/\s]+@[a-z0-9.-]+$/), reason: 
 
 export const DELETE = route({ auth: "admin", recent: true, body: del }, async ({ params, body, user, ip, zone }) => {
   const appId = param(params.app);
-  const t = await prosodyFor(appId);
+  const t = await chatTarget(appId);
   await destroyRoom(t, { jid: body.jid, reason: body.reason || null });
   audit(user, { action: "chat.room.delete", target: appId, summary: `Closed group chat ${body.jid}` }, { ip, zone });
   return { ok: true };

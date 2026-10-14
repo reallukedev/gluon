@@ -7,8 +7,10 @@ import { docker } from "../docker/client";
 import { lanHost, listApps, type AppSummary } from "../docker/apps";
 import { lanSide } from "../network/reach";
 import { networkStatus } from "../network/status";
-import { chatSnapshot, prosodyFor, putProsodyFile } from "./prosody";
+import { prosodyFor, putProsodyFile } from "./prosody";
+import { chatSnapshot, chatTarget } from "./backend";
 import { applySettings, type Where } from "./service";
+import { QUARK_TURN } from "./recipe";
 import { coturnRecipe, newTurnSecret, PROSODY_TURN_SECRET, RELAY_PORTS, stunAnswers, TURN_PORT } from "./turn";
 import type { ChatCallsStatus } from "@/lib/chat-types";
 
@@ -27,8 +29,39 @@ async function relayApp(): Promise<AppSummary | null> {
   return apps.find((a) => a.containers.some((c) => COTURN.test(c.image))) ?? null;
 }
 
+/**
+ * Quark carries calls itself: its relay is part of the chat server, so there's nothing to install
+ * and turning calls on is just a setting. The status reads the relay from Quark's snapshot.
+ */
+async function quarkCallsStatus(appId: string): Promise<ChatCallsStatus> {
+  const [snap, lan, lanIp] = await Promise.all([chatSnapshot(appId), lanSide().catch(() => ({ lanIp: null, gateway: null })), serverLanIp()]);
+  const host = snap.hosts[0];
+  const relay = snap.builtInRelay;
+  const port = relay?.port ?? QUARK_TURN.port;
+  const running = !!relay?.running;
+  const onServer = process.platform === "linux";
+  const publicIp = onServer ? ((await networkStatus().catch(() => null))?.publicIp.v4 ?? null) : null;
+  const [here, outside] = await Promise.all([
+    onServer && running && lanIp ? stunAnswers(lanIp, port) : Promise.resolve(null),
+    running && publicIp ? stunAnswers(publicIp, port) : Promise.resolve(null),
+  ]);
+  return {
+    on: !!host?.settings.calls?.on,
+    host: host?.settings.calls?.host ?? host?.host ?? null,
+    relay: relay ? { appId: snap.app.id, name: snap.app.name, running } : null,
+    builtIn: true,
+    server: "quark",
+    answers: { here, outside },
+    lanIp,
+    gateway: lan.gateway,
+    publicIp,
+    ports: { turn: port, relayMin: relay?.relayMin ?? QUARK_TURN.relayMin, relayMax: relay?.relayMax ?? QUARK_TURN.relayMax },
+  };
+}
+
 /** The relay, whether it answers here and through the router, and what to forward. */
 export async function callsStatus(appId: string): Promise<ChatCallsStatus> {
+  if ((await chatTarget(appId)).kind === "quark") return quarkCallsStatus(appId);
   const [relay, lan, lanIp, snap] = await Promise.all([relayApp(), lanSide().catch(() => ({ lanIp: null, gateway: null })), serverLanIp(), chatSnapshot(appId)]);
   const running = !!relay?.containers.some((c) => COTURN.test(c.image) && c.state === "running");
   const host = snap.hosts[0];
@@ -43,6 +76,8 @@ export async function callsStatus(appId: string): Promise<ChatCallsStatus> {
     on: !!host?.settings.calls?.on,
     host: host?.settings.calls?.host ?? host?.host ?? null,
     relay: relay ? { appId: relay.id, name: relay.name, running } : null,
+    builtIn: false,
+    server: "prosody",
     answers: { here, outside },
     lanIp,
     gateway: lan.gateway,
@@ -53,6 +88,8 @@ export async function callsStatus(appId: string): Promise<ChatCallsStatus> {
 
 /** Install the relay when there isn't one. Returns the builder draft to publish, or null to go straight to finishing. */
 export async function startCalls(user: User, where: Where, appId: string): Promise<{ draftId: string | null }> {
+  // Quark's relay is built in: straight to finishing.
+  if ((await chatTarget(appId)).kind === "quark") return { draftId: null };
   const existing = await relayApp();
   if (existing) return { draftId: null };
   const snap = await chatSnapshot(appId);
@@ -76,6 +113,19 @@ async function relaySecret(relay: AppSummary): Promise<string> {
 
 /** Share the relay's secret with Prosody and turn calls on. */
 export async function finishCalls(user: User, where: Where, appId: string, draftId: string | null) {
+  const target = await chatTarget(appId);
+  if (target.kind === "quark") {
+    const snap = await chatSnapshot(appId);
+    const h = snap.hosts[0];
+    if (!h) throw new AppError("invalid", "This Quark has no chat domain yet.", 400);
+    const r = await applySettings(user, where, appId, h.host, { ...h.settings, calls: { on: true, host: h.settings.calls?.host || h.host } }, false, null);
+    const after = await chatSnapshot(appId).catch(() => null);
+    if (after?.builtInRelay && !after.builtInRelay.running) {
+      r.notes.push(after.builtInRelay.builtIn ? "Calls are on, but Quark's call relay isn't running yet. Its log under Logs says why." : "Calls are on, but Quark's built-in call relay is turned off in its config file, so chat apps get no relay.");
+    }
+    audit(user, { action: "chat.calls", target: appId, summary: `Turned on calls across networks for ${h.host} through Quark's built-in relay` }, where);
+    return r;
+  }
   if (draftId) {
     const d = await appDetail(draftId);
     if (d.status !== "published") throw new AppError("not_ready", "The relay isn't installed yet. Wait for it to finish.", 409);

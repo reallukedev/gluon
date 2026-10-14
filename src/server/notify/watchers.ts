@@ -5,6 +5,8 @@ import { publicBaseUrl } from "../settings";
 import { findById } from "../auth/users";
 import { listApps } from "../docker/apps";
 import { prosodyFor, prosodyLua } from "../chat/prosody";
+import { quarkFor, quarkSnapshotOf } from "../chat/quark";
+import { chatApps } from "../chat/backend";
 import { list } from "../chat/lua";
 import { appImageUpdates, checkAppImages, runningImages } from "../updates/apps";
 import { peopleHref } from "@/lib/settings-links";
@@ -235,17 +237,18 @@ async function registryWatch() {
 
 // ---------------------------------------------------------------- chat server
 
-const PROSODY_IMAGE = /(^|\/)(prosody|prosodyim)\/|(^|\/)prosody(:|$)/i;
 const ACCOUNTS_LUA = `local um=require"core.usermanager"; local out={};
 for name,h in pairs(prosody.hosts) do if h.type=="local" and name~="localhost" then local us={}; for u in um.users(name) do us[#us+1]=u end; out[#out+1]={host=name, users=us} end end;
 return out`;
 
 async function chatWatch() {
-  const apps = (await listApps()).filter((a) => a.containers.some((c) => PROSODY_IMAGE.test(c.image) && c.state === "running"));
-  for (const a of apps) {
+  for (const { app: a, kind } of await chatApps({ running: true })) {
     let hosts: { host: string; users: string[] | Record<string, never> }[];
     try {
-      hosts = list(await prosodyLua(await prosodyFor(a.id), ACCOUNTS_LUA, {}, 15_000));
+      hosts =
+        kind === "quark"
+          ? (await quarkSnapshotOf(await quarkFor(a.id))).hosts.map((h) => ({ host: h.host, users: h.accounts.map((x) => x.user) }))
+          : list(await prosodyLua(await prosodyFor(a.id), ACCOUNTS_LUA, {}, 15_000));
     } catch {
       continue;
     }

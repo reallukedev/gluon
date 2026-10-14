@@ -23,7 +23,8 @@ function platformOf(ua: string): Platform {
 }
 
 /**
- * Where a chat invite link leads (Prosody's invites_page). Says which app to get for this device,
+ * Where a chat invite link leads (Prosody's invites_page, or a Quark invite when Quark's own web
+ * page is off). Says which app to get for this device,
  * then hands the invite to it. Nothing here signs anyone in to Gluon.
  */
 export default async function ChatInvitePage({ params }: { params: Promise<{ host: string; token: string }> }) {

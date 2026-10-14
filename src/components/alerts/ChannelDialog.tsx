@@ -682,7 +682,7 @@ function XmppFields({
             {stopped.length
               ? `${stopped[0]!.problem} Start it, then come back.`
               : admin
-                ? "Gluon sends through a Prosody chat server it runs. Set one up from Apps, or send from an XMPP account you already have."
+                ? "Gluon sends through a chat server it runs (Quark or Prosody). Set one up from Apps, or send from an XMPP account you already have."
                 : "Ask whoever looks after the server to set up a chat server. Until then, use ntfy or email."}
           </Notice>
         ) : error && !data ? (

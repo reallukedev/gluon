@@ -2,7 +2,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { UserPlus, Link as LinkIcon } from "iconoir-react";
-import type { ChatSnapshot } from "@/lib/chat-types";
+import { CHAT_SERVER_NAME, type ChatServerKind, type ChatSnapshot } from "@/lib/chat-types";
 import type { NetworkStatus } from "@/lib/network-types";
 import { useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
@@ -24,11 +24,11 @@ const ConfigEditor = dynamic(() => import("./ConfigEditor").then((m) => m.Config
 });
 
 /**
- * Apps → Prosody → Chat server: who has an account and which devices they're on, invite links,
- * what chat apps can do with this server (and the switch that fixes each gap), group chats,
- * settings and the config file. Everything is read live from Prosody.
+ * Apps → Prosody or Quark → Chat server: who has an account and which devices they're on, invite
+ * links, what chat apps can do with this server (and the switch that fixes each gap), group chats,
+ * settings and the config file. Everything is read live from the chat server.
  */
-export function ChatPanel({ appId, appName, running }: { appId: string; appName: string; running: boolean }) {
+export function ChatPanel({ appId, appName, running, server: serverHint }: { appId: string; appName: string; running: boolean; server: ChatServerKind }) {
   const url = running ? `/api/chat/${encodeURIComponent(appId)}` : null;
   const { data, error, mutate, isLoading } = useApi<ChatSnapshot>(url, { refresh: 15_000 });
   const [hostPick, setHostPick] = React.useState<string | null>(null);
@@ -45,12 +45,15 @@ export function ChatPanel({ appId, appName, running }: { appId: string; appName:
       </Panel>
     );
   }
+  const server = data?.server ?? serverHint;
+  const name = CHAT_SERVER_NAME[server];
   if (error && !data) {
     // prosodyctl reads the whole config first, so a mistake in it takes the console down too.
-    const brokenConfig = /config file/i.test(error.message);
+    // Quark's console keeps answering whatever its config file says, so that only happens to Prosody.
+    const brokenConfig = server === "prosody" && /config file/i.test(error.message);
     return (
       <div className={s.panel}>
-        <Notice tone="fault" title={brokenConfig ? "Prosody can't read its config" : "Gluon couldn't talk to Prosody"} action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+        <Notice tone="fault" title={brokenConfig ? "Prosody can't read its config" : `Gluon couldn't talk to ${name}`} action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
           {error.message}
           {brokenConfig ? " Prosody keeps running on the config it last read; fix the file below and save it." : ""}
         </Notice>
@@ -66,7 +69,14 @@ export function ChatPanel({ appId, appName, running }: { appId: string; appName:
 
   const host = data.hosts.find((h) => h.host === hostPick) ?? data.hosts[0];
   if (!host) {
-    return (
+    return server === "quark" ? (
+      <div className={s.panel}>
+        <Notice title="Quark has no chat domain yet">Add one to its config file below. Quark starts serving it as soon as you save.</Notice>
+        <Panel title="Quark's config file" flush>
+          <ConfigEditor appId={appId} onSaved={() => void mutate()} />
+        </Panel>
+      </div>
+    ) : (
       <Notice title="Prosody has no chat domain yet">
         Add a VirtualHost line to its config file (like <span className="mono">VirtualHost &quot;chat.example.com&quot;</span>), then restart it.
       </Notice>
@@ -81,19 +91,19 @@ export function ChatPanel({ appId, appName, running }: { appId: string; appName:
       )}
       <ConfigNotice snap={data} />
       {host.problem && (
-        <Notice tone="fault" title={`Prosody couldn't read ${host.host}`}>
+        <Notice tone="fault" title={`${name} couldn't read ${host.host}`}>
           {host.problem} Its log under Logs has the details.
         </Notice>
       )}
       <ReachNotice host={host.host} />
 
-      <Accounts appId={appId} host={host} onChanged={() => void mutate()} onAdd={() => setAdding(true)} />
+      <Accounts appId={appId} host={host} server={server} onChanged={() => void mutate()} onAdd={() => setAdding(true)} />
       <Invites appId={appId} host={host} onChanged={() => void mutate()} onInvite={() => setInviting(true)} />
       <ChatSettingsArea appId={appId} snap={data} hostName={host.host} onSaved={() => void mutate()} />
       {host.groupsHost && <Rooms appId={appId} host={host} onChanged={() => void mutate()} />}
 
       <Panel
-        title="Prosody's config file"
+        title={`${name}'s config file`}
         meta={
           <Button size="sm" variant="ghost" onClick={() => setShowConfig((v) => !v)} aria-expanded={showConfig}>
             {showConfig ? "Hide" : "Edit by hand"}
@@ -105,7 +115,9 @@ export function ChatPanel({ appId, appName, running }: { appId: string; appName:
           <ConfigEditor appId={appId} onSaved={() => void mutate()} />
         ) : (
           <p className={s.hint} style={{ padding: "14px 18px" }}>
-            For settings Gluon doesn&rsquo;t cover. Gluon checks your changes with Prosody before it saves them, and keeps a copy of the file from before it first changed anything.
+            {server === "quark"
+              ? "For settings Gluon doesn’t cover. Quark checks your changes before it saves them, and applies them straight away."
+              : "For settings Gluon doesn’t cover. Gluon checks your changes with Prosody before it saves them, and keeps a copy of the file from before it first changed anything."}
           </p>
         )}
       </Panel>
@@ -135,7 +147,9 @@ function Lead({ snap, hostName, onAdd, onInvite }: { snap: ChatSnapshot; hostNam
           {gaps > 0 ? ` ${gaps === 1 ? "One thing chat apps expect is" : `${gaps} things chat apps expect are`} turned off.` : ""}
         </p>
         <p className={s.facts}>
-          <span>Prosody {snap.version.split(" ")[0]}</span>
+          <span>
+            {CHAT_SERVER_NAME[snap.server]} {snap.version.split(" ")[0]}
+          </span>
           {snap.startedAt && (
             <span>
               Running since <Time ts={snap.startedAt} />
@@ -183,6 +197,8 @@ function ReachNotice({ host }: { host: string }) {
 }
 
 function ConfigNotice({ snap }: { snap: ChatSnapshot }) {
+  // Quark takes every setting through its own console, for each chat domain on its own.
+  if (snap.server === "quark") return null;
   if (snap.major !== null && snap.major < 13) {
     return (
       <Notice tone="attention" title={`This is Prosody ${snap.version}`}>
@@ -212,11 +228,13 @@ function ChatSettingsArea({ appId, snap, hostName, onSaved }: { appId: string; s
   const [calls, setCalls] = React.useState(false);
   const saver = useSettingsSaver(appId, host, snap.config.rev, onSaved);
   // One gluon.cfg.lua can't hold different settings per domain, so several domains are hand-edited.
-  const canEdit = snap.config.writable && (snap.major === null || snap.major >= 13) && snap.hosts.length === 1;
+  // Quark keeps settings per domain and applies them live, so it can always be changed here.
+  const quark = snap.server === "quark";
+  const canEdit = quark || (snap.config.writable && (snap.major === null || snap.major >= 13) && snap.hosts.length === 1);
   return (
     <>
       <Capabilities host={host} canFix={canEdit} saving={saver.saving} onFix={(patch) => void saver.save({ ...host.settings, ...patch })} onCalls={() => setCalls(true)} />
-      <ChatSettingsForm key={`${appId}:${hostName}:${JSON.stringify(host.settings)}`} host={host} disabled={!canEdit} saver={saver} multipleHosts={snap.hosts.length > 1} onCalls={() => setCalls(true)} />
+      <ChatSettingsForm key={`${appId}:${hostName}:${JSON.stringify(host.settings)}`} host={host} disabled={!canEdit} saver={saver} multipleHosts={!quark && snap.hosts.length > 1} onCalls={() => setCalls(true)} />
       {saver.node}
       {calls && <CallsDialog open={calls} onOpenChange={setCalls} appId={appId} onChanged={onSaved} />}
     </>

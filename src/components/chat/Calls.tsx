@@ -54,7 +54,15 @@ function Checks({ st }: { st: ChatCallsStatus }) {
     <dl className={s.facts2}>
       <div>
         <dt>Relay</dt>
-        <dd>{!st.relay ? <StateLine state="stopped" label="Not installed" /> : st.relay.running ? <StateLine state="running" label={`${st.relay.name} is running`} /> : <StateLine state="unhealthy" label={`${st.relay.name} is stopped`} />}</dd>
+        <dd>
+          {!st.relay ? (
+            <StateLine state="stopped" label={st.builtIn ? "Not available in this Quark" : "Not installed"} />
+          ) : st.relay.running ? (
+            <StateLine state="running" label={st.builtIn ? `Built into ${st.relay.name}, running` : `${st.relay.name} is running`} />
+          ) : (
+            <StateLine state="unhealthy" label={st.builtIn ? `Built into ${st.relay.name}, not running` : `${st.relay.name} is stopped`} />
+          )}
+        </dd>
       </div>
       <div>
         <dt>On this server</dt>
@@ -70,7 +78,8 @@ function Checks({ st }: { st: ChatCallsStatus }) {
 
 /**
  * Calls across networks: installs a small TURN relay (coturn) next to Prosody and turns on the
- * setting that hands chat apps logins for it. Says exactly what the router has to forward.
+ * setting that hands chat apps logins for it. Quark has the relay built in, so there it's just the
+ * setting. Says exactly what the router has to forward.
  */
 export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: boolean; onOpenChange: (o: boolean) => void; appId: string; onChanged: () => void }) {
   const url = `/api/chat/${encodeURIComponent(appId)}/calls`;
@@ -115,7 +124,11 @@ export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: bo
   const turnOff = () =>
     confirm({
       title: "Turn off calls across networks?",
-      consequences: ["Calls on the same network keep working.", "Calls between two homes or on mobile data may fail again.", "The Call relay app stays installed; remove it from Apps if you don't want it."],
+      consequences: [
+        "Calls on the same network keep working.",
+        "Calls between two homes or on mobile data may fail again.",
+        ...(st?.builtIn ? [] : ["The Call relay app stays installed; remove it from Apps if you don't want it."]),
+      ],
       confirmLabel: "Turn off",
       onConfirm: async () => {
         await api.del(url);
@@ -132,7 +145,9 @@ export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: bo
       onOpenChange={(o) => !busy && onOpenChange(o)}
       size="wide"
       title={on ? "Calls across networks" : "Make calls work everywhere"}
-      description={on ? undefined : "Two phones on different networks often can't reach each other directly. A small relay on this server carries the call between them."}
+      description={
+        on ? undefined : st?.builtIn ? "Two phones on different networks often can't reach each other directly. Quark has a relay built in that carries the call between them." : "Two phones on different networks often can't reach each other directly. A small relay on this server carries the call between them."
+      }
       footer={
         on ? (
           <>
@@ -149,7 +164,7 @@ export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: bo
               Cancel
             </Button>
             <Button variant="primary" loading={busy} disabled={!st} onClick={() => void setUp()}>
-              {st?.relay ? "Turn on calls" : "Set up calls"}
+              {st?.relay || st?.builtIn ? "Turn on calls" : "Set up calls"}
             </Button>
           </>
         )
@@ -161,9 +176,11 @@ export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: bo
         <div className={s.form}>
           {!on && (
             <p className={s.hint}>
-              {st.relay
-                ? `Gluon gives chat apps logins for ${st.relay.name}, which is already on this server.`
-                : "Gluon installs coturn as an app called Call relay. It only relays calls to the internet, never into your home network, and chat apps get logins that expire."}
+              {st.builtIn
+                ? "Nothing to install: Quark has the relay built in. Turning calls on tells chat apps to use it."
+                : st.relay
+                  ? `Gluon gives chat apps logins for ${st.relay.name}, which is already on this server.`
+                  : "Gluon installs coturn as an app called Call relay. It only relays calls to the internet, never into your home network, and chat apps get logins that expire."}
             </p>
           )}
           {job && <JobProgress view={job} stages={STAGES} running={busy} label="Installing the call relay" closeNote="Keep this open: once the relay runs, Gluon gives Prosody its secret." />}

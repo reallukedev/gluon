@@ -101,11 +101,11 @@ const jid = z
 
 export const xmppConfigSchema = z.object({
   /**
-   * "server": send through a chat server Gluon runs (Prosody), from gluon@<its domain>; no password.
+   * "server": send through a chat server Gluon runs (Prosody or Quark), from gluon@<its domain>; no password.
    * "account": sign in to any XMPP account (JID + password) and send from it.
    */
   mode: z.enum(["server", "account"]).default("server"),
-  /** server: the Gluon app running Prosody, and which of its domains sends. */
+  /** server: the Gluon app running Prosody or Quark, and which of its domains sends. */
   app: z.string().trim().max(200).nullable().optional(),
   domain: z.string().trim().toLowerCase().max(253).nullable().optional(),
   /** account: the account that sends, its password (secret) and an optional server address (host or host:port). */

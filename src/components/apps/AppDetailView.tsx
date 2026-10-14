@@ -35,7 +35,7 @@ import { reduceUmbrelStream, umbrelBusy } from "./umbrelStream";
 import { MoveDialog } from "./MoveDialog";
 import { useMoveWatch } from "./useMoveWatch";
 import { UninstallDialog } from "./UninstallDialog";
-import { serviceKind } from "@/lib/service-kind";
+import { isChatKind, serviceKind } from "@/lib/service-kind";
 import s from "./detail.module.css";
 
 const ChatPanel = dynamic(() => import("@/components/chat/ChatPanel").then((m) => m.ChatPanel), {
@@ -145,8 +145,8 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
   const moveWhy = moveBlock(app) ?? (moving ? "It's moving right now" : null);
   const un = uninstallRoute(app);
   const kind = app.self ? null : serviceKind(app.details.map((d) => d.image));
-  // A link to a tab this app doesn't have (Chat server on a non-Prosody app) lands on Overview.
-  const tab: Tab = (asked === "chat" && kind !== "prosody") || (asked === "voice" && kind !== "mumble") ? "overview" : asked;
+  // A link to a tab this app doesn't have (Chat server on an app that isn't Prosody or Quark) lands on Overview.
+  const tab: Tab = (asked === "chat" && !isChatKind(kind)) || (asked === "voice" && kind !== "mumble") ? "overview" : asked;
 
   const confirmUpdate = () =>
     confirm({
@@ -374,7 +374,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
         hrefFor={(v) => (v === "overview" ? base : `${base}?tab=${v}`)}
         items={[
           { value: "overview", label: "Overview" },
-          ...(kind === "prosody" ? [{ value: "chat" as const, label: "Chat server" }] : []),
+          ...(isChatKind(kind) ? [{ value: "chat" as const, label: "Chat server" }] : []),
           ...(kind === "mumble" ? [{ value: "voice" as const, label: "Voice server" }] : []),
           { value: "logs", label: "Logs" },
           ...(app.configFile ? [{ value: "compose" as const, label: "Compose file" }] : []),
@@ -384,7 +384,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
       />
       <div className={s.tabBody}>
         {tab === "overview" && <Overview app={app} busy={busy} onContainer={(n, a) => void containerAct(n, a)} />}
-        {tab === "chat" && kind === "prosody" && <ChatPanel appId={app.id} appName={app.name} running={!stopped} />}
+        {tab === "chat" && isChatKind(kind) && <ChatPanel appId={app.id} appName={app.name} running={!stopped} server={kind} />}
         {tab === "voice" && kind === "mumble" && <VoicePanel appId={app.id} appName={app.name} running={!stopped} />}
         {tab === "logs" && <LogViewer appId={app.id} containers={app.details.map((d) => ({ name: d.name, label: d.service ?? d.name }))} initialContainer={container} />}
         {tab === "compose" && app.configFile && <ComposeEditor appId={app.id} onApplied={() => void mutate()} />}

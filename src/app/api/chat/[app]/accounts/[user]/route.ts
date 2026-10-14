@@ -3,7 +3,7 @@ import { route } from "@/server/api";
 import { param } from "@/app/api/docker/params";
 import { audit } from "@/server/audit";
 import { AppError } from "@/server/errors";
-import { deleteAccount, updateAccount, USERNAME_RE } from "@/server/chat/prosody";
+import { deleteAccount, serverName, updateAccount, USERNAME_RE } from "@/server/chat/backend";
 import { newPassword, targetAndHost } from "@/server/chat/service";
 
 const patch = z.object({
@@ -28,7 +28,7 @@ export const PATCH = route({ auth: "admin", recent: true, body: patch, burst: { 
   const { t, snap } = await targetAndHost(appId, body.host);
   const acct = snap.hosts.find((h) => h.host === body.host)?.accounts.find((a) => a.user === u);
   if (!acct) throw new AppError("not_found", `${u}@${body.host} doesn't exist any more.`, 404);
-  if (body.role && acct.fromConfig) throw new AppError("from_config", `${acct.jid} is an owner because it's listed in admins in Prosody's config file. Remove it there to change its role.`, 409);
+  if (body.role && acct.fromConfig) throw new AppError("from_config", `${acct.jid} is an owner because it's listed in admins in ${serverName(t.kind)}'s config file. Remove it there to change its role.`, 409);
   const password = body.password === "generate" ? newPassword() : body.password;
   const r = await updateAccount(t, { host: body.host, user: u, password, role: body.role, enabled: body.enabled, signOut: body.signOut });
   const did = [
@@ -47,7 +47,7 @@ export const DELETE = route({ auth: "admin", recent: true, body: del }, async ({
   const { appId, u } = who(params);
   const { t, snap } = await targetAndHost(appId, body.host);
   const acct = snap.hosts.find((h) => h.host === body.host)?.accounts.find((a) => a.user === u);
-  if (acct?.fromConfig) throw new AppError("from_config", `${acct.jid} is listed in admins in Prosody's config file. Remove it there first.`, 409);
+  if (acct?.fromConfig) throw new AppError("from_config", `${acct.jid} is listed in admins in ${serverName(t.kind)}'s config file. Remove it there first.`, 409);
   await deleteAccount(t, { host: body.host, user: u });
   audit(user, { action: "chat.account.delete", target: appId, summary: `Deleted chat account ${u}@${body.host}` }, { ip, zone });
   return { ok: true };

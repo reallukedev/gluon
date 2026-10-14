@@ -7,7 +7,10 @@ import { configRev } from "../caddy/routes";
 import { currentConfig, saveRoutes } from "../network/routes-service";
 import { withAppLock } from "../apps/lock";
 import { componentChange } from "./settings";
-import { chatSnapshot, prosodyFor, reloadProsody, restartProsody, writeSettings, type ProsodyTarget } from "./prosody";
+import { reloadProsody, restartProsody, writeSettings } from "./prosody";
+import { setQuarkSettings, type QuarkTarget } from "./quark";
+import { toQuarkSettings } from "./quark-map";
+import { chatSnapshot, chatTarget, type ChatTarget } from "./backend";
 import type { ChatSettings, ChatSnapshot } from "@/lib/chat-types";
 
 export type Where = { ip: string; zone: string };
@@ -20,21 +23,21 @@ export function newPassword(): string {
   return [0, 4, 8, 12].map((i) => chars.slice(i, i + 4).join("")).join("-");
 }
 
-export async function targetAndHost(appId: string, host: string): Promise<{ t: ProsodyTarget; snap: ChatSnapshot }> {
-  const t = await prosodyFor(appId);
+export async function targetAndHost(appId: string, host: string): Promise<{ t: ChatTarget; snap: ChatSnapshot }> {
+  const t = await chatTarget(appId);
   const snap = await chatSnapshot(appId);
   if (!snap.hosts.some((h) => h.host === host)) throw new AppError("invalid", `${host} isn't a chat domain on this server.`, 400, { field: "host" });
   return { t, snap };
 }
 
 /** The chat server's web port as published on this server (container port 5280), if it is. */
-function publishedWebPort(t: ProsodyTarget): number | null {
+function publishedWebPort(t: { app: ChatTarget["app"]; id: string }): number | null {
   const c = t.app.containers.find((x) => x.id === t.id);
   return c?.ports.find((p) => p.container === 5280 && p.proto === "tcp")?.host ?? null;
 }
 
 /** Point the chat domain's web address at the chat server's web port, for browser chat and uploads. */
-async function ensureWebSide(user: User, where: Where, t: ProsodyTarget, host: string): Promise<string | null> {
+async function ensureWebSide(user: User, where: Where, t: { app: ChatTarget["app"]; id: string }, host: string): Promise<string | null> {
   const cfg = currentConfig();
   const r = cfg.routes.find((x) => x.type === "subdomain" && x.host === host && !!x.xmpp);
   if (!r || r.type !== "subdomain" || !r.xmpp) return `There's no chat address for ${host} on Network yet, so browsers and uploads can't reach the chat server. Add it in Network.`;
@@ -68,7 +71,8 @@ export async function applySettings(
   restart: boolean,
   rev: string | null,
 ): Promise<{ restarted: boolean; notes: string[] }> {
-  const t = await prosodyFor(appId);
+  const t = await chatTarget(appId);
+  if (t.kind === "quark") return applyQuarkSettings(user, where, t, appId, host, next, rev);
   return withAppLock([appId], `Chat settings for ${t.app.name} are being saved`, async () => {
     // Read inside the lock and against what the person saw, so two tabs can't undo each other.
     const snap = await chatSnapshot(appId);
@@ -104,5 +108,26 @@ export async function applySettings(
     if (missed.length) notes.push(`Prosody's own config sets ${missed.join(", ")}, so those didn't change. Edit it under Prosody's config file below.`);
     audit(user, { action: "chat.settings", target: appId, summary: `Changed chat settings for ${host}${restarted ? " and restarted the chat server" : ""}`, detail: { host, settings: next, unapplied: missed } }, where);
     return { restarted, notes };
+  });
+}
+
+/**
+ * Quark takes the settings as they are and applies them live, per chat domain, so there's no
+ * restart to ask about, no version to check and several domains are fine.
+ */
+async function applyQuarkSettings(user: User, where: Where, t: QuarkTarget, appId: string, host: string, next: ChatSettings, rev: string | null): Promise<{ restarted: boolean; notes: string[] }> {
+  return withAppLock([appId], `Chat settings for ${t.app.name} are being saved`, async () => {
+    const snap = await chatSnapshot(appId);
+    if (rev && snap.config.rev !== rev) throw new AppError("stale", "The chat settings changed since this page loaded. Reload to see them, then make your change again.", 409);
+    const h = snap.hosts.find((x) => x.host === host);
+    if (!h) throw new AppError("invalid", `${host} isn't a chat domain on this server.`, 400, { field: "host" });
+    const r = await setQuarkSettings(t, host, toQuarkSettings(next, h.settings, host));
+    const notes = Array.isArray(r?.notes) ? r.notes.filter((n) => typeof n === "string" && n.trim()) : [];
+    if (next.web || next.files.on) {
+      const why = await ensureWebSide(user, where, t, host);
+      if (why) notes.push(why);
+    }
+    audit(user, { action: "chat.settings", target: appId, summary: `Changed chat settings for ${host}`, detail: { host, settings: next, server: "quark" } }, where);
+    return { restarted: false, notes };
   });
 }

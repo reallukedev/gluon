@@ -1,4 +1,4 @@
-/* The Chat server tab (Prosody): people and their devices, invite links, what chat apps can do,
+/* The Chat server tab (Prosody or Quark): people and their devices, invite links, what chat apps can do,
    group chats, settings and the config file. Built on the Instrument Plate tokens. */
 
 .panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }

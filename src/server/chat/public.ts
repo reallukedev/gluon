@@ -1,10 +1,9 @@
 import "server-only";
-import { listApps } from "../docker/apps";
-import { peekChatInvite, prosodyFor } from "./prosody";
+import { chatApps, chatTarget, peekInvite } from "./backend";
 
 /**
- * The public invite page asks Prosody whether a token is live. Anyone can load that page, so
- * lookups are capped per address: a wrong guess costs a Prosody console call.
+ * The public invite page asks the chat server (Prosody or Quark) whether a token is live. Anyone
+ * can load that page, so lookups are capped per address: a wrong guess costs an admin console call.
  */
 
 type G = typeof globalThis & { __gluonChatInviteLookups?: Map<string, number[]> };
@@ -27,12 +26,10 @@ function allowed(ip: string): boolean {
 
 export async function findChatInvite(host: string, token: string, ip: string): Promise<{ host: string; expires: number; username: string | null; uri: string } | null> {
   if (!/^[a-z0-9.-]{1,253}$/.test(host) || !/^[\w-]{8,100}$/.test(token) || !allowed(ip)) return null;
-  const apps = await listApps().catch(() => []);
-  for (const a of apps) {
-    if (!a.containers.some((c) => c.state === "running" && /(^|\/)(prosody|prosodyim)\/|(^|\/)prosody(:|$)/i.test(c.image))) continue;
+  for (const { app } of await chatApps({ running: true })) {
     try {
-      const t = await prosodyFor(a.id);
-      const hit = await peekChatInvite(t, { host, token });
+      const t = await chatTarget(app.id);
+      const hit = await peekInvite(t, { host, token });
       if (hit) return { host, ...hit };
     } catch {
       /* this server doesn't host that domain, or isn't answering */

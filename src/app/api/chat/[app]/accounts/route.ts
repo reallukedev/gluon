@@ -2,7 +2,7 @@ import { z } from "zod";
 import { route } from "@/server/api";
 import { param } from "@/app/api/docker/params";
 import { audit } from "@/server/audit";
-import { createAccount, USERNAME_RE } from "@/server/chat/prosody";
+import { createAccount, USERNAME_RE } from "@/server/chat/backend";
 import { newPassword, targetAndHost } from "@/server/chat/service";
 
 const body = z.object({

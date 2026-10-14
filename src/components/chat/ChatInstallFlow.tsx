@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import type { JobEvent } from "@/lib/builder-types";
-import type { HistoryKeep, SignUp } from "@/lib/chat-types";
+import { alternatePortNotes, type QuarkPorts } from "@/lib/chat-ports";
+import { CHAT_SERVER_NAME, type ChatServerKind, type HistoryKeep, type SignUp } from "@/lib/chat-types";
 import { api, ApiError, streamPost, useApi } from "@/lib/client/api";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -33,8 +34,12 @@ const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 
 interface Plan {
-  existing: { id: string; name: string }[];
+  existing: { id: string; name: string; server: ChatServerKind }[];
   conflicts: string[];
+  /** Quark only: the host ports it will publish. */
+  ports: QuarkPorts | null;
+  /** Something holds the standard chat ports, so Quark gets the alternate set. */
+  alternatePorts: boolean;
   baseDomain: string | null;
   network: boolean;
   taken: string[];
@@ -47,13 +52,22 @@ interface Done {
   notes: string[];
 }
 
+const SERVER_DESC: Record<ChatServerKind, string> = {
+  quark: "One app that does everything, calls included. Settings you change here apply straight away, without bumping anyone off.",
+  prosody: "The long-standing choice. A few settings restart it, and calls between homes need a second app Gluon installs for you.",
+};
+
 /**
- * Install Prosody the way Gluon manages it: pick the chat domain and your own account, choose the
- * features chat apps expect, then Gluon installs it, publishes the domain on Network (so Caddy gets
- * a certificate Gluon copies in) and hands over the first admin's sign-in.
+ * Install a chat server the way Gluon manages it: Quark (the default) or Prosody. Pick the chat
+ * domain and your own account, choose the features chat apps expect, then Gluon installs it,
+ * publishes the domain on Network (so Caddy gets a certificate Gluon copies in) and hands over the
+ * first admin's sign-in.
  */
 export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { data: plan } = useApi<Plan>(open ? "/api/chat/install" : null);
+  const [server, setServer] = React.useState<ChatServerKind>("quark");
+  // The port check depends on the server: Quark also needs the call relay's ports.
+  const { data: plan } = useApi<Plan>(open ? `/api/chat/install?server=${server}` : null);
+  const name = CHAT_SERVER_NAME[server];
   const [step, setStep] = React.useState<Step>("domain");
   const [domain, setDomain] = React.useState("");
   const [username, setUsername] = React.useState("");
@@ -75,6 +89,7 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
   React.useEffect(() => {
     if (!open) return;
     setStep("domain");
+    setServer("quark");
     setUsername("");
     setErrors({});
     setFailure(null);
@@ -88,7 +103,7 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
   React.useEffect(() => () => abort.current?.abort(), []);
 
   const d = domain.trim().toLowerCase().replace(/\.$/, "");
-  const body = { domain: d, username: username.trim().toLowerCase(), signUp, history, groups, files, push };
+  const body = { server, domain: d, username: username.trim().toLowerCase(), signUp, history, groups, files, push };
 
   function check(at: Step): boolean {
     const e: Record<string, string> = {};
@@ -124,7 +139,7 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
         if (!ok) throw new Error("The install didn't finish. The steps above say where it stopped.");
         setInstalled(draftId);
       }
-      setJob((v) => ({ ...v, result: { ok: true, message: "Prosody is running. Setting up your account and the chat domain…" } }));
+      setJob((v) => ({ ...v, result: { ok: true, message: `${name} is running. Setting up your account and the chat domain…` } }));
       const r = await api.post<Done>("/api/chat/install/finish", { ...body, draftId });
       setDone(r);
       setStep("ready");
@@ -140,6 +155,8 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
   }
 
   const blocked = plan && plan.conflicts.length > 0;
+  // Quark beside another chat server: moved ports, which need SRV records and their own forwards.
+  const moved = server === "quark" && plan?.alternatePorts && plan.ports ? alternatePortNotes(d || "chat.example.com", plan.ports) : null;
   const idx = STEPS.findIndex((x) => x.key === step);
   const next = () => {
     if (step === "domain" && check("domain")) setStep("you");
@@ -153,7 +170,7 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
       onOpenChange={(o) => !running && onOpenChange(o)}
       size="wide"
       title={step === "ready" ? "Your chat server is ready" : "Set up a chat server"}
-      description={step === "ready" ? undefined : "Prosody, an XMPP server: private chat that works with Monal, Conversations, Gajim and other apps."}
+      description={step === "ready" ? undefined : "Private chat on your own server that works with Monal, Conversations, Gajim and other XMPP apps."}
       footer={
         step === "ready" && done ? (
           <>
@@ -220,11 +237,39 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
               next();
             }}
           >
+            <div className={s.settings}>
+              <div className={s.setting}>
+                <div className={s.settingText}>
+                  <span className={s.settingTitle}>Chat server</span>
+                  <p className={s.settingDesc}>{SERVER_DESC[server]}</p>
+                </div>
+                <div className={s.signUp}>
+                  <Segmented
+                    aria-label="Chat server"
+                    value={server}
+                    onChange={setServer}
+                    options={[
+                      { value: "quark", label: "Quark (recommended)" },
+                      { value: "prosody", label: "Prosody" },
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
             <Field label="Chat domain" error={errors.domain} description={`Everyone's address ends in it, like you@${d || "chat.example.com"}. It can't change later without moving every account.`}>
               <Input mono value={domain} onChange={(e) => setDomain(e.target.value.replace(/\s/g, ""))} placeholder="chat.example.com" spellCheck={false} autoCapitalize="off" autoFocus />
             </Field>
+            {moved && (
+              <Notice tone="attention" title="Quark gets its own ports">
+                {moved.join(" ")}
+              </Notice>
+            )}
             <p className={s.hint}>
-              {plan?.network
+              {moved
+                ? plan?.network
+                  ? `Gluon publishes it on Network and keeps its certificate current. It also needs a DNS record pointing at your home (the *.${plan.baseDomain} wildcard covers names under it).`
+                  : "Point the domain's DNS at your home as well."
+                : plan?.network
                 ? `Gluon publishes it on Network, keeps its certificate current, and checks chat apps can reach it. It needs a DNS record pointing at your home (the *.${plan.baseDomain} wildcard covers names under it), and your router has to forward ports 5222 and 5269 to this server.`
                 : "Point the domain's DNS at your home and forward ports 5222 and 5269 to this server."}
             </p>
@@ -294,9 +339,9 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
 
         {step === "install" && (
           <>
-            <JobProgress view={job} stages={JOB_STAGES} running={running} label="Installing Prosody" closeNote="Keep this open: once Prosody is running, Gluon sets up your account and the chat domain." />
+            <JobProgress view={job} stages={JOB_STAGES} running={running} label={`Installing ${name}`} closeNote={`Keep this open: once ${name} is running, Gluon sets up your account and the chat domain.`} />
             {failure && (
-              <Notice tone="fault" title={installed ? "Prosody is installed, but setting it up stopped" : "The chat server wasn't set up"}>
+              <Notice tone="fault" title={installed ? `${name} is installed, but setting it up stopped` : "The chat server wasn't set up"}>
                 {failure}
                 {installed ? " Try the setup again to finish; it picks up where it stopped." : ""}
               </Notice>
@@ -307,8 +352,16 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
         {step === "ready" && done && (
           <>
             <Credentials appId={done.appId} jid={done.jid} password={done.password} />
-            {done.routeAdded && <p className={s.hint}>{d} is on Network now. Caddy gets its certificate within a minute or two, and Gluon copies it into Prosody.</p>}
-            <p className={s.hint}>For voice and video calls between homes and on mobile data, set up calls on the Chat server tab.</p>
+            {done.routeAdded && (
+              <p className={s.hint}>
+                {d} is on Network now. Caddy gets its certificate within a minute or two, and Gluon copies it into {name}.
+              </p>
+            )}
+            <p className={s.hint}>
+              {server === "quark"
+                ? "For voice and video calls between homes and on mobile data, turn on calls on the Chat server tab. Quark has the relay built in."
+                : "For voice and video calls between homes and on mobile data, set up calls on the Chat server tab."}
+            </p>
             {done.notes.map((n) => (
               <Notice key={n} tone="attention">
                 {n}

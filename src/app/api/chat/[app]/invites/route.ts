@@ -3,7 +3,7 @@ import { route } from "@/server/api";
 import { param } from "@/app/api/docker/params";
 import { AppError } from "@/server/errors";
 import { audit } from "@/server/audit";
-import { createInvite, revokeInvite, USERNAME_RE } from "@/server/chat/prosody";
+import { createInvite, revokeInvite, USERNAME_RE } from "@/server/chat/backend";
 import { targetAndHost } from "@/server/chat/service";
 
 const post = z.object({

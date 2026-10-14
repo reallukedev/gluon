@@ -5,6 +5,8 @@ const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 
 /** What the chat server install flow sends. */
 export const installBody = z.object({
+  /** Quark unless the person picks Prosody. */
+  server: z.enum(["quark", "prosody"]).default("quark"),
   domain: z.string().trim().toLowerCase().regex(DOMAIN_RE, "Enter a domain like chat.example.com."),
   username: z.string().trim().toLowerCase().regex(USERNAME_RE, "Use lowercase letters, numbers, dots, dashes or underscores."),
   signUp: z.enum(["closed", "invite", "open"]).default("invite"),
@@ -15,6 +17,7 @@ export const installBody = z.object({
 });
 
 export const toInstall = (b: z.infer<typeof installBody>) => ({
+  server: b.server,
   domain: b.domain,
   username: b.username,
   settings: installSettings(b.domain, {

@@ -1,5 +1,5 @@
 import "server-only";
-import { openSignUp } from "../chat/prosody";
+import { openSignUp } from "../chat/backend";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { tryReadConfig, caddyRunning, isRedirect, httpsMode, XMPP_C2S_PORT, XMPP_S2S_PORT, type RoutesConfig, type SubdomainRoute } from "../caddy/routes";
@@ -183,7 +183,7 @@ async function chatStatus(r: ChatRoute, certDays: number, directTlsPort: number 
       c2s: c2sPort,
       s2s: s2s ? { port: s2s.port, reachable: s2s.reachable, ms: s2s.ms, error: s2s.error, tls: s2s.tls } : null,
       web,
-      // Gluon's own Prosody knows its sign-up rule; the probe only sees that registration exists.
+      // Gluon's own Prosody or Quark knows its sign-up rule; the probe only sees that registration exists.
       openRegistration: openRegistration ? ((await openSignUp(r.app, r.host)) ?? openRegistration) : openRegistration,
       certSync: x.cert_sync && (httpsMode(r) === "auto" || httpsMode(r) === "own") ? (certSyncState(r.id) ?? { container: x.cert_sync.container, checkedAt: null, copiedAt: null, ok: true, message: "Gluon checks the certificate shortly after start-up." }) : null,
       reach: null,
