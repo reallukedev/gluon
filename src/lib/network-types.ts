@@ -312,8 +312,9 @@ export interface VoiceStatus {
  * same: the public address leads to this server (verified by certificate or protocol reply).
  * other: something answers on the public address, but not this server.
  * none: nothing answers there.
+ * unconfirmed: nothing answered through the router, and the check from the internet failed, so it's unknown.
  */
-export type ReachOutcome = "same" | "other" | "none";
+export type ReachOutcome = "same" | "other" | "none" | "unconfirmed";
 
 export interface PortReach {
   port: number;

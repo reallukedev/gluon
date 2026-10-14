@@ -64,4 +64,18 @@ describe("can people outside reach the chat and voice ports", () => {
     const r = reachVerdict({ ...base, ports: [c2s("same"), s2s("same")], controls: ["same"] });
     expect(r).toMatchObject({ state: "ok", summary: "People outside reach ports 5222 and 5269 through your router." });
   });
+
+  test("when the outside check fails it says so, rather than blaming the router", () => {
+    const r = reachVerdict({ ...base, ports: [c2s("unconfirmed"), s2s("unconfirmed")], controls: ["same"] });
+    expect(r.state).toBe("unknown");
+    expect(r.ports.map((p) => p.verdict)).toEqual(["unknown", "unknown"]);
+    expect(r.ports[0]!.message).toBe("Couldn't check TCP port 5222 from outside. Try it from a phone off Wi-Fi.");
+    expect(r.summary).toBe("Couldn't check ports 5222 and 5269 from outside. Try them from a phone off Wi-Fi.");
+  });
+
+  test("a port that's closed from outside too is still the router's", () => {
+    const r = reachVerdict({ ...base, ports: [c2s("same"), s2s("unconfirmed"), { port: 5223, proto: "tcp", label: "Chat apps sign in (direct TLS)", primary: false, lan: true, outside: "none" }], controls: ["same"] });
+    expect(r.state).toBe("blocked");
+    expect(r.ports.map((p) => p.verdict)).toEqual(["reachable", "unknown", "not-forwarded"]);
+  });
 });

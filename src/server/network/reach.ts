@@ -4,7 +4,8 @@ import { probeDirectTls, mumblePing } from "./voice-probe";
 import { CADDY_HOST, CADDY_PORT, tcpConnect } from "./probes";
 import { defaultGateways } from "../diagnostics/checkup/probes";
 import { ipAddr } from "../diagnostics/interfaces";
-import type { MumblePing, ReachOutcome } from "@/lib/network-types";
+import { confirmFromOutside, maxAgeOf, portcheckerIo, targetKey, type OutsideCache, type PortChecker, type ReachTarget } from "./reach-outside";
+import type { ReachOutcome } from "@/lib/network-types";
 
 /**
  * Connecting to this network's public address from inside, through the router, to see whether
@@ -18,16 +19,7 @@ import type { MumblePing, ReachOutcome } from "@/lib/network-types";
 export const REACH_PROBING = (process.env.GLUON_REACH_PROBE ?? (process.platform === "linux" ? "on" : "off")) === "on";
 const TTL_MS = 5 * 60_000;
 
-export type ReachTarget =
-  | { kind: "xmpp-client" | "xmpp-server"; port: number; domain: string; lanFingerprint: string | null }
-  | { kind: "tls"; port: number; domain: string; lanFingerprint: string | null }
-  /** Mumble's TCP port: a bare connect, since HTTP or TLS there counts towards its ban. */
-  | { kind: "tcp"; port: number }
-  | { kind: "mumble-udp"; port: number; lan: MumblePing };
-
-export const targetKey = (t: ReachTarget) => `${t.kind}:${t.port}:${"domain" in t ? t.domain : ""}`;
-// Mumble bans an address after 10 TCP connections in 2 minutes; one every 10 minutes is far below that.
-const ttlOf = (t: ReachTarget) => (t.kind === "tcp" ? 10 * 60_000 : TTL_MS);
+export { targetKey, type ReachTarget } from "./reach-outside";
 
 const sameCert = (lan: string | null, outside: string | null | undefined): ReachOutcome => (!lan || !outside ? "same" : lan === outside ? "same" : "other");
 
@@ -50,26 +42,27 @@ async function outsideOf(ip: string, t: ReachTarget): Promise<ReachOutcome> {
   return sameCert(t.lanFingerprint, r.tls?.fingerprint);
 }
 
-type G = typeof globalThis & { __gluonReach?: Map<string, { at: number; value: ReachOutcome }>; __gluonLanSide?: { at: number; value: LanSide } };
+type G = typeof globalThis & { __gluonReach?: Map<string, { at: number; value: ReachOutcome }>; __gluonReachOutside?: OutsideCache; __gluonLanSide?: { at: number; value: LanSide } };
 const g = globalThis as G;
 const cache = () => (g.__gluonReach ??= new Map());
 
-/** What each target does on the public address, cached a few minutes per address and port. */
-export async function outsideOutcomes(ip: string, targets: ReachTarget[], force = false): Promise<Map<string, ReachOutcome>> {
+/**
+ * What each target does on the public address, cached a few minutes per address and port. TCP ports
+ * that don't answer through the router are then checked once more from the internet (reach-outside.ts).
+ */
+export async function outsideOutcomes(ip: string, targets: ReachTarget[], force = false, checker: PortChecker = portcheckerIo): Promise<Map<string, ReachOutcome>> {
   const out = new Map<string, ReachOutcome>();
   await Promise.all(
     targets.map(async (t) => {
       const key = `${ip}|${targetKey(t)}`;
       const hit = cache().get(key);
-      // "Check now" still respects Mumble's limit; everything else may run again after a minute.
-      const maxAge = force ? (t.kind === "tcp" ? ttlOf(t) : 60_000) : ttlOf(t);
-      if (hit && Date.now() - hit.at < maxAge) return out.set(targetKey(t), hit.value);
+      if (hit && Date.now() - hit.at < maxAgeOf(t, force)) return out.set(targetKey(t), hit.value);
       const value = await outsideOf(ip, t).catch((): ReachOutcome => "none");
       cache().set(key, { at: Date.now(), value });
       out.set(targetKey(t), value);
     }),
   );
-  return out;
+  return confirmFromOutside(ip, targets, out, { checker, cache: (g.__gluonReachOutside ??= new Map()), force });
 }
 
 /** The web port as a control: does Caddy answer on the public address with the same certificate? */

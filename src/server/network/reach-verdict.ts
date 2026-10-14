@@ -7,6 +7,7 @@ import type { PortReach, PublicReach, ReachOutcome } from "@/lib/network-types";
  * A port that answers on the LAN but not on the public address only proves the router doesn't
  * forward it when some other port on that address does get through to this server. If nothing
  * answers at all, the router may simply not loop traffic back inside, so Gluon can't tell.
+ * TCP ports that don't answer are also checked from the internet; "unconfirmed" means that check failed.
  */
 
 export interface ReachProbe {
@@ -59,6 +60,7 @@ export function reachVerdict(input: ReachInput): PublicReach {
     if (p.outside === "other") {
       return { ...p, verdict: "elsewhere", message: `Something other than this server answers on ${P(p)} port ${p.port} at ${publicIp}. Your router probably forwards it to another device; point it at ${where} instead.` };
     }
+    if (p.outside === "unconfirmed") return { ...p, verdict: "unknown", message: `Couldn't check ${P(p)} port ${p.port} from outside. Try it from a phone off Wi-Fi.` };
     if (hairpin) {
       return {
         ...p,
@@ -83,6 +85,10 @@ export function reachVerdict(input: ReachInput): PublicReach {
   } else if (live.length && live.every((p) => p.verdict === "reachable")) {
     state = "ok";
     summary = `People outside reach ${portList(live)} through your router.`;
+  } else if (live.some((p) => p.outside === "unconfirmed")) {
+    state = "unknown";
+    const unsure = live.filter((p) => p.outside === "unconfirmed");
+    summary = `Couldn't check ${portList(unsure)} from outside. Try ${unsure.length === 1 ? "it" : "them"} from a phone off Wi-Fi.`;
   } else {
     state = "unknown";
     summary = live.find((p) => p.verdict === "unknown")?.message ?? "Nothing to check until the server answers on this machine.";
