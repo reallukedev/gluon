@@ -71,8 +71,8 @@ export function Jid({ jid }: { jid: string }) {
 /** What someone needs to sign in: address, password, a code to scan, and which app to get. Shown once. */
 export function Credentials({ appId, jid, password }: { appId: string; jid: string; password: string | null }) {
   const message = password
-    ? `Your chat account is ready.\nAddress: ${jid}\nPassword: ${password}\nUse any XMPP app: Monal on iPhone, Conversations on Android, Gajim on a computer.`
-    : `Your chat address is ${jid}. Use any XMPP app: Monal on iPhone, Conversations on Android, Gajim on a computer.`;
+    ? `Your chat account is ready\n\nAddress: ${jid}\nPassword: ${password}\n\nUse any XMPP app`
+    : `Your chat account is ready\n\nAddress: ${jid}\n\nUse any XMPP app`;
   return (
     <div className={s.card}>
       <div className={s.qrCol}>
