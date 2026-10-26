@@ -283,7 +283,7 @@ async function build(force: boolean): Promise<ExposureReport> {
       flags.push({
         id: `exposure.unknown:${x.routeId}`,
         severity: "info",
-        title: `Gluon can't tell whether ${x.name} has a login`,
+        title: `Can't tell whether ${x.name} has a login`,
         detail: `${x.login.evidence ?? ""} If you know, mark it in the app's settings so the audit is accurate.`.trim(),
         subject: x.routeId,
         href: x.app ? `/apps/${encodeURIComponent(x.app.appId)}?tab=settings` : `/network?route=${encodeURIComponent(x.routeId)}`,

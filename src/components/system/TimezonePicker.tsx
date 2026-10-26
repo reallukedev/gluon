@@ -19,7 +19,7 @@ export function TimezonePicker({ value, onChange, disabled }: { value: string | 
   if (error || zones.length === 0) {
     return (
       <span className={s.sub}>
-        <span className="mono">{value ?? "Unknown"}</span> · the list of timezones couldn't be loaded.
+        <span className="mono">{value ?? "Not set"}</span> · can't be changed from here.
       </span>
     );
   }

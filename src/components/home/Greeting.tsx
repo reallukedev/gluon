@@ -10,11 +10,16 @@ function partOfDay(h: number) {
   return "Good evening";
 }
 
+function hourIn(timeZone: string | undefined) {
+  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone }).format(new Date()));
+}
+
 export function Greeting() {
   const { prefs, viewer, timeZone, serverName } = usePrefs();
-  const [hour, setHour] = React.useState<number | null>(null);
+  // With the time zone known (it rides in a cookie), the server already renders the right greeting, so nothing swaps in.
+  const [hour, setHour] = React.useState<number | null>(() => (timeZone ? hourIn(timeZone) : null));
   React.useEffect(() => {
-    const read = () => setHour(Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone }).format(new Date())));
+    const read = () => setHour(hourIn(timeZone));
     read();
     const t = setInterval(read, 60_000);
     return () => clearInterval(t);

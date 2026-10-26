@@ -46,7 +46,7 @@ export function IconPicker({ value, name, onChange, suggestions = [] }: { value:
       if (data.length > MAX_ICON_BYTES * 1.37) return setError("That image stays too large after scaling. Try a simpler one.");
       onChange(data);
     } catch {
-      setError("Gluon couldn't read that image.");
+      setError("Couldn't read that image. Try another file.");
     } finally {
       setBusy(false);
       if (file.current) file.current.value = "";
@@ -113,7 +113,7 @@ export function IconPicker({ value, name, onChange, suggestions = [] }: { value:
             {error}
           </p>
         ) : (
-          <p className={s.hint}>{value ? (value.startsWith("data:") ? "Kept inside the app, so it shows up even offline." : "Umbrel loads it from that address.") : "Without one, Umbrel shows the app's first letter."}</p>
+          <p className={s.hint}>{value ? (value.startsWith("data:") ? "Kept inside the app, so it shows offline too." : "Loaded from that address.") : "Without one, the app's first letters show."}</p>
         )}
       </div>
     </div>

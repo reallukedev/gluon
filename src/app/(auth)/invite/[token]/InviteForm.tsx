@@ -75,7 +75,7 @@ export function InviteForm({ token, displayName, role, serverName, mustEnrol, re
       <div className={`${s.form} appear`} data-wide="">
         <FlowSteps steps={ENROL_STEPS} current="codes" label="Joining as an admin" />
         <h2>Save your recovery codes</h2>
-        <p className={s.lede}>Two-step sign-in is on. If you ever lose your phone, one of these gets you in instead of a code.</p>
+        <p className={s.lede}>Two-step sign-in is on. If you lose your phone, one of these gets you in.</p>
         <RecoveryCodes codes={codes} username={f.username} serverName={serverName} />
         <Button variant="primary" size="lg" block onClick={finish}>
           I've saved them, continue
@@ -90,7 +90,7 @@ export function InviteForm({ token, displayName, role, serverName, mustEnrol, re
         <FlowSteps steps={ENROL_STEPS} current="enrol" label="Joining as an admin" />
         <h2>Link your phone</h2>
         <p className={s.lede}>
-          Your account is ready. Because you're joining as an admin from outside home, Gluon asks for a code from your phone each time you sign in from away. Set that up now to finish.
+          Your account is ready. Admins signing in from away need a code from their phone, so link it now to finish.
         </p>
         <TwoStepSetup
           begin={begin}
@@ -111,15 +111,13 @@ export function InviteForm({ token, displayName, role, serverName, mustEnrol, re
       {mustEnrol && <FlowSteps steps={ENROL_STEPS} current="account" label="Joining as an admin" />}
       <h2>{displayName ? `Welcome, ${displayName}` : `Join ${serverName}`}</h2>
       <p className={s.lede}>
-        {role === "admin"
-          ? "You've been invited to help run this server. Choose a username and password."
-          : "You've been invited to use the apps on this server. Choose a username and password to get started."}
-        {mustEnrol && " You'll also link an authenticator app, since you're joining as an admin from outside home."}
+        {role === "admin" ? `You've been invited to help run ${serverName}.` : `You've been invited to use the apps on ${serverName}.`}
+        {mustEnrol && " Admins joining from away also link an authenticator app."}
       </p>
       <Field label="Your name" error={err("displayName")}>
         <Input value={f.displayName} onChange={set("displayName")} autoComplete="name" autoFocus={!displayName} maxLength={60} />
       </Field>
-      <Field label="Username" error={err("username")} description="What you'll type to sign in.">
+      <Field label="Username" error={err("username")} description="What you'll sign in with.">
         <Input value={f.username} onChange={set("username")} autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus={!!displayName} maxLength={32} />
       </Field>
       <div className={s.passwordPair}>

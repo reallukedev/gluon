@@ -3,7 +3,8 @@ import * as React from "react";
 import { mutate as mutateGlobal } from "swr";
 import type { LeftoverT, NeedStateT, RouterStatus } from "@/lib/router-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
-import { Button, LinkButton } from "@/components/ui/Button";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { Dialog, useConfirm } from "@/components/ui/Dialog";
 import { Field, Input } from "@/components/ui/Field";
@@ -95,7 +96,7 @@ export function PortForwarding({ onRouterPage }: { onRouterPage?: boolean } = {}
     });
 
   const missing = data?.needs.filter((n) => n.status === "missing") ?? [];
-  const router = data?.model ? `${data.model}${data.gateway ? ` at ${data.gateway}` : ""}` : data?.gateway ? `Router at ${data.gateway}` : null;
+  const router = data?.model ?? (data?.gateway ? `Router at ${data.gateway}` : null);
   const server = data?.server.name ?? "this server";
 
   return (
@@ -108,7 +109,13 @@ export function PortForwarding({ onRouterPage }: { onRouterPage?: boolean } = {}
             Forward {missing.length === 1 ? "the missing port" : `${missing.length} missing`}
           </Button>
         ) : router ? (
-          <span className={s.muted}>{router}</span>
+          !onRouterPage && data?.gateway ? (
+            <Link href="/network/router" className={s.routerLink} title="Open the router page">
+              {router}
+            </Link>
+          ) : (
+            <span className={s.muted}>{router}</span>
+          )
         ) : undefined
       }
       flush
@@ -116,7 +123,7 @@ export function PortForwarding({ onRouterPage }: { onRouterPage?: boolean } = {}
       {!data ? (
         error ? (
           <div className={s.pad}>
-            <Notice tone="fault" title="Gluon couldn't check port forwarding">
+            <Notice tone="fault" title="Couldn't check port forwarding">
               {error.message}
             </Notice>
           </div>
@@ -125,52 +132,46 @@ export function PortForwarding({ onRouterPage }: { onRouterPage?: boolean } = {}
         )
       ) : (
         <>
-          <div className={s.lead}>
-            {data.connected ? (
-              <p>
-                {missing.length === 0 && !data.error
-                  ? `Everything your apps need from the internet reaches ${server}${router ? ` through your ${data.model}` : ""}.`
-                  : `Gluon reads your ${data.model} and adds what's missing, pointing it at ${server}${data.server.ip ? ` (${data.server.ip})` : ""}.`}
-              </p>
-            ) : data.supported ? (
-              <>
-                <p>
-                  Gluon can set these up on your {data.model}. It needs the router&rsquo;s Device Access Code, printed on its label, once.
-                </p>
-                <Button size="sm" onClick={() => setConnecting(true)}>
-                  Connect with the access code
-                </Button>
-              </>
-            ) : (
-              <p>
-                Forward these on your router to {data.server.ip ?? "this server"}. {data.gateway ? `Its settings are usually at http://${data.gateway}.` : ""} Gluon can do it for you on AT&amp;T BGW gateways.
-              </p>
+          <div className={s.lead} data-last={data.needs.length === 0 && !data.leftovers.length && !data.connected ? "" : undefined}>
+            <p>
+              {data.needs.length === 0
+                ? "Nothing on this server needs a port forwarded yet."
+                : data.connected
+                  ? missing.length === 0 && !data.error
+                    ? `Everything your apps need from the internet reaches ${server}.`
+                    : `Gluon adds what's missing on your ${data.model}, pointing it at ${server}${data.server.ip ? ` (${data.server.ip})` : ""}.`
+                  : data.supported
+                    ? `Gluon can forward these for you with the Device Access Code on the router's label.`
+                    : `Forward these on your router to ${data.server.ip ?? "this server"}${data.gateway ? `, usually at http://${data.gateway}` : ""}.`}
+            </p>
+            {!data.connected && data.supported && (
+              <Button size="sm" onClick={() => setConnecting(true)}>
+                Connect router
+              </Button>
             )}
           </div>
           {data.codeRejected ? (
             <div className={s.pad}>
               <Notice
                 tone="attention"
-                title="The router no longer accepts the access code Gluon has"
+                title="The router no longer accepts the access code"
                 action={
                   <Button size="sm" onClick={() => setConnecting(true)}>
                     Enter it again
                   </Button>
                 }
               >
-                Gluon stopped signing in with it, so the router doesn&rsquo;t lock sign-ins out. Port forwarding stays as it is until you enter the code again.
+                Gluon stopped using it so the router doesn&rsquo;t lock sign-ins. Forwarding stays as it is until you enter the code again.
               </Notice>
             </div>
           ) : data.error ? (
             <div className={s.pad}>
-              <Notice tone="attention" title="Gluon couldn't read your router">
+              <Notice tone="attention" title="Couldn't read your router">
                 {data.error}
               </Notice>
             </div>
           ) : null}
-          {data.needs.length === 0 ? (
-            <p className={`${s.pad} ${s.muted}`}>Nothing on this server needs a port forwarded yet.</p>
-          ) : (
+          {data.needs.length === 0 ? null : (
             <ul className={s.list}>
               {data.needs.map((st) => (
                 <li key={st.need.key} className={s.row}>
@@ -226,18 +227,11 @@ export function PortForwarding({ onRouterPage }: { onRouterPage?: boolean } = {}
               </ul>
             </>
           )}
-          {(data.connected || (!onRouterPage && data.gateway)) && (
+          {data.connected && (
             <div className={s.foot}>
-              {!onRouterPage && data.gateway && (
-                <LinkButton href="/network/router" size="sm" variant="ghost">
-                  Open the router page
-                </LinkButton>
-              )}
-              {data.connected && (
-                <Button size="sm" variant="ghost" onClick={forget}>
-                  Remove the access code
-                </Button>
-              )}
+              <Button size="sm" variant="ghost" onClick={forget}>
+                Remove the access code
+              </Button>
             </div>
           )}
         </>
@@ -271,7 +265,7 @@ export function ConnectDialog({ open, onOpenChange, model, gateway, onConnected 
       toast.success(`Connected to your ${model}`);
       onOpenChange(false);
     } catch (e) {
-      if (!quiet(e)) setErr(e instanceof Error ? e.message : "Gluon couldn't sign in to the router.");
+      if (!quiet(e)) setErr(e instanceof Error ? e.message : "Couldn't sign in to the router.");
     } finally {
       setBusy(false);
     }
@@ -282,7 +276,7 @@ export function ConnectDialog({ open, onOpenChange, model, gateway, onConnected 
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       title="Connect your router"
-      description={`Gluon signs in to your ${model}${gateway ? ` at ${gateway}` : ""} the way your browser does, to forward ports and restart it when you ask.`}
+      description={`Gluon signs in to your ${model}${gateway ? ` at ${gateway}` : ""} like a browser would, to forward ports and restart it when you ask.`}
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
@@ -301,7 +295,7 @@ export function ConnectDialog({ open, onOpenChange, model, gateway, onConnected 
           if (code.trim()) void go();
         }}
       >
-        <Field label="Device Access Code" error={err} description="Printed on the label on the side of the router. Gluon saves it encrypted on this server, so you enter it once and nobody else who manages Gluon has to. It's only used to sign in to the router.">
+        <Field label="Device Access Code" error={err} description="On the label on the side of the router. Saved encrypted on this server and only used to sign in to the router.">
           <Input type="password" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" spellCheck={false} autoCapitalize="off" mono autoFocus maxLength={32} />
         </Field>
       </form>

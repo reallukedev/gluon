@@ -35,7 +35,7 @@ export function SecurityStep() {
     return (
       <>
         <StepHead title="Save your recovery codes">
-          <p>Two-step sign-in is on. If you ever lose your phone, one of these gets you in instead of a code.</p>
+          <p>Two-step sign-in is on. If you lose your phone, one of these gets you in.</p>
         </StepHead>
         <RecoveryCodes codes={codes} username={viewer.username} serverName={plan.serverName} />
         <Actions
@@ -56,14 +56,14 @@ export function SecurityStep() {
       <StepHead title="Reaching Gluon from outside">
         {publicAt ? (
           <p>
-            Gluon can be reached from the internet at <span className="mono">{publicAt}</span>. Anyone who finds that address gets a sign-in page, and right now your password is all that stands in the way.
+            Anyone who finds <span className="mono">{publicAt}</span> gets a sign-in page, and only your password stands in the way.
           </p>
         ) : (
-          <p>You&apos;re signed in over the internet right now, so Gluon can be reached from outside your home.</p>
+          <p>You&apos;re signed in over the internet, so Gluon can be reached from outside.</p>
         )}
         <p>
-          Two-step sign-in also asks for a code from an app on your phone, so a leaked password isn&apos;t enough.
-          {plan.requireMfaAway ? " Admins need it to sign in from outside home anyway, so setting it up now saves a surprise later." : ""}
+          Two-step sign-in adds a code from your phone, so a leaked password isn&apos;t enough.
+          {plan.requireMfaAway ? " Admins need it to sign in from away anyway." : ""}
         </p>
       </StepHead>
 
@@ -81,7 +81,7 @@ export function SecurityStep() {
           }}
         />
       ) : (
-        <p className={o.note}>It takes about a minute: scan a code with an authenticator app (1Password, Google Authenticator, Authy…), then type the six digits it shows.</p>
+        <p className={o.note}>About a minute: scan a code with an authenticator app like 1Password or Authy, then type the 6 digits.</p>
       )}
 
       <Actions

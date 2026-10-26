@@ -108,6 +108,11 @@ a.card:focus-visible .go { color: var(--ink); }
   .card[data-size="i"] .name { font-size: var(--text-sm); }
   /* 64px is too much for a third of a phone; the icon keeps its proportions at 52. */
   .card[data-size="i"] .icon > * { width: 52px !important; height: 52px !important; }
+  /* Rows share a phone's width two by two: a smaller icon and no arrow leave the name room. */
+  .card[data-size="c"] { padding: 0 10px 0 12px; }
+  .card[data-size="c"] .face { gap: 10px; }
+  .card[data-size="c"] .icon > * { width: 32px !important; height: 32px !important; }
+  .card[data-size="c"] .go { display: none; }
 }
 
 /* ---------------------------------------------------------------- preview (Collection / catalog) */

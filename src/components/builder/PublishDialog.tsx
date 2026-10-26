@@ -97,18 +97,18 @@ export function PublishDialog({ open, onOpenChange, detail, issues, target, stor
       </Button>
     );
   } else {
-    description = target === "umbrel" ? (installed ? "Gluon adds the new version to its store, then Umbrel updates the app." : "Gluon adds it to its store, then Umbrel installs it like any other app.") : "Gluon writes the app's files and starts it with Docker Compose.";
+    description = target === "umbrel" ? (installed ? "The new version goes into Gluon's store, then Umbrel updates the app." : "It goes into Gluon's store, then Umbrel installs it.") : "Writes the app's files and starts it with Docker Compose.";
     const facts: [React.ReactNode, React.ReactNode][] = [
       ["Version", <span key="v" className="mono">{detail.nextVersion}{detail.publishedVersion && <span className={s.muted}> (now {detail.publishedVersion})</span>}</span>],
       [target === "umbrel" ? "In Umbrel as" : "Folder", <span key="w" className="mono">{target === "umbrel" ? detail.plannedAppId ?? "…" : `${store?.composeRoot ?? ""}/${detail.appId ?? detail.spec.details.slug}`}</span>],
     ];
     if (webUrl) facts.push(["Opens at", <span key="u" className="mono">{webUrl.replace(/^http:\/\//, "")}</span>]);
-    if (building) facts.push(["Images", detail.github?.builtCommit ? <span key="b">Built from <span className="mono">{detail.github.builtCommit.slice(0, 7)}</span>{detail.github.latestCommit && detail.github.latestCommit !== detail.github.builtCommit ? "; newer commits exist" : ""}</span> : "Gluon builds them first (this can take a while)"]);
+    if (building) facts.push(["Images", detail.github?.builtCommit ? <span key="b">Built from <span className="mono">{detail.github.builtCommit.slice(0, 7)}</span>{detail.github.latestCommit && detail.github.latestCommit !== detail.github.builtCommit ? "; newer commits exist" : ""}</span> : "Built first, which can take a while"]);
     body = (
       <div className={s.stack}>
         {needsStore ? (
-          <Notice tone="attention" title="Gluon's store isn't in Umbrel yet" action={<Button size="sm" onClick={onSetUpStore}>Set up the store</Button>}>
-            Umbrel installs apps from app stores, so it needs to know about Gluon&apos;s once.
+          <Notice tone="attention" title="Add Gluon's store to Umbrel first" action={<Button size="sm" onClick={onSetUpStore}>Set up the store</Button>}>
+            Umbrel installs apps from stores. You do this once.
           </Notice>
         ) : null}
         {startError && <Notice tone="fault" title="That didn't start">{startError}</Notice>}

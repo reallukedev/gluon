@@ -70,10 +70,14 @@ export function Notifications() {
             <Skeleton height={40} />
           </div>
         ) : mine.length === 0 ? (
-          <Empty title={admin ? "No personal channels" : "Nowhere to reach you yet"} action={<Button onClick={() => edit(null)}>Add a way to reach you</Button>}>
-            {admin
-              ? "Server-wide channels (Settings → Alerts → Channels) are usually enough. Add one here for alerts only you should get, like your own phone."
-              : "Get a message on your phone (with the free ntfy app), by email or in your chat app when one of your apps stops working, and when someone replies to a problem you reported."}
+          <Empty title={admin ? "No channels of your own" : "Nowhere to reach you yet"} action={<Button onClick={() => edit(null)}>{admin ? "Add a channel" : "Add a way to reach you"}</Button>}>
+            {admin ? (
+              <>
+                For alerts only you should get, like your own phone. Shared channels are in <Link href={alertsHref("notifications")}>Alerts</Link>.
+              </>
+            ) : (
+              "Hear on your phone, by email or in chat when one of your apps stops working, or someone answers your report."
+            )}
           </Empty>
         ) : (
           <ChannelList channels={mine} onEdit={edit} onChange={refresh} />
@@ -103,15 +107,8 @@ export const defaults = (role: "admin" | "member", tz: string): Partial<Subscrip
 
 function WhatYouGet({ data, onChange }: { data: SubscriptionsResponse; onChange: () => void }) {
   const admin = data.role === "admin";
-  if (data.channels.length === 0) {
-    return admin ? (
-      <Panel title="What you're told">
-        <p className={s.hint}>
-          Add a channel first, here or in <Link href={alertsHref("notifications")}>Alerts → Channels</Link>. Then choose here what it sends you.
-        </p>
-      </Panel>
-    ) : null;
-  }
+  // Nothing to choose until there's a channel; the empty state below says where to add one.
+  if (data.channels.length === 0) return null;
   return (
     <Panel title={admin ? "What you're told" : "What you're told about"} flush>
       <ul className={s.subs} role="list">
@@ -262,7 +259,7 @@ function SubscriptionRow({
                 ]}
               />
               {preset === "problems" && (
-                <p className={s.hint}>Things that broke or need you, warnings about sign-ins, failed Gluon updates and household reports, and a message when each problem clears. This is the default.</p>
+                <p className={s.hint}>Breakages, things that need you, sign-in warnings, failed updates and household reports, plus an all-clear when each is fixed.</p>
               )}
               {preset === "all" && (
                 <p className={s.hint}>All of that, plus available and installed updates{data.digest.enabled ? ", the daily summary" : ""} and new chat accounts.</p>
@@ -354,7 +351,7 @@ function SubscriptionRow({
                   </div>
                 ))}
               {admin && draft.subjects !== "all" && (
-                <p className={s.hint}>Narrows problems and app updates. Problems that aren&apos;t about an app (disks, memory) stop coming; sign-in, Gluon and chat server messages still do.</p>
+                <p className={s.hint}>Disk and memory problems stop coming. Sign-in, Gluon and chat messages still do.</p>
               )}
             </div>
           )}
@@ -366,7 +363,7 @@ function SubscriptionRow({
           </div>
 
           {draft.quiet && (
-            <div className={s.group}>
+            <div className={`${s.group} ${s.reveal}`}>
               <div className={s.quiet}>
                 <span>From</span>
                 <Input type="time" className={`${s.time} num`} value={draft.quiet.from} onChange={(e) => e.target.value && set("quiet", { ...draft.quiet!, from: e.target.value })} aria-label="Quiet hours start" />
@@ -378,8 +375,7 @@ function SubscriptionRow({
               </Checkbox>
               <p className={s.hint}>
                 Times are in {tz.replace(/_/g, " ")}
-                {sub?.tz && sub.tz !== tz ? ` (saved as ${sub.tz.replace(/_/g, " ")}; saving updates it)` : ""}. Messages held overnight go out when quiet hours end, unless the problem has already cleared.
-                {admin ? " Updates and everything else wait too." : ""}
+                {sub?.tz && sub.tz !== tz ? ` (saved as ${sub.tz.replace(/_/g, " ")}; saving updates it)` : ""}. Held messages go out when quiet hours end, unless the problem has cleared.
               </p>
             </div>
           )}

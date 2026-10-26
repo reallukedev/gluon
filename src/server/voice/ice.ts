@@ -98,7 +98,7 @@ export function iceError(e: unknown, what = "That"): AppError {
   };
   const w = words[short];
   if (w) return new AppError(`voice_${short}`, w[0], w[1]);
-  if (isUnreachable(e)) return new AppError("voice_unreachable", "Gluon couldn't reach Mumble's admin connection. Check that the voice server is running.", 503);
+  if (isUnreachable(e)) return new AppError("voice_unreachable", "Couldn't reach Mumble's admin connection. Check that the voice server is running.", 503);
   if (short === "OperationNotExistException") return new AppError("voice_unsupported", "This version of Mumble doesn't support that.", 501);
   return new AppError("voice_error", `${what} didn't work (${short}).`, 502);
 }

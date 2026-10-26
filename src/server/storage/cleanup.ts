@@ -173,7 +173,7 @@ export async function cleanupPreview(): Promise<CleanupPreview> {
   const [journal, df, leftovers, dockerRoot] = await Promise.all([
     journalBytes(),
     dockerDf().catch(() => {
-      warnings.push("Gluon couldn't ask Docker how much space it uses.");
+      warnings.push("Couldn't ask Docker how much space it uses.");
       return null;
     }),
     findLeftovers().catch(() => []),

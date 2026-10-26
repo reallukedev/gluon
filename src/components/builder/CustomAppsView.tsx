@@ -32,14 +32,14 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
   if (!data) {
     return (
       <Page>
-        <PageHeader title="Apps" summary={error ? "The apps you made didn't load." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} actions={<NewAppButton variant="primary" />} />
+        <PageHeader title="Apps" summary={error ? "Couldn't load the apps you made." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} actions={<NewAppButton variant="primary" />} />
         <AppsSectionTabs current="custom" />
         {error ? (
-          <Notice tone="fault" title="Couldn't load your apps" action={<Button size="sm" loading={isLoading} onClick={() => void mutate()}>Try again</Button>}>
+          <Notice tone="fault" action={<Button size="sm" loading={isLoading} onClick={() => void mutate()}>Try again</Button>}>
             {error.message}
           </Notice>
         ) : (
-          <div className={s.table} aria-busy aria-label="Loading your apps">
+          <div className={s.table} aria-busy aria-label="Loading custom apps">
             {Array.from({ length: 3 }, (_, i) => (
               <div key={i} className={`${s.listRow} ${s.listRowStatic}`}>
                 <div className={s.appCell}>
@@ -69,8 +69,8 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
   const summary =
     apps.length === 0
       ? umbrel
-        ? "Make your own apps and install them in Umbrel like any other."
-        : "Make your own apps from images, compose files or repositories."
+        ? "Apps you make here install in Umbrel like any other."
+        : <>Apps you make here run with Docker Compose from <span className="mono">{store?.composeRoot}</span>.</>
       : [
           published.length === 1
             ? `You've published 1 app${runningCount ? `, running ${where}` : ", not running right now"}.`
@@ -109,7 +109,7 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
             action={
               <>
                 <LinkButton href="/apps/new?from=image" icon={<Box3dPoint />}>
-                  Docker image
+                  Image
                 </LinkButton>
                 <LinkButton href="/apps/new?from=run" icon={<Terminal />}>
                   docker run
@@ -118,18 +118,16 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
                   Compose file
                 </LinkButton>
                 <LinkButton href="/apps/new?from=github" icon={<Github />}>
-                  GitHub repository
+                  GitHub
                 </LinkButton>
               </>
             }
           >
-            {umbrel
-              ? "Package any Docker image, docker run command, compose file or GitHub project as an Umbrel app. Gluon hosts it in its own app store, so it installs, updates and uninstalls from Umbrel's dashboard, and shows up here and in Apps."
-              : "Package any Docker image, docker run command, compose file or GitHub project as an app Gluon runs with Docker Compose, with its data kept in one folder."}
+            Pick what to start from.
           </Empty>
         </Panel>
       ) : (
-        <div className={s.table} role="table" aria-label="Your apps">
+        <div className={s.table} role="table" aria-label="Custom apps">
           <div className={s.headRow} role="row">
             <span role="columnheader">App</span>
             <span role="columnheader">State</span>
@@ -230,27 +228,19 @@ function StoreNotice({ store, hasApps, hasPublished, onSetUp }: { store: StoreSt
     return (
       <>
         <Notice tone="fault" title="This version of Gluon can't host an app store">
-          Its image doesn&apos;t include git, which Umbrel needs to read the store and Gluon needs to build from GitHub. Update Gluon; apps you make are kept as drafts until then.
+          Its image has no git, which the store and GitHub builds need. Update Gluon; until then, apps you make stay drafts.
         </Notice>
         {gap}
       </>
     );
   }
-  if (store.platform !== "umbrel") {
-    return (
-      <>
-        <Notice title={store.platform === "casaos" ? "Gluon is working with CasaOS, not Umbrel" : "Gluon isn't working with Umbrel"}>
-          Apps you make run with Docker Compose in <span className="mono">{store.composeRoot}</span>, and show up in Apps like any other stack. If Umbrel runs here too, choose it under Settings › Server › Works with.
-        </Notice>
-        {gap}
-      </>
-    );
-  }
+  // Without Umbrel the summary says where apps run; there's nothing to set up.
+  if (store.platform !== "umbrel") return null;
   if (store.umbrel === "unreachable") {
     return (
       <>
         <Notice tone="fault" title="Umbrel isn't answering">
-          It may be restarting. Your apps&apos; states will show again when it&apos;s back; drafts can still be edited.
+          It may be restarting. Drafts can still be edited.
         </Notice>
         {gap}
       </>
@@ -275,7 +265,7 @@ function StoreNotice({ store, hasApps, hasPublished, onSetUp }: { store: StoreSt
           <div className={s.setupPanel}>
             <div className={s.setupText}>
               <h2>Umbrel installs apps from app stores</h2>
-              <p className={s.hint}>Gluon keeps a small private store for the apps you make, served from this server to Umbrel. Add it once, and every app you publish shows up in Umbrel&apos;s dashboard.</p>
+              <p className={s.hint}>Add Gluon&apos;s private store once, and every app you publish shows in Umbrel&apos;s dashboard.</p>
             </div>
             <Button onClick={onSetUp}>Add Gluon&apos;s store to Umbrel</Button>
           </div>

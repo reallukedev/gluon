@@ -41,7 +41,7 @@ export function DiskView() {
           key: "images",
           name: "Images",
           href: "/apps/images",
-          what: `${fmt.plural(data.images.count, "image")}, ${data.images.unused} not used by any container`,
+          what: `${fmt.plural(data.images.count, "image")} · ${data.images.unused} unused`,
           bytes: data.images.bytes,
           free: data.images.unusedBytes,
           freeWords: "at least",
@@ -51,7 +51,7 @@ export function DiskView() {
         {
           key: "buildcache",
           name: "Build cache",
-          what: data.buildCache.count ? `${fmt.plural(data.buildCache.count, "step")} of earlier builds, kept to make rebuilds faster` : "Nothing kept from builds",
+          what: data.buildCache.count ? `${fmt.plural(data.buildCache.count, "step")} kept to speed up rebuilds` : "Nothing kept from builds",
           bytes: data.buildCache.bytes,
           free: data.buildCache.reclaimable,
           freeWords: "about",
@@ -62,7 +62,7 @@ export function DiskView() {
           key: "volumes",
           name: "Volumes",
           href: "/apps/volumes",
-          what: `${fmt.plural(data.volumes.count, "volume")}, ${data.volumes.unused} not used by any container`,
+          what: `${fmt.plural(data.volumes.count, "volume")} · ${data.volumes.unused} unused`,
           bytes: data.volumes.bytes,
           free: data.volumes.unusedBytes,
           freeWords: "up to",
@@ -73,7 +73,7 @@ export function DiskView() {
           key: "containers",
           name: "Containers",
           href: "/apps",
-          what: `Changes ${fmt.plural(data.containers.count, "container")} made to their own files; ${data.containers.stopped} stopped`,
+          what: `Files written inside ${fmt.plural(data.containers.count, "container")} · ${data.containers.stopped} stopped`,
           bytes: data.containers.bytes,
           free: data.containers.stoppedBytes,
           freeWords: "up to",
@@ -87,7 +87,7 @@ export function DiskView() {
   const tight = pctFull !== null && pctFull >= 0.9;
 
   const summary = !data ? (
-    error ? "Gluon couldn't ask Docker how much space it uses." : "Measuring what Docker keeps on disk. This can take a moment."
+    error ? "Couldn't ask Docker how much space it uses." : "Measuring what Docker keeps on disk…"
   ) : (
     <>
       <b>
@@ -175,7 +175,7 @@ export function DiskView() {
                     total={data.fs?.size}
                     format={(v) => fmt.bytes(v)}
                     restLabel={data.fs ? "Free" : undefined}
-                    summary={data.fs ? `${fmt.bytes(data.fs.size - data.fs.free)} of ${fmt.bytes(data.fs.size)} in use` : `${fmt.bytes(data.total)} in all`}
+                    summary={data.fs ? `${fmt.bytes(data.fs.size - data.fs.free)} of ${fmt.bytes(data.fs.size)} in use` : " "}
                     segments={[
                       { key: "images", label: "Images", value: data.images.bytes, meta: fmt.plural(data.images.count, "image") },
                       { key: "buildcache", label: "Build cache", value: data.buildCache.bytes },
@@ -189,7 +189,7 @@ export function DiskView() {
             )}
           </Panel>
 
-          <Panel title="What could go" meta={data ? "Each cleanup shows exactly what it removes first" : undefined} flush>
+          <Panel title="What could go" meta={data ? "Each cleanup shows what it removes first" : undefined} flush>
             {!data ? (
               <ul className={s.kinds} aria-busy="true">
                 {[0, 1, 2, 3].map((i) => (
@@ -220,19 +220,21 @@ export function DiskView() {
                             <span>
                               {k.freeWords} {fmt.bytes(k.free)} could go
                             </span>
-                          ) : (
+                          ) : k.bytes > 0 ? (
                             <span>all in use</span>
-                          )}
+                          ) : null}
                         </span>
                         <span className={s.kindTrack} role="meter" aria-label={`${k.name}: share that could go`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
-                          {share < 1 && <span style={{ width: `${(1 - share) * 100}%` }} />}
+                          {k.bytes > 0 && share < 1 && <span style={{ width: `${(1 - share) * 100}%` }} />}
                           {share > 0 && <span data-free="" style={{ left: `${(1 - share) * 100}%`, width: `${share * 100}%` }} />}
                         </span>
                       </span>
                       <span className={s.kindAction}>
-                        <Button size="sm" disabled={k.free <= 0 && k.key !== "images"} onClick={() => setCleanup(k.key)}>
-                          {k.free > 0 ? `${k.action}…` : k.key === "images" ? "Check unused images…" : "Nothing to free"}
-                        </Button>
+                        {(k.free > 0 || k.key === "images") && (
+                          <Button size="sm" onClick={() => setCleanup(k.key)}>
+                            {k.free > 0 ? `${k.action}…` : "Check unused images…"}
+                          </Button>
+                        )}
                       </span>
                     </li>
                   );
@@ -248,7 +250,7 @@ export function DiskView() {
               <span>
                 <i data-free="" /> Could go
               </span>
-              <span>Image sizes count shared layers once. Removing an image frees its own layers; shared ones stay while another image needs them.</span>
+              <span>Layers shared between images count once.</span>
             </div>
           )}
         </div>

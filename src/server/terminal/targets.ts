@@ -29,7 +29,7 @@ export function hostAvailability(): { available: boolean; note: string | null } 
   if (devLocal()) {
     return hasPython() ? { available: true, note: "Development: this is the computer running Gluon." } : { available: false, note: "The server terminal needs Gluon to run in Docker (or Python 3 on this computer, for development)." };
   }
-  return selfContainerId() ? { available: true, note: null } : { available: false, note: "Gluon couldn't find its own container, so it can't open a terminal on the server. It needs to run in Docker with the host's process list (pid: host)." };
+  return selfContainerId() ? { available: true, note: null } : { available: false, note: "A terminal on the server needs Gluon's own container, and it can't be found. Run Gluon in Docker with the host's process list (pid: host)." };
 }
 
 export interface Resolved {

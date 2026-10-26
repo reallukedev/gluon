@@ -70,7 +70,7 @@ export function PublishDialog({ site, open, onOpenChange, changeAddress, beforeP
     if (custom && base && (host === base || underBase(host))) return { state: "unhealthy", text: `For names under ${base}, untick “Use my own domain”.` };
     if (taken) return { state: "unhealthy", text: `Already used by ${taken.name}.` };
     if (had && host === had.host) return { state: "running", text: "Its current address." };
-    return { state: "running", text: custom ? "Free." : "Free. The wildcard DNS record already covers it, so there's nothing to set up." };
+    return { state: "running", text: custom ? "Free." : "Free, and ready to use." };
   })();
   const scheme = editing ? (https.mode === "http" ? "http" : "https") : had?.https === "http" ? "http" : "https";
   const url = `${scheme}://${editing ? host || "…" : had!.host}`;
@@ -126,7 +126,7 @@ export function PublishDialog({ site, open, onOpenChange, changeAddress, beforeP
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       title={title}
-      description={site.state === "draft" ? "Choose where people will find it. You can change this later." : undefined}
+      description={site.state === "draft" ? "Where people will find it. You can change it later." : undefined}
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
@@ -140,7 +140,7 @@ export function PublishDialog({ site, open, onOpenChange, changeAddress, beforeP
     >
       <div className={s.body}>
         {site.addressesUnavailable && <Notice tone="fault">{site.addressesUnavailable}</Notice>}
-        {noIndex && <Notice tone="attention" title="There's no index.html at the top of the site">It&rsquo;s the page people see when they open the address. Make one, or rename your front page to index.html, then publish.</Notice>}
+        {noIndex && <Notice tone="attention" title="There's no index.html at the top of the site">It&rsquo;s the page visitors land on. Add one or rename your front page, then publish.</Notice>}
         {editing ? (
           <div className={s.address}>
             <Field label="Address" error={errors.host}>
@@ -191,9 +191,9 @@ export function PublishDialog({ site, open, onOpenChange, changeAddress, beforeP
         )}
         <p className={s.recap}>
           {replacing
-            ? `Copies the draft (${draft}) and serves it at ${url.replace(/^https:\/\//, "")} in place of the version ${live ? `published ${fmt.relative(live.createdAt)}` : "there now"}.`
-            : `Copies the draft (${draft}) and serves it at ${url.replace(/^https:\/\//, "")}.`}{" "}
-          Gluon keeps the last {SITE_LIMITS.versions} versions, so you can go back to one.
+            ? `Replaces the version ${live ? `published ${fmt.relative(live.createdAt)}` : "there now"} with the draft (${draft}).`
+            : `Puts the draft (${draft}) live.`}{" "}
+          The last {SITE_LIMITS.versions} versions are kept so you can go back.
         </p>
         {unsavedFile && <p className={s.recap}>Your changes to {unsavedFile} are saved first.</p>}
         {error && <Notice tone="fault">{error}</Notice>}

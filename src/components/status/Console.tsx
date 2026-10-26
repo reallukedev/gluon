@@ -22,6 +22,9 @@ const MARKS = [100, 50, 10, 1] as const;
 /** 0–100 % → 0–1 on a log scale (1% ≈ 0.15, 10% ≈ 0.52, 50% ≈ 0.85). */
 export const level = (pct: number) => Math.min(1, Math.max(0, Math.log10(1 + Math.max(0, pct)) / Math.log10(101)));
 
+/** The browser keeps 6 significant digits of a style percentage; round first so hydration matches. */
+const mark = (m: number) => `${Math.round(level(m) * 10_000) / 100}%`;
+
 interface Strip {
   id: string;
   name: string;
@@ -70,7 +73,7 @@ export function Console({ apps, findings }: { apps: StatusApp[]; findings: Findi
     <div className={c.desk}>
       <div className={c.scale} aria-hidden>
         {MARKS.map((m) => (
-          <span key={m} style={{ bottom: `${level(m) * 100}%` }}>
+          <span key={m} style={{ bottom: mark(m) }}>
             {m}
           </span>
         ))}
@@ -80,7 +83,7 @@ export function Console({ apps, findings }: { apps: StatusApp[]; findings: Findi
         <div className={c.track}>
           <span className={c.grads} aria-hidden>
             {MARKS.map((m) => (
-              <i key={m} style={{ bottom: `${level(m) * 100}%` }} />
+              <i key={m} style={{ bottom: mark(m) }} />
             ))}
             <i data-floor="" style={{ bottom: 0 }} />
           </span>

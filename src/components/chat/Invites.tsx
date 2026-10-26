@@ -52,7 +52,7 @@ export function Invites({ appId, host, onChanged, onInvite }: { appId: string; h
     <Panel title="Invite links" meta={live.length ? <span className="num">{live.length}</span> : undefined} flush>
       {live.length === 0 ? (
         <div className={s.empty}>
-          <p>An invite link sets up an account right in someone&rsquo;s chat app. They pick their own name and password, so you never handle it.</p>
+          <p>An invite link sets up an account in someone&rsquo;s chat app. They pick their own name and password.</p>
           <Button onClick={onInvite}>Make an invite link</Button>
         </div>
       ) : (
@@ -108,7 +108,7 @@ function InviteShare({ appId, invite, host }: { appId: string; invite: ChatInvit
         <p className={s.hint}>
           {invite.page
             ? "The link opens a page that explains which app to get, then sets up their account in it."
-            : "Opening the link in a chat app sets up their account. Gluon has no public address set (Settings), so the link only works on a device that already has a chat app."}
+            : "Opening the link in a chat app sets up their account. With no public address for Gluon (Settings), it only works where a chat app is already installed."}
         </p>
         <div className={s.link}>
           <Input mono readOnly value={link} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
@@ -230,7 +230,7 @@ export function InviteDialog({ open, onOpenChange, appId, host, onCreated }: { o
               <AffixInput after={`@${host.host}`} value={username} onChange={(e) => setUsername(e.target.value.replace(/\s/g, "").toLowerCase())} autoCapitalize="off" autoComplete="off" spellCheck={false} maxLength={64} placeholder="sam" mono />
             </Field>
           ) : (
-            <p className={s.hint}>Anyone with the link can make a member account until it expires, like a family group chat link. Cancel it once everyone has joined.</p>
+            <p className={s.hint}>Anyone with the link can make a member account until it expires. Cancel it once everyone has joined.</p>
           )}
           <div className={s.row2}>
             <Field label="Link works for">

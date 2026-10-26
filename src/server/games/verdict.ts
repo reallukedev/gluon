@@ -30,12 +30,12 @@ export function routeVerdict(ping: McPing | null, target: McTarget, router: "mis
 /** Does `host` lead players here? Minecraft can't go through Cloudflare's proxy, which only carries web traffic. */
 export function hostDns(host: string, r: DnsResult | null, publicKnown: boolean): HostDns {
   if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return { status: "literal", message: "An IP address, so there's nothing to look up.", addresses: [host] };
-  if (!r) return { status: "error", message: `Gluon couldn't look up ${host}.`, addresses: [] };
+  if (!r) return { status: "error", message: `Couldn't look up ${host}.`, addresses: [] };
   const addresses = [...r.a, ...r.aaaa];
   if (r.status === "missing") return { status: "missing", message: `${host} has no DNS record, so players outside your home can't find it.`, addresses };
   if (r.status === "error") return { status: "error", message: r.message, addresses };
   if (r.proxied) return { status: "proxied", message: `${host} goes through Cloudflare's proxy, which only carries websites. Set it to DNS only in Cloudflare.`, addresses };
   if (r.status === "mismatch") return { status: "elsewhere", message: `${r.message} Players outside your home won't reach this server.`, addresses };
-  if (!publicKnown || r.matchesPublicIp === null) return { status: "error", message: `${host} points at ${addresses.join(", ")}. Gluon couldn't find your home's public address to compare.`, addresses };
+  if (!publicKnown || r.matchesPublicIp === null) return { status: "error", message: `${host} points at ${addresses.join(", ")}. Couldn't find your home's public address to compare.`, addresses };
   return { status: "home", message: `${host} points at your home.`, addresses };
 }

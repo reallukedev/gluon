@@ -281,7 +281,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
   const title = converting ? "Set it up as a chat server" : existing ? `Edit ${existing.name}` : "Put a chat server on the internet";
   const description = converting && existing
     ? `${bare(data.urls[existing.id] ?? "")} points web visitors at port ${existing.backend.port}, which only chat apps understand. This keeps the address and sets it up the way XMPP expects.`
-    : "Chat apps connect straight to the server. Gluon publishes its domain, keeps its certificate current and checks it can be reached.";
+    : "Chat apps connect straight to the server. Gluon keeps its certificate current and checks it's reachable.";
   const primary = last ? (existing ? "Save changes" : "Put it on the internet") : "Continue";
   const ports = [form.c2s, ...(form.federation ? [form.s2s] : [])];
 
@@ -392,8 +392,8 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                     </button>
                   </div>
                 )}
-                {servers.error && <p className={f.faint}>Gluon couldn&rsquo;t look for chat servers ({servers.error.message}). Enter the port it listens on instead.</p>}
-                {list && list.length === 0 && <p className={f.faint}>Gluon didn&rsquo;t find a Quark, Prosody, ejabberd or Snikket container on this server. If yours runs here under another image, enter its client port.</p>}
+                {servers.error && <p className={f.faint}>Couldn&rsquo;t look for chat servers ({servers.error.message}). Enter the port it listens on instead.</p>}
+                {list && list.length === 0 && <p className={f.faint}>No Quark, Prosody, ejabberd or Snikket container here. If yours uses another image, enter its client port.</p>}
                 {picked && !picked.ports.c2s && (
                   <Notice tone="attention" title={`${picked.container} doesn't publish a client port`}>
                     Chat apps need to reach port 5222 on this server. Publish it in the app&rsquo;s settings, or enter the port it uses below.
@@ -434,7 +434,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                 <div className={c.option}>
                   <div className={c.optionText}>
                     <span className={c.optionTitle}>Talk to other chat servers</span>
-                    <span className={f.faint}>Lets people here chat with people on other XMPP servers. Other servers connect to this port.</span>
+                    <span className={f.faint}>Lets people here chat with people on other XMPP servers, which connect on this port.</span>
                   </div>
                   <Switch checked={form.federation} onChange={(v) => set("federation", v)} aria-label="Talk to other chat servers" />
                   {form.federation && (
@@ -484,8 +484,8 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                       {!form.container
                         ? "Pick the chat server's container on the first step to turn this on."
                         : mode === "own"
-                          ? `If the certificate in ${form.container} gets close to expiring, Gluon copies yours in and reloads it. A certificate that another tool keeps current is left alone.`
-                          : `Caddy renews ${domain || "the domain"}'s certificate on its own. If the one in ${form.container} gets close to expiring, Gluon copies Caddy's in and reloads it, so chat apps never see an expired one. A certificate that another tool keeps current is left alone.`}
+                          ? `When the certificate in ${form.container} nears its end, Gluon copies yours in and reloads it.`
+                          : `When the certificate in ${form.container} nears its end, Gluon copies Caddy's in and reloads it, so chat apps never see an expired one.`}
                     </span>
                     {errors.sync && <span className={f.error}>{errors.sync}</span>}
                   </div>
@@ -496,7 +496,7 @@ export function ChatServerFlow({ target, data, status, commit, onClose, onReload
                       <Input value={form.syncDir} onChange={(e) => set("syncDir", e.target.value.trim())} mono spellCheck={false} autoCapitalize="off" />
                     </Field>
                   )}
-                  {picked && !picked.canSync && <span className={f.faint}>Gluon can only reload Prosody and Quark for now, so {picked.container} keeps managing its own certificate.</span>}
+                  {picked && !picked.canSync && <span className={f.faint}>Gluon can only reload Prosody and Quark, so {picked.container} keeps managing its own certificate.</span>}
                 </div>
 
               </div>

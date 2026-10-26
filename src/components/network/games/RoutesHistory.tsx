@@ -40,7 +40,7 @@ export function RoutesHistory({ open, onOpenChange, file, onRestored }: { open: 
       open={open}
       onOpenChange={(o) => busy === null && onOpenChange(o)}
       title="Earlier versions"
-      description={file ? <>Each change Gluon made to <span className="mono">{file}</span>, newest first. Put back the file as it was before any of them.</> : undefined}
+      description={file ? <>Gluon&rsquo;s changes to <span className="mono">{file}</span>, newest first. Put back the file as it was before any of them.</> : undefined}
       footerStart={err ? <span className={s.formError}>{err}</span> : undefined}
       footer={
         <Button variant="ghost" onClick={() => onOpenChange(false)}>

@@ -2,7 +2,7 @@
 import * as React from "react";
 import { api, useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Panel, Notice, Skeleton, Empty } from "@/components/ui/Surface";
+import { Panel, Notice, Skeleton } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
@@ -27,7 +27,7 @@ export function DockerSpace({ data }: { data: CleanupPreview | undefined }) {
         </div>
       ) : !u ? (
         <div className={s.pad}>
-          <Notice tone="fault">Gluon couldn't ask Docker how much space it uses. Check that Docker is running.</Notice>
+          <Notice tone="fault">Couldn't reach Docker. Check that it's running.</Notice>
         </div>
       ) : (
         <dl className={s.kvRows}>
@@ -90,7 +90,7 @@ export function useCleanupActions(onChanged?: () => void) {
     if (!l) return;
     confirm({
       title: "Delete the old storage copy?",
-      consequences: [`Deletes ${l.paths.join(" and ")} (${fmt.bytes(l.bytes)}).`, "Docker now runs from its new place; your apps won't notice.", "This can't be undone."],
+      consequences: [`Deletes ${l.paths.join(" and ")} (${fmt.bytes(l.bytes)}).`, "Apps keep running: Docker uses its new place.", "This can't be undone."],
       confirmLabel: `Free ${fmt.bytes(l.bytes)}`,
       onConfirm: async () => {
         try {
@@ -111,7 +111,7 @@ export function useCleanupActions(onChanged?: () => void) {
     confirm({
       title: "Clear the package download cache?",
       consequences: [`Deletes ${fmt.plural(data.apt.files, "downloaded package")} (${fmt.bytes(data.apt.bytes)}) from /var/cache/apt.`, "Installed software isn't affected."],
-      confirmLabel: "Clear",
+      confirmLabel: "Clear cache",
       variant: "primary",
       onConfirm: () => run({ kind: "apt" }),
     });
@@ -121,8 +121,8 @@ export function useCleanupActions(onChanged?: () => void) {
     if (!data) return;
     confirm({
       title: `Shrink the system log to ${fmt.bytes(keep)}?`,
-      consequences: [`Deletes the oldest log files until it takes ${fmt.bytes(keep)} (it's ${fmt.bytes(data.journal.bytes)} now).`, "Recent logs are kept, so current problems can still be looked into.", "Older history is gone for good."],
-      confirmLabel: "Shrink",
+      consequences: [`Deletes the oldest entries until it takes ${fmt.bytes(keep)} (it's ${fmt.bytes(data.journal.bytes)} now).`, "Recent entries stay.", "Older history is gone for good."],
+      confirmLabel: "Shrink log",
       variant: "primary",
       onConfirm: () => run({ kind: "journal", keepBytes: keep }),
     });
@@ -181,7 +181,7 @@ export function CleanupPanel({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <>
-      <Panel title="Clean up" meta={data ? <span>Nothing is removed without asking</span> : undefined} flush>
+      <Panel title="Clean up" flush>
         {error && (
           <div className={s.pad}>
             <Notice tone="fault">{error.message}</Notice>
@@ -216,7 +216,7 @@ export function CleanupPanel({ onChanged }: { onChanged?: () => void }) {
             <li className={s.cleanup}>
               <div className={s.cleanupText}>
                 <p className={s.cleanupTitle}>Downloaded update packages</p>
-                <p className={s.muted}>Copies of packages apt already installed. It downloads them again if it ever needs them.</p>
+                <p className={s.muted}>Installers apt already used. It fetches them again if needed.</p>
               </div>
               <span className={`${s.cleanupSize} num`}>{fmt.bytes(data.apt.bytes)}</span>
               <Button size="sm" disabled={data.apt.bytes < MB} onClick={actions.apt}>
@@ -227,7 +227,7 @@ export function CleanupPanel({ onChanged }: { onChanged?: () => void }) {
             <li className={s.cleanup}>
               <div className={s.cleanupText}>
                 <p className={s.cleanupTitle}>System log</p>
-                <p className={s.muted}>The journal of everything Linux and its services did. The oldest entries go first.</p>
+                <p className={s.muted}>The oldest entries go first.</p>
               </div>
               <span className={`${s.cleanupSize} num`}>{fmt.bytes(data.journal.bytes)}</span>
               <span className={s.cleanupControls}>
@@ -241,12 +241,12 @@ export function CleanupPanel({ onChanged }: { onChanged?: () => void }) {
             <li className={s.cleanup} data-wide="" id="cleanup-docker" tabIndex={-1}>
               <div className={s.cleanupText}>
                 <p className={s.cleanupTitle}>Docker leftovers</p>
-                <p className={s.muted}>Pick what goes. Images and build cache come back on the next download or build.</p>
+                <p className={s.muted}>Images and build cache come back when they're needed.</p>
               </div>
               {!d ? (
-                <Notice tone="fault">Gluon couldn't reach Docker.</Notice>
+                <Notice tone="fault">Couldn't reach Docker.</Notice>
               ) : d.danglingImages.length + d.stoppedContainers.length + d.unusedVolumes.length === 0 && d.buildCache.bytes === 0 ? (
-                <Empty title="Nothing to clean up">Docker has no unused images, stopped containers or orphaned volumes.</Empty>
+                <p className={s.muted}>Nothing to clean up.</p>
               ) : (
                 <div className={s.pickList}>
                   {d.danglingImages.length > 0 && (
@@ -262,7 +262,7 @@ export function CleanupPanel({ onChanged }: { onChanged?: () => void }) {
                   {d.stoppedContainers.length > 0 && (
                     <fieldset className={s.pickGroup}>
                       <legend className="label">Stopped containers</legend>
-                      <p className={s.hint}>An app's stopped containers are recreated when you start it again from Apps.</p>
+                      <p className={s.hint}>Starting the app from Apps makes them again.</p>
                       {d.stoppedContainers.map((c) => (
                         <Checkbox key={c.id} checked={ctrs.has(c.id)} onChange={(on) => setCtrs((x) => toggle(x, c.id, on))}>
                           <span className="mono">{c.name}</span> <span className={s.muted}>{[c.app, c.status].filter(Boolean).join(" · ")}</span>
@@ -273,7 +273,7 @@ export function CleanupPanel({ onChanged }: { onChanged?: () => void }) {
                   {d.unusedVolumes.length > 0 && (
                     <fieldset className={s.pickGroup}>
                       <legend className="label">Volumes no container uses</legend>
-                      {d.unusedVolumes.some((v) => !v.anonymous) && <p className={s.hint}>Named volumes can hold an app's data (for example an app you removed but might reinstall). Only pick the ones you're sure about.</p>}
+                      {d.unusedVolumes.some((v) => !v.anonymous) && <p className={s.hint}>Named volumes can hold a removed app's data. Pick only the ones you're sure about.</p>}
                       {d.unusedVolumes.map((v) => (
                         <Checkbox key={v.name} checked={vols.has(v.name)} onChange={(on) => setVols((x) => toggle(x, v.name, on))}>
                           <span className="mono truncate" title={v.name}>
@@ -297,7 +297,7 @@ export function CleanupPanel({ onChanged }: { onChanged?: () => void }) {
                             ...dockerSelected.ctrs.map((c) => `Container ${c.name}${c.app ? ` (${c.app})` : ""}.`),
                             ...dockerSelected.vols.map((v) => `Volume ${v.anonymous ? v.name.slice(0, 12) + "…" : v.name}${v.bytes !== null ? ` (${fmt.bytes(v.bytes)})` : ""}: its data is deleted for good.`),
                           ],
-                          confirmLabel: "Remove",
+                          confirmLabel: `Remove ${fmt.bytes(dockerBytes)}`,
                           onConfirm: () =>
                             run({
                               kind: "docker",

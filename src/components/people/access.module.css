@@ -103,3 +103,12 @@
   .map .corner, .map .rowHead { min-width: 150px; max-width: 180px; padding-left: 14px; }
   .colHead { min-width: 88px; }
 }
+
+/* A cell's mark swaps between dash and check: let the new one settle in instead of blinking. */
+.toggle svg, .inherited svg {
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: scale(calc(1 - 0.3 * var(--motion)));
+  }
+}

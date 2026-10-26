@@ -204,7 +204,7 @@ export async function validateMountTarget(raw: string, opts: { ignoreMount?: str
     }
   } catch (e) {
     if (e instanceof AppError) throw e;
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw new AppError("unreadable", `Gluon couldn't check ${p}: ${(e as Error).message}`);
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw new AppError("unreadable", `Couldn't check ${p}: ${(e as Error).message}`);
   }
   return { path: p, exists };
 }

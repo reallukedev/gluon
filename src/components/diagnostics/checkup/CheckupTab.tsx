@@ -69,12 +69,12 @@ export function CheckupTab({ initial, runId, start }: { initial: CheckupState | 
             </Button>
           }
         >
-          Started <Time ts={others[0]!.startedAt} />. Watching it shows the results as they come in.
+          Started <Time ts={others[0]!.startedAt} />.
         </Notice>
       )}
       {stored.error && runId && (
         <Notice tone="fault" title="That checkup isn't available" action={<Button size="sm" onClick={() => router.replace("/diagnostics", { scroll: false })}>Show the latest</Button>}>
-          {stored.error.message} Gluon keeps the last 50 checkups.
+          {stored.error.message} Only the last 50 are kept.
         </Notice>
       )}
 
@@ -118,7 +118,7 @@ function AtRest({ busy, onRun }: { busy: boolean; onRun: () => void }) {
         </div>
         <div className={s.restText}>
           <h3 id="checkup-rest">Check the whole server</h3>
-          <p>A full checkup looks at the internet connection, your public addresses, every app, the drives, the hardware, the system and its security. It takes about a minute and changes nothing.</p>
+          <p>About a minute. Changes nothing.</p>
           <Button variant="primary" onClick={onRun} disabled={busy}>
             Run a full checkup
           </Button>
@@ -347,23 +347,29 @@ function RunPanel({ view, streaming, isLive, onRun, onBackToLatest }: { view: Ru
 
       <Panel
         title={streaming ? "Found so far" : "What it found"}
+        className={streaming ? s.streaming : undefined}
         meta={problemsCount ? <span className="num">{counts.fail ? `${counts.fail} broken` : ""}{counts.fail && counts.warn ? " · " : ""}{counts.warn ? `${counts.warn} to look at` : ""}</span> : undefined}
         flush
       >
-        <ResultList
-          plan={plan}
-          groups={meta.groups}
-          results={view.results}
-          showGroups={meta.layout === "sweep" && meta.groups.length > 1}
-          openPassed={openPassed}
-          setOpenPassed={setOpenPassed}
-          emptyNote={
-            <p className={s.starting} style={{ padding: "16px 18px" }}>
-              <Mark state={streaming ? "running" : done ? "ok" : "skip"} />
-              {streaming ? "Nothing wrong so far." : done ? "Nothing to fix. Every check passed." : "No results were recorded."}
-            </p>
-          }
-        />
+        <div className={s.found}>
+          <ResultList
+            plan={plan}
+            groups={meta.groups}
+            results={view.results}
+            showGroups={meta.layout === "sweep" && meta.groups.length > 1}
+            openPassed={openPassed}
+            setOpenPassed={setOpenPassed}
+            emptyNote={
+              // A clean finished run already says so in its verdict; only the passed list is left.
+              streaming || !done ? (
+                <p className={s.starting} style={{ padding: "16px 18px" }}>
+                  <Mark state={streaming ? "running" : "skip"} />
+                  {streaming ? "Nothing wrong so far." : "No results were recorded."}
+                </p>
+              ) : null
+            }
+          />
+        </div>
       </Panel>
     </>
   );

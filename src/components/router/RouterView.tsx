@@ -21,13 +21,13 @@ const POLL_MS = 15_000;
 
 function Summary({ o }: { o: RouterOverview }) {
   const model = o.facts?.model ?? "router";
-  if (o.kind === "none") return <>Gluon can&rsquo;t find your router: this server has no default route.</>;
-  if (o.kind === "unreachable") return <>Your router at <span className="mono">{o.gateway}</span> isn&rsquo;t answering Gluon.</>;
+  if (o.kind === "none") return <>Can&rsquo;t find your router.</>;
+  if (o.kind === "unreachable") return <>Your router at <span className="mono">{o.gateway}</span> isn&rsquo;t answering.</>;
   if (o.kind === "other")
     return (
       <>
-        Gluon can read AT&amp;T BGW gateways, and your router at <span className="mono">{o.gateway}</span>
-        {o.otherName ? ` (${o.otherName})` : ""} isn&rsquo;t one. Set up the ports below on it by hand.
+        Your router at <span className="mono">{o.gateway}</span>
+        {o.otherName ? ` (${o.otherName})` : ""} isn&rsquo;t one Gluon can read. Forward the ports below by hand.
       </>
     );
   const bb = o.broadband;
@@ -35,7 +35,7 @@ function Summary({ o }: { o: RouterOverview }) {
   if (bb.up === false)
     return (
       <>
-        <b>Your internet is down.</b> Your {model} says its {bb.source ? `${bb.source.toLowerCase()} ` : ""}connection to AT&amp;T is down. Devices at home can still reach each other and this server.
+        <b>Your internet is down.</b> The {model}&rsquo;s {bb.source ? `${bb.source.toLowerCase()} ` : ""}line to AT&amp;T is down; devices at home still reach each other and this server.
       </>
     );
   const line = [bb.source?.toLowerCase(), mbps(bb.lineMbps)].filter(Boolean).join(" at ");
@@ -57,7 +57,7 @@ function RestartNotice({ o, onDismiss }: { o: RouterOverview; onDismiss: () => v
   if (r.state === "waiting")
     return (
       <Notice title="Restarting your router">
-        Asked at {fmt.time(r.requestedAt)}. The internet and Wi-Fi are off for everyone at home until it&rsquo;s back, usually 3 to 5 minutes. Gluon checks every 15 seconds.
+        Asked at {fmt.time(r.requestedAt)}. Internet and Wi-Fi are off at home until it&rsquo;s back, usually 3 to 5 minutes.
       </Notice>
     );
   return (
@@ -116,9 +116,9 @@ export function RouterView({ initial }: { initial: RouterOverview | null }) {
   if (!o) {
     return (
       <Page>
-        <PageHeader back={BACK} title="Router" summary={error ? "Gluon couldn't load what your router says." : "Reading your router…"} />
+        <PageHeader back={BACK} title="Router" summary={error ? "Couldn't load what your router says." : "Reading your router…"} />
         {error && (
-          <Notice tone="fault" title="Gluon didn't answer" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+          <Notice tone="fault" title="Couldn't load the router page" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
             {error.message}
           </Notice>
         )}
@@ -135,25 +135,25 @@ export function RouterView({ initial }: { initial: RouterOverview | null }) {
           Restart the router
         </Button>
       ) : (
-        <Button onClick={() => setConnecting(true)}>{rejected ? "Enter the access code again" : "Connect with the access code"}</Button>
+        <Button onClick={() => setConnecting(true)}>{rejected ? "Enter the access code again" : "Connect router"}</Button>
       )}
     </div>
   ) : undefined;
 
   const by = o.access.connectedBy;
   const access = rejected ? (
-    <StateLine state="attention" label="The router no longer accepts the access code Gluon has. Enter it again." />
+    <StateLine state="attention" label="The router stopped accepting the access code" />
   ) : o.access.connected ? (
     <div className={s.rowMain}>
       <StateLine state="running" label="Gluon has the access code" />
       {by && (
         <span className={s.rowSub}>
-          Entered {by.name ? `by ${by.name} ` : ""}on {fmt.date(by.at, { year: true })}. It&rsquo;s saved for this server, so nobody else needs to enter it.
+          Entered {by.name ? `by ${by.name} ` : ""}on {fmt.date(by.at, { year: true })}
         </span>
       )}
     </div>
   ) : (
-    <StateLine state="stopped" label="Gluon doesn't have the access code yet" />
+    <StateLine state="stopped" label="No access code yet" />
   );
 
   return (
@@ -163,19 +163,19 @@ export function RouterView({ initial }: { initial: RouterOverview | null }) {
         {o.restart && hidden !== o.restart.requestedAt && <RestartNotice o={o} onDismiss={() => setHidden(o.restart!.requestedAt)} />}
         {o.kind === "unreachable" && (
           <Notice tone="fault" title="Your router isn't answering">
-            Gluon asks again every minute. If the internet is out too, check that the router&rsquo;s lights are on and this server&rsquo;s network cable is in.
+            Check the router&rsquo;s lights and this server&rsquo;s network cable. Gluon tries again every minute.
           </Notice>
         )}
         {o.error && bgw && o.facts && !waiting(o) && (
-          <Notice tone="attention" title="Gluon couldn't read the router just now">
+          <Notice tone="attention" title="Couldn't read the router just now">
             {o.error} {o.readAt.broadband ? <>What&rsquo;s below is from <Time ts={o.readAt.broadband} />.</> : null}
           </Notice>
         )}
-        {error && o && <Notice tone="attention" title="Gluon isn't answering right now">What&rsquo;s below is the last reading. {error.message}</Notice>}
+        {error && o && <Notice tone="attention" title="Can't reach Gluon right now">What&rsquo;s below is the last reading. {error.message}</Notice>}
       </div>
 
       {o.kind === "none" ? (
-        <Empty title="No router found">Gluon looks for the router through this server&rsquo;s default route. Check the server&rsquo;s network settings under System.</Empty>
+        <Empty title="No router found">This server has no default route. Check its network settings in System.</Empty>
       ) : bgw ? (
         <>
           <div className={s.grid}>

@@ -5,6 +5,7 @@ import { Folder, Page as PageIcon, OpenNewWindow, NavArrowRight, ArrowUpLeft } f
 import { api, useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Panel, Empty, Notice, Skeleton } from "@/components/ui/Surface";
+import { Disclosure } from "@/components/ui/Disclosure";
 import { Button, IconButton, LinkButton } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Time } from "@/components/ui/Time";
@@ -208,17 +209,24 @@ export function UsagePanel({ mounts, initialPath, onChanged }: { mounts: MountCh
               Stop scan
             </Button>
           ) : (
-            <Button size="sm" loading={starting} onClick={() => void start()}>
-              {scanned ? "Scan again" : "Scan"}
-            </Button>
+            // Before the first scan the empty state below holds the button.
+            !(data && !result) && (
+              <Button size="sm" loading={starting} onClick={() => void start()}>
+                {scanned ? "Scan again" : "Scan"}
+              </Button>
+            )
           )}
         </div>
       </div>
 
       {error && (
         <div className={s.pad}>
-          <Notice tone="fault" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
-            {error.message}
+          <Notice tone="fault" title={error.code === "network" ? "Can't reach the server" : `Couldn't measure ${path === root ? rootLabel : path}`} action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+            {error.code !== "network" && (
+              <Disclosure summary="Details">
+                <span className="mono">{error.message}</span>
+              </Disclosure>
+            )}
           </Notice>
         </div>
       )}
@@ -229,7 +237,7 @@ export function UsagePanel({ mounts, initialPath, onChanged }: { mounts: MountCh
             <div style={{ width: `${run.progress && run.progress.total ? Math.min(100, (run.progress.done / run.progress.total) * 100) : 4}%` }} />
             <span className="num">{run.progress && run.progress.total ? `Measured ${run.progress.done} of ${run.progress.total} items in ${path}` : `Measuring ${path}…`}</span>
           </div>
-          <p className={s.hint}>Large drives take a few minutes. It runs in the background at low priority, so apps aren't slowed down; you can leave this page.</p>
+          <p className={s.hint}>Runs in the background at low priority. You can leave this page.</p>
         </div>
       )}
 
@@ -240,8 +248,8 @@ export function UsagePanel({ mounts, initialPath, onChanged }: { mounts: MountCh
       )}
 
       {data && !result && !run && (
-        <Empty title={`${path === root ? rootLabel : path} hasn't been measured yet`} action={<Button onClick={() => void start()} loading={starting}>Scan it</Button>}>
-          Gluon adds up every folder inside it and draws them to scale, so the biggest ones stand out. Nothing is changed.
+        <Empty title={`${path === root ? rootLabel : path} hasn't been measured yet`} action={<Button onClick={() => void start()} loading={starting}>Scan</Button>}>
+          Every folder inside, drawn to scale. Nothing is changed.
         </Empty>
       )}
 
@@ -260,7 +268,7 @@ export function UsagePanel({ mounts, initialPath, onChanged }: { mounts: MountCh
             )}
           </p>
           {shown.length === 0 && result.otherBytes === 0 ? (
-            <Empty title="It's empty">There's nothing in {path}.</Empty>
+            <Empty title="Nothing in here" />
           ) : (
             <div className={s.mapArea}>
               <SpaceMap result={result} withFree={withFree} hints={hints} urgent={fsFull >= 0.85} active={focus?.key ?? null} onActive={setActive} onDrill={go} />

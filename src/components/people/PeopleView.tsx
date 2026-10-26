@@ -7,7 +7,7 @@ import { NavArrowRight, UserPlus, Trash } from "iconoir-react";
 import type { InviteView, PersonView, ProblemReport } from "@/lib/people-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Empty, Panel, Skeleton } from "@/components/ui/Surface";
+import { Panel, Skeleton } from "@/components/ui/Surface";
 import { SectionHeader } from "@/components/settings/SectionHeader";
 import { peopleHref, type PeopleTab } from "@/lib/settings-links";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -50,12 +50,13 @@ function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; initialP
   const members = people.filter((p) => p.role === "member").length;
   const off = people.filter((p) => p.disabled).length;
   const weakAdmins = people.filter((p) => p.role === "admin" && !p.mfa && !p.disabled).length;
+  const selfWeak = people.some((p) => p.self && p.role === "admin" && !p.mfa);
   const summary = (
     <>
       {newReports > 0 && <b>{fmt.plural(newReports, "new problem report")} from the household. </b>}
       {people.length === 1 ? "Just you so far" : members === 0 ? `${fmt.plural(people.length, "admin")}, no household members yet` : `${fmt.plural(people.length - members, "admin")} and ${fmt.plural(members, "household member")}`}
       {off ? `, ${off} turned off` : ""}.{invites?.length ? ` ${fmt.plural(invites.length, "invite")} waiting to be used.` : ""}
-      {weakAdmins ? (people.length === 1 ? " Two-step verification isn't on yet." : ` ${weakAdmins === 1 ? "One admin has" : `${weakAdmins} admins have`} no two-step verification.`) : ""}
+      {weakAdmins ? (weakAdmins === 1 && selfWeak ? " You don't have two-step sign-in yet." : ` ${weakAdmins === 1 ? "One admin has" : `${weakAdmins} admins have`} no two-step sign-in.`) : ""}
     </>
   );
 
@@ -82,7 +83,7 @@ function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; initialP
         aria-label="People sections"
       />
       <div className={s.tabBody}>
-        {tab === "people" && <PeopleList people={people} invites={invites} onInvitesChange={() => void mutateInvites()} onInvite={() => setInviting(true)} />}
+        {tab === "people" && <PeopleList people={people} invites={invites} onInvitesChange={() => void mutateInvites()} />}
         {tab === "access" && <AccessMap />}
         {tab === "reports" && <ReportsTab focus={reportId} />}
         {tab === "announcements" && <AnnouncementsTab />}
@@ -100,7 +101,7 @@ function PeopleView({ tab, initialPeople, reportId }: { tab: PeopleTab; initialP
   );
 }
 
-function PeopleList({ people, invites, onInvitesChange, onInvite }: { people: PersonView[]; invites: InviteView[] | undefined; onInvitesChange: () => void; onInvite: () => void }) {
+function PeopleList({ people, invites, onInvitesChange }: { people: PersonView[]; invites: InviteView[] | undefined; onInvitesChange: () => void }) {
   const router = useRouter();
   const [confirm, confirmNode] = useConfirm();
 
@@ -160,7 +161,7 @@ function PeopleList({ people, invites, onInvitesChange, onInvite }: { people: Pe
               </span>
               <span role="cell" className={s.mfa}>
                 <span className={s.cellLabel}>Two-step</span>
-                {p.mfa ? "On" : <span className={s.muted}>Off</span>}
+                {p.mfa ? "On" : p.role === "admin" && !p.disabled ? <StateLine state="attention" label="Off" /> : <span className={s.muted}>Off</span>}
               </span>
               <span role="cell" className={s.seen}>
                 <span className={s.cellLabel}>Seen</span>
@@ -171,8 +172,6 @@ function PeopleList({ people, invites, onInvitesChange, onInvite }: { people: Pe
                   <StateLine state="stopped" label="Turned off" />
                 ) : p.mustChangePassword ? (
                   <StateLine state="starting" label="Must pick a new password" />
-                ) : p.role === "admin" && !p.mfa ? (
-                  <StateLine state="attention" label="Admin without two-step" />
                 ) : (
                   p.sessions ? (
                     <StateLine state="running" label={`Signed in on ${p.sessions} device${p.sessions === 1 ? "" : "s"}`} />
@@ -189,16 +188,9 @@ function PeopleList({ people, invites, onInvitesChange, onInvite }: { people: Pe
         })}
       </div>
 
-      <Panel title="Invites not used yet" meta={invites?.length ? <span className="num">{invites.length}</span> : undefined} flush>
-        {!invites ? (
-          <div className={s.skeletons}>
-            <Skeleton height={44} />
-          </div>
-        ) : invites.length === 0 ? (
-          <Empty title="No open invites" action={<Button onClick={onInvite}>Invite someone</Button>}>
-            An invite is a one-time link that lets someone choose their own username and password. It works for 7 days.
-          </Empty>
-        ) : (
+      {/* Only while there are some: the header's Invite button covers the empty case. */}
+      {invites && invites.length > 0 && (
+        <Panel title="Invites not used yet" meta={<span className="num">{invites.length}</span>} flush>
           <ul className={`${s.invites} appear`} role="list">
             {invites.map((i) => (
               <li key={i.id} className={s.invite}>
@@ -218,9 +210,9 @@ function PeopleList({ people, invites, onInvitesChange, onInvite }: { people: Pe
               </li>
             ))}
           </ul>
-        )}
-      </Panel>
-      {invites && invites.length > 0 && <p className={s.hint}>For safety, Gluon only shows an invite link once, when it's made. If one was lost, cancel it and make a new one.</p>}
+          <p className={`${s.panelFoot} ${s.hint}`}>Each link is shown only once. If one is lost, cancel it and make another.</p>
+        </Panel>
+      )}
       {confirmNode}
     </>
   );

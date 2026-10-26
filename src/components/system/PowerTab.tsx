@@ -167,7 +167,7 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
             <h3 id="pw-restart" className={pw.actionTitle}>
               Restart
             </h3>
-            <p className={pw.actionDesc}>Everything goes offline for about 2 minutes, then starts again on its own. Needed after some updates.</p>
+            <p className={pw.actionDesc}>Offline for about 2 minutes, then everything starts again.</p>
           </div>
           <Button icon={<SystemRestart />} variant={data.reboot.required && !blocked ? "attention" : "secondary"} disabled={blocked} onClick={() => now("restart")}>
             Restart…
@@ -179,7 +179,7 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
             <h3 id="pw-shut" className={pw.actionTitle}>
               Shut down
             </h3>
-            <p className={pw.actionDesc}>The server turns off and stays off. Someone has to press its power button to turn it back on.</p>
+            <p className={pw.actionDesc}>Stays off until someone presses its power button.</p>
           </div>
           <Button icon={<SystemShut />} variant="danger" disabled={blocked} onClick={() => now("shutdown")}>
             Shut down…
@@ -213,7 +213,7 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
                 schedule();
               }}
             >
-              <Field label="Restart at" description={`Server time${tz ? `, ${tz.replace(/_/g, " ")}` : ""}. The next time the clock shows this, within 24 hours. A quiet hour is best.`}>
+              <Field label="Restart at" description={`Server time${tz ? ` (${tz.replace(/_/g, " ")})` : ""}. Pick a quiet hour.`}>
                 <Input type="time" value={at} onChange={(e) => setAt(e.target.value)} className={s.timeInput} required />
               </Field>
               <DayRuler hhmm={at} tz={tz} />
@@ -238,7 +238,7 @@ function ImpactPanel({ impact }: { impact: PowerImpact | null }) {
   if (!impact) {
     return (
       <Panel title="What happens to your apps">
-        <p className={pw.note}>Gluon couldn't check the apps right now. Apps set to restart on their own come back after a restart.</p>
+        <p className={pw.note}>Couldn't check the apps. Those set to restart on their own come back.</p>
       </Panel>
     );
   }
@@ -429,7 +429,10 @@ function Waiting({ action }: { action: Action }) {
       <div className={s.waiting} role="status" aria-live="polite">
         <StateLine state={phase === "back" ? "running" : phase === "slow" ? "attention" : action === "shutdown" && phase === "down" ? "stopped" : "starting"} size={22} />
         <div>
-          <p className={s.waitingText}>{text}</p>
+          {/* Each phase's sentence fades in as it replaces the last, so the change is noticed. */}
+          <p key={text} className={`${s.waitingText} appear`}>
+            {text}
+          </p>
           <p className={`${s.sub} num`}>
             {mins > 0 ? `${mins} min ` : ""}
             {secs} s

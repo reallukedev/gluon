@@ -74,7 +74,7 @@ export function MountsTable({ disks, onAction, busy }: { disks: DiskView[]; onAc
   const router = useRouter();
   const rows = mountedRows(disks);
   if (!rows.length) {
-    return <Empty title="Nothing is mounted">Drives appear here once they're mounted. Open a disk above to mount it.</Empty>;
+    return <Empty title="Nothing is mounted">Open a disk above to mount it.</Empty>;
   }
   return (
     <div className={s.table} role="table" aria-label="Mounted filesystems">

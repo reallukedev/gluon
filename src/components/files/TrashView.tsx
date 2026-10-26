@@ -43,7 +43,7 @@ export function TrashView({ data, error, isAdmin, refresh, onJob, onNavigate }: 
         const clash = list.find((i) => i.id === e.details?.id) ?? list[0]!;
         confirm({
           title: `Something called “${clash.name}” is already there`,
-          description: <>Something new is at <span className="mono">{clash.originalPath}</span>. Gluon won't replace it.</>,
+          description: <>Something new is at <span className="mono">{clash.originalPath}</span>.</>,
           consequences: [`${list.length > 1 ? "Items that clash are" : "It's"} restored next to it as “${clash.name.replace(/(\.[^.]+)?$/, " (restored)$1")}”.`, "Nothing is overwritten."],
           confirmLabel: "Restore with a new name",
           variant: "primary",
@@ -97,9 +97,7 @@ export function TrashView({ data, error, isAdmin, refresh, onJob, onNavigate }: 
   }
   if (!items.length) {
     return (
-      <Empty title="The trash is empty">
-        Things you delete in Files land here first, on the same drive they came from, so you can put them back. {isAdmin ? "Emptying the trash frees their space." : "Only admins can delete things for good."}
-      </Empty>
+      <Empty title="Deleted files land here">You can put them back until the trash is emptied.</Empty>
     );
   }
 

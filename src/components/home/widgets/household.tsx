@@ -139,7 +139,7 @@ function internetSentence(d: InternetData, dayStart: number, fmt: ReturnType<typ
   const today = d.outages.filter((o) => (o.end ?? now) > dayStart);
   if (!today.length) {
     const measuredToday = d.since !== null && d.since <= dayStart;
-    return measuredToday ? "No drops today." : "No drops since Gluon started watching.";
+    return measuredToday ? "No drops today." : "No drops since checks began.";
   }
   const longest = today.reduce((a, b) => ((b.end ?? now) - b.start > (a.end ?? now) - a.start ? b : a));
   const dur = spanWords((longest.end ?? now) - longest.start);
@@ -199,7 +199,7 @@ function InternetWidget({ size }: WidgetProps) {
   const tall = size === "t" || size === "l" || size === "x";
   const sentence = internetSentence(data, dayStart, fmt);
   return (
-    <div className={h.net} data-size={size}>
+    <div key="ready" className={`${h.net} appear`} data-motion-gentle="" data-size={size}>
       <div className={h.netHead}>
         <StateLine state={stale ? "unknown" : head.line} size={16} />
         <p className={h.netWords}>{stale ? "Not checked lately" : head.words}</p>
@@ -226,7 +226,7 @@ function InternetWidget({ size }: WidgetProps) {
       {measured > 0 ? (
         <Strip data={data} height={compact ? 18 : tall ? 40 : 26} axis={!compact} onRead={compact ? undefined : setReading} />
       ) : (
-        <p className={h.learning}>The last day fills in here as Gluon checks, every 30 seconds.</p>
+        <p className={h.learning}>Fills in as checks run, every 30 seconds.</p>
       )}
       <p className={h.sentence}>{sentence}</p>
       {tall && (

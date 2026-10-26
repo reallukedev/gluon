@@ -28,7 +28,6 @@
 .col[data-drop] { background: color-mix(in oklab, var(--ink) 5%, var(--panel)); }
 .colScroll { min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 0; scrollbar-width: thin; }
 .colScroll[data-pad] { padding: 12px; }
-.colFoot { padding: 6px 12px; font-size: var(--text-2xs); color: var(--faint); box-shadow: inset 0 1px 0 var(--line); }
 .colNote { padding: 10px; }
 .vrow { position: absolute; left: 0; right: 0; top: 0; padding: 0 4px; }
 .vgrid { position: absolute; left: 0; right: 0; top: 0; display: grid; }
@@ -36,7 +35,6 @@
 .empty { display: grid; justify-items: start; gap: 6px; padding: 18px 16px; }
 .emptyTitle { margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--ink); }
 .emptyText { margin: 0; font-size: var(--text-sm); color: var(--muted); }
-.emptyActions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 
 .row {
   position: relative;
@@ -166,14 +164,13 @@
 .previewInner { display: grid; gap: 14px; padding: 14px 18px 20px; }
 .stage { display: grid; place-items: center; min-height: 200px; max-height: 340px; padding: 8px; overflow: hidden; border-radius: 10px; background: var(--sunk); }
 .stage[data-kind="image"] { height: 320px; }
-.stage[data-kind="text"], .stage[data-kind="pdf"] { display: block; max-height: none; padding: 0; background: transparent; }
+.stage[data-kind="text"], .stage[data-kind="pdf"] { display: block; place-items: normal; max-height: none; padding: 0; background: transparent; }
 .previewName { margin: 0; font-family: var(--font-display); font-stretch: 90%; font-size: var(--text-lg); font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .previewActions { display: flex; flex-wrap: wrap; gap: 6px; }
 .summaryCol { min-width: 300px; flex-basis: 300px; }
 .summaryList { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 16px; margin: 0; font-size: var(--text-sm); }
 .summaryList dt { color: var(--muted); }
 .summaryList dd { margin: 0; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
-.summaryHint { margin: 4px 0 0; font-size: var(--text-sm); color: var(--faint); }
 
 /* ------------------------------------------------------------ the status line */
 .status { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0 6px 0 14px; box-shadow: inset 0 1px 0 var(--line); }
@@ -196,6 +193,7 @@
   font-size: var(--text-md);
   pointer-events: none;
 }
+.drop { transition: opacity var(--dur-fast) var(--ease-out); @starting-style { opacity: 0; } }
 .drop svg { width: 22px; height: 22px; }
 .drop[data-refused] { outline-color: var(--fault); color: var(--fault); }
 
@@ -211,5 +209,9 @@
   .row { font-size: var(--text-base); }
   .place { min-height: 46px; font-size: var(--text-base); }
   .drop { inset: 52px 0 56px; }
+  .frame[data-nav] .col[data-phone-current] { animation: files-phone-in var(--dur-base) var(--ease-out); }
+  .frame[data-nav="out"] .col[data-phone-current] { animation-name: files-phone-back; }
 }
+@keyframes files-phone-in { from { opacity: 0; transform: translateX(calc(24px * var(--motion))); } }
+@keyframes files-phone-back { from { opacity: 0; transform: translateX(calc(-24px * var(--motion))); } }
 @media (prefers-reduced-motion: reduce) { .tileFace { transition: none; } }

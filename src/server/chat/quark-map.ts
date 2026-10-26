@@ -114,7 +114,7 @@ export function refusalError(code: string, error: string): AppError {
 export function unreachableError(detail: string): AppError {
   return new AppError(
     "quark_console",
-    `Gluon couldn't reach Quark's admin console${detail ? ` (${detail})` : ""}. Check that Quark is running and finished starting, then try again.`,
+    `Couldn't reach Quark's admin console${detail ? ` (${detail})` : ""}. Check that Quark is running and finished starting, then try again.`,
     502,
   );
 }

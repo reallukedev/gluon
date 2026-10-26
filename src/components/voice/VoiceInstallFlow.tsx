@@ -147,7 +147,7 @@ export function VoiceInstallFlow({ open, onOpenChange }: { open: boolean; onOpen
       onOpenChange={(o) => !running && onOpenChange(o)}
       size="wide"
       title={step === "ready" ? "Your voice server is ready" : "Set up a voice server"}
-      description={step === "ready" ? undefined : "Mumble: low-latency group voice chat with apps for every computer and phone. Gluon manages it from the first start."}
+      description={step === "ready" ? undefined : "Mumble: low-latency group voice chat with apps for every computer and phone."}
       footer={
         step === "ready" && done ? (
           <>
@@ -188,14 +188,14 @@ export function VoiceInstallFlow({ open, onOpenChange }: { open: boolean; onOpen
     >
       <div className={s.steps}>
         <FlowSteps label="Setting up a voice server" steps={STEPS} current={step} working={running} failed={!!failure} complete={step === "ready"} />
-        {planError && <Notice tone="fault" title="Gluon couldn't check this server">{planError.message}</Notice>}
+        {planError && <Notice tone="fault" title="Couldn't check this server">{planError.message}</Notice>}
 
         {step === "name" && (
           <form className={s.steps} onSubmit={submit}>
             <Field label="Name" error={errors.name} description="Shown at the top of the channel list, and as the app's name in Gluon.">
               <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoFocus placeholder="Mumble" />
             </Field>
-            <Field label="Welcome message" optional error={errors.welcome} description="What people see in the chat when they join. Simple HTML works, like <b>bold</b>. You can change it any time.">
+            <Field label="Welcome message" optional error={errors.welcome} description="Shown in the chat when people join. Simple HTML works, like <b>bold</b>.">
               <TextArea value={welcome} onChange={(e) => setWelcome(e.target.value)} rows={3} maxLength={5000} />
             </Field>
             <button type="submit" hidden />
@@ -204,7 +204,7 @@ export function VoiceInstallFlow({ open, onOpenChange }: { open: boolean; onOpen
 
         {step === "password" && (
           <form className={s.steps} onSubmit={submit}>
-            <Field label="Join password" optional error={errors.password} description="Leave it empty so anyone with the address can join. With one, people type it once and their Mumble app remembers it.">
+            <Field label="Join password" optional error={errors.password} description="Leave empty so anyone with the address can join. Mumble apps remember it after the first time.">
               <Input value={password} onChange={(e) => setPassword(e.target.value)} maxLength={128} autoFocus autoComplete="off" spellCheck={false} />
             </Field>
             <button type="submit" hidden />

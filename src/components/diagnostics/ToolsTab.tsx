@@ -39,7 +39,7 @@ export function ToolsTab() {
   return (
     <div className={s.tools}>
       <p className={`${s.toolWide} ${s.faint}`}>
-        Each tool runs once, from this server. To track down a problem step by step, use a <Link href="/diagnostics">checkup</Link> instead.
+        One-off tests from this server. To find what&apos;s wrong, run a <Link href="/diagnostics">checkup</Link>.
       </p>
       <DnsTool />
       <PingTool />

@@ -37,26 +37,26 @@ export function FlowFrame({ step, detail, draft, working, failed, complete, hasA
   const steps = STEPS.filter((x) => hasAddress || x.key !== "address");
   const summary =
     step === "source"
-      ? "Pick what to run and Gluon sets the rest up with you. Nothing starts until the last step."
+      ? "Nothing starts until the last step."
       : step === "start"
         ? complete
           ? `${name || "The app"} is running.`
           : failed
             ? `${name || "The app"} didn't start. The details are below.`
-            : `Starting ${name || "the app"}. This page follows along, and it keeps going if you leave.`
+            : `Starting ${name || "the app"}. It keeps going if you leave.`
         : step === "review"
-          ? "This is exactly what will run. Nothing has started yet."
-          : `${name || "This app"} is a draft, saved as you go. Nothing runs until you start it.`;
+          ? "Exactly what will run. Nothing has started yet."
+          : "Nothing runs until you start it.";
   return (
     <Page narrow>
       <PageHeader
-        back={{ href: "/apps/custom", label: "Your apps" }}
+        back={{ href: "/apps/custom", label: "Custom apps" }}
         title={step === "source" || !name ? "Make an app" : step === "start" && complete ? name : `Set up ${name}`}
         summary={summary}
         actions={
           detail ? (
             <LinkButton href={`/apps/custom/${detail.id}`} variant="secondary">
-              Open in the full builder
+              Open full builder
             </LinkButton>
           ) : undefined
         }

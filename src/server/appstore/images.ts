@@ -128,7 +128,7 @@ export async function lookupImage(ref: string): Promise<ImageLookup> {
     result.tags = await tags(host, p.registry, p.repository, auth).catch(() => []);
     if (p.registry === "docker.io") result.description = await hubDescription(p.repository).catch(() => null);
   } catch (e) {
-    if (!result.local) result.unknownReason = e instanceof NetError ? `Gluon couldn't reach ${p.registry} (${e.message}), so it couldn't check this image.` : "Gluon couldn't check this image right now.";
+    if (!result.local) result.unknownReason = e instanceof NetError ? `Couldn't reach ${p.registry} (${e.message}), so this image wasn't checked.` : "Couldn't check this image right now. Try again in a minute.";
   }
   cache.set(clean, { at: Date.now(), value: result });
   return result;
@@ -206,7 +206,7 @@ export async function searchHub(input: string): Promise<HubSearchResult> {
     remember(hub.search, q, value);
     return value;
   } catch (e) {
-    return { query: q, results: [], error: e instanceof NetError ? `Gluon couldn't reach Docker Hub (${e.message}). Type the full image name instead.` : "Search isn't working right now. Type the full image name instead." };
+    return { query: q, results: [], error: e instanceof NetError ? `Couldn't reach Docker Hub (${e.message}). Type the full image name instead.` : "Search isn't working right now. Type the full image name instead." };
   }
 }
 
@@ -258,7 +258,7 @@ export async function tagPage(ref: string, q: string, page: number): Promise<Tag
     return out;
   } catch (e) {
     if (e instanceof RegistryAnswer) return { ...base, error: e.status === 401 || e.status === 403 || e.status === 404 ? `${p.registry} won't list the tags of ${p.repository}: it doesn't exist, or it's private.` : `${p.registry} answered ${e.status}, so the tags didn't load.` };
-    return { ...base, error: e instanceof NetError ? `Gluon couldn't reach ${p.registry} (${e.message}). Check the server's internet connection, then try again.` : "The tags didn't load. Try again in a moment." };
+    return { ...base, error: e instanceof NetError ? `Couldn't reach ${p.registry} (${e.message}). Check the server's internet connection, then try again.` : "The tags didn't load. Try again in a moment." };
   }
 }
 

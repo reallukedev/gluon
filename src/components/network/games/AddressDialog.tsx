@@ -73,7 +73,7 @@ export function AddressDialog({ open, onOpenChange, st, edit, onDone }: { open: 
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       title={edit ? `Change ${edit.host}` : "Add a Minecraft address"}
-      description="Players type the address in Multiplayer, and mc-router sends them to the server you pick. They don't need a port number."
+      description="Players type it in Multiplayer, with no port, and reach the server you pick."
       footerStart={err && !err.field ? <span className={s.formError}>{err.message}</span> : undefined}
       footer={
         <>

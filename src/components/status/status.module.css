@@ -1,6 +1,28 @@
+/*
+ * Two columns: what needs you and what happened on the left, the machine on the right, apps across.
+ * One column on narrow screens, in order of urgency: needs, machine, storage, apps, then history.
+ */
 .cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-.side { display: grid; gap: 20px; min-width: 0; }
-@media (max-width: 1080px) { .cols { grid-template-columns: 1fr; } }
+.body, .main, .side { display: grid; gap: 20px; min-width: 0; }
+.appsPanel { grid-column: 1 / -1; min-width: 0; }
+@media (max-width: 1080px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .main, .side { display: contents; }
+  .needsWrap { order: 0; }
+  .machinePanel { order: 1; }
+  .storagePanel { order: 2; }
+  .appsPanel { order: 3; }
+  .recentPanel { order: 4; }
+}
+
+/* The Needs you panel arrives and leaves as a whole; its rows do their own settling inside. */
+.needsWrap {
+  min-width: 0;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style { opacity: 0; transform: translateY(calc(-6px * var(--motion))); }
+}
+/* Fades while the last row slides out; StatusView unmounts it at NEEDS_EXIT_MS (600ms). */
+.needsWrap[data-closing] { opacity: 0; transition-delay: 360ms; }
 
 /* Needs you */
 .needs { margin: 0; padding: 0; list-style: none; }
@@ -14,7 +36,9 @@
 }
 .need:first-child { border-top: 0; }
 .need:target { background: var(--attn-soft); }
-.need, .needsFoot { transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
+/* Travel scales with --motion: reduced motion keeps the fades and drops the glide. */
+.need, .needsFoot { transition: transform calc(var(--dur-slow) * var(--motion)) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
+.need[data-arrived] { @starting-style { opacity: 0; transform: translateY(calc(-6px * var(--motion))); } }
 .needMark { position: relative; width: 2px; height: 34px; margin-top: 2px; background: var(--attn); transform-origin: top; transition: background-color var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out); }
 .needMark::after {
   content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: var(--attn);
@@ -24,7 +48,7 @@
 /* Fixed: the doubled line settles into one ink line, then the item slides out. */
 .need[data-resolved] .needMark { background: var(--ink); }
 .need[data-resolved] .needMark::after { display: block; transform: scaleY(0); opacity: 0; }
-.need[data-leaving] { opacity: 0; transform: translateX(12px); pointer-events: none; transition-duration: 220ms; }
+.need[data-leaving] { opacity: 0; transform: translateX(calc(12px * var(--motion))); pointer-events: none; transition-duration: 220ms; }
 .need[data-resolved][data-leaving] { transition-delay: var(--dur-slow); }
 .need[data-severity="fault"] .needMark { transform: scaleY(0.42); background: var(--fault); }
 .need[data-severity="fault"] .needMark::after { display: none; }
@@ -57,16 +81,18 @@
 .fsVal { color: var(--muted); }
 .fsVal[data-attn] { color: var(--ink); font-weight: 600; }
 
-/* Apps (spacing comes from the tab body's gap) */
-.appsPanel { min-width: 0; }
-
 /* Recently */
 .recentPanel { min-width: 0; }
 .recent { margin: 0; padding: 0; list-style: none; }
-.recentRow { display: grid; grid-template-columns: 140px 1fr; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
+.recentRow {
+  display: grid; grid-template-columns: 128px 1fr; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: var(--text-md);
+  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+}
+.recentRow[data-arrived] { @starting-style { opacity: 0; transform: translateY(calc(-4px * var(--motion))); } }
 .recentRow:first-child { border-top: 0; }
 .recentTime { color: var(--muted); font-size: var(--text-sm); }
 .recentText b { font-weight: 600; }
+.recentTimes { color: var(--muted); }
 .recentRow[data-outcome="failed"] .recentText { color: var(--fault); }
 @media (max-width: 640px) { .recentRow { grid-template-columns: 1fr; gap: 2px; } }
 
@@ -84,10 +110,6 @@
 .open:active { transform: scale(calc(1 - 0.03 * var(--motion))); }
 @media (hover: hover) and (pointer: fine) { .open:hover { background: var(--panel-2); } }
 
-/* Header: the tracked date line across from the verdict. */
-.dateLine { font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-@media (max-width: 720px) { .dateLine { display: none; } }
-
 /* Fixed with its remedy: the doubled line settles into one while Gluon confirms on its next check. */
 .need[data-settled] .needMark { background: var(--ink); }
 .need[data-settled] .needMark::after { transform: scaleY(0); opacity: 0; }
@@ -95,7 +117,3 @@
 .need[data-settled] .needTitle { color: var(--ink-2); }
 .needSettled { color: var(--ink-2); }
 .needMeta :global(.truncate) { max-width: 32ch; }
-
-/* Admin page body: panels 20px apart. */
-.body { display: grid; gap: 20px; min-width: 0; }
-.main { display: grid; gap: 20px; min-width: 0; }

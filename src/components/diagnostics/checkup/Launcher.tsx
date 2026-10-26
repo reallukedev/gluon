@@ -115,7 +115,7 @@ export function History({ runs, current, hrefFor }: { runs: CheckupRunRow[]; cur
   return (
     <Panel title="Recent checkups" meta={runs.length ? <span className="num">{runs.length}</span> : undefined} flush>
       {!runs.length ? (
-        <Empty title="No checkups yet">Each checkup is kept here with what it found, so the next one can tell you what's new and what got fixed.</Empty>
+        <Empty title="No checkups yet">Each one is kept here, so the next can show what changed.</Empty>
       ) : (
         <>
           <ul className={s.history} role="list">
@@ -132,7 +132,7 @@ export function History({ runs, current, hrefFor }: { runs: CheckupRunRow[]; cur
               </ul>
             </Disclosure>
           )}
-          <p className={s.histFoot}>Gluon keeps the last 50 checkups.</p>
+          <p className={s.histFoot}>The last 50 are kept.</p>
         </>
       )}
     </Panel>

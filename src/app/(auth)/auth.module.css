@@ -13,8 +13,8 @@
   justify-content: space-between;
   padding: 36px 40px 40px;
 }
-:root[data-theme="dark"] .plate { background: #0b0c0d; color: var(--ink); border-right: 1px solid var(--line); }
-@media (prefers-color-scheme: dark) { :root[data-theme="system"] .plate { background: #0b0c0d; color: var(--ink); border-right: 1px solid var(--line); } }
+:root[data-theme="dark"] .plate { background: var(--sunk); color: var(--ink); }
+@media (prefers-color-scheme: dark) { :root[data-theme="system"] .plate { background: var(--sunk); color: var(--ink); } }
 .brand { display: flex; align-items: center; gap: 10px; font-size: var(--text-md); font-weight: 600; letter-spacing: 0.02em; opacity: 0.9; }
 .brand svg { width: 22px; height: 22px; }
 .lines {

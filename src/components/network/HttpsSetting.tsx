@@ -28,18 +28,18 @@ interface Props {
 }
 
 const OPTIONS: { mode: HttpsModeT; title: string; text: (host: string) => string; only?: SiteKind }[] = [
-  { mode: "auto", title: "Gluon gets a certificate", text: () => "The web server here gets one from Let's Encrypt and renews it on its own. Pick this unless something else already handles HTTPS." },
-  { mode: "own", title: "I have my own certificate", text: () => "You supply it, from certbot, another tool or your organisation. Gluon serves it and warns you before it ends, but can't renew it." },
+  { mode: "auto", title: "Gluon gets a certificate", text: () => "From Let's Encrypt, renewed on its own. Pick this unless something else handles HTTPS." },
+  { mode: "own", title: "I have my own certificate", text: () => "From certbot or another tool. Gluon serves it and warns before it ends, but can't renew it." },
   {
     mode: "http",
     title: "Plain HTTP, HTTPS is handled in front",
-    text: (host) => `For a tunnel, another proxy or a load balancer in front of this server. Without one, browsers mark http://${host || "the address"} as not secure.`,
+    text: (host) => `For a tunnel or proxy in front of this server. Without one, browsers mark http://${host || "the address"} as not secure.`,
   },
   {
     mode: "none",
     title: "The chat server handles its own",
     only: "chat",
-    text: () => "No web page here at all, so the web server never asks for a certificate. Use this when the domain's website lives somewhere else.",
+    text: () => "No web page here, so no certificate. Use this when the domain's website lives elsewhere.",
   },
 ];
 
@@ -120,7 +120,7 @@ export function HttpsSetting({ host, kind, value: f, onChange, stored, errors, c
                 ) : (
                   <>
                     <PemField label="Certificate and its chain" placeholder="-----BEGIN CERTIFICATE-----" value={f.cert} error={errors.cert} onText={(cert) => set({ cert })} description="fullchain.pem if it comes from certbot." />
-                    <PemField label="Private key" placeholder="-----BEGIN PRIVATE KEY-----" value={f.key} error={errors.key} onText={(key) => set({ key })} description="It stays on this server, readable only by the web server. Gluon never shows it again." />
+                    <PemField label="Private key" placeholder="-----BEGIN PRIVATE KEY-----" value={f.key} error={errors.key} onText={(key) => set({ key })} description="Stays on this server, readable only by the web server, and is never shown again." />
                     {stored?.stored && f.replacing && (
                       <div className={h.actions}>
                         <Button size="sm" variant="ghost" onClick={() => set({ replacing: false, cert: "", key: "", checked: null })}>
@@ -132,7 +132,7 @@ export function HttpsSetting({ host, kind, value: f, onChange, stored, errors, c
                 )
               ) : (
                 <>
-                  <Field label="Certificate file" error={errors.certFile} description="The full chain. Gluon copies it for the web server, and again whenever it changes, so renewals carry over.">
+                  <Field label="Certificate file" error={errors.certFile} description="The full chain. Gluon copies it again whenever it changes, so renewals carry over.">
                     <Input value={f.certFile} onChange={(e) => set({ certFile: e.target.value.trim(), checked: null })} mono spellCheck={false} autoCapitalize="off" placeholder={certbotFiles(host).cert} />
                   </Field>
                   <Field label="Key file" error={errors.keyFile}>

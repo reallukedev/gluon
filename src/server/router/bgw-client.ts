@@ -74,7 +74,7 @@ async function request(s: Gateway, jar: Jar, path: string, init: { method?: "GET
   } catch (e) {
     const err = e as Error;
     if (err.name === "TimeoutError" || err.name === "AbortError") throw new AppError("router_slow", `Your router at ${where(s)} didn't answer within ${Math.round(timeoutMs / 1000)} seconds.`, 504);
-    throw new AppError("router_unreachable", `Gluon couldn't reach your router at ${where(s)}.`, 502);
+    throw new AppError("router_unreachable", `Couldn't reach your router at ${where(s)}.`, 502);
   }
   for (const c of res.headers.getSetCookie?.() ?? []) {
     const [pair] = c.split(";");

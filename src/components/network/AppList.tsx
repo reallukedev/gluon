@@ -58,7 +58,7 @@ export const AppList = React.forwardRef<HTMLElement, Props>(function AppList({ e
               <Row key={e.key} e={e} baseDomain={baseDomain} busy={busy === e.key} highlight={highlight === e.key} onOpen={onOpen} onToggle={onToggle} onHomeOnly={onHomeOnly} onMarkLogin={onMarkLogin} statusLoading={statusLoading} />
             ))}
             <Empty title="No other apps on the internet yet" action={<Button icon={<Plus />} onClick={onPublish}>Put an app on the internet</Button>}>
-              Give an app an address like photos.{baseDomain} and people can open it from anywhere. Gluon sets up the web server and the certificate; the wildcard DNS record already covers the name.
+              Give an app an address like photos.{baseDomain} to open it from anywhere.
             </Empty>
           </>
         ) : (
@@ -67,7 +67,7 @@ export const AppList = React.forwardRef<HTMLElement, Props>(function AppList({ e
               <span role="columnheader" className={s.colApp}>
                 App and address
               </span>
-              <span role="columnheader">Working</span>
+              <span role="columnheader">State</span>
               <span role="columnheader">Login</span>
               <span role="columnheader" className={s.colSwitch}>
                 On the internet
@@ -90,7 +90,7 @@ export const AppList = React.forwardRef<HTMLElement, Props>(function AppList({ e
 
 export function LoginCell({ l }: { l: LoginWords }) {
   if (l.tone === "loading") return <Skeleton width={110} height={12} />;
-  if (l.tone === "off") return <span className={s.faint}>Off</span>;
+  if (l.tone === "off") return <span className={s.faint}>{l.label}</span>;
   return (
     <span className={s.login} data-tone={l.tone === "public" ? "partial" : l.tone} title={l.evidence ?? undefined}>
       <span className={s.loginGlyph} aria-hidden>
@@ -158,7 +158,7 @@ function Row({
                 A site from <Link href={`/sites/${e.site.id}`}>Sites</Link>
               </span>
             )}
-            {e.isFallback && <span className={s.alsoLine}>Answers anything on {baseDomain} no other address claims</span>}
+            {e.isFallback && <span className={s.alsoLine}>Catches anything no other address claims</span>}
             {e.isRedirect && redirectTarget(main.route) && (
               <span className={s.alsoLine}>
                 <ArrowRight className={s.alsoArrow} aria-hidden /> <span className="mono">{bare(redirectTarget(main.route)!)}</span>
@@ -192,11 +192,11 @@ function Row({
           {e.health.state ? <StateLine state={e.health.state} label={e.health.label} /> : statusLoading ? <Skeleton width={90} height={12} /> : <span className={s.faint}>Not checked</span>}
         </span>
         <span role="cell" className={s.colLogin}>
-          <LoginCell l={e.login} />
+          {e.on && <LoginCell l={e.login} />}
         </span>
         <span role="cell" className={s.colSwitch}>
           {e.isFallback ? (
-            <Tooltip content={`${e.name} answers ${baseDomain} itself, so it's always on. You can change which app answers in its details.`}>
+            <Tooltip content={`Always on: ${e.name} answers ${baseDomain}. Change the app in its details.`}>
               <span className={s.always} tabIndex={0}>
                 Always
               </span>
@@ -211,7 +211,7 @@ function Row({
       </div>
 
       {broken && (
-        <div className={s.fix} data-tone="fault">
+        <div className={s.fix} data-tone="fault" data-motion-gentle="">
           <span className={s.fixMark} aria-hidden />
           <p className={s.fixText}>{e.health.sentence}</p>
           <span className={s.fixActions}>
@@ -234,7 +234,7 @@ function Row({
         </div>
       )}
       {e.on && e.needsLogin && (
-        <div className={s.fix} data-tone="attention">
+        <div className={s.fix} data-tone="attention" data-motion-gentle="">
           <span className={s.fixMark} aria-hidden />
           <p className={s.fixText}>
             <b>Anyone who finds {bare(url)} can use {e.name}.</b> {e.login.evidence}

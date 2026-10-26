@@ -57,7 +57,7 @@ export function UninstallDialog({
       onDone(r.message);
     } catch (e) {
       if (e instanceof ApiError && e.code === "reauth_cancelled") return;
-      setError(e instanceof Error ? e.message : "Gluon couldn't uninstall it.");
+      setError(e instanceof Error ? e.message : "Couldn't uninstall it. Try again.");
       if (e instanceof ApiError && e.code === "conflict") void mutate();
     } finally {
       setBusy(false);
@@ -75,7 +75,7 @@ export function UninstallDialog({
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       title={title ?? `Uninstall ${app.name}?`}
-      description={plan ? `Gluon stops and removes its ${n === 1 ? "container" : `${n} containers`}${plan.via === "compose" ? " with docker compose down" : ""}.` : undefined}
+      description={plan ? `Stops and removes its ${n === 1 ? "container" : `${n} containers`}${plan.via === "compose" ? " with docker compose down" : ""}.` : undefined}
       footer={
         <>
           <Button variant="ghost" disabled={busy} onClick={() => onOpenChange(false)}>
@@ -87,7 +87,7 @@ export function UninstallDialog({
             </HoldButton>
           ) : (
             <Button variant="dangerSolid" disabled={!plan} loading={busy} onClick={() => void go()}>
-              Uninstall
+              Uninstall {app.name}
             </Button>
           )}
         </>
@@ -130,7 +130,7 @@ export function UninstallDialog({
             </p>
           ) : null}
           {mode === "everything" && !m.removes.length && !m.optional.length ? (
-            <p className={s.none}>Gluon found no data it can delete safely. Everything it uses is outside its own folders or shared with other apps, so only its containers go.</p>
+            <p className={s.none}>No data here is safe to delete: it's outside the app's folders or shared, so only its containers go.</p>
           ) : (
             <Items title={mode === "everything" ? "Deleted for good" : "Removed"} items={m.removes} empty="Only its containers. Nothing on disk is deleted." fmt={fmt} danger={mode === "everything"} />
           )}
@@ -139,7 +139,7 @@ export function UninstallDialog({
               <h3 id="uninstall-optional" className={s.groupTitle}>
                 Kept unless you tick them <span className="num">{m.optional.length}</span>
               </h3>
-              <p className={s.hint}>These look like libraries or hold a lot, so Gluon keeps them unless you pick them one by one.</p>
+              <p className={s.hint}>These look like libraries or hold a lot, so they stay unless you tick them.</p>
               <ul className={s.list}>
                 {m.optional.map((i) => (
                   <li key={i.target} className={s.stay}>

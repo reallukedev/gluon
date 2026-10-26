@@ -55,7 +55,7 @@ export function PersonDetail({ initial }: { initial: PersonView }) {
       title: role === "admin" ? `Make ${p.displayName} an admin?` : `Make ${p.displayName} a household member?`,
       consequences:
         role === "admin"
-          ? ["They can change everything on the server: apps, disks, public addresses, other people's accounts.", "Their individual app and folder choices are cleared (admins see everything).", ...(p.mfa ? [] : ["They'll need two-step verification to sign in from outside home."])]
+          ? ["They can change everything on the server: apps, disks, public addresses, other people's accounts.", "Their individual app and folder choices are cleared (admins see everything).", ...(p.mfa ? [] : ["They'll need two-step sign-in to sign in from outside home."])]
           : ["They lose access to everything except their apps, Status, and any folders you share.", ...(p.self ? ["That's you: you'll lose admin access straight away."] : [])],
       confirmLabel: role === "admin" ? "Make admin" : "Make household member",
       variant: "primary",
@@ -73,13 +73,13 @@ export function PersonDetail({ initial }: { initial: PersonView }) {
     });
   const resetMfa = () =>
     confirm({
-      title: `Turn off two-step verification for ${p.displayName}?`,
+      title: `Turn off two-step sign-in for ${p.displayName}?`,
       description: "Use this when someone lost their phone.",
       consequences: ["Their password alone is enough to sign in until they set it up again.", "Their old recovery codes stop working.", ...(p.role === "admin" ? ["As an admin, they can only sign in from home until they set it up again."] : [])],
       confirmLabel: "Turn off two-step",
       onConfirm: quiet(async () => {
         await api.del(`${url}/mfa`);
-        toast.success("Two-step verification turned off", { description: `Ask ${p.displayName} to set it up again in Settings → Security.` });
+        toast.success("Two-step sign-in turned off", { description: `Ask ${p.displayName} to set it up again in Settings → Security.` });
         void mutate();
       }),
     });

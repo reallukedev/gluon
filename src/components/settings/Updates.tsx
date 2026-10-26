@@ -145,6 +145,8 @@ function Running({ data, checking, onCheck }: { data: UpdatesStatus; checking: b
           : nightly
             ? "You're on the newest nightly."
             : "You're on the newest version.";
+  // The rail earns its space only when there's somewhere to go; otherwise the note says it in words.
+  const showRail = !!(updateAvailable && latest && !checking);
   return (
     <Panel
       title="This copy"
@@ -169,7 +171,9 @@ function Running({ data, checking, onCheck }: { data: UpdatesStatus; checking: b
             )}
           </div>
           <p className={s.sub}>
-            {CHANNEL_NAME[running.channel]} build. {installWords(data.install)} Started <Time ts={running.startedAt} />.
+            {showRail ? null : `${note} `}
+            {data.install.kind === "development" ? null : `${installWords(data.install)} `}
+            Started <Time ts={running.startedAt} />.
           </p>
         </div>
         <Button icon={<Refresh />} onClick={onCheck} loading={checking}>
@@ -177,40 +181,40 @@ function Running({ data, checking, onCheck }: { data: UpdatesStatus; checking: b
         </Button>
       </div>
 
-      <div
-        className={s.rail}
-        role="img"
-        aria-label={updateAvailable && latest ? `Running ${running.version}; ${latest.version} is available.` : `Running ${running.version}. ${note}`}
-      >
-        <span className={s.track} aria-hidden />
-        <span className={s.mark} data-at="now" aria-hidden>
-          <StateLine state="running" size={22} />
-          <span className={s.markLabel}>
-            <b className="num">{running.version}</b>
-            <span>Running</span>
-          </span>
-        </span>
-        {updateAvailable && latest && !checking ? (
-          <>
-            <span className={s.gap} aria-hidden />
-            <span className={s.mark} data-at="next" aria-hidden>
-              <StateLine state="starting" size={22} />
-              <span className={s.markLabel}>
-                <b className="num">{latest.version}</b>
-                <span>{fmt.relative(latest.publishedAt)}</span>
-              </span>
+      {showRail && (
+        <div
+          className={s.rail}
+          role="img"
+          aria-label={updateAvailable && latest ? `Running ${running.version}; ${latest.version} is available.` : `Running ${running.version}. ${note}`}
+        >
+          <span className={s.track} aria-hidden />
+          <span className={s.mark} data-at="now" aria-hidden>
+            <StateLine state="running" size={22} />
+            <span className={s.markLabel}>
+              <b className="num">{running.version}</b>
+              <span>Running</span>
             </span>
-          </>
-        ) : (
-          <span className={s.railNote}>{note}</span>
-        )}
-      </div>
+          </span>
+          {updateAvailable && latest && !checking ? (
+            <>
+              <span className={s.gap} aria-hidden />
+              <span className={s.mark} data-at="next" aria-hidden>
+                <StateLine state="starting" size={22} />
+                <span className={s.markLabel}>
+                  <b className="num">{latest.version}</b>
+                  <span>{fmt.relative(latest.publishedAt)}</span>
+                </span>
+              </span>
+            </>
+          ) : null}
+        </div>
+      )}
       <p className={s.fine}>
-        Updates come from{" "}
+        {nightly ? "Nightlies" : "Releases"} come from{" "}
         <a href={`https://github.com/${data.repo}`} target="_blank" rel="noreferrer">
           github.com/{data.repo}
         </a>
-        {nightly ? ", following every change pushed to main (Nightly)." : ", following tagged releases (Stable)."}
+        .
       </p>
     </Panel>
   );
@@ -579,8 +583,8 @@ function Channel({ data, onSaved, setChecking }: { data: UpdatesStatus; onSaved:
         {pending
           ? `Switching to ${CHANNEL_NAME[pending]} and checking what it has…`
           : on === "nightly"
-            ? "Gluon looks for a new nightly every half hour. Switching back to Stable never goes backwards on its own: you choose when."
-            : "Gluon looks for a new release every few hours. Switching channel checks straight away."}
+            ? "Checked every half hour. Going back to Stable never downgrades on its own."
+            : "Checked every few hours, and straight away when you switch."}
       </p>
     </Panel>
   );
@@ -613,12 +617,10 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
   const nightly = st.channel === "nightly";
   const asap = nightly && st.nightlyTiming === "asap";
   const description = !st.auto
-    ? "Off. Gluon tells you when an update is available."
+    ? "Off. You're told when one is out."
     : asap
-      ? "On. Each nightly is installed within about half an hour of landing, at most once every 45 minutes."
-      : nightly
-        ? `On. The newest nightly is installed around ${hourLabel(st.hour)}, at most once a day.`
-        : `On. New releases are installed around ${hourLabel(st.hour)}, at most once a day.`;
+      ? "On. Each nightly installs within about half an hour of landing."
+      : "On. At most once a day, at the hour below.";
 
   return (
     <Panel title="Automatic updates">
@@ -629,7 +631,7 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
         {nightly && (
           <SettingRow
             label="How often"
-            description={asap ? "Install each nightly as it lands. Never while another update is running." : `Once a day, around ${hourLabel(st.hour)}.`}
+            description={asap ? "Never while another update is running." : undefined}
           >
             <Segmented
               value={st.nightlyTiming}
@@ -644,18 +646,20 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
           </SettingRow>
         )}
         {!asap && (
-          <SettingRow label="When" description="The hour an automatic update may start. Pick a time nobody's watching a film.">
-            <Select
-              value={String(st.hour)}
-              onChange={(v) => void save({ hour: Number(v) })}
-              options={Array.from({ length: 24 }, (_, h) => ({ value: String(h), label: `Around ${hourLabel(h)}` }))}
-              disabled={busy}
-              aria-label="Hour for automatic updates"
-            />
-          </SettingRow>
+          <div className={`${s.reveal} ${s.revealRow}`}>
+            <SettingRow label="When" description="Pick an hour when nobody's watching a film.">
+              <Select
+                value={String(st.hour)}
+                onChange={(v) => void save({ hour: Number(v) })}
+                options={Array.from({ length: 24 }, (_, h) => ({ value: String(h), label: `Around ${hourLabel(h)}` }))}
+                disabled={busy}
+                aria-label="Hour for automatic updates"
+              />
+            </SettingRow>
+          </div>
         )}
         {methods.length > 1 && (
-          <SettingRow label="Update from" description="Where automatic updates come from.">
+          <SettingRow label="Update from">
             <Segmented value={st.method} onChange={(v) => void save({ method: v })} options={methods.map((m) => ({ value: m, label: METHOD_NAME[m] }))} disabled={busy} aria-label="Where updates come from" />
           </SettingRow>
         )}

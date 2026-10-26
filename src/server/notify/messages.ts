@@ -38,7 +38,7 @@ export function problemMessage(f: Finding, audience: "admin" | "member", appName
     const name = appName ?? "One of your apps";
     return {
       title: `${name} isn't working right now`,
-      body: `Gluon noticed and the admin has been told. You don't need to do anything${filter.resolved ? "; you'll get a message when it's back" : ""}.`,
+      body: `The admin has been told, so there's nothing you need to do${filter.resolved ? ". You'll get a message when it's back" : ""}.`,
       link: memberLink(),
       linkLabel: "Open Gluon",
       severity: f.severity,

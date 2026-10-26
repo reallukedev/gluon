@@ -155,7 +155,7 @@ async function gh<T>(path: string): Promise<T> {
   try {
     res = await fetch(`https://api.github.com/repos/${REPO}${path}`, { headers, signal: AbortSignal.timeout(15_000) });
   } catch {
-    throw new Error("Gluon couldn't reach GitHub. Check this server's internet connection.");
+    throw new Error("Couldn't reach GitHub. Check this server's internet connection.");
   }
   if (res.status === 404 || res.status === 422) throw Object.assign(new Error("not found"), { status: 404 });
   if (res.status === 403 || res.status === 429) throw new Error("GitHub is limiting how often this server can check. Gluon will try again later.");

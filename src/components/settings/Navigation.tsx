@@ -1,6 +1,5 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -67,8 +66,7 @@ export function Navigation() {
       >
         <div style={{ padding: "12px 16px 16px" }}>
           <p className={s.hint} style={{ marginBottom: 12 }}>
-            Drag the handle to reorder, or focus it and use Space and the arrow keys. Switch off what you don't use; it stays reachable with <Kbd>⌘K</Kbd>. Changes
-            show in the sidebar straight away.
+            Drag to reorder. Pages you switch off stay one <Kbd>⌘K</Kbd> away.
           </p>
           <DndContext
             id={dndId}
@@ -104,7 +102,7 @@ export function Navigation() {
         </div>
       </Panel>
       <Panel title="Keyboard">
-        <SettingRow label="Single-key shortcuts" description="Letters and / as shortcuts when you're not typing. ⌘K always works.">
+        <SettingRow label="Single-key shortcuts" description="Letters and / work when you're not typing.">
           <Switch checked={prefs.shortcuts} onChange={(v) => void set({ shortcuts: v })} aria-label="Single-key shortcuts" />
         </SettingRow>
         <dl className={s.keys} style={{ marginTop: 12 }}>
@@ -133,7 +131,7 @@ export function Navigation() {
         </dl>
       </Panel>
       <p className={s.hint}>
-        Collapse the sidebar to icons with the button next to the server's name. <Link href="/settings/home">Home page settings</Link>
+        To shrink the sidebar to icons, use the button beside the server's name.
       </p>
     </div>
   );

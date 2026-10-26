@@ -101,18 +101,18 @@ async function prepare(id: string): Promise<Prepared> {
     source = "docker";
     const ct = inspects[0]! as unknown as ContainerInspect;
     const image = (await docker().getImage(inspects[0]!.Image).inspect().catch(() => null)) as ImageInspect | null;
-    if (!image) extraWarnings.push("Gluon couldn't read the container's image, so the compose file lists every setting, including ones the image sets itself.");
+    if (!image) extraWarnings.push("Couldn't read the container's image, so the compose file lists every setting, including ones the image sets itself.");
     r = composeFromContainer({ container: ct, image, newProject: newId, newDir: folder, volumes, meta });
   } else if (app.source === "umbrel") {
     source = "umbrel";
     const ep = await findUmbrel();
-    if (!ep) throw new AppError("umbrel_missing", "Gluon can't find Umbrel on this server, so it can't stop the Umbrel app safely.", 503);
+    if (!ep) throw new AppError("umbrel_missing", "Can't find Umbrel on this server, so the Umbrel app can't be stopped safely.", 503);
     const re = UMBREL_ROOT_RE(app.id);
     const fromMount = runtime.flatMap((rt) => rt.mounts).map((m) => re.exec(m.source)?.[1]).find(Boolean);
     const umbrelRoot = fromMount ?? ep.dataDir;
     const appData = `${umbrelRoot}/app-data/${app.id}`;
     const text = readText(`${appData}/docker-compose.yml`);
-    if (text === null) throw new AppError("no_compose", `Gluon can't read ${appData}/docker-compose.yml, Umbrel's file for ${app.name}.`, 409);
+    if (text === null) throw new AppError("no_compose", `Can't read ${appData}/docker-compose.yml, Umbrel's file for ${app.name}.`, 409);
     const manifest = (() => {
       try {
         return (YAML.parse(readText(`${appData}/umbrel-app.yml`) ?? "") ?? {}) as Record<string, unknown>;
@@ -153,9 +153,9 @@ async function prepare(id: string): Promise<Prepared> {
     source = app.source === "casaos" ? "casaos" : "compose";
     const files = (labels["com.docker.compose.project.config_files"] ?? "").split(",").filter(Boolean);
     const workingDir = labels["com.docker.compose.project.working_dir"] ?? (files[0] ? path.posix.dirname(files[0]) : null);
-    if (files.length !== 1) throw new AppError("cant_move", files.length ? `${app.name} is made from ${files.length} compose files. Gluon can move apps made from one.` : `Gluon can't find ${app.name}'s compose file.`, 409);
+    if (files.length !== 1) throw new AppError("cant_move", files.length ? `${app.name} is made from ${files.length} compose files. Gluon can move apps made from one.` : `Can't find ${app.name}'s compose file.`, 409);
     const text = readText(files[0]!);
-    if (text === null) throw new AppError("no_compose", `Gluon can't read ${files[0]}.`, 409);
+    if (text === null) throw new AppError("no_compose", `Can't read ${files[0]}.`, 409);
     const dotenvText = workingDir ? readText(`${workingDir}/.env`) : null;
     const ownDirs: OwnDir[] = [];
     if (source === "casaos") {
@@ -460,7 +460,7 @@ async function carryOver(from: string, to: string, movedAt: number, user: User, 
     applyRecordPlan(plan);
   } catch (e) {
     emit({ type: "line", text: e instanceof Error ? e.message : String(e), stream: "err" });
-    return "Gluon couldn't hand over its settings, access and Home pins, so check them on its Settings tab.";
+    return "Couldn't carry over its settings, access and Home pins. Check them on its Settings tab.";
   } finally {
     invalidateMonitors();
   }
@@ -516,7 +516,7 @@ async function execute(p: Prepared, user: User, where: Where, emit: (e: MoveEven
     try {
       fs.mkdirSync(hostPath(dir), { mode: 0o755 });
     } catch (e) {
-      throw new AppError("folder_taken", (e as NodeJS.ErrnoException).code === "EEXIST" ? `${dir} appeared while ${app.name} was stopping, so Gluon left it alone.` : `Gluon couldn't create ${dir}.`, 409);
+      throw new AppError("folder_taken", (e as NodeJS.ErrnoException).code === "EEXIST" ? `${dir} appeared while ${app.name} was stopping, so Gluon left it alone.` : `Couldn't create ${dir}.`, 409);
     }
     fs.writeFileSync(hostPath(`${dir}/${MARKER}`), moveMarker({ source: plan.source, id: app.id, name: app.name }, moveId, user.username));
     created = true;

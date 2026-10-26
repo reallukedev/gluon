@@ -40,7 +40,7 @@ export function ChatPanel({ appId, appName, running, server: serverHint }: { app
     return (
       <Panel>
         <div className={s.empty}>
-          <p>{appName} isn&rsquo;t running, so Gluon can&rsquo;t read its accounts or settings. Start it from the top of this page.</p>
+          <p>{appName} isn&rsquo;t running, so its accounts and settings can&rsquo;t be read. Start it from the top of this page.</p>
         </div>
       </Panel>
     );
@@ -53,7 +53,7 @@ export function ChatPanel({ appId, appName, running, server: serverHint }: { app
     const brokenConfig = server === "prosody" && /config file/i.test(error.message);
     return (
       <div className={s.panel}>
-        <Notice tone="fault" title={brokenConfig ? "Prosody can't read its config" : `Gluon couldn't talk to ${name}`} action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+        <Notice tone="fault" title={brokenConfig ? "Prosody can't read its config" : `Couldn't reach ${name}`} action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
           {error.message}
           {brokenConfig ? " Prosody keeps running on the config it last read; fix the file below and save it." : ""}
         </Notice>
@@ -117,7 +117,7 @@ export function ChatPanel({ appId, appName, running, server: serverHint }: { app
           <p className={s.hint} style={{ padding: "14px 18px" }}>
             {server === "quark"
               ? "For settings Gluon doesn’t cover. Quark checks your changes before it saves them, and applies them straight away."
-              : "For settings Gluon doesn’t cover. Gluon checks your changes with Prosody before it saves them, and keeps a copy of the file from before it first changed anything."}
+              : "For settings Gluon doesn’t cover. Prosody checks your changes before they save, and the original file is kept."}
           </p>
         )}
       </Panel>

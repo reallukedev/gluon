@@ -87,9 +87,7 @@ export function RequestsTab() {
         </Notice>
       )}
       {feed?.format === "console" && (
-        <Notice title="Caddy is still using its older log format">
-          Requests are read from its console log for now. Saving any public address switches Caddy to structured logs, which are more reliable.
-        </Notice>
+        <Notice title="Caddy uses its older log format">Save any public address to switch it to the newer, more reliable one.</Notice>
       )}
 
       {!stats ? <Skeleton height={150} radius={12} /> : <LastHour stats={stats} cls={cls} onCls={setCls} />}
@@ -163,7 +161,7 @@ export function RequestsTab() {
           ) : visible.length === 0 ? (
             <div className={s.feedEmpty}>
               <Empty title={entries.length ? "Nothing matches" : "No requests yet"}>
-                {entries.length ? "Try another filter." : "Visits to your public addresses appear here the moment Caddy handles them."}
+                {entries.length ? "Try another filter." : "Visits to your public addresses show up here as they happen."}
               </Empty>
             </div>
           ) : (
@@ -262,7 +260,7 @@ function LastHour({ stats, cls, onCls }: { stats: RequestStats; cls: Cls; onCls:
           <div className={ins.minutes} data-isolate={active !== null ? "" : undefined} onPointerLeave={() => setActive(null)} role="img" aria-label={`${hourTotal} requests in the last hour, ${hourFail} with server errors`}>
             {stats.series.map(([t, n, bad], i) => (
               <span key={t} className={ins.minute} data-empty={n === 0 ? "" : undefined} data-active={active === i ? "" : undefined} onPointerEnter={() => setActive(i)}>
-                <span className={ins.minuteLine} style={{ height: `${Math.max(4, (n / max) * 100)}%` }} />
+                <span className={ins.minuteLine} style={{ height: `${Math.max(4, Math.round((n / max) * 1000) / 10)}%` }} />
                 {bad > 0 && <span className={ins.minuteFail} />}
               </span>
             ))}

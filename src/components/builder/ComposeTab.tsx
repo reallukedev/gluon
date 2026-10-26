@@ -46,7 +46,7 @@ export function ComposeTab({ draft, detail, issues, onFix, onFixAll, onGo, edito
           </div>
           {view === "changes" && changed ? (
             <>
-              <p className={s.diffNote}>What changed since version {detail.publishedVersion} was published. Switch back to Edit to change it.</p>
+              <p className={s.diffNote}>Changes since {detail.publishedVersion}.</p>
               <YamlEditor value={draft.spec.compose} original={published!} readOnly height={560} label="Changes to the compose file" />
             </>
           ) : (
@@ -55,7 +55,7 @@ export function ComposeTab({ draft, detail, issues, onFix, onFixAll, onGo, edito
         </div>
         {secretList.length > 0 && (
           <Notice title={secretList.length === 1 ? "1 secret is kept out of this file" : `${secretList.length} secrets are kept out of this file`}>
-            <span className="mono">{secretList.join(", ")}</span>. Gluon stores them encrypted and writes them next to the app when it&apos;s published; edit them under Services.
+            <span className="mono">{secretList.join(", ")}</span>. Stored encrypted and written next to the app on publish. Edit them under Services.
           </Notice>
         )}
       </div>
@@ -77,7 +77,7 @@ export function ComposeTab({ draft, detail, issues, onFix, onFixAll, onGo, edito
             if (i.line) requestAnimationFrame(() => editorRef.current?.gotoLine(i.line!));
             else onGo(i);
           }}
-          empty={detail.target === "compose" ? "Nothing to fix. Gluon runs this as written." : "Nothing to fix. Umbrel will run this as written, plus its own proxy for the web page."}
+          empty={detail.target === "compose" ? "Nothing to fix. It runs as written." : "Nothing to fix. Umbrel runs it as written, plus its proxy for the web page."}
         />
       </Panel>
     </div>

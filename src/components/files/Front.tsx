@@ -53,12 +53,13 @@ export const Front = React.memo(function Front() {
 
   return (
     <div className={s.front} data-files-keys="">
-      <Shelf title="Changed in the last two weeks" state={recent} sort="mtime" empty="Nothing new or changed in the last two weeks." />
+      <Shelf title="Changed in the last two weeks" state={recent} sort="mtime" withFolder empty="Nothing changed in the last two weeks." />
       <PlacesRack />
-      <Shelf title="Photos" state={photos} sort="mtime" filter={(h) => !COVER.test(h.name)} empty="No photos in the folders you can open yet." />
-      <Shelf title="Films and shows" state={videos} sort="name" covers={photos.hits} group empty="No videos found." />
-      <Largest state={large} />
-      <Shelf title="Documents" state={documents} sort="mtime" empty="No documents found." />
+      {/* Later shelves wait their turn unseen and stay away when they find nothing. */}
+      {specs[1] && <Shelf title="Photos" state={photos} sort="mtime" filter={(h) => !COVER.test(h.name)} />}
+      {specs[2] && <Shelf title="Films and shows" state={videos} sort="name" covers={photos.hits} group />}
+      {specs[3] && <Largest state={large} />}
+      {specs[4] && <Shelf title="Documents" state={documents} sort="mtime" />}
     </div>
   );
 });
@@ -67,7 +68,7 @@ const CACHED = { cache: true };
 
 const asThumb = (h: SearchHit): ThumbItem => ({ path: h.path, name: h.name, kind: h.kind, type: h.type, size: h.size, mtime: h.mtime });
 
-function Shelf({ title, state, sort, filter, covers, group, empty }: { title: string; state: SearchState & { retry: () => void }; sort: "mtime" | "name"; filter?: (h: SearchHit) => boolean; covers?: SearchHit[]; group?: boolean; empty: string }) {
+function Shelf({ title, state, sort, filter, covers, group, withFolder, empty }: { title: string; state: SearchState & { retry: () => void }; sort: "mtime" | "name"; filter?: (h: SearchHit) => boolean; covers?: SearchHit[]; group?: boolean; withFolder?: boolean; empty?: string }) {
   const f = useFiles();
   const fmt = useFormat();
   const [all, setAll] = React.useState(false);
@@ -93,10 +94,18 @@ function Shelf({ title, state, sort, filter, covers, group, empty }: { title: st
         ? { item: { path: dir, name: baseName(dir), kind: "folder", type: "dir", size: null, mtime: Math.max(...l.map((x) => x.mtime)) }, cover: coverFor(dir), sub: fmt.plural(l.length, "episode") }
         : { item: asThumb(l[0]!), cover: coverFor(parentOf(l[0]!.path)), sub: fmt.bytes(l[0]!.size), hit: l[0]! },
     );
-  } else tiles = hits.map((h) => ({ item: asThumb(h), cover: null, sub: sort === "mtime" ? <FileTime ts={h.mtime} /> : fmt.bytes(h.size), hit: h }));
+  } else
+    tiles = hits.map((h) => ({
+      item: asThumb(h),
+      cover: null,
+      // Recent files are often namesakes (every app's compose.yaml): the folder tells them apart.
+      sub: withFolder ? <>{baseName(parentOf(h.path)) || "/"} · <FileTime ts={h.mtime} /></> : sort === "mtime" ? <FileTime ts={h.mtime} /> : fmt.bytes(h.size),
+      hit: h,
+    }));
   const shown = all ? tiles : tiles.slice(0, 24);
   const siblings = tiles.flatMap((t) => (t.hit ? [t.hit] : []));
   const loading = !state.done && !state.hits.length;
+  if (state.done && !tiles.length && !state.error && !empty) return null;
   const open = (t: Tile) => (t.item.kind === "folder" ? f.go(t.item.path) : t.hit && f.lookHit(t.hit, siblings));
   const reveal = (t: Tile) => f.go(t.item.kind === "folder" ? t.item.path : parentOf(t.item.path), t.item.kind === "folder" ? {} : { select: t.item.name });
   return (
@@ -120,7 +129,7 @@ function Shelf({ title, state, sort, filter, covers, group, empty }: { title: st
       {state.done && !tiles.length && !state.error ? (
         <p className={s.empty}>{empty}</p>
       ) : (
-        <div className={s.strip} data-all={all ? "" : undefined} role="list">
+        <div key={loading ? "loading" : "tiles"} className={`${s.strip} ${loading ? "" : "appear"}`} data-all={all ? "" : undefined} role="list">
           {loading
             ? Array.from({ length: 8 }, (_, i) => <Skeleton key={i} height={group ? 300 : 172} radius={10} style={{ flex: "none", width: 168 }} />)
             : shown.map((t) => (
@@ -161,6 +170,7 @@ function Largest({ state }: { state: SearchState & { retry: () => void } }) {
   const hits = state.hits.filter((h) => h.size !== null).toSorted((a, b) => (b.size ?? 0) - (a.size ?? 0));
   const total = hits.reduce((a, h) => a + (h.size ?? 0), 0);
   const max = hits[0]?.size ?? 0;
+  if (state.done && !hits.length && !state.error) return null;
   return (
     <section className={s.shelf} aria-label="Taking the most space">
       <div className={s.head}>
@@ -177,10 +187,8 @@ function Largest({ state }: { state: SearchState & { retry: () => void } }) {
         </Notice>
       ) : !state.done && !hits.length ? (
         <Skeleton height={180} radius={12} />
-      ) : !hits.length ? (
-        <p className={s.empty}>No single file is over 1 GB.</p>
       ) : (
-        <ol className={s.ledger}>
+        <ol className={`${s.ledger} appear`}>
           {hits.slice(0, 10).map((h) => (
             <li key={h.path}>
               <button type="button" className={s.ledgerRow} onClick={() => f.go(parentOf(h.path), { select: h.name })} title={`Show ${h.name} in its folder`}>
@@ -239,7 +247,7 @@ function PlatePlace({ p, fmt, onGo }: { p: Place; fmt: ReturnType<typeof useForm
         <span className="truncate">{p.label}</span>
       </span>
       {missing ? (
-        <span className={s.plateSub}>Not connected. Its files come back when the drive does.</span>
+        <span className={s.plateSub}>Not connected</span>
       ) : level ? (
         <>
           <span className={s.meter} data-level={level} aria-hidden>
@@ -252,7 +260,7 @@ function PlatePlace({ p, fmt, onGo }: { p: Place; fmt: ReturnType<typeof useForm
           </span>
         </>
       ) : (
-        <span className={`${s.plateSub} truncate`}>{p.kind === "grant" ? (p.access === "write" ? "You can add and change things" : "You can look and download") : (p.detail ?? p.path)}</span>
+        <span className={`${s.plateSub} truncate`}>{p.kind === "grant" ? (p.access === "write" ? "Can edit" : "View only") : (p.detail ?? p.path)}</span>
       )}
     </button>
   );

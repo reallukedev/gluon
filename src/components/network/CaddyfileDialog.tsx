@@ -43,7 +43,7 @@ export function CaddyfileDialog({ open, onOpenChange, onRewrite }: { open: boole
       open={open}
       onOpenChange={onOpenChange}
       title="Caddyfile"
-      description="The web server's settings file. Gluon writes it from your addresses every time you save; change the addresses instead of the file."
+      description="Gluon writes this from your addresses on every save. Change the addresses, not the file."
       size="xwide"
       footerStart={
         data?.drift ? (

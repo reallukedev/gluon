@@ -57,7 +57,7 @@ async function prosodyOwner(t: ProsodyTarget): Promise<{ uid: number; gid: numbe
     .split("\n")
     .find((l) => l.startsWith("prosody:"));
   const [, , uid, gid] = line?.split(":") ?? [];
-  if (!uid || !gid) throw new AppError("prosody_user", "Gluon couldn't find the prosody user in the container.", 502);
+  if (!uid || !gid) throw new AppError("prosody_user", "Couldn't find the prosody user in the container.", 502);
   const o = { uid: Number(uid), gid: Number(gid) };
   owners.set(t.id, o);
   return o;
@@ -85,7 +85,7 @@ export async function prosodyLua<T>(t: ProsodyTarget, body: string, args: unknow
   if (!res.ok) {
     // Only when no result came back at all: an error from Gluon's own Lua may mention any word.
     if (!res.fromLua && /connect|socket|No such file/i.test(res.error)) {
-      throw new AppError("prosody_console", "Gluon couldn't open Prosody's admin console. Make sure admin_shell is in modules_enabled, then restart Prosody.", 502);
+      throw new AppError("prosody_console", "Couldn't open Prosody's admin console. Make sure admin_shell is in modules_enabled, then restart Prosody.", 502);
     }
     throw new AppError("prosody_error", cleanLuaError(res.error), 400);
   }
@@ -198,7 +198,7 @@ async function configOnHost(t: ProsodyTarget, file: string | undefined): Promise
     fs.accessSync(hostPath(path.posix.dirname(onHost)), fs.constants.W_OK);
     writable = true;
   } catch {
-    reason = `Gluon can't write to ${onHost}.`;
+    reason = `Can't write to ${onHost}.`;
   }
   let managed = false;
   try {
@@ -510,8 +510,8 @@ export async function destroyRoom(t: ProsodyTarget, a: { jid: string; reason: st
 // ---------------------------------------------------------------- settings and config
 
 function hostFile(snap: ConfigPlace): string {
-  if (!snap.config.hostPath) throw new AppError("config_unavailable", snap.config.reason ?? "Gluon can't find Prosody's config file.", 409);
-  if (!snap.config.writable) throw new AppError("config_readonly", snap.config.reason ?? "Gluon can't change Prosody's config file.", 409);
+  if (!snap.config.hostPath) throw new AppError("config_unavailable", snap.config.reason ?? "Can't find Prosody's config file.", 409);
+  if (!snap.config.writable) throw new AppError("config_readonly", snap.config.reason ?? "Can't change Prosody's config file.", 409);
   return snap.config.hostPath;
 }
 
@@ -574,9 +574,9 @@ async function locateConfig(appId: string): Promise<ConfigPlace> {
 
 export async function readConfigFiles(appId: string): Promise<ChatConfigFiles & { snap: ConfigPlace }> {
   const snap = await locateConfig(appId);
-  if (!snap.config.hostPath) throw new AppError("config_unavailable", snap.config.reason ?? "Gluon can't find Prosody's config file.", 409);
+  if (!snap.config.hostPath) throw new AppError("config_unavailable", snap.config.reason ?? "Can't find Prosody's config file.", 409);
   const main = readOr(snap.config.hostPath) ?? (snap.config.layout === "confd" ? CUSTOM_STARTER : null);
-  if (main === null) throw new AppError("config_unavailable", `Gluon can't read ${snap.config.hostPath}.`, 409);
+  if (main === null) throw new AppError("config_unavailable", `Can't read ${snap.config.hostPath}.`, 409);
   return { main, gluon: readOr(path.posix.join(path.posix.dirname(snap.config.hostPath), GLUON_CONFIG)), file: snap.config.hostPath, snap };
 }
 

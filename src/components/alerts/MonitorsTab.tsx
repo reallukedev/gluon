@@ -194,7 +194,7 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
                 <MoreHoriz />
               </IconButton>
             }
-            items={[{ label: "Look for new apps and addresses now", description: "Gluon also does this every minute", icon: <Refresh />, onSelect: () => void syncNow() }]}
+            items={[{ label: "Look for new apps and addresses now", description: "This also runs every minute", icon: <Refresh />, onSelect: () => void syncNow() }]}
           />
           <Button variant="primary" icon={<Plus />} onClick={() => edit(null)}>
             Add monitor
@@ -225,7 +225,7 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
             action={!all.length ? <Button onClick={() => edit(null)}>Add a monitor</Button> : undefined}
           >
             {all.length === 0
-              ? "Gluon adds one for every app with a web page and every public address within a minute of starting. Add your own for things elsewhere on the network: a router, a NAS, a website."
+              ? "Apps and public addresses get one on their own. Add one for a router, a NAS or a website."
               : "Try another filter."}
           </Empty>
         </div>
@@ -279,7 +279,7 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
           ))}
           <div className={s.tableFoot}>
             <TraceLegend />
-            <span className={s.muted}>Response is the time 95% of checks answered within, over the last day.</span>
+            <span className={s.muted}>Response: how fast 95% of checks answered in the last day.</span>
           </div>
         </div>
       )}

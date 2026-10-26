@@ -253,7 +253,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
               </Button>
             }
           >
-            Browsers that open {bare(main.url)} are sent to port {route!.backend.port}, which only chat apps understand, so they get an error. Gluon can publish it the way XMPP expects and keep its certificate current.
+            Browsers that open {bare(main.url)} reach port {route!.backend.port}, which only chat apps understand. Set it up as a chat server and Gluon keeps its certificate current.
           </Notice>
         )}
         {voiceAsWeb && (
@@ -266,7 +266,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
               </Button>
             }
           >
-            Browsers that open {bare(main.url)} are sent to port {route!.backend.port}, where Mumble answers, so they get an error. Set up as a voice server, browsers get a page with a link that opens Mumble, and Gluon checks that people outside can get through.
+            Browsers that open {bare(main.url)} reach port {route!.backend.port}, which only Mumble understands. As a voice server, browsers get a link that opens Mumble instead.
           </Notice>
         )}
         {e.on && (
@@ -371,7 +371,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
         {site && (
           <section className={s.dSection}>
             <h3 className={s.dSub}>Site</h3>
-            <p className={s.faint}>A site from Sites. The web server serves a published copy of its files, so there&rsquo;s no app or login behind it. Edit it, publish changes, go back to an earlier version or take it offline in Sites.</p>
+            <p className={s.faint}>Published files from Sites, with no app or login behind them. Change or unpublish it in Sites.</p>
           </section>
         )}
 
@@ -381,7 +381,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
             <div className={s.dLogin}>
               <LoginCell l={e.login} />
               {e.login.evidence && <p className={s.faint}>{e.login.evidence}</p>}
-              {e.login.adminTool && e.on && <p className={s.faint}>It can change this server or your home, so use a strong password and two-factor sign-in if it offers it. Keeping it home-only is safer.</p>}
+              {e.login.adminTool && e.on && <p className={s.faint}>It can change this server or your home. Use a strong password and two-step sign-in, or keep it home-only.</p>}
               {e.on && e.needsLogin && <p className={s.dWarn}>Anyone who finds {bare(main.url)} can use it.</p>}
               {e.on && e.appId && (e.login.tone === "unknown" || e.login.tone === "none" || e.login.tone === "login") && (
                 <div className={s.dActions}>
@@ -418,7 +418,7 @@ export function AppDetails({ entry: e, baseDomain, open, onOpenChange, busy, sta
 
         {!e.isFallback && !site && (
           <section className={s.dDanger}>
-            <p className={s.faint}>{e.on ? "Take every address above off the internet. The app keeps running at home, and History can bring the addresses back." : "Delete these addresses. The app keeps running at home, and History can bring them back."}</p>
+            <p className={s.faint}>{e.on ? "Takes every address above off the internet. The app keeps running at home." : "Deletes these addresses. The app keeps running at home."}</p>
             <Button size="sm" variant="danger" onClick={() => onRemoveApp(e)} disabled={busy}>
               {e.on ? "Remove from the internet" : "Remove the addresses"}
             </Button>
@@ -452,7 +452,7 @@ function ChatFacts({ x, syncing, onCheck }: { x: XmppStatus; syncing: boolean; o
             ) : x.openRegistration ? (
               <>
                 <StateLine state="attention" label="Anyone can sign up" />
-                <span className={c.factNote}>Strangers can create accounts from any chat app. Turn off allow_registration in the chat server&rsquo;s config unless that&rsquo;s the plan.</span>
+                <span className={c.factNote}>Strangers can make accounts. Turn off allow_registration in the server&rsquo;s config unless you want that.</span>
               </>
             ) : (
               <StateLine state="running" label="Only accounts you create" />

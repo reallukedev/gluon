@@ -140,7 +140,7 @@ export function ImageField({ value, onChange, label = "Image", error, autoFocus,
     else if (lookup.error)
       status = (
         <span>
-          Gluon couldn&apos;t check it: {lookup.error}{" "}
+          Couldn&apos;t check it: {lookup.error}{" "}
           <button type="button" className={s.link} onClick={lookup.retry}>
             Check again
           </button>

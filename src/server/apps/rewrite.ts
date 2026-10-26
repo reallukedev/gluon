@@ -238,7 +238,7 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
     if (!isObj(parsed) || !isObj(parsed.services)) throw new Error("no services");
     doc = parsed;
   } catch {
-    return { compose: "", envText: null, copies: [], stays: [], sharedVolumes: [], ports: [], warnings: [], blockers: ["Gluon couldn't read this app's compose file."] };
+    return { compose: "", envText: null, copies: [], stays: [], sharedVolumes: [], ports: [], warnings: [], blockers: ["Couldn't read this app's compose file."] };
   }
   const services = doc.services as Record<string, Obj>;
   const topVolumes = isObj(doc.volumes) ? (doc.volumes as Record<string, Obj | null>) : {};
@@ -341,7 +341,7 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
     const placePath = (raw: string, what: "folder" | "file", readOnly = what === "file"): string | null => {
       const r = interpolate(raw, known);
       if (r.missing.length) {
-        c.block(`Gluon couldn't work out ${r.missing.join(", ")} in “${name}”.`);
+        c.block(`Couldn't work out ${r.missing.join(", ")} in “${name}”.`);
         return null;
       }
       const abs = resolveFrom(r.value, input.workingDir);
@@ -514,7 +514,7 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
     }
     ports.push(...publishedPorts(name, svc.ports, known));
   }
-  if (proxy?.host) c.warn(`Gluon couldn't tell which part of ${input.meta.name} Umbrel's proxy forwarded to (${proxy.host}), so its web page isn't published. Add the port to the compose file after the move.`);
+  if (proxy?.host) c.warn(`Couldn't tell which part of ${input.meta.name} Umbrel's proxy forwarded to (${proxy.host}), so its web page isn't published. Add the port to the compose file after the move.`);
   if (proxy?.auth && unguarded) {
     c.warn(`Umbrel asked for its login before opening ${input.meta.name} on port ${unguarded}. The copy answers on port ${unguarded} directly, so anyone on your home network can open it without that login; only ${input.meta.name}'s own login, if it has one, protects it.`);
   }
@@ -537,7 +537,7 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
       const r = interpolate(str(def.file)!, known);
       const abs = r.missing.length ? null : resolveFrom(r.value, input.workingDir);
       if (!abs) {
-        c.block(`Gluon couldn't place the file for ${section.slice(0, -1)} “${k}”.`);
+        c.block(`Couldn't place the file for ${section.slice(0, -1)} “${k}”.`);
         continue;
       }
       const own = input.ownDirs.find((d) => within(abs, d.path));
@@ -562,7 +562,7 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
 
   const compose = render(out, `${input.meta.name}, moved to Gluon from ${sourceWord(input.source)}.`);
   const missing = interpolate(compose, forNew).missing;
-  if (missing.length) c.block(`Gluon couldn't work out ${[...new Set(missing)].join(", ")}, which the compose file needs.`);
+  if (missing.length) c.block(`Couldn't work out ${[...new Set(missing)].join(", ")}, which the compose file needs.`);
   const needed: Record<string, string> = {};
   for (const v of varsIn(compose)) if (forNew[v] !== undefined) needed[v] = forNew[v]!;
 

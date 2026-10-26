@@ -104,7 +104,7 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
     .sort((a, b) => (sort === "size" ? b.size - a.size : sort === "name" ? imageName(a).localeCompare(imageName(b)) : b.created - a.created));
 
   const summary = !images ? (
-    error ? "Gluon couldn't get the list from Docker." : "Asking Docker…"
+    error ? "Couldn't get the list from Docker." : "Asking Docker…"
   ) : images.length === 0 ? (
     "No Docker images yet."
   ) : (
@@ -114,7 +114,7 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
         {total !== null ? (
           <>
             {" "}
-            use <span className="num">{fmt.bytes(total)}</span>.
+            {images.length === 1 ? "uses" : "use"} <span className="num">{fmt.bytes(total)}</span>.
           </>
         ) : (
           "."
@@ -531,7 +531,7 @@ function ImageDetail({ image: i, onRemove, onPull }: { image: DockerImage; onRem
             </ul>
           ) : (
             <p className={s.faint} style={{ fontSize: "var(--text-sm)" }}>
-              {i.use === "leftover" ? "When an image is rebuilt or updated, the old one loses its tag and stays behind. It's safe to remove." : "Nothing runs from it right now. Removing it only matters if you plan to start something from it again."}
+              {i.use === "leftover" ? "Left behind when an image was rebuilt or updated. Safe to remove." : "Nothing runs from it. Keep it only if you plan to start something from it."}
             </p>
           )}
           <div className={s.detailActions}>

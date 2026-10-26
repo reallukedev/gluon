@@ -134,9 +134,9 @@ export function LogsTab({ initialSource, initialUnit }: { initialSource: Source;
           value={source}
           onChange={setSource}
           options={[
-            { value: "kernel", label: "Kernel and hardware" },
+            { value: "kernel", label: "Kernel" },
             { value: "journal", label: "Services" },
-            { value: "docker", label: "Container events" },
+            { value: "docker", label: "Containers" },
           ]}
         />
         {source === "journal" && (
@@ -178,18 +178,24 @@ export function LogsTab({ initialSource, initialUnit }: { initialSource: Source;
         </span>
       </div>
 
-      {error && <Notice tone="fault" title="The log stopped">{error}</Notice>}
+      {error && lines.length > 0 && (
+        <Notice tone="fault" title="The log stopped updating">
+          {error} Retrying.
+        </Notice>
+      )}
 
       <div className={lg.viewport} ref={parent} onScroll={onScroll} data-wrap={prefs.logsWrap ? "" : undefined} role="log" aria-live="off" aria-label={`${source} log`}>
         {!loaded ? (
-          <p className={lg.empty}>Loading the latest lines…</p>
+          <p className={lg.empty}>Loading…</p>
         ) : visible.length === 0 ? (
           <p className={lg.empty}>
             {lines.length
               ? "No lines match."
-              : source === "docker"
-                ? "No container events since Gluon started. Starts, stops and crashes appear here as they happen."
-                : "Nothing logged with these filters. New lines appear here as they're written."}
+              : error
+                ? "Couldn't read this log. Retrying."
+                : source === "docker"
+                  ? "No starts, stops or crashes since Gluon started."
+                  : "Nothing logged with these filters."}
           </p>
         ) : (
           <div style={{ height: v.getTotalSize(), position: "relative" }}>

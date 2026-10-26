@@ -4,7 +4,6 @@
 .error { color: var(--fault); font-size: var(--text-sm); line-height: 1.45; display: flex; gap: 7px; align-items: baseline; }
 .error::before { content: ""; flex: none; width: 5px; height: 5px; transform: translateY(-2px) rotate(45deg); background: var(--fault); }
 .pad { padding: 16px 18px; }
-.notice { margin-bottom: 14px; }
 .lead { font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; margin-bottom: 16px; text-wrap: pretty; }
 .setupWrap { display: grid; gap: 20px; padding: 2px 0; }
 .flow { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
@@ -89,3 +88,4 @@
   .deviceActions { grid-column: 2; grid-row: 1; }
   .legendScale { display: block; flex-basis: 100%; }
 }
+.more { padding: 8px 14px; border-top: 1px solid var(--line); }

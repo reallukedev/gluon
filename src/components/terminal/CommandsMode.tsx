@@ -220,7 +220,7 @@ export const CommandsMode = React.forwardRef<CommandsHandle, Props>(function Com
           <div className={s.intro}>
             <p className={s.introTitle}>{p.target === "host" ? "Run a command on this server" : `Run a command in ${p.label}`}</p>
             <p className={s.introText}>
-              Commands go through a shell, so pipes, variables and <code>cd</code> work. Tab completes names, folders and options. Programs that need the whole screen, like <code>top</code> or <code>vim</code>, open in the terminal.
+              Pipes, variables and <code>cd</code> work. Full-screen programs like <code>top</code> or <code>vim</code> open in the terminal.
             </p>
             <ul className={s.examples} aria-label="Try one">
               {examples.map((ex) => (

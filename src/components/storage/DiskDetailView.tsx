@@ -31,9 +31,9 @@ interface Detail {
 function healthSentence(d: DiskView, fmt: ReturnType<typeof useFormat>): string {
   const sm = d.smart;
   if (!d.mediaPresent) return "Nothing is inserted.";
-  if (!sm) return "Gluon hasn't read this drive's health yet. It checks every 30 minutes.";
+  if (!sm) return "Health not read yet.";
   const bits: string[] = [];
-  if (sm.state === "asleep") bits.push("Asleep; Gluon doesn't wake it just to check");
+  if (sm.state === "asleep") bits.push("Asleep");
   else if (sm.state === "unavailable") bits.push(sm.message ?? "No health data");
   else bits.push(smartPhrase(sm));
   if (sm.temperature !== null && sm.state !== "asleep") bits.push(fmt.temp(sm.temperature));
@@ -48,14 +48,14 @@ function HealthPanel({ disk, detail }: { disk: DiskView; detail: SmartDetail | u
   if (!sm) {
     return (
       <Panel title="Health">
-        <Empty title="Not checked yet">Gluon reads each drive's own health report (SMART) every 30 minutes. Use “Check drive health” to read it now.</Empty>
+        <Empty title="Not checked yet">Read every 30 minutes, or now with Check health.</Empty>
       </Panel>
     );
   }
   if (sm.state === "unavailable" && !sm.readAt) {
     return (
       <Panel title="Health">
-        <Notice title="This drive doesn't report its health">{sm.message ?? "Some USB adapters and card readers don't pass health data through. Gluon can still mount and measure it."}</Notice>
+        <Notice title="This drive doesn't report its health">{sm.message ?? "Some USB adapters don't pass it through. The drive still works normally."}</Notice>
       </Panel>
     );
   }
@@ -85,7 +85,7 @@ function HealthPanel({ disk, detail }: { disk: DiskView; detail: SmartDetail | u
   return (
     <Panel title="Health" meta={detail?.firmware ? <span>firmware {detail.firmware}</span> : undefined}>
       <div className={s.stack}>
-        {sm.state === "asleep" && <p className={s.muted}>The drive is spun down. These are its last readings; Gluon won't wake it just to look.</p>}
+        {sm.state === "asleep" && <p className={s.muted}>Spun down. These are its last readings.</p>}
         {sm.notes.length > 0 && (
           <ul className={s.plainList}>
             {sm.notes.map((n, i) => (
@@ -110,7 +110,7 @@ function HistoryPanel({ detail }: { detail: SmartDetail | undefined }) {
       {!detail ? (
         <Skeleton height={150} />
       ) : h.length < 2 ? (
-        <Empty title="Not enough history yet">Gluon records the drive's temperature and sector counts every 30 minutes while it's awake. Charts appear after a few readings.</Empty>
+        <Empty title="Not enough history yet">Readings are taken every 30 minutes while the drive is awake.</Empty>
       ) : (
         <div className={s.charts}>
           <div>
@@ -147,7 +147,7 @@ function AttributesPanel({ disk, detail }: { disk: DiskView; detail: SmartDetail
   if (!detail || detail.attributes.length === 0) return null;
   const known = !!disk.smart?.known;
   return (
-    <Panel title="Everything the drive reports" meta={<span>{known ? "SMART attributes" : "SMART attributes · this model isn't in smartctl's database, so names are guesses"}</span>} flush className={s.span2}>
+    <Panel title="Everything the drive reports" meta={<span>{known ? "SMART attributes" : "Names are guesses for this model"}</span>} flush className={s.span2}>
       <div className={s.attrTable} role="table" aria-label="SMART attributes">
         <div className={`${s.attrRow} ${s.tHead}`} role="row">
           <span role="columnheader">What</span>
@@ -186,7 +186,7 @@ function AttributesPanel({ disk, detail }: { disk: DiskView; detail: SmartDetail
           );
         })}
       </div>
-      <p className={s.hint + " " + s.pad}>“Value” is the maker's score (higher is better); the drive is in trouble when it falls to the limit. “Raw” is the actual count.</p>
+      <p className={s.hint + " " + s.pad}>Value is the maker's score, in trouble at the limit. Raw is the actual count.</p>
     </Panel>
   );
 }
@@ -209,7 +209,7 @@ function PartitionsPanel({ disk, onAction, busy }: { disk: DiskView; onAction: (
   return (
     <Panel title={disk.wholeDisk ? "Filesystem" : "Partitions"} meta={disk.partitionTable ? <span>{disk.partitionTable.toUpperCase()} partition table</span> : undefined} flush className={s.span2}>
       {rows.length === 0 ? (
-        <Empty title={disk.mediaPresent ? "Nothing on it" : "Nothing inserted"}>{disk.mediaPresent ? "This disk has no partitions or filesystem. Set it up to use it for storage." : "Insert a card or drive and it appears here."}</Empty>
+        <Empty title={disk.mediaPresent ? "No partitions or filesystem" : "Nothing inserted"}>{disk.mediaPresent ? undefined : "Insert a card or drive to see it here."}</Empty>
       ) : (
         <ul className={s.parts} role="list">
           {rows.map(({ v, depth }) => {
@@ -330,7 +330,7 @@ export function DiskDetailView({ initial }: { initial: Detail }) {
     try {
       await api.post("/api/storage/smart", { disk: disk.id });
       await mutate();
-      toast.success(disk.smart?.state === "asleep" ? "It's still asleep, so Gluon left it alone." : "Health checked.");
+      toast.success(disk.smart?.state === "asleep" ? "Still asleep, so it was left alone" : "Health checked");
     } catch (e) {
       const m = errorText(e);
       if (m) toast.error(m);
@@ -412,13 +412,6 @@ export function DiskDetailView({ initial }: { initial: Detail }) {
         <div className={s.banner}>
           <Notice tone="fault" title="This drive is failing">
             Copy anything important off it now and plan to replace it. {disk.smart.notes[0] ?? ""}
-          </Notice>
-        </div>
-      )}
-      {canSetup && (
-        <div className={s.banner}>
-          <Notice title={disk.state === "empty" ? "This disk is blank" : "Nothing on this disk is in use"}>
-            Set it up to add {fmt.bytes(disk.size)} of storage. Gluon erases it, formats it and keeps it mounted after restarts.
           </Notice>
         </div>
       )}

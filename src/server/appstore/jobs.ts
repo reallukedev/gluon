@@ -67,7 +67,7 @@ export function startJob(appId: string, kind: JobKind, stages: { key: string; la
       emit({ type: "done", ok: r.ok, message: r.message, detail: r.detail });
     } catch (e) {
       job.ok = false;
-      const message = e instanceof Error && "code" in e ? e.message : "Something went wrong on the server. It's been logged.";
+      const message = e instanceof Error && "code" in e ? e.message : "Something went wrong on the server. Try again; the details are in the server log.";
       if (!(e instanceof Error && "code" in e)) console.error("[gluon] builder job failed", e);
       emit({ type: "done", ok: false, message, detail: (e as { details?: { lines?: string[] } })?.details?.lines });
     } finally {

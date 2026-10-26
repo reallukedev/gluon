@@ -1,7 +1,7 @@
 import "server-only";
 import { all, now, one, run } from "../db";
 import { id as newId } from "../crypto";
-import { AppError, conflict, notFound } from "../errors";
+import { AppError, conflict, fieldWords, notFound, ownIssueMessage } from "../errors";
 import { monitorConfigSchema, type MonitorConfig, type MonitorKind } from "@/lib/alerts-types";
 
 interface MonitorRow {
@@ -68,7 +68,7 @@ export function checkConfig(merged: Record<string, unknown>): MonitorConfig {
   if (!p.success) {
     const issue = p.error.issues[0];
     const field = issue?.path.join(".");
-    throw new AppError("invalid", issue?.message && !issue.message.startsWith("Invalid") ? issue.message : `Check ${field || "the settings"}.`, 400, field ? { field: `config.${field}` } : undefined);
+    throw new AppError("invalid", ownIssueMessage(issue?.message) ?? `Check ${fieldWords(field) ?? "the settings"}.`, 400, field ? { field: `config.${field}` } : undefined);
   }
   if (p.data.timeoutSec >= p.data.intervalSec) {
     throw new AppError("invalid", "The timeout has to be shorter than the time between checks.", 400, { field: "config.timeoutSec" });

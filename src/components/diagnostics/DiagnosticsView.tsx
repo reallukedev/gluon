@@ -32,9 +32,9 @@ const TAB_ITEMS: { value: DiagTab; label: string }[] = [
 function CheckupSummary({ initial }: { initial: CheckupState | null }) {
   const { data } = useApi<CheckupState>(STATE_URL, { fallbackData: initial ?? undefined, refresh: 30_000 });
   const live = useCheckupRun();
-  if (live.streaming) return <>A checkup is running. Results appear below as each check finishes.</>;
+  if (live.streaming) return <>A checkup is running.</>;
   const sum = live.view?.summary?.status === "done" && live.view.meta.kind === "full" ? live.view.summary : (data?.latest?.summary ?? null);
-  if (!sum) return <>No full checkup has run yet. One takes about a minute and changes nothing on the server.</>;
+  if (!sum) return <>No full checkup has run yet.</>;
   const { fail, warn } = sum.counts;
   const found = !fail && !warn ? "everything checked out" : `${fail ? `${fail} ${fail === 1 ? "thing was" : "things were"} broken` : "nothing was broken"}${warn ? ` and ${warn} ${warn === 1 ? "thing" : "things"} needed a look` : ""}`;
   return (

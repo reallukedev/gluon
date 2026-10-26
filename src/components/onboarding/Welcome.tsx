@@ -68,6 +68,9 @@ export function Welcome({ plan }: { plan: Plan }) {
   const keyboard = useKeyboardLast();
   const moved = React.useRef(false);
 
+  // Home is where every way out of here lands; fetch it early so leaving is quick.
+  React.useEffect(() => router.prefetch("/"), [router]);
+
   const steps = plan.steps as StepId[];
   const at = Math.max(0, steps.indexOf(step));
 
@@ -127,7 +130,7 @@ export function Welcome({ plan }: { plan: Plan }) {
             <span className={o.serverName}>{serverName}</span>
           </span>
           {!last && (
-            <Button variant="ghost" size="sm" onClick={() => finish()} disabled={leaving}>
+            <Button variant="ghost" size="sm" onClick={() => finish()} loading={leaving}>
               {plan.role === "admin" ? "Skip setup" : "Skip to Home"}
             </Button>
           )}

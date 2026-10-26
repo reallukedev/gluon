@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { all, now, one, run } from "../db";
 import { decryptJson, encryptJson, id as newId } from "../crypto";
-import { AppError, badRequest, forbidden, notFound } from "../errors";
+import { AppError, badRequest, fieldWords, forbidden, notFound, ownIssueMessage } from "../errors";
 import type { User } from "../auth/users";
 import { checkUrl } from "./net";
 import { invalidate } from "./cache";
@@ -131,7 +131,7 @@ export function validateConfig(kind: IntegrationKind, config: Record<string, unk
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = issue?.path.join(".") || undefined;
-    const msg = issue?.message && !issue.message.startsWith("Invalid") ? issue.message : `Check ${field ?? "the settings"}.`;
+    const msg = ownIssueMessage(issue?.message) ?? `Check ${fieldWords(field) ?? "the settings"}.`;
     throw badRequest(msg, field ? { field: `config.${field}` } : undefined);
   }
   return parsed.data as Record<string, unknown>;

@@ -140,7 +140,7 @@ export function VoiceServerFlow({ target, data, status, commit, onClose, onReloa
   const description =
     converting && existing
       ? `${bare(data.urls[existing.id] ?? "")} sends browsers to port ${existing.backend.port}, which only Mumble understands. This keeps the address and sets it up for voice apps.`
-      : "Voice apps connect straight to Mumble. Gluon keeps a certificate for the name and checks that people outside can get through.";
+      : "Voice apps connect straight to Mumble. Gluon keeps its certificate and checks it's reachable.";
 
   return (
     <Dialog
@@ -228,7 +228,7 @@ export function VoiceServerFlow({ target, data, status, commit, onClose, onReloa
               </button>
             </div>
           )}
-          {list && list.length === 0 && <p className={f.faint}>Gluon didn&rsquo;t find a Mumble container on this server. If yours runs here under another image, enter its port.</p>}
+          {list && list.length === 0 && <p className={f.faint}>No Mumble container here. If yours uses another image, enter its port.</p>}
           {server && !server.udp && server.port && (
             <Notice tone="attention" title={`${server.container} only publishes TCP`}>
               Voice goes over UDP when it can. Without it Mumble still works over TCP, but with more delay. Publish UDP {server.port} in the app&rsquo;s settings too.
@@ -269,7 +269,7 @@ export function VoiceServerFlow({ target, data, status, commit, onClose, onReloa
             <li>
               <Globe aria-hidden />
               <span>
-                Your router has to forward port <span className="mono">{port || MUMBLE_PORT}</span>, TCP and UDP, to this server. Once it&rsquo;s saved, Gluon tries it through your internet address and tells you if it doesn&rsquo;t get through.
+                Your router has to forward port <span className="mono">{port || MUMBLE_PORT}</span>, TCP and UDP, to this server. After saving, Gluon tests it from your internet address.
               </span>
             </li>
             <li>
@@ -277,7 +277,7 @@ export function VoiceServerFlow({ target, data, status, commit, onClose, onReloa
               <span>
                 {https.mode === "http"
                   ? `The web page at ${host || "the domain"} is plain HTTP, so there's no certificate here for Mumble to use.`
-                  : `The web server keeps a certificate for ${host || "the domain"}, which Mumble can use so apps don't ask people to accept a self-signed one.`}
+                  : `The web server keeps a certificate for ${host || "the domain"} that Mumble can use, so apps don't warn about a self-signed one.`}
               </span>
             </li>
             <li>

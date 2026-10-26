@@ -83,7 +83,7 @@
 .line[data-level="debug"] { color: var(--muted); }
 .line[data-current] { background: color-mix(in oklab, var(--ink) 9%, transparent); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ts { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; user-select: none; }
-.ctr { flex: none; width: var(--ctr-w, 14ch); overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.ctr { flex: none; width: var(--ctr-w, 14ch); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .text { min-width: 0; }
 .text mark { background: color-mix(in oklab, var(--ink) 16%, transparent); color: var(--ink); border-radius: 2px; box-shadow: 0 1px 0 var(--ink-2); }
 .line[data-current] .text mark { background: var(--ink); color: var(--panel); }
@@ -104,7 +104,12 @@
 .mark[data-kind="match"] { left: 1px; right: 1px; background: var(--ink); height: 1px; }
 .mark::before { content: ""; position: absolute; inset: -3px 0; }
 
-.jump { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); }
+/* Rises in when new lines arrive below a paused view; lines themselves never animate (they can stream fast). */
+.jump {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  transition: opacity var(--dur-base) var(--ease-out), transform calc(var(--dur-base) * var(--motion)) var(--ease-out);
+  @starting-style { opacity: 0; transform: translate(-50%, calc(8px * var(--motion))); }
+}
 
 @media (max-width: 640px) {
   .frame { grid-template-columns: minmax(0, 1fr) 8px; gap: 4px; }

@@ -337,7 +337,11 @@ export function Home({ initial }: Props) {
     setCollection(collectionAsked);
     setCollectionAsked(null);
   }, [CollectionView, collectionAsked]);
-  const ctx = React.useMemo(() => ({ openCollection, arranging }), [openCollection, arranging]);
+  const typesKey = [...new Set(items.map((i) => i.type))].sort().join(" ");
+  const ctx = React.useMemo(() => {
+    const types = new Set(typesKey.split(" "));
+    return { openCollection, arranging, pinned: (t: string) => types.has(t) };
+  }, [openCollection, arranging, typesKey]);
   const active = activeId ? layout.items.find((i) => i.id === activeId) : null;
   const settingsItem = settingsFor ? layout.items.find((i) => i.id === settingsFor) : null;
   const settingsDef = settingsItem ? widgetDef(settingsItem.type) : null;
@@ -351,7 +355,7 @@ export function Home({ initial }: Props) {
         {(arranging || barMounted) && (
           <div className={s.editBar} role="region" aria-label="Arranging your Home" data-motion-gentle="" data-leaving={arranging ? undefined : ""} inert={!arranging || undefined}>
             <span className={s.editText}>
-              Drag anything by its name to move it. Pick a shape to resize it, or use <MoreHoriz className={s.inlineIcon} aria-label="More" /> to move or unpin it.
+              Drag by the name to move. Pick a shape to resize, or <MoreHoriz className={s.inlineIcon} aria-label="More" /> to unpin.
               <span className={s.saveState} aria-live="polite">
                 {saving === "saving" ? "Saving…" : saving === "saved" ? "Saved" : saving === "error" ? "Not saved" : ""}
               </span>
@@ -714,7 +718,7 @@ const WidgetFrame = React.memo(function WidgetFrame({
       aria-label={label}
     >
       {editing && (
-        <div className={s.chrome}>
+        <div className={s.chrome} data-motion-gentle="">
           <button type="button" className={s.handle} ref={handleRef} {...handleProps} data-handle="" aria-label={`Move ${label}. Use the arrow keys after picking it up.`}>
             <DragHandGesture />
             <span>{label}</span>

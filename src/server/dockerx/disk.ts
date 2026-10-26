@@ -113,7 +113,7 @@ async function imagePlan(): Promise<CleanupPlan> {
     else if (i.baseOf.length) note = `Base of ${listJoin(i.baseOf.slice(0, 2))}; frees little`;
     else if (!i.tags.length) note = "Kept by digest only";
     if (r?.status === "missing") caution = "Built on this server or private: it can't be downloaded again.";
-    else if (r?.status === "unknown" && i.tags.length) caution = "Gluon couldn't check whether it can be downloaded again.";
+    else if (r?.status === "unknown" && i.tags.length) caution = "Couldn't check whether it can be downloaded again.";
     items.push({
       id: i.id,
       label: i.tags[0] ?? i.repo ?? (i.built ? "Leftover build" : "Untagged image"),

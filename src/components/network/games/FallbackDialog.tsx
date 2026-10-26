@@ -50,7 +50,7 @@ export function FallbackDialog({ open, onOpenChange, st, onDone }: { open: boole
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       title="Players on any other address"
-      description="Someone who types your IP address, or a name that isn't in the list, reaches this server."
+      description="Where players go when they type your IP address or a name not in the list."
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>

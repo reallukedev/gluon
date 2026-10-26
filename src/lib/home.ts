@@ -79,23 +79,26 @@ export function withStart(layout: HomeLayout): HomeLayout {
   return { ...layout, items: [...lead, ...layout.items].slice(0, 80), migrated: [...(layout.migrated ?? []), "start"] };
 }
 
+/*
+ * Defaults are laid out in whole bands of the 12-column grid so nothing is left ragged at 1440. Apps are Row cards,
+ * four to a line; whatever follows them is full width (or the end), so a short last row of apps leaves a gap at the
+ * end of that row instead of pulling the next widgets out of line.
+ */
 export const ADMIN_DEFAULT: HomeLayout = {
   version: 1,
   migrated: ["start"],
   items: [
     { id: "wgreeting", type: "greeting", size: "h", config: {} },
     { id: "wsearch", type: "search", size: "h", config: {} },
-    { id: "wapps", type: ALL_APPS, size: "i", config: {} },
     { id: "wstatus", type: "status", size: "m", config: {} },
     { id: "wvitals", type: "vitals", size: "s", config: {} },
-    { id: "wclock", type: "clock", size: "s", config: {} },
-    { id: "wstorage", type: "storage", size: "t", config: {} },
-    { id: "wnetwork", type: "network", size: "t", config: {} },
+    { id: "wbusy", type: "server.busy", size: "s", config: { by: "memory" } },
+    { id: "wapps", type: ALL_APPS, size: "c", config: {} },
+    { id: "wuptime", type: "server.uptime", size: "w", config: {} },
+    { id: "wnetwork", type: "network", size: "m", config: {} },
     { id: "winternet", type: "household.internet", size: "m", config: {} },
     { id: "wspace", type: "server.space", size: "m", config: {} },
-    { id: "wuptime", type: "server.uptime", size: "w", config: {} },
-    { id: "wbusy", type: "server.busy", size: "m", config: { by: "memory" } },
-    { id: "wnotes", type: "notes", size: "m", config: { text: "" } },
+    { id: "wactivity", type: "server.activity", size: "m", config: {} },
   ],
 };
 
@@ -105,10 +108,10 @@ export const HOUSEHOLD_DEFAULT: HomeLayout = {
   items: [
     { id: "wgreeting", type: "greeting", size: "h", config: {} },
     { id: "wsearch", type: "search", size: "h", config: {} },
-    { id: "wapps", type: ALL_APPS, size: "i", config: {} },
-    { id: "wclock", type: "clock", size: "m", config: {} },
+    { id: "wapps", type: ALL_APPS, size: "c", config: {} },
+    { id: "winternet", type: "household.internet", size: "w", config: {} },
     { id: "wstatus", type: "status", size: "m", config: {} },
-    { id: "winternet", type: "household.internet", size: "m", config: {} },
-    { id: "wnotes", type: "notes", size: "m", config: { text: "" } },
+    { id: "wclock", type: "clock", size: "s", config: {} },
+    { id: "wnotes", type: "notes", size: "s", config: { text: "" } },
   ],
 };

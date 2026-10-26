@@ -25,12 +25,12 @@ export function PortsGroup({ draft, form: f, issues, isWeb, target, usedPorts, o
     <section className={s.group} data-field={base}>
       <div className={s.groupHead}>
         <h3 className={s.groupTitle}>Ports</h3>
-        {f.hostNetwork && <span className={s.groupDesc}>Uses the server&apos;s network, so every port it opens is on the server already.</span>}
+        {f.hostNetwork && <span className={s.groupDesc}>Uses the server&apos;s network, so its ports are already open there.</span>}
       </div>
       {isWeb && web.containerPort && !f.hostNetwork && (
         <p className={s.hint}>
-          Its web page (port <span className="mono">{web.containerPort}</span>) opens on <span className="mono">{web.port ?? "?"}</span>
-          {target === "umbrel" ? " through Umbrel's proxy" : ""}, so it doesn&apos;t need a row here. Add ports other devices connect to directly.
+          The web page (<span className="mono">{web.containerPort}</span> to <span className="mono">{web.port ?? "?"}</span>
+          {target === "umbrel" ? ", through Umbrel's proxy" : ""}) needs no row. Add ports other devices connect to directly.
         </p>
       )}
       {rows.length > 0 && !f.hostNetwork && (

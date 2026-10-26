@@ -17,7 +17,7 @@ export function Household() {
     <div className={s.stack}>
       <Panel title="Default home page">
         <p className={s.hint} style={{ marginBottom: 14 }}>
-          New household members start with this layout. Anyone can change their own afterwards; changing the default doesn't touch pages people have already customised.
+          New household members start with this. Changing it leaves pages people have already arranged alone.
         </p>
         {!data ? (
           <Skeleton height={120} />
@@ -31,6 +31,7 @@ export function Household() {
                   key={i.id}
                   className={s.layoutTile}
                   data-admin={d?.adminOnly ? "" : undefined}
+                  data-short={size.rows === 1 ? "" : undefined}
                   style={{ gridColumn: `span ${size.cols}`, gridRow: `span ${size.rows}` }}
                   title={`${d?.name ?? i.type} · ${size.label}${d?.adminOnly ? " · admins only, hidden from members" : ""}`}
                 >
@@ -60,7 +61,7 @@ export function Household() {
           >
             Reset to Gluon's default
           </Button>
-          <LinkButton href="/?edit=1" variant="primary">
+          <LinkButton href="/?edit=1">
             Design it on your home page
           </LinkButton>
         </div>

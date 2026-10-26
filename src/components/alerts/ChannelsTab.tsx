@@ -62,10 +62,7 @@ export function ChannelsTab({ highlight }: { highlight: string | null }) {
           </div>
         ) : server.length === 0 ? (
           <div className={s.firstChannel}>
-            <p className={s.firstChannelText}>
-              <b>Nothing is sent anywhere yet.</b> Choose where alerts should go. You can send a test before saving, and pick which alerts each channel gets in
-              Settings → Notifications.
-            </p>
+            <p className={s.firstChannelText}>Pick where alerts go. You can send a test before saving.</p>
             <div className={s.kindGrid}>
               {CHANNEL_KINDS.map((k) => (
                 <button key={k} type="button" className={s.kindChoice} onClick={() => edit(null, k)}>
@@ -109,9 +106,9 @@ export function ChannelsTab({ highlight }: { highlight: string | null }) {
 }
 
 const NEEDS: Record<ChannelKind, string> = {
-  ntfy: "Free. Install the ntfy app and pick a topic.",
-  pushover: "Paid app. Needs your user key and an app token.",
-  email: "Any mail account. Needs its mail server details.",
-  webhook: "Discord, Slack or your own service.",
-  xmpp: "Messages in Conversations, Monal or any XMPP chat app.",
+  ntfy: "Free app. Pick a topic.",
+  pushover: "Paid app. Needs a user key and app token.",
+  email: "Any mail account.",
+  webhook: "Discord, Slack or your own.",
+  xmpp: "Conversations, Monal or any XMPP app.",
 };

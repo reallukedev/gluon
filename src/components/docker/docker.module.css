@@ -341,7 +341,7 @@
 .meter { margin-top: 16px; }
 /* Disk use rows, sized by the list's own width. Full: 180 + figures + ~170 button + 2×24 + 36 ≈ 500px min. */
 .kinds { margin: 0; padding: 0; list-style: none; container: kinds / inline-size; }
-.kind { display: grid; grid-template-columns: minmax(180px, 1.3fr) minmax(0, 2fr) auto; align-items: center; gap: 12px 24px; padding: 16px 18px; border-top: 1px solid var(--line); }
+.kind { display: grid; grid-template-columns: minmax(180px, 1.3fr) minmax(0, 2fr) 13rem; align-items: center; gap: 12px 24px; padding: 16px 18px; border-top: 1px solid var(--line); }
 .kind:first-child { border-top: 0; }
 .kindName { display: grid; gap: 2px; min-width: 0; }
 .kindName strong { font-size: var(--text-md); font-weight: 620; }

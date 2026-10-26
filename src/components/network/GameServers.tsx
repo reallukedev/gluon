@@ -43,7 +43,7 @@ export function GameServers() {
     try {
       await mutate(await api.post<GamesStatus>(`${GAMES_URL}/check`), { revalidate: false });
     } catch (e) {
-      toast.error("Gluon couldn't check the game servers", { description: e instanceof Error ? e.message : undefined });
+      toast.error("Couldn't check the game servers", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setChecking(false);
     }
@@ -55,7 +55,7 @@ export function GameServers() {
       await mutate(r.status, { revalidate: false });
       toast.success("Put back the way it was");
     } catch (e) {
-      if (!quiet(e)) toast.error("Gluon couldn't undo that", { description: e instanceof Error ? e.message : undefined });
+      if (!quiet(e)) toast.error("Couldn't undo that", { description: e instanceof Error ? e.message : undefined });
     }
   }
 
@@ -118,7 +118,7 @@ export function GameServers() {
     try {
       changed(await api.put<McChangeResult>(`${GAMES_URL}/minecraft`, { reload: true }), "mc-router read its routes again");
     } catch (e) {
-      if (!quiet(e)) toast.error("Gluon couldn't reload mc-router", { description: e instanceof Error ? e.message : undefined });
+      if (!quiet(e)) toast.error("Couldn't reload mc-router", { description: e instanceof Error ? e.message : undefined });
     }
   };
 
@@ -160,7 +160,7 @@ export function GameServers() {
       {!data ? (
         <div className={s.pad}>
           {error ? (
-            <Notice tone="fault" title="Gluon couldn't look at the game servers" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+            <Notice tone="fault" title="Couldn't look at the game servers" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
               {error.message}
             </Notice>
           ) : (
@@ -213,6 +213,7 @@ function Minecraft({ st, fwd, onAdd, onEdit, onRemove, onFallback, onHistory }: 
         <h3 id="games-java" className={s.subTitle}>
           Minecraft Java
         </h3>
+        {r.status === "missing" && <span className={s.subMeta}>mc-router not installed</span>}
         {r.status !== "missing" && <span className={s.subMeta}>{r.container}{r.version ? ` ${r.version}` : ""}{r.hostPort ? `, port ${r.hostPort}` : ""}</span>}
         {canEdit && st.routes.length > 0 && (
           <Button size="sm" className={s.subAction} onClick={onAdd}>
@@ -222,10 +223,10 @@ function Minecraft({ st, fwd, onAdd, onEdit, onRemove, onFallback, onHistory }: 
       </div>
 
       {r.status === "missing" ? (
-        <div className={s.emptyWrap}>
-          <Empty title="mc-router isn't installed">
-            mc-router lets all your Minecraft Java servers share port 25565: players type a name like survival.mc.example.com and it sends them to the right server. Run itzg/mc-router with a routes file in a folder on this server, and Gluon manages its addresses here. Game ports below work without it.
-          </Empty>
+        <div className={s.emptyLine}>
+          <p>
+            Run <span className="mono">itzg/mc-router</span> with a routes file on this server to give each Java server its own name on port 25565.
+          </p>
         </div>
       ) : (
         <>
@@ -240,7 +241,7 @@ function Minecraft({ st, fwd, onAdd, onEdit, onRemove, onFallback, onHistory }: 
             <div className={s.pad}>
               <Notice tone="fault" title="The routes file has a mistake" action={<Button size="sm" onClick={onHistory}>Earlier versions</Button>}>
                 <p className={s.noticeText}>
-                  {r.broken.message} mc-router keeps the addresses it last loaded, but won&rsquo;t pick up changes. Fix <span className="mono">{r.file}</span> by hand, or put back an earlier version. Gluon won&rsquo;t write over it.
+                  {r.broken.message} mc-router keeps what it last loaded. Fix <span className="mono">{r.file}</span> by hand or put back an earlier version; Gluon won&rsquo;t write over it.
                 </p>
                 {r.broken.excerpt && <pre className={s.excerpt}>{r.broken.excerpt}</pre>}
               </Notice>
@@ -426,7 +427,7 @@ function OtherGames({ st, fwd, onAdd, onEdit, onRemove }: { st: GamesStatus; fwd
       </div>
       {st.ports.length === 0 ? (
         <div className={s.emptyLine}>
-          <p>Bedrock, Valheim, Terraria and most other games can&rsquo;t share an address by name, so each needs its own port forwarded. Add one and Gluon lists it under Port forwarding.</p>
+          <p>Bedrock, Valheim and most other games each need a port forwarded. Add one and it shows up under Port forwarding.</p>
         </div>
       ) : (
         <ul className={s.list} aria-label="Game ports">

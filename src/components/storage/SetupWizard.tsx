@@ -171,7 +171,7 @@ export function SetupWizard({ disk, onClose, onDone }: { disk: DiskView | null; 
         open={!!disk}
         onOpenChange={(o) => !o && close()}
         title={phase === "run" ? `Setting up the ${disk?.title ?? "disk"}` : `Set up the ${disk?.title ?? "disk"}`}
-        description={phase === "look" ? "Gluon erases it, formats it as one ext4 drive, mounts it and keeps it mounted after restarts." : undefined}
+        description={phase === "look" ? "Erased, formatted as one ext4 drive and kept mounted after restarts." : undefined}
         size="wide"
         footer={footer}
       >
@@ -197,10 +197,10 @@ export function SetupWizard({ disk, onClose, onDone }: { disk: DiskView | null; 
               <b>{disk.model ?? disk.name}</b> <span className={s.muted}>· {disk.path} · serial {disk.serial ?? "unknown"}</span>
             </p>
             {vols.length === 0 ? (
-              <p className={s.muted}>It's blank: no partitions and no filesystem.</p>
+              <p className={s.muted}>It's blank.</p>
             ) : (
               <>
-                <p>What's on it now, which will be erased:</p>
+                <p>Erases what's on it now:</p>
                 <ul className={s.eraseList} role="list">
                   {vols.map((v) => (
                     <li key={v.name}>
@@ -213,14 +213,14 @@ export function SetupWizard({ disk, onClose, onDone }: { disk: DiskView | null; 
                 </ul>
               </>
             )}
-            {disk.system && <Notice tone="fault">{disk.systemReason ?? "This is the system disk."} Gluon won't erase it.</Notice>}
+            {disk.system && <Notice tone="fault">{disk.systemReason ?? "This is the system disk."} It can't be erased here.</Notice>}
             {disk.state === "in-use" && <Notice tone="fault">Something on this disk is in use. Unmount it first.</Notice>}
           </div>
         )}
 
         {phase === "name" && (
           <div className={s.stack}>
-            <Field label="Name" description="Up to 16 letters, numbers, dashes or underscores. It's how the drive identifies itself." error={label && !labelOk ? "Use 1–16 letters, numbers, dashes or underscores." : null}>
+            <Field label="Name" description="Up to 16 letters, numbers, dashes or underscores." error={label && !labelOk ? "Use 1–16 letters, numbers, dashes or underscores." : null}>
               <Input mono value={label} onChange={(e) => setLabel(e.target.value)} spellCheck={false} autoComplete="off" autoFocus />
             </Field>
             <Field label="Mount at" description="A new or empty folder.">

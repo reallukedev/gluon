@@ -290,7 +290,7 @@ async function loop() {
     if (!c || !c.running) {
       s.following = false;
       s.container = c?.name ?? null;
-      s.error = c ? "Caddy isn't running, so there are no requests to show." : "Gluon can't find the Caddy container.";
+      s.error = c ? "Caddy isn't running, so there are no requests to show." : "Can't find the Caddy container.";
       await new Promise((r) => setTimeout(r, 30_000));
       continue;
     }

@@ -79,10 +79,10 @@ export function Switch({ checked, onChange, disabled, id, ...aria }: SwitchProps
 }
 
 /** A settings row: label + description on the left, a control (switch, select…) on the right. */
-export function SettingRow({ label, description, children, stack }: { label: React.ReactNode; description?: React.ReactNode; children: React.ReactNode; stack?: boolean }) {
+export function SettingRow({ label, description, children, stack, className }: { label: React.ReactNode; description?: React.ReactNode; children: React.ReactNode; stack?: boolean; className?: string }) {
   const id = React.useId();
   return (
-    <div className={`${s.row} ${stack ? s.stack : ""}`} role="group" aria-labelledby={id}>
+    <div className={`${s.row} ${stack ? s.stack : ""} ${className ?? ""}`} role="group" aria-labelledby={id}>
       <div className={s.rowText}>
         <div id={id} className={s.rowLabel}>
           {label}

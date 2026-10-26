@@ -6,3 +6,5 @@
 .people { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 8px; }
 .error { color: var(--fault); font-size: var(--text-sm); }
 .actions { display: flex; justify-content: flex-end; }
+.meta { font-size: var(--text-xs); color: var(--muted); }
+@media (max-width: 720px) { .meta { display: none; } }

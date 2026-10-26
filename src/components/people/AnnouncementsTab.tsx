@@ -51,9 +51,11 @@ export function AnnouncementsTab() {
       <Panel
         title="Showing now"
         meta={
-          <Button size="sm" variant="primary" icon={<Plus />} onClick={() => edit(null)}>
-            New announcement
-          </Button>
+          active.length > 0 ? (
+            <Button size="sm" icon={<Plus />} onClick={() => edit(null)}>
+              New announcement
+            </Button>
+          ) : undefined
         }
         flush
       >
@@ -63,8 +65,7 @@ export function AnnouncementsTab() {
           </div>
         ) : active.length === 0 ? (
           <Empty title="Nothing announced" action={<Button icon={<Megaphone />} onClick={() => edit(null)}>Write an announcement</Button>}>
-            Announcements appear as a banner for everyone in the household, e.g. “Power cut tonight from 10, everything will be off for an hour.” Tie one to an app and
-            only people who use that app see it.
+            A banner across everyone's pages, like “Power cut tonight from 10.” Tie one to an app to show it only to people who use that app.
           </Empty>
         ) : (
           <AnnList items={active} onEdit={edit} onRemove={takeDown} />

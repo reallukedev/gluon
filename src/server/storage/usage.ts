@@ -163,7 +163,7 @@ export async function startUsage(user: User | null, raw: string): Promise<Storag
       return;
     }
     if (!total && code !== 0) {
-      job.finish("failed", { error: unreadable ? "Gluon couldn't read that folder." : "The scan didn't finish." });
+      job.finish("failed", { error: unreadable ? "Couldn't read that folder." : "The scan didn't finish." });
       return;
     }
     // Mount points of other drives inside it: show them with their own size, marked, not counted.

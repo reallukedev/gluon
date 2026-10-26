@@ -53,8 +53,8 @@ interface Done {
 }
 
 const SERVER_DESC: Record<ChatServerKind, string> = {
-  quark: "One app that does everything, calls included. Settings you change here apply straight away, without bumping anyone off.",
-  prosody: "The long-standing choice. A few settings restart it, and calls between homes need a second app Gluon installs for you.",
+  quark: "One app, calls included. Settings apply straight away without signing anyone out.",
+  prosody: "The long-standing choice. Some settings restart it, and calls between homes need a second app Gluon installs.",
 };
 
 /**
@@ -267,10 +267,10 @@ export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenC
             <p className={s.hint}>
               {moved
                 ? plan?.network
-                  ? `Gluon publishes it on Network and keeps its certificate current. It also needs a DNS record pointing at your home (the *.${plan.baseDomain} wildcard covers names under it).`
+                  ? `Gluon publishes it on Network and keeps its certificate current. It needs a DNS record pointing at your home; *.${plan.baseDomain} already covers names under it.`
                   : "Point the domain's DNS at your home as well."
                 : plan?.network
-                ? `Gluon publishes it on Network, keeps its certificate current, and checks chat apps can reach it. It needs a DNS record pointing at your home (the *.${plan.baseDomain} wildcard covers names under it), and your router has to forward ports 5222 and 5269 to this server.`
+                ? `Gluon publishes it on Network and keeps its certificate current. It needs a DNS record pointing at your home (*.${plan.baseDomain} covers names under it) and ports 5222 and 5269 forwarded to this server.`
                 : "Point the domain's DNS at your home and forward ports 5222 and 5269 to this server."}
             </p>
           </form>

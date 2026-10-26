@@ -77,15 +77,28 @@ export const api = {
 const fetcher = (url: string) => api.get<unknown>(url);
 
 /** Polling GET with SWR. `refresh` in ms; pauses automatically when the tab is hidden. */
+const noSubscribe = () => () => {};
+
 export function useApi<T>(url: string | null, opts: SWRConfiguration & { refresh?: number } = {}) {
   const { refresh, ...rest } = opts;
-  return useSWR<T, ApiError>(url, fetcher as (u: string) => Promise<T>, {
+  const res = useSWR<T, ApiError>(url, fetcher as (u: string) => Promise<T>, {
     refreshInterval: refresh,
     revalidateOnFocus: true,
     keepPreviousData: true,
     dedupingInterval: 1000,
     ...rest,
   });
+  // A part of the page that hydrates late (slow Safari, Suspense) can find its data already cached.
+  // Render what the server rendered until hydration is over, or React throws the page's HTML away.
+  const hydrated = React.useSyncExternalStore(noSubscribe, () => true, () => false);
+  if (hydrated || rest.fallbackData !== undefined) return res;
+  return {
+    get data() { return undefined; },
+    get error() { return undefined; },
+    get isLoading() { return true; },
+    get isValidating() { return res.isValidating; },
+    mutate: res.mutate,
+  } as typeof res;
 }
 
 /**

@@ -154,7 +154,7 @@ export function AdvancedGroup({ draft, form: f, names, issues, target }: { draft
             ) : (
               <div className={s.healthGrid}>
                 <div className={s.wide}>
-                  <Field label="Command" optional description="Runs inside the container; exit code 0 means healthy. Leave it empty to keep the image's own check.">
+                  <Field label="Command" optional description="Exit code 0 means healthy. Empty keeps the image's own check.">
                     <Input value={health.test} mono placeholder="curl -fs http://localhost:8080/health || exit 1" onChange={(e) => setHealthLocal({ ...health, test: e.target.value })} spellCheck={false} />
                   </Field>
                 </div>

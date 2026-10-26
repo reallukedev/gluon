@@ -219,6 +219,15 @@
 .jobSteps li[data-state="running"]::before { background: repeating-linear-gradient(to bottom, var(--ink) 0 2px, transparent 2px 4px); }
 .jobSteps li[data-state="failed"]::before { background: var(--fault); height: 5px; transform: translateY(-2px); }
 .jobSteps li[data-state="running"] { color: var(--ink); }
+/* A new step or the outcome arriving fades in with a short rise; reduced motion keeps the fade. */
+.jobSteps li,
+.result {
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(calc(4px * var(--motion)));
+  }
+}
 .pct { display: flex; align-items: center; gap: 10px; font-size: var(--text-sm); color: var(--ink-2); }
 .track { position: relative; flex: 1; max-width: 320px; height: 3px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
 .track > span { position: absolute; inset: 0; background: var(--ink-2); transform-origin: left; transition: transform var(--dur-slow) var(--ease-out); }

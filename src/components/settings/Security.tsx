@@ -324,20 +324,18 @@ function TwoStep({ status, refresh }: { status: MfaStatus | undefined; refresh: 
       </>
     );
   } else {
+    const homeOnly = viewer.role === "admin" && status.requiredAway;
     body = (
       <>
-        {viewer.role === "admin" && status.requiredAway && (
-          <div className={s.notice}>
-            <Notice tone="attention" title="You can only sign in at home">
-              Admins need two-step sign-in to connect from outside the home network. It takes a minute and an app on your phone.
-            </Notice>
-          </div>
-        )}
         <div className={s.statusRow}>
-          <StateLine state="stopped" />
+          <StateLine state={homeOnly ? "attention" : "stopped"} />
           <div className={s.statusText}>
-            <span className={s.statusTitle}>Off</span>
-            <span className={s.statusSub}>Add a code from your phone when you sign in, so a leaked password isn't enough.</span>
+            <span className={s.statusTitle}>{homeOnly ? "Off, so you can only sign in at home" : "Off"}</span>
+            <span className={s.statusSub}>
+              {homeOnly
+                ? "Admins need it to sign in from outside. It takes a minute and an authenticator app."
+                : "A code from your phone at sign-in, so a leaked password isn't enough."}
+            </span>
           </div>
           <Button variant="primary" onClick={() => setMode("setup")}>
             Set up
@@ -375,6 +373,9 @@ function TwoStep({ status, refresh }: { status: MfaStatus | undefined; refresh: 
  * while it was signed in from home (dashed from away), a faint line while it sits idle, and a dotted
  * tail until it signs itself out. Stale sessions read at a glance as long faint lines.
  */
+/** Rows shown before "Show more": enough for a household's phones and laptops. */
+const FIRST = 8;
+
 function Devices() {
   const { data, mutate, isLoading, error } = useApi<SessionRow[]>("/api/me/sessions", { refresh: 60_000 });
   const [confirm, confirmNode] = useConfirm();
@@ -383,7 +384,9 @@ function Devices() {
     const t = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(t);
   }, []);
-  const list = data ?? [];
+  const [showAll, setShowAll] = React.useState(false);
+  // This device first: it's the one people look for.
+  const list = React.useMemo(() => [...(data ?? [])].sort((a, b) => Number(b.current) - Number(a.current)), [data]);
   const others = list.filter((x) => !x.current);
   const flagged = list.filter((x) => x.newDevice);
 
@@ -468,10 +471,17 @@ function Devices() {
             <span />
           </div>
           <ul className={s.devices} role="list" aria-label={summary ?? "Signed-in devices"}>
-            {list.map((x) => (
+            {(showAll ? list : list.slice(0, FIRST)).map((x) => (
               <DeviceRow key={x.id} x={x} now={now} onSignOut={() => void signOut(x)} onConfirm={() => void itWasMe(x)} />
             ))}
           </ul>
+          {list.length > FIRST && (
+            <div className={s.more}>
+              <Button size="sm" variant="ghost" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
+                {showAll ? "Show fewer" : `Show ${list.length - FIRST} more`}
+              </Button>
+            </div>
+          )}
           <p className={s.legend}>
             <span className={s.legendItem}>
               <i data-k="home" /> Used at home

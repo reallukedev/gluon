@@ -43,7 +43,7 @@ export function ServiceEditor({ names, source, ...p }: ServiceProps & { names: s
   const remove = () =>
     confirm({
       title: `Remove “${f.name}”?`,
-      description: "It's removed from this app's compose file. Nothing changes where the app runs until you publish.",
+      description: "Nothing changes where the app runs until you publish.",
       consequences: [
         ...(isWeb ? ["The app won't have a web page until you choose another service."] : []),
         ...(secretKeys.length ? [`Its ${secretKeys.length === 1 ? "secret" : `${secretKeys.length} secrets`} (${secretKeys.join(", ")}) ${secretKeys.length === 1 ? "is" : "are"} deleted.`] : []),
@@ -97,7 +97,7 @@ export function ServiceEditor({ names, source, ...p }: ServiceProps & { names: s
         confirm="Rename"
         taken={names.filter((n) => n !== f.name)}
         initial={f.name}
-        description="Other services reach it by this name (it's its hostname), so update any addresses that use the old one."
+        description="Other services reach it by this name. Update any addresses that use the old one."
         onDone={async (name) => {
           if (name === f.name) return;
           if (secretKeys.length) await draft.renameSecrets(f.name, name);

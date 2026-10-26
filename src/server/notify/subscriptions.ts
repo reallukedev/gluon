@@ -1,6 +1,6 @@
 import "server-only";
 import { all, run } from "../db";
-import { AppError, forbidden, notFound } from "../errors";
+import { AppError, forbidden, notFound, ownIssueMessage } from "../errors";
 import { listApps, appsForMember } from "../docker/apps";
 import { getPrefs } from "../prefs";
 import { getSetting } from "../settings";
@@ -126,7 +126,7 @@ async function sanitize(user: User, input: Partial<SubscriptionFilter>): Promise
   const parsed = subscriptionFilterSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    throw new AppError("invalid", issue?.message && !issue.message.startsWith("Invalid") ? issue.message : "Check the notification settings.", 400, {
+    throw new AppError("invalid", ownIssueMessage(issue?.message) ?? "Check the notification settings.", 400, {
       field: `filter.${issue?.path.join(".") ?? ""}`,
     });
   }

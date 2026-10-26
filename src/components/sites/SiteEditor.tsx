@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { MoreHoriz, OpenNewWindow, Copy, Download, EditPencil, Internet, Trash, PagePlus, FolderPlus, Upload, Prohibition } from "iconoir-react";
+import { MoreHoriz, OpenNewWindow, Copy, Download, EditPencil, Internet, Trash, PagePlus, FolderPlus, Upload, Prohibition, Check } from "iconoir-react";
 import { api, ApiError } from "@/lib/client/api";
 import { copyText } from "@/lib/client/clipboard";
 import { useMediaQuery } from "@/lib/client/motion";
@@ -58,34 +58,34 @@ function blankFor(path: string, siteName: string): string {
 
 function sentence(site: SiteDetail, dirty: number): React.ReactNode {
   const host = site.address?.host;
-  const unsaved = dirty ? ` ${dirty === 1 ? "One file has" : `${dirty} files have`} edits that aren't saved yet.` : "";
+  const unsaved = dirty ? ` ${dirty === 1 ? "1 file isn't" : `${dirty} files aren't`} saved.` : "";
   switch (site.state) {
     case "draft":
       return (
         <>
-          <b>Not published yet.</b> Edit the files, check the preview, then publish it to an address.{unsaved}
+          <b>Not published yet.</b>{unsaved}
         </>
       );
     case "live":
       return (
         <>
-          <b>Live at {host}.</b> {dirty ? unsaved.trim() : site.changes ? "You have changes that aren't published yet." : "The draft is the same as what's live."}
+          <b>Live at {host}.</b> {dirty ? unsaved.trim() : site.changes ? "Some changes aren't published yet." : null}
         </>
       );
     case "off":
       return (
         <>
-          <b>Offline.</b> {host} is turned off; publishing puts it back.{unsaved}
+          <b>Offline.</b> Publish to put {host} back.{unsaved}
         </>
       );
     case "broken":
       return host ? (
         <>
-          <b>{host} isn&rsquo;t serving anything.</b> The version it points at is gone or its entry in routes.json was changed by hand. Publish again to fix it.{unsaved}
+          <b>{host} isn&rsquo;t serving anything.</b> Its route was changed or removed by hand. Publish again to fix it.{unsaved}
         </>
       ) : (
         <>
-          <b>This site&rsquo;s address can&rsquo;t be used.</b> Its entry in routes.json was changed by hand. Publish again to give it an address.{unsaved}
+          <b>This site&rsquo;s address can&rsquo;t be used.</b> Its route was changed by hand. Publish again to give it an address.{unsaved}
         </>
       );
   }
@@ -259,6 +259,8 @@ export function SiteEditor({ initial, openFile }: { initial: SiteDetail; openFil
   // ⌘S / Ctrl+S anywhere on the page saves the open file instead of saving the web page.
   React.useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      // The editor's own Mod-s has already saved (and prevented the default); saving twice sent a stale etag.
+      if (ev.defaultPrevented) return;
       if ((ev.metaKey || ev.ctrlKey) && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === "s") {
         ev.preventDefault();
         void save();
@@ -458,7 +460,7 @@ export function SiteEditor({ initial, openFile }: { initial: SiteDetail; openFil
         ...(site.address ? [`${site.address.host} stops working and comes off the Network page.`] : []),
         ...(site.versions.length ? [`${plural(site.versions.length, "published version")} ${site.versions.length === 1 ? "is" : "are"} deleted.`] : []),
         `The draft (${plural(site.draft.files, "file")}, ${formatBytes(site.draft.bytes)}) is deleted.`,
-        "This can't be undone. Download it as a .zip first if you might want it back.",
+        "This can't be undone. Download a .zip first to keep a copy.",
       ],
       typeToConfirm: site.address ? site.name : undefined,
       confirmLabel: "Delete site",
@@ -487,18 +489,22 @@ export function SiteEditor({ initial, openFile }: { initial: SiteDetail; openFil
       <div className={e.paneBar}>
         <span className={e.filePath} title={path ?? undefined}>
           {path ?? "No file open"}
-          {dirty && <span className={e.dirtyText}>Not saved</span>}
+          {dirty && <span className={`${e.dirtyText} appear`}>Not saved</span>}
         </span>
         {buf && (
           <Button size="sm" variant={dirty ? "secondary" : "ghost"} onClick={() => void save()} loading={saving} disabled={!dirty} iconEnd={dirty ? <span className={e.kbd}><Kbd>{mac ? "⌘S" : "Ctrl S"}</Kbd></span> : undefined}>
-            {dirty ? "Save" : "Saved"}
+            {/* The label swap fades and "Saved" carries a check, so a save reads as done without a toast. */}
+            <span key={dirty ? "save" : "saved"} className={`${e.saveLabel} appear`}>
+              {!dirty && <Check aria-hidden />}
+              {dirty ? "Save" : "Saved"}
+            </span>
           </Button>
         )}
       </div>
       {conflict && conflict.path === path && (
         <div className={e.conflict}>
           <Notice tone="attention" title={conflict.kind === "changed" ? "This file changed somewhere else" : "This file isn't in the draft any more"}>
-            {conflict.kind === "changed" ? "It was saved from another tab or by someone else after you opened it. Load that version (your edits here are dropped), or keep yours and save over it." : "It was deleted or renamed somewhere else. Save your copy to put it back, or open another file."}
+            {conflict.kind === "changed" ? "Someone saved it after you opened it. Load their version and drop your edits, or keep yours and save over it." : "It was deleted or renamed somewhere else. Save your copy to put it back, or open another file."}
             <span className={e.conflictActions}>
               {conflict.kind === "changed" ? (
                 <>

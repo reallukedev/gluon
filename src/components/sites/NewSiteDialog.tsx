@@ -103,7 +103,7 @@ export function NewSiteDialog({ open, onOpenChange, start: initialStart, baseDom
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       title="New site"
-      description={`You can edit it here and see it before anyone else does. Publishing gives it an address like ${name.trim() ? name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "name" : "name"}.${baseDomain}.`}
+      description={`It stays private until you publish it at ${name.trim() ? name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "name" : "name"}.${baseDomain}.`}
       initialFocus={nameRef}
       footerStart={busy ? <span className={s.busyText} aria-live="polite">{busy}</span> : undefined}
       footer={
@@ -124,7 +124,7 @@ export function NewSiteDialog({ open, onOpenChange, start: initialStart, baseDom
           if (ready) void create();
         }}
       >
-        <Field label="Name" error={nameError} description="For you; visitors see the page's own title.">
+        <Field label="Name" error={nameError} description="Visitors see the page's own title instead.">
           <Input ref={nameRef} value={name} onChange={(e) => (setName(e.target.value), setNameError(null))} maxLength={60} placeholder="Family recipes" autoComplete="off" />
         </Field>
         <div className={s.startBlock}>
@@ -139,10 +139,10 @@ export function NewSiteDialog({ open, onOpenChange, start: initialStart, baseDom
               </Radio.Root>
             ))}
           </RadioGroup>
-          {start === "starter" && <p className={s.startDesc}>A front page, a stylesheet and a “page not found” page, ready to change. They work on phones and in dark mode.</p>}
+          {start === "starter" && <p className={s.startDesc}>A front page, a stylesheet and a “page not found” page, ready to change.</p>}
           {start === "files" && (
             <div className={s.startBody}>
-              <p className={s.startDesc}>Pick the files of your site, or the folder they&rsquo;re in. Its index.html becomes the front page.</p>
+              <p className={s.startDesc}>Its index.html becomes the front page.</p>
               <div className={s.pickRow}>
                 <Button size="sm" onClick={() => filesRef.current?.click()}>
                   Choose files
@@ -174,7 +174,7 @@ export function NewSiteDialog({ open, onOpenChange, start: initialStart, baseDom
           )}
           {start === "zip" && (
             <div className={s.startBody}>
-              <p className={s.startDesc}>Gluon unpacks it into the site. If everything in it sits in one folder, the site is what&rsquo;s inside that folder.</p>
+              <p className={s.startDesc}>Unpacked into the site. A single folder at the top is unwrapped.</p>
               <div className={s.pickRow}>
                 <Button size="sm" onClick={() => zipRef.current?.click()}>
                   Choose a .zip
@@ -185,7 +185,7 @@ export function NewSiteDialog({ open, onOpenChange, start: initialStart, baseDom
                   </span>
                 )}
               </div>
-              {zipTooBig && <Notice tone="fault">That zip is {formatBytes(zip!.size)}; Gluon takes up to {formatBytes(SITE_LIMITS.zipBytes)} at once.</Notice>}
+              {zipTooBig && <Notice tone="fault">That zip is {formatBytes(zip!.size)}. The limit is {formatBytes(SITE_LIMITS.zipBytes)}.</Notice>}
               <input
                 ref={zipRef}
                 type="file"

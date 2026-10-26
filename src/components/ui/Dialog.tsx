@@ -64,6 +64,9 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
     </>
   );
   const popupClass = `${s.popup} ${size !== "default" ? s[size] : ""}`;
+  // Opened by pointer, focus the dialog itself: landing on the close button would light its focus ring for no reason.
+  const popupRef = React.useRef<HTMLDivElement>(null);
+  const focusOnOpen = initialFocus ?? ((type: string) => (type === "keyboard" ? true : popupRef.current));
 
   if (sheet) {
     return (
@@ -72,7 +75,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           <Drawer.Backdrop className={`${s.backdrop} ${s.sheetBackdrop}`} data-motion-gentle="" />
           <Drawer.VirtualKeyboardProvider>
             <Drawer.Viewport className={s.viewport}>
-              <Drawer.Popup className={`${popupClass} ${s.sheet}`} initialFocus={initialFocus} data-motion-gentle="">
+              <Drawer.Popup ref={popupRef} className={`${popupClass} ${s.sheet}`} initialFocus={focusOnOpen} data-motion-gentle="">
                 {content}
               </Drawer.Popup>
             </Drawer.Viewport>
@@ -87,7 +90,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
       <BaseDialog.Portal keepMounted={keepMounted}>
         <BaseDialog.Backdrop className={s.backdrop} data-motion-gentle="" />
         <BaseDialog.Viewport className={s.viewport}>
-          <BaseDialog.Popup className={popupClass} initialFocus={initialFocus} data-motion-gentle="">
+          <BaseDialog.Popup ref={popupRef} className={popupClass} initialFocus={focusOnOpen} data-motion-gentle="">
             {content}
           </BaseDialog.Popup>
         </BaseDialog.Viewport>

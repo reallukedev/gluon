@@ -36,6 +36,7 @@ import { MoveDialog } from "./MoveDialog";
 import { useMoveWatch } from "./useMoveWatch";
 import { UninstallDialog } from "./UninstallDialog";
 import { isChatKind, serviceKind } from "@/lib/service-kind";
+import { useMediaQuery } from "@/lib/client/motion";
 import s from "./detail.module.css";
 
 const ChatPanel = dynamic(() => import("@/components/chat/ChatPanel").then((m) => m.ChatPanel), {
@@ -82,15 +83,22 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
   const open = viewer.zone === "home" ? (app.urls.home ?? app.urls.away) : (app.urls.away ?? app.urls.home);
   const pinHome = usePinToHome();
   const pinned = pinHome.isPinned(app.id);
+  // On a phone the header keeps Open, Start or Stop, and More; Pin and Restart move into More.
+  const narrow = useMediaQuery("(max-width: 640px)");
 
+  // The state line shows progress by eye; this says it out loud for screen readers.
+  const [said, say] = React.useState("");
   async function act(action: "start" | "stop" | "restart") {
     setBusy(action);
+    say(`${{ start: "Starting", stop: "Stopping", restart: "Restarting" }[action]} ${app.name}…`);
     try {
-      const r = await api.post<{ message: string }>(`${apiBase}/action`, { action });
-      toast.success(r.message);
-      void mutate();
+      // The state under the title shows it happening and settles when it's done.
+      await api.post(`${apiBase}/action`, { action });
+      await mutate();
+      say(`${app.name} ${{ start: "started", stop: "stopped", restart: "restarted" }[action]}.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "That didn't work.");
+      say("");
+      toast.error(`Couldn't ${action} ${app.name}`, { description: e instanceof Error ? e.message : undefined });
     } finally {
       setBusy(null);
     }
@@ -153,8 +161,8 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
       title: umbrel?.latest ? `Update ${app.name} to ${umbrel.latest}?` : `Update ${app.name}?`,
       description: umbrel
         ? "Umbrel downloads the new version and restarts the app. It's usually unavailable for a minute or two."
-        : "Gluon downloads the newest images for this app and recreates any container whose image changed. It's usually down for a few seconds.",
-      confirmLabel: "Update",
+        : "Downloads the newest images and recreates any container that changed. It's usually down for a few seconds.",
+      confirmLabel: `Update ${app.name}`,
       variant: "primary",
       onConfirm: async () => void update(),
     });
@@ -196,6 +204,13 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
     );
 
   const moreItems: MenuEntry[] = [
+    ...(narrow && !app.copyOf
+      ? ([
+          { label: "Restart", icon: <Refresh />, disabled: stopped || umbrelWorking || !!busy, onSelect: () => void act("restart") },
+          ...(open ? [{ label: pinned ? "Unpin from Home" : "Pin to Home", icon: pinned ? <PinSlash /> : <Pin />, onSelect: () => void pinHome.toggle(app) }] : []),
+          "separator",
+        ] as MenuEntry[])
+      : []),
     {
       label: "Update",
       description: app.self
@@ -237,6 +252,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
 
   return (
     <Page>
+      <span className="sr-only" role="status">{said}</span>
       <PageHeader
         back={{ href: "/apps", label: "Apps" }}
         title={
@@ -247,13 +263,17 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
         }
         summary={
           <span className={s.summary}>
-            <StateLine state={app.line} label={app.copyOf ? (stopped ? "Old copy, stopped" : "Old copy, still running") : app.summary} />
+            {busy === "start" || busy === "stop" || busy === "restart" ? (
+              <StateLine state="starting" label={{ start: "Starting…", stop: "Stopping…", restart: "Restarting…" }[busy]} />
+            ) : (
+              <StateLine state={app.line} label={app.copyOf ? (stopped ? "Old copy, stopped" : "Old copy, still running") : app.summary} />
+            )}
             {app.description && app.description.trim().toLowerCase() !== app.name.trim().toLowerCase() && <span className={s.desc}>{app.description}</span>}
           </span>
         }
         actions={
           <>
-            {open && !app.copyOf && (
+            {open && !app.copyOf && !narrow && (
               <IconButton label={pinned ? "Unpin from Home" : "Pin to Home"} variant="secondary" aria-pressed={pinned} onClick={() => void pinHome.toggle(app)}>
                 {pinned ? <PinSlash /> : <Pin />}
               </IconButton>
@@ -263,7 +283,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
                 {open.startsWith("mumble:") ? "Open in Mumble" : "Open"}
               </Button>
             )}
-            {!app.copyOf && (
+            {!app.copyOf && !narrow && (
               <Button icon={<Refresh />} loading={busy === "restart"} disabled={stopped || umbrelWorking} onClick={() => void act("restart")}>
                 Restart
               </Button>
@@ -288,7 +308,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
                             ...(app.routes.some((r) => r.enabled) ? ["Its public address will show an error in the meantime."] : []),
                             ...(app.household ? ["Household members will see it as not working."] : []),
                           ],
-                          confirmLabel: "Stop",
+                          confirmLabel: `Stop ${app.name}`,
                           variant: "primary",
                           onConfirm: () => act("stop"),
                         },
@@ -321,7 +341,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
               </Button>
             }
           >
-            Gluon is copying its data and starting the new copy. Leave it running; it puts everything back if the copy doesn't start.
+            Copying its data and starting the new copy. If the new copy doesn&apos;t start, everything goes back as it was.
           </Notice>
         </div>
       ) : app.copyOf ? (
@@ -345,7 +365,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
             }
           >
             It was installed from {sourceName(app.source)}. <Link href={`/apps/${encodeURIComponent(app.copyOf.id)}`}>{app.copyOf.name} from {sourceName(app.copyOf.source)}</Link> is the one in use
-            {app.configFile ? "." : `. It shares its Compose name with that app, so Gluon handles its containers one by one and won't run Compose on it.`}
+            {app.configFile ? "." : ". It shares a Compose name with that app, so its containers are handled one by one."}
           </Notice>
         </div>
       ) : movedFrom && oldCopy ? (
@@ -365,7 +385,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
         <UmbrelNotice app={app} busy={umbrelWorking} onUpdate={confirmUpdate} />
       ) : app.source === "casaos" && tab === "compose" ? (
         <div className={s.banner}>
-          <Notice title="CasaOS manages this file">If you later change this app's settings in CasaOS, CasaOS rewrites the file and your edits here are replaced.</Notice>
+          <Notice title="CasaOS manages this file">Changing the app in CasaOS rewrites it and replaces your edits.</Notice>
         </div>
       ) : null}
 
@@ -475,7 +495,7 @@ function UmbrelNotice({ app, busy, onUpdate }: { app: AppDetail; busy: boolean; 
         ) : (
           <>
             {u.version ? `Version ${u.version}` : "Installed"}
-            {storeName ? ` from ${storeName}${community ? ", a community store" : ""}` : ""}. Restart, stop, logs and files work here. Updating and removing it go through Umbrel, and Umbrel keeps its compose file.
+            {storeName ? ` from ${storeName}${community ? ", a community store" : ""}` : ""}. Updates and removal go through Umbrel.
           </>
         )}
       </Notice>
@@ -505,9 +525,9 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
 
   return (
     <div className={s.grid}>
-      <Panel title="How it's put together" meta={<span className={s.panelHint}>Hover to trace, click a container for its actions</span>} className={s.span2}>
+      <Panel title="How it's put together" meta={<span className={s.panelHint}>Click a container for its actions</span>} className={s.span2}>
         {app.details.length === 0 ? (
-          <p className={s.padless}>{umbrelBusy(app.umbrel?.state) ? "Umbrel is still setting this app up. Its containers show up here once they're created." : "This app has no containers right now."}</p>
+          <p className={s.padless}>{umbrelBusy(app.umbrel?.state) ? "Umbrel is still setting it up. Its containers show here once they exist." : "No containers right now."}</p>
         ) : (
           <StackDiagram app={app} actions={{ onContainer, busy, logsHref: (c) => `${base}?tab=logs&container=${encodeURIComponent(c)}` }} />
         )}
@@ -562,7 +582,9 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
             {publicRoutes.length ? (
               <>
                 Yes, at {publicRoutes.map((r) => r.url.replace(/^https?:\/\//, "")).join(" and ")}.{" "}
-                {app.hasLogin === "yes" ? "It asks for its own login." : app.hasLogin === "no" ? <b>Anyone who finds it can use it; it has no login.</b> : <span className={s.faint}>Gluon doesn't know if it has a login (set it in Settings).</span>}
+                {app.hasLogin === "yes" ? "It asks for its own login." : app.hasLogin === "no" ? <b>Anyone who finds it can use it; it has no login.</b> : <span className={s.faint}>
+                    Not known if it has a login. <Link href={`${base}?tab=settings`}>Set it</Link>
+                  </span>}
               </>
             ) : (
               <span className={s.faint}>
@@ -582,7 +604,7 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
 
       <Panel title="Recent events" flush>
         {app.events.length === 0 ? (
-          <p className={s.pad}>Nothing since Gluon started watching. Starts, stops and crashes show up here.</p>
+          <p className={s.pad}>No starts, stops or crashes since Gluon started watching.</p>
         ) : (
           <ul className={s.events} role="list">
             {app.events.slice(0, 12).map((e, i) => (
@@ -598,7 +620,7 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
       </Panel>
 
       {app.details.length > 0 && (
-        <Panel title="Settings inside the app" meta={<span className={s.panelHint}>Environment variables; secrets stay hidden until you ask</span>} flush className={s.span2}>
+        <Panel title="Environment variables" flush className={s.span2}>
           <EnvTable app={app} />
         </Panel>
       )}

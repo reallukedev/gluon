@@ -173,7 +173,7 @@ export function Files({ initialPlaces }: { initialPlaces: Places | null }) {
     return (
       <Page narrow>
         <PageHeader title="Files" summary="Nothing has been shared with you yet." />
-        <Empty title="No folders shared with you yet">When an admin shares a folder with you, like the family photos or the film library, it shows up here and you can open, upload and download from any device.</Empty>
+        <Empty title="No shared folders">Folders an admin shares with you show up here.</Empty>
       </Page>
     );
   }
@@ -183,7 +183,7 @@ export function Files({ initialPlaces }: { initialPlaces: Places | null }) {
   if (screen === "trash") {
     title = "Trash";
     const t = trash.data;
-    summary = t ? (t.items.length ? `${fmt.plural(t.items.length, "item")} using ${fmt.bytes(t.byFilesystem.reduce((a, f) => a + f.bytes, 0))}. Deleted things stay here until ${admin ? "you empty the trash" : "an admin empties the trash"}.` : "Nothing in the trash.") : <Skeleton width={260} height={12} />;
+    summary = t ? (t.items.length ? `${fmt.plural(t.items.length, "item")} using ${fmt.bytes(t.byFilesystem.reduce((a, f) => a + f.bytes, 0))}.` : "Nothing in the trash.") : <Skeleton width={260} height={12} />;
   } else if (screen === "browse") {
     title = <span className={s.title} title={here?.path ?? path ?? ""}>{folderTitle(here?.path === path ? here : undefined, path ?? "/", places.data)}</span>;
     summary = here && here.path === path ? folderSentence(here, places.data, fmt, admin) : hereError ? (hereError.code === "network" ? "Can't reach the server right now." : "This folder can't be shown.") : <Skeleton width={260} height={12} />;
@@ -228,7 +228,9 @@ export function Files({ initialPlaces }: { initialPlaces: Places | null }) {
 function FrontSummary({ places }: { places: Places | undefined }) {
   const fmt = useFormat();
   if (!places) return <Skeleton width={300} height={12} />;
-  const drives = places.places.filter((d) => d.kind === "drive" && d.fs);
+  // Every drive in the rack, the system drive included, counted once per filesystem.
+  const seen = new Set<string>();
+  const drives = places.places.filter((d) => (d.kind === "drive" || d.kind === "root") && d.fs && !seen.has(d.fs.device) && seen.add(d.fs.device));
   if (!places.admin) {
     const shares = places.places.filter((p) => p.kind === "grant");
     return <>{shares.length ? `${fmt.plural(shares.length, "folder")} shared with you.` : "Your pinned folders."}</>;

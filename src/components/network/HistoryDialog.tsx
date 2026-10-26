@@ -75,7 +75,7 @@ export function HistoryDialog({ open, onOpenChange, data, onRestored }: { open: 
         open={open}
         onOpenChange={onOpenChange}
         title="History"
-        description="A copy is kept before every save (the last 40). Pick one to see how it differs from now."
+        description="The last 40 versions, one per save. Pick one to compare with now."
         size="xwide"
         footer={
           <>
@@ -93,7 +93,7 @@ export function HistoryDialog({ open, onOpenChange, data, onRestored }: { open: 
         ) : !list.data ? (
           <Skeleton height={300} radius={10} />
         ) : !list.data.entries.length ? (
-          <Empty title="No earlier versions yet">Every time you save an address, the previous version is kept here.</Empty>
+          <Empty title="No earlier versions yet">Each save keeps the version before it here.</Empty>
         ) : (
           <div className={s.history}>
             <ul className={s.historyList} role="listbox" aria-label="Saved versions">

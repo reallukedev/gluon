@@ -134,10 +134,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.body { flex: 1; min-height: 0; }
+.body { flex: 1; min-height: 0; transition: opacity var(--dur-base) var(--ease-out); }
 
 .grid[data-editing] .widget { border-color: var(--line-strong); }
 .grid[data-editing] .body { opacity: 0.6; pointer-events: none; user-select: none; }
+/* One-row items can't fit the handle bar and their content: while arranging, the bar (which names them) is the item. */
+.grid[data-editing] .widget:is([data-size="c"], [data-size="h"], [data-size="b"]) > .body,
+.widget[data-overlay]:is([data-size="c"], [data-size="h"], [data-size="b"]) > .body { display: none; }
+.grid[data-editing] .widget:is([data-size="c"], [data-size="h"], [data-size="b"]) > .chrome,
+.widget[data-overlay]:is([data-size="c"], [data-size="h"], [data-size="b"]) > .chrome { flex: 1; border-bottom: 0; }
 /* While dragging, the widget's place becomes the drop slot: an empty dashed outline where it will land. */
 .widget[data-dragging] { border-style: dashed; border-color: var(--ink-2); background: var(--sunk); }
 .widget[data-dragging] > * { visibility: hidden; }
@@ -157,6 +162,7 @@
   @starting-style { opacity: 0; transform: scale(calc(1 - 0.03 * var(--motion, 1))); }
 }
 .widget[data-overlay] .body { opacity: 0.8; }
+.widget[data-overlay] .chrome { transition: none; }
 
 /* Entrance, once per session: each widget rises 6px into place, 40ms apart. */
 /* Reduced motion keeps the staggered fade and drops the travel (--motion is 0). */
@@ -173,6 +179,9 @@
   padding: 6px 6px 6px 6px;
   border-bottom: 1px solid var(--line);
   background: var(--panel-2);
+  /* Arranging: each widget's handle bar settles in from its top edge as the bodies dim. */
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style { opacity: 0; transform: translateY(calc(-4px * var(--motion, 1))); }
 }
 .handle {
   flex: 1;
@@ -228,10 +237,16 @@
   .widget { grid-column: span 12; }
   .widget[data-size="s"], .widget[data-size="t"], .widget[data-size="c"] { grid-column: span 6; }
   .widget[data-size="i"] { grid-column: span 4; }
+  /* Rows are 64px here, so wide tiles take a third row to keep their content whole. */
+  .widget[data-size="m"], .widget[data-size="w"] { grid-row: span 3; }
 }
 /* Small phones: small and tall widgets take the full width; icons and short cards keep sharing a row. */
 @media (max-width: 480px) {
   .widget[data-size="s"], .widget[data-size="t"] { grid-column: span 12; }
+}
+/* The narrowest phones: app rows take the whole width so names aren't cut to a few letters. */
+@media (max-width: 359px) {
+  .widget[data-size="c"] { grid-column: span 12; }
 }
 
 .emptyHome { display: grid; justify-items: start; gap: 10px; padding: 40px 0; max-width: 560px; }

@@ -115,6 +115,8 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.saveLabel { display: inline-flex; align-items: center; gap: 5px; }
+.saveLabel svg { width: 14px; height: 14px; }
 .dirtyText { flex: none; font-family: var(--font-sans); font-size: var(--text-xs); color: var(--muted); }
 .kbd { display: inline-flex; margin-left: 2px; opacity: 0.8; }
 .kbd kbd { font-size: 0.68rem; }

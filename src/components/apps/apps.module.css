@@ -104,7 +104,7 @@
 .row[data-copy] .appName { color: var(--ink-2); font-weight: 560; }
 .row[data-copy] .appCell > span:first-child { opacity: 0.7; }
 
-.appCell { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 0; }
+.appCell { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 0; }
 .appText { min-width: 0; display: grid; gap: 1px; }
 .appName { font-size: var(--text-md); font-weight: 620; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) { .appName:hover { text-decoration: underline; text-underline-offset: 0.2em; } }
@@ -126,11 +126,12 @@
 .progressTrack > span[data-indeterminate] { right: 65%; animation: sweep 1400ms var(--ease-in-out) infinite; }
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 
+/* Restacked: name and actions, then state, then the figures with the address at the end of their line. */
 @container apps (max-width: 699px) {
   .headRow { display: none; }
   .row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-    grid-template-areas: "app app actions" "state state state" "cpu mem mem" "addr addr addr";
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "app app app actions" "state state state state" "cpu mem addr addr";
     gap: 8px 16px;
     padding: 12px 12px 14px 16px;
   }
@@ -139,9 +140,22 @@
   .row > .meterCell:nth-of-type(3) { grid-area: cpu; padding-left: 46px; }
   .row > .meterCell:nth-of-type(4) { grid-area: mem; }
   .meterCell > span { justify-content: flex-start; }
-  .addrCell { grid-area: addr; padding-left: 46px; }
+  .addrCell { grid-area: addr; display: flex; justify-content: flex-end; }
+  .addrCell > * { justify-content: flex-end; }
   .actions { grid-area: actions; }
   .row[data-nested] .appCell { padding-left: 24px; }
-  .row[data-nested] .stateCell, .row[data-nested] .addrCell, .row[data-nested] > .meterCell:nth-of-type(3) { padding-left: 70px; }
+  .row[data-nested] .stateCell, .row[data-nested] > .meterCell:nth-of-type(3) { padding-left: 70px; }
   .row[data-nested]::before { left: 32px; top: -4px; height: 32px; }
+}
+/* Too narrow to share a line (and always for an old copy's note): the address takes its own. */
+@container apps (max-width: 349px) {
+  .row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "app app actions" "state state state" "cpu mem mem" "addr addr addr"; }
+  .addrCell { justify-content: flex-start; padding-left: 46px; }
+  .addrCell > * { justify-content: flex-start; }
+  .row[data-nested] .addrCell { padding-left: 70px; }
+}
+@container apps (max-width: 699px) {
+  .row[data-copy] { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "app app actions" "state state state" "cpu mem mem" "addr addr addr"; }
+  .row[data-copy] .addrCell { justify-content: flex-start; padding-left: 46px; }
+  .row[data-copy][data-nested] .addrCell { padding-left: 70px; }
 }

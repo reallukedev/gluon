@@ -138,7 +138,7 @@ export function StoreView() {
     setRuns((r) => ({ ...r, [id]: { state: emptyStream, running: true } }));
     try {
       await streamPost<StreamEvent>("/api/store/install", { appId: id }, apply);
-      if (!finished) apply({ type: "error", message: "Gluon lost track of the install before Umbrel finished. Umbrel may still be working on it; Apps shows where it got to." });
+      if (!finished) apply({ type: "error", message: "Lost track of the install before Umbrel finished. Umbrel may still be on it; Apps shows where it got to." });
     } catch (err) {
       const message =
         err instanceof ApiError && err.code === "reauth_cancelled"
@@ -188,22 +188,17 @@ export function StoreView() {
   if (data.platform !== "umbrel") {
     return (
       <Page>
-        <PageHeader title="Apps" summary={data.platform === "casaos" ? "Gluon is working with CasaOS, which has its own app store." : "Gluon isn't working with Umbrel, so there's no app store here."} />
+        <PageHeader title="Apps" summary={data.platform === "casaos" ? "CasaOS has its own app store; apps installed there show up in All apps." : "There's no app store without Umbrel."} />
         <AppsSectionTabs current="store" />
         <Empty
           title="The app store needs Umbrel"
           action={
             <>
-              <LinkButton href="/settings/server">Open Server settings</LinkButton>
-              <LinkButton href="/apps" variant="ghost">
-                Back to Apps
-              </LinkButton>
+              <LinkButton href="/settings/server">Choose Umbrel</LinkButton>
             </>
           }
         >
-          {data.platform === "casaos"
-            ? "Install apps in CasaOS; they show up in Apps on their own. If Umbrel runs on this server too, choose it under Settings → Server → Works with."
-            : "Gluon installs apps through Umbrel's app store. If Umbrel runs on this server, choose it under Settings → Server → Works with."}
+          If Umbrel runs on this server, pick it under Works with in Server settings.
         </Empty>
       </Page>
     );

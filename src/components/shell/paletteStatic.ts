@@ -28,7 +28,7 @@ const SECTIONS: { id: string; parent: string; label: string; hint: string; keywo
   { id: "people:announcements", parent: "settings", label: "Announcements", hint: "Settings · People", keywords: "message banner household maintenance", href: peopleHref({ tab: "announcements" }), icon: "settings" },
   { id: "people:defaults", parent: "settings", label: "Home page for new members", hint: "Settings · People", keywords: "household defaults default layout widgets", href: peopleHref({ tab: "defaults" }), icon: "settings" },
   { id: "apps:store", parent: "apps", label: "App store", hint: "Apps · get new apps", keywords: "install umbrel get apps", href: "/apps/store", icon: "apps" },
-  { id: "apps:custom", parent: "apps", label: "Your apps", hint: "Apps · apps you made", keywords: "make an app builder custom compose", href: "/apps/custom", icon: "apps" },
+  { id: "apps:custom", parent: "apps", label: "Custom apps", hint: "Apps · apps you made", keywords: "make an app builder custom compose", href: "/apps/custom", icon: "apps" },
   { id: "apps:images", parent: "apps", label: "Docker images", hint: "Apps · Docker", keywords: "docker images pull prune", href: "/apps/images", icon: "apps" },
   { id: "apps:volumes", parent: "apps", label: "Docker volumes", hint: "Apps · Docker", keywords: "docker volumes", href: "/apps/volumes", icon: "apps" },
   { id: "apps:networks", parent: "apps", label: "Docker networks", hint: "Apps · Docker", keywords: "docker networks bridge", href: "/apps/networks", icon: "apps" },

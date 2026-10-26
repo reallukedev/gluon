@@ -254,7 +254,7 @@ export async function planRename(input: RenameInput): Promise<RenameWork> {
         const proj: ComposeProject = { project, files: realFiles, workingDir: wd && fs.existsSync(hostPath(wd)) ? wd : null };
         apps.push({ id: project, name: displayName(project), mode: "compose", project: proj, affected: cs, runningServices, runningIds: siblings.filter((c) => c.running).map((c) => c.id), willStop: runningServices.length > 0 });
       } else {
-        const msg = `Gluon can't find the compose file for ${displayName(project)} (${first.configFiles.join(", ") || "none recorded"}), so its folders can't be updated.`;
+        const msg = `Can't find the compose file for ${displayName(project)} (${first.configFiles.join(", ") || "none recorded"}), so its folders can't be updated.`;
         (symlink ? warnings : blockers).push(symlink ? `${msg} It will be restarted as-is and use the compatibility link.` : `${msg} Turn on the compatibility link to keep it working.`);
         apps.push({ id: project, name: displayName(project), mode: "containers", project: null, affected: cs, runningServices: [], runningIds: cs.filter((c) => c.running).map((c) => c.id), willStop: cs.some((c) => c.running) });
       }
@@ -342,7 +342,7 @@ export async function planRename(input: RenameInput): Promise<RenameWork> {
           (symlink ? warnings : blockers).push(symlink ? `${msg} The compatibility link keeps it working.` : `${msg} Turn on the compatibility link, or fix it by hand first.`);
         }
       } catch (e) {
-        blockers.push(`Gluon couldn't check ${a.name}'s updated compose files: ${(e as Error).message}`);
+        blockers.push(`Couldn't check ${a.name}'s updated compose files: ${(e as Error).message}`);
       } finally {
         tmp?.cleanup();
       }
@@ -755,7 +755,7 @@ async function runRename(job: Job, w: RenameWork, user: User, where: Where) {
         severity: "fault",
         subject: from,
         title: `Moving ${from} didn't finish cleanly`,
-        cause: `It stopped at "${failedAt}" and Gluon couldn't undo everything: ${failures.join("; ")}.`,
+        cause: `It stopped at "${failedAt}" and not everything could be undone: ${failures.join("; ")}.`,
         detail: { jobId: job.id },
         remedy: { action: "", label: "See what happened", href: `/storage?job=${job.id}` },
       });

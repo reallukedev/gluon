@@ -81,7 +81,7 @@ export function siteDetail(id: string): SiteDetail {
       .map((v) => ({ version: v.version, createdAt: v.created_at, createdBy: v.created_by, files: v.files, bytes: v.bytes, live: sum.live?.version === v.version && sum.state !== "off" })),
     baseDomain: cfg?.base_domain ?? null,
     taken: (Array.isArray(cfg?.routes) ? cfg!.routes : []).filter((r): r is SubdomainRoute => !!r && r.type === "subdomain" && typeof r.host === "string" && r.site?.id !== id).map((r) => ({ host: r.host, name: r.name })),
-    addressesUnavailable: cfg ? null : "Gluon can't read the public addresses file, so it can't publish anything yet. Check the Network page.",
+    addressesUnavailable: cfg ? null : "Can't read the public addresses file, so nothing can be published yet. Check the Network page.",
   };
 }
 
@@ -105,7 +105,7 @@ export function renameSite(user: User, where: Where, id: string, raw: string): S
 
 function needConfig(): RoutesConfig {
   const cfg = tryReadConfig();
-  if (!cfg) throw new AppError("no_routes", "Gluon can't read the public addresses file (routes.json in ~/proxy/caddy), so it can't publish. Check the Network page.", 503);
+  if (!cfg) throw new AppError("no_routes", "Can't read the public addresses file (routes.json in ~/proxy/caddy), so nothing can be published. Check the Network page.", 503);
   return cfg;
 }
 
@@ -230,7 +230,7 @@ export function deleteSite(user: User, where: Where, id: string): Promise<{ ok: 
     const row = siteRow(id);
     const cfg = tryReadConfig();
     if (!cfg && versionsOnDisk(id).length) {
-      throw new AppError("no_routes", "Gluon can't read the public addresses right now, so it can't take this site's address down. Fix that on the Network page first.", 503);
+      throw new AppError("no_routes", "Can't read the public addresses right now, so this site's address can't be taken down. Fix that on the Network page first.", 503);
     }
     const existing = routeOf(cfg, id);
     if (existing) {

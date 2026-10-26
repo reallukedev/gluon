@@ -40,7 +40,7 @@ export async function changeTarget(f: MumbleFacts): Promise<{ target: ChangeTarg
       const d = await appDetail(builderId);
       if (d.status !== "published" || d.target !== "compose") return no("This app isn't published by Gluon's builder any more.");
       const service = mumbleService(d.spec.compose);
-      if (!service) return no("Gluon can't find the Mumble service in this app's builder settings.");
+      if (!service) return no("Can't find the Mumble service in this app's builder settings.");
       return { target: { via: "builder", builderId, service }, option: { ok: true, via: "builder", why: null } };
     } catch {
       return no("Gluon's builder doesn't know this app any more.");
@@ -53,10 +53,10 @@ export async function changeTarget(f: MumbleFacts): Promise<{ target: ChangeTarg
   try {
     text = fs.readFileSync(hostPath(file), "utf8");
   } catch {
-    return no(`Gluon can't read ${file}.`);
+    return no(`Can't read ${file}.`);
   }
   const service = mumbleService(text) ?? f.service;
-  if (!service) return no("Gluon can't find the Mumble service in the compose file.");
+  if (!service) return no("Can't find the Mumble service in the compose file.");
   return { target: { via: "compose", service, file, dir: path.posix.dirname(file) }, option: { ok: true, via: "compose", why: null } };
 }
 
@@ -69,7 +69,7 @@ export async function freeIcePort(start = 6502): Promise<number> {
     if (used.has(p)) continue;
     if (await canBind(p)) return p;
   }
-  throw new AppError("no_port", "Gluon couldn't find a free port for Mumble's admin connection.", 409);
+  throw new AppError("no_port", "Couldn't find a free port for Mumble's admin connection.", 409);
 }
 
 function canBind(port: number): Promise<boolean> {

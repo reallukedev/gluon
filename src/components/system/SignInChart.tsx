@@ -113,7 +113,7 @@ export function SignInChart({ history: h, live }: { history: SignInHistory; live
       <>
         <span className={s.readTime}>Now</span>
         <span>{now.length ? `${peopleList(now)} ${now.length === 1 ? "is" : "are"} connected.` : "Nobody is connected."}</span>
-        <span className={s.readHint}>Point at the timeline, or focus it and use the arrow keys, to see who was on.</span>
+        <span className={s.readHint}>Point at the timeline to see who was on.</span>
       </>
     );
   } else {

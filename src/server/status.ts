@@ -48,12 +48,12 @@ const slim = (a: AppSummary): StatusApp => ({
 });
 
 function dockerDownVerdict(findings: Finding[], forMember: boolean): StatusPayload["verdict"] {
-  if (forMember) return { tone: "fault", headline: "Gluon can't see the apps right now.", detail: "The part of the server that runs them isn't answering. The people who look after the server can see this too." };
+  if (forMember) return { tone: "fault", headline: "Can't see the apps right now.", detail: "The part of the server that runs them isn't answering. The people who look after the server can see this too." };
   const others = findings.length;
   return {
     tone: "fault",
     headline: "Docker isn't answering.",
-    detail: `Gluon can't see any apps until it does, so this page can't say whether they're running.${others ? ` ${others === 1 ? "1 other thing needs" : `${others} other things need`} you too.` : ""} It may be restarting; if it stays like this, restart Docker from System → Services.`,
+    detail: `Can't tell whether the apps are running until it answers.${others ? ` ${others === 1 ? "1 other thing needs" : `${others} other things need`} you too.` : ""} It may be restarting; if it stays like this, restart Docker from System → Services.`,
   };
 }
 
@@ -62,11 +62,11 @@ function verdictFor(findings: Finding[], apps: StatusApp[], forMember: boolean):
   const attention = findings.filter((f) => f.severity === "attention");
   const down = apps.filter((a) => a.line === "unhealthy" || a.line === "stopped");
   if (forMember) {
-    if (!apps.length) return { tone: "ok", headline: "The server is up.", detail: "No apps have been shared with you yet. Ask whoever runs it to share the ones you use." };
+    if (!apps.length) return { tone: "ok", headline: "The server is up.", detail: "No apps are shared with you yet. Ask the admin for the ones you use." };
     if (down.length) {
       return { tone: "fault", headline: `${listJoin(down.map((a) => a.name))} ${down.length === 1 ? "isn't" : "aren't"} working right now.`, detail: "The people who look after the server have been told." };
     }
-    return { tone: "ok", headline: "Everything's working.", detail: "All your apps are up." };
+    return { tone: "ok", headline: "Everything's working.", detail: "" };
   }
   if (faults.length) {
     const lead = faults[0]!.title.replace(/\.$/, "");
@@ -80,7 +80,9 @@ function verdictFor(findings: Finding[], apps: StatusApp[], forMember: boolean):
     return {
       tone: "attention",
       headline: `Everything is running. ${attention.length === 1 ? "1 thing needs" : `${attention.length} things need`} you.`,
-      detail: attention.some((f) => (f.detail as { daysToFull?: number } | null)?.daysToFull) ? "One of them will become a problem soon." : "None of them are urgent yet.",
+      detail: attention.some((f) => (f.detail as { daysToFull?: number } | null)?.daysToFull)
+        ? attention.length === 1 ? "It will become a problem soon." : "One of them will become a problem soon."
+        : attention.length === 1 ? "It isn't urgent yet." : "None of them are urgent yet.",
     };
   }
   return { tone: "ok", headline: "Everything is running.", detail: "Nothing needs you." };
@@ -106,7 +108,8 @@ export async function statusFor(user: User): Promise<StatusPayload> {
     apps,
     filesystems: isAdmin ? filesystems() : [],
     uptime: h?.uptime ?? null,
-    recent: isAdmin ? listActivity({ limit: 8 }) : [],
+    // Extra rows so repeats can fold together and still fill eight lines.
+    recent: isAdmin ? listActivity({ limit: 32 }) : [],
     announcements: (await currentAnnouncements(user)).map(({ id, message, app_id }) => ({ id, message, app_id })),
     checkedAt: Date.now(),
   };

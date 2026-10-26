@@ -62,7 +62,7 @@ export function ContainerView({ id, initial, initialError }: { id: string; initi
         <PageHeader back={back} title={id} summary={error ? undefined : "Asking Docker…"} />
         {error ? (
           error instanceof ApiError && error.status === 404 ? (
-            <Empty title="That container is gone">It was removed or recreated (an update gives containers a new ID). Find it again from its app in Apps.</Empty>
+            <Empty title="That container is gone">It was removed or recreated, which gives it a new ID. Find it from its app in Apps.</Empty>
           ) : (
             <LoadError error={error} what="the container" onRetry={() => void mutate()} retrying={isValidating} />
           )
@@ -257,7 +257,7 @@ function RunCommand({ c }: { c: ContainerInspect }) {
   const router = useRouter();
   const [command, setCommand] = React.useState("");
   const target = containerTarget(c.name);
-  const blocked = c.self ? "Gluon doesn't run commands inside its own container. For the server itself, use the Terminal on this server." : c.state !== "running" ? `${c.name} isn't running. Start it (from its app) to run a command in it.` : null;
+  const blocked = c.self ? "Commands can't run inside Gluon's own container. Use the Terminal for the server itself." : c.state !== "running" ? `${c.name} isn't running. Start it (from its app) to run a command in it.` : null;
 
   function run(e: React.FormEvent) {
     e.preventDefault();
@@ -280,7 +280,7 @@ function RunCommand({ c }: { c: ContainerInspect }) {
               Commands here can change how Umbrel works. Stick to reading things unless you know what the change does.
             </Notice>
           )}
-          <Field label="Command" description="Opens the Terminal and runs it there, in this container's shell, where pipes, cd and Tab completion work.">
+          <Field label="Command" description="Runs it in this container's shell, in the Terminal.">
             <div className={s.execLine}>
               <Input mono value={command} onChange={(e) => setCommand(e.target.value)} placeholder="ls -la /config" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} maxLength={2000} enterKeyHint="go" />
               <Button type="submit" variant="primary" icon={<Play />}>

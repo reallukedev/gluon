@@ -44,6 +44,7 @@ export function storageSummary(inv: Inventory, fmt: ReturnType<typeof useFormat>
   if (loose.length) problems.push(loose.length === 1 ? `${loose[0]!.primaryMount} won't come back after a restart.` : `${loose.length} drives won't come back after a restart.`);
   for (const d of wearing) problems.push(`The ${d.title} is showing wear.`);
   const quiet = unused.map((d) => `The ${d.title} isn't being used.`);
+  if (!disks.length) return "No disks found.";
   return (
     <>
       {fmt.plural(disks.length, "disk")}, <span className="num">{fmt.bytes(free)}</span> free.{" "}
@@ -107,7 +108,7 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
     try {
       await api.post("/api/storage/smart", {});
       await mutate();
-      toast.success("Drive health checked. Sleeping drives were left asleep.");
+      toast.success("Drive health checked", { description: "Sleeping drives were left asleep." });
     } catch (e) {
       const m = errorText(e);
       if (m) toast.error(m);
@@ -132,9 +133,11 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
         title="Storage"
         summary={storageSummary(inv, fmt)}
         actions={
-          <Button icon={<Refresh />} loading={checking} onClick={() => void checkHealth()}>
-            Check drive health
-          </Button>
+          inv.disks.length > 0 && (
+            <Button icon={<Refresh />} loading={checking} onClick={() => void checkHealth()}>
+              Check drive health
+            </Button>
+          )
         }
       />
 
@@ -173,30 +176,32 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
           </Panel>
         )}
 
-        {tab === "disks" && (
-          <div className={s.stack}>
-            {inv.warnings.map((w) => (
-              <Notice key={w} tone="attention">
-                {w}
-              </Notice>
-            ))}
-            <Panel title="Disks" meta={inv.smartCheckedAt ? <span>Health checked <Time ts={inv.smartCheckedAt} /></span> : <span>Health check pending</span>} flush>
-              {inv.disks.length === 0 ? (
-                <Empty title="No disks found">Gluon couldn't list the disks on this server. If this keeps happening, check that lsblk works on the host.</Empty>
-              ) : (
+        {tab === "disks" &&
+          (inv.disks.length === 0 ? (
+            // Nothing listed means the listing failed; one message, not a warning plus two empty panels.
+            <Panel flush>
+              <Empty title="Couldn't list the disks">Check that lsblk works on the host, then reload this page.</Empty>
+            </Panel>
+          ) : (
+            <div className={s.stack}>
+              {inv.warnings.map((w) => (
+                <Notice key={w} tone="attention">
+                  {w}
+                </Notice>
+              ))}
+              <Panel title="Disks" meta={inv.smartCheckedAt ? <span>Health checked <Time ts={inv.smartCheckedAt} /></span> : <span>Health check pending</span>} flush>
                 <ul className={s.disks} role="list">
                   {inv.disks.map((d: DiskView) => (
                     <DiskRow key={d.id} disk={d} />
                   ))}
                 </ul>
-              )}
-              <Legend />
-            </Panel>
-            <Panel title="Mounted" meta={<span className="num">{mountedRows(inv.disks).filter((r) => r.vol.primaryMount).length} filesystems</span>} flush>
-              <MountsTable disks={inv.disks} onAction={act} busy={busy} />
-            </Panel>
-          </div>
-        )}
+                <Legend />
+              </Panel>
+              <Panel title="Mounted" meta={<span className="num">{mountedRows(inv.disks).filter((r) => r.vol.primaryMount).length} filesystems</span>} flush>
+                <MountsTable disks={inv.disks} onAction={act} busy={busy} />
+              </Panel>
+            </div>
+          ))}
         {tab === "space" && (
           <div className={s.grid}>
             <div className={s.span2}>

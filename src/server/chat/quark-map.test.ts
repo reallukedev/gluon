@@ -33,13 +33,13 @@ describe("reading quark ctl", () => {
     expect([status("not_found"), status("config"), status("invalid"), status("not_enabled")]).toEqual([404, 409, 400, 400]);
   });
 
-  it("says Gluon couldn't reach the admin console when nothing answered", () => {
+  it("says it couldn't reach the admin console when nothing answered", () => {
     const r = parseCtl("", fixture("quark-ctl-unreachable.txt"), 1);
     expect(r.kind).toBe("unreachable");
     const e = thrown(() => ctlValue(r));
     expect(e.code).toBe("quark_console");
     expect(e.status).toBe(502);
-    expect(e.message).toMatch(/^Gluon couldn't reach Quark's admin console \(.*admin\.sock/);
+    expect(e.message).toMatch(/^Couldn't reach Quark's admin console \(.*admin\.sock/);
     // An exec that never started (no quark binary) prints no JSON at all.
     expect(parseCtl('OCI runtime exec failed: exec: "quark": executable file not found', "", 126).kind).toBe("unreachable");
   });

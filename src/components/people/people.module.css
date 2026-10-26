@@ -232,3 +232,12 @@
 .steps li[data-current] i { border-color: var(--ink); }
 /* One person, opened from Settings → People. */
 .detail { min-width: 0; }
+
+/* The new link replaces the form: settle in from just below so the swap reads as the next step. */
+.reveal {
+  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(calc(6px * var(--motion)));
+  }
+}

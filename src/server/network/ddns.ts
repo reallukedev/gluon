@@ -180,7 +180,7 @@ async function build(): Promise<DdnsStatus> {
     lastChange: null,
     errors: [],
     recent: [],
-    summary: "No dynamic DNS container found, so Gluon can't tell whether DNS follows this network's address.",
+    summary: "No dynamic DNS updater found, so there's no telling whether DNS follows this network's address.",
     state: "unknown",
   };
   if (!found) return empty;

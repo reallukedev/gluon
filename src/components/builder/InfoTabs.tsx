@@ -40,7 +40,7 @@ export function FilesTab({ id, rev }: { id: string; rev: number }) {
   const current = file && names.includes(file) ? file : names[0] ?? null;
   if (error) return <Notice tone="fault" title="Couldn't show the files">{error.message}</Notice>;
   if (!data || (isLoading && !data)) return <Skeleton height={400} radius={12} />;
-  if (data.error) return <Notice tone="fault" title="These files can't be made yet">{data.error} Fix the problems listed under Checks first.</Notice>;
+  if (data.error) return <Notice tone="fault" title="These files can't be made yet">{data.error} Fix the problems under Checks first.</Notice>;
   const folders = Object.keys(data.files).filter((f) => f.endsWith(".gitkeep")).map((f) => f.replace(/\/\.gitkeep$/, ""));
   const before = current && data.published ? data.published[current] : undefined;
   return (
@@ -79,7 +79,7 @@ export function FilesTab({ id, rev }: { id: string; rev: number }) {
 // ---------------------------------------------------------------- history
 
 export function HistoryTab({ detail }: { detail: CustomAppDetail }) {
-  if (!detail.versions.length) return <Empty title="Not published yet">Each time you publish, the version shows up here with who published it and from which commit.</Empty>;
+  if (!detail.versions.length) return <Empty title="Not published yet">Each published version shows up here.</Empty>;
   return (
     <Panel title="Published versions" flush meta={<span className="num">{detail.versions.length}</span>}>
       <ul className={s.plainList}>
@@ -114,7 +114,7 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
   const [editingToken, setEditingToken] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
   const [log, setLog] = React.useState<{ id: string; text: string | null; error: string | null } | null>(null);
-  const branchErr = branch && !BRANCH_RE.test(branch) ? "That isn't a branch name Gluon can use." : null;
+  const branchErr = branch && !BRANCH_RE.test(branch) ? "That isn't a valid branch name." : null;
   const pathErr = repoPathError(path);
   const url = `https://github.com/${gh.owner}/${gh.repo}`;
   const behind = gh.latestCommit && gh.builtCommit && gh.latestCommit !== gh.builtCommit;
@@ -133,7 +133,7 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
     setChecking(true);
     try {
       const r = await api.post<{ latest: string; built: string | null }>(`/api/custom-apps/${detail.id}/commits`);
-      if (r.built && r.latest === r.built) toast.success("Up to date", { description: `The newest commit on ${gh.branch} is the one it was built from.` });
+      if (r.built && r.latest === r.built) toast.success("Up to date", { description: `It was built from the newest commit on ${gh.branch}.` });
       else toast.info(r.built ? "There are new commits" : "Not built yet", { description: `${gh.branch} is at ${r.latest.slice(0, 7)}.` });
     } catch (e) {
       toast.error("Couldn't check for new commits", { description: e instanceof Error ? e.message : undefined });
@@ -176,7 +176,7 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
             <span>
               {gh.hasToken ? "A token is saved for this repository." : gh.private ? "The repository is private and no token is saved." : "No token (the repository is public)."}
               <span className={s.controlHint}>
-                {gh.hasToken ? "It's encrypted and never shown again." : "A token lets Gluon clone private repositories and avoids GitHub's limits."}
+                {gh.hasToken ? "It's encrypted and never shown again." : "Needed for private repositories; also avoids GitHub's rate limits."}
               </span>
             </span>
             <span className={s.iconButtons}>
@@ -249,7 +249,7 @@ export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAp
         )}
         {detail.builds.length === 0 ? (
           <p className={`${s.hint} ${s.panelText}`}>
-            No builds yet. Gluon builds the images when you publish, or now with Build now.
+            No builds yet. Images build when you publish.
           </p>
         ) : (
           <ul className={`${s.plainList} ${s.plainListAfter}`}>

@@ -39,7 +39,7 @@
   .meter[data-fit] { justify-content: flex-start; gap: 8px; }
   .meter[data-fit] .name { display: inline; font-size: var(--text-xs); color: var(--muted); }
   .meter[data-fit] .spark { display: none; }
-  .meter[data-fit] .bar { display: block; max-width: 44px; min-width: 28px; }
+  .meter[data-fit] .bar { display: none; }
   .meter[data-fit] .value { min-width: 0; }
   .none[data-fit] { display: none; }
 }

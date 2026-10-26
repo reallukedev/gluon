@@ -55,6 +55,8 @@ async function withAppCards(layout: HomeLayout, userId: string, role: Role, pers
   const byId = new Map(apps.map((a) => [a.id, a]));
   const onPage = new Set(layout.items.filter((i) => i.type === "app").map((i) => String(i.config.appId)));
   const cardsFor = (block: WidgetItem): WidgetItem[] => {
+    // Defaults say how their app cards look; the old single Apps block of personal layouts always became icons.
+    const cardSize = !personal && (block.size === "c" || block.size === "i") ? block.size : "i";
     const cfg = block.config as { show?: string; ids?: unknown };
     const pinned = personal ? getPrefs(userId).homeApps : null;
     const ids =
@@ -65,7 +67,7 @@ async function withAppCards(layout: HomeLayout, userId: string, role: Role, pers
       .filter((a): a is AppSummary => !!a && !onPage.has(a.id))
       .map((a) => {
         onPage.add(a.id);
-        return appItem(a, "i");
+        return appItem(a, cardSize);
       });
   };
   const items: WidgetItem[] = [];

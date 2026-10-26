@@ -87,7 +87,7 @@ export function readCertFiles(files: { cert: string; key: string }, host: string
       return fs.readFileSync(/*turbopackIgnore: true*/ real, "utf8");
     } catch (e) {
       const code = (e as NodeJS.ErrnoException).code;
-      return { ok: false, field, message: code === "ENOENT" ? `There's no file at ${p}.` : code === "EACCES" ? `Gluon isn't allowed to read ${p}.` : code === "EISDIR" ? `${p} is a folder. Enter the file inside it.` : `Gluon couldn't read ${p} (${code ?? "error"}).` };
+      return { ok: false, field, message: code === "ENOENT" ? `There's no file at ${p}.` : code === "EACCES" ? `No permission to read ${p}.` : code === "EISDIR" ? `${p} is a folder. Enter the file inside it.` : `Couldn't read ${p} (${code ?? "error"}).` };
     }
   };
   const cert = read(files.cert, "cert");

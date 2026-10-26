@@ -359,7 +359,7 @@ export const def: KindDef<Config> = {
         version,
         detail: n
           ? `Gluon can see ${n} ${n === 1 ? "server" : "servers"}.`
-          : "Gluon can't see any servers. If Crafty has some, give Gluon's user a role with those servers (an API token on an admin account needs Full access ticked).",
+          : "Can't see any servers. If Crafty has some, give Gluon's user a role with those servers (an API token on an admin account needs Full access ticked).",
       });
     }),
   data: {

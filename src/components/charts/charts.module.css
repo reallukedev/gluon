@@ -49,6 +49,8 @@
   max-width: 220px;
   white-space: nowrap;
   transform: translateX(12px);
+  /* It follows the pointer with no lag; only the switch to the other side glides, so it never jumps. */
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 .readout[data-flip] { transform: translateX(calc(-100% - 12px)); }
 .readoutTime { color: var(--muted); font-variant-numeric: tabular-nums; }

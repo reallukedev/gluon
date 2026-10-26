@@ -64,7 +64,7 @@ async function api<T>(url: string, token: string | undefined, accept = "applicat
     }
     return { status: r.status, data, text, headers: r.headers as Record<string, unknown> };
   } catch (e) {
-    if (e instanceof NetError) throw new AppError("github_unreachable", "Gluon can't reach GitHub right now. Check this server's internet connection.", 502);
+    if (e instanceof NetError) throw new AppError("github_unreachable", "Can't reach GitHub right now. Check this server's internet connection.", 502);
     throw e;
   }
 }
@@ -296,7 +296,7 @@ export async function latestCommit(ref: { owner: string; repo: string; branch: s
       const msg = (e as Error).message ?? "";
       if (/Authentication failed|could not read Username|403|401/i.test(msg)) throw new AppError("github_token", "GitHub refused the stored token. Update it under Source.", 400);
       if (/not found|Repository not found/i.test(msg)) throw new AppError("github_missing", "GitHub can't find the repository any more.", 404);
-      throw new AppError("github_unreachable", "Gluon couldn't ask GitHub for new commits. Try again in a minute.", 502);
+      throw new AppError("github_unreachable", "Couldn't ask GitHub for new commits. Try again in a minute.", 502);
     }
   }
   const r = await api<unknown>(`https://api.github.com/repos/${ref.owner}/${ref.repo}/commits/${encodeURIComponent(ref.branch)}`, token, "application/vnd.github.sha");

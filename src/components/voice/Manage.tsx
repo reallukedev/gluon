@@ -23,7 +23,7 @@ export function NotManaged({ live, details, onManage, onRetry }: { live: VoiceLi
   const fixable = live.manage.ok && code !== "booting";
   const why =
     code === "not_managed"
-      ? "Mumble's admin connection (Ice) only listens inside its container, so Gluon can't see who's here or change channels and settings. One change opens it to this server only."
+      ? "Mumble's admin connection (Ice) only listens inside its container, so Gluon can't see who's here or change channels. One change opens it to this server only."
       : code === "booting"
         ? "This page fills in as soon as it answers."
         : code === "wrong_secret"
@@ -56,7 +56,7 @@ export function NotManaged({ live, details, onManage, onRetry }: { live: VoiceLi
       <Panel title="What Gluon can tell from outside">
         <dl className={s.facts2}>
           <dt>Connected now</dt>
-          <dd>{live.basics.connected === null ? "Gluon couldn't count" : live.basics.connected === 0 ? "Nobody" : people(live.basics.connected)}</dd>
+          <dd>{live.basics.connected === null ? "Couldn't count" : live.basics.connected === 0 ? "Nobody" : people(live.basics.connected)}</dd>
           <dt>Ports</dt>
           <dd className={s.mono}>{ports.length ? ports.map((x) => `${x.host}${x.proto === "udp" ? "/udp" : ""}`).filter((v, i, a) => a.indexOf(v) === i).join(", ") : "None published"}</dd>
           <dt>Join password</dt>
@@ -97,7 +97,7 @@ export function ManageDialog({ open, onOpenChange, appId, appName, onDone }: { o
       open={open}
       onOpenChange={close}
       title={started ? `Letting Gluon manage ${appName}` : `Let Gluon manage ${appName}?`}
-      description={started ? undefined : "A one-time change to how it runs. After it, this tab shows who's here and changes channels, people and settings live."}
+      description={started ? undefined : "A one-time change to how it runs. Then this tab shows who's here and changes channels, people and settings live."}
       footer={
         started ? (
           <Button variant={job.running ? "ghost" : "primary"} disabled={job.running} onClick={() => close(false)}>

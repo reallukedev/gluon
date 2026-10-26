@@ -47,14 +47,14 @@ export function DetailsTab({ draft, detail, services, issues, target, storeId, u
           <div data-field="details.slug">
             <Field
               label="App id"
-              description={published ? `Umbrel knows it as ${appId}. It stays the same for good.` : target === "umbrel" ? `Umbrel will know it as ${appId}. It can't change once published.` : `Its folder and project name: ${appId}.`}
+              description={published ? `Umbrel knows it as ${appId}. It stays the same for good.` : target === "umbrel" ? `Umbrel will know it as ${appId}. It can't change once published.` : (appId === d.slug ? "Its folder and project name." : `Its folder and project name: ${appId}.`)}
               error={errorAt(issues, "details.slug")}
             >
               <Input value={d.slug} mono readOnly={published} maxLength={30} spellCheck={false} autoCapitalize="off" onChange={(e) => setD({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 30) })} />
             </Field>
           </div>
           <div className={s.wide} data-field="details.tagline">
-            <Field label="Tagline" optional description="One line under the name in Umbrel's store." error={errorAt(issues, "details.tagline")}>
+            <Field label="Tagline" optional description={target === "umbrel" ? "One line under the name in Umbrel's store." : undefined} error={errorAt(issues, "details.tagline")}>
               <Input value={d.tagline} maxLength={140} onChange={(e) => setD({ tagline: e.target.value })} placeholder="Your documents, scanned and searchable" />
             </Field>
           </div>
@@ -70,7 +70,7 @@ export function DetailsTab({ draft, detail, services, issues, target, storeId, u
             </Field>
           </div>
           <div data-field="details.version">
-            <Field label="Version" description={detail.publishedVersion ? (detail.nextVersion === d.version ? `The next publish is ${detail.nextVersion}.` : `Unchanged, so the next publish is ${detail.nextVersion}.`) : "Umbrel shows it and offers an update whenever it changes."} error={errorAt(issues, "details.version")}>
+            <Field label="Version" description={detail.publishedVersion ? (detail.nextVersion === d.version ? `The next publish is ${detail.nextVersion}.` : `Unchanged, so the next publish is ${detail.nextVersion}.`) : target === "umbrel" ? "Umbrel offers an update when it changes." : undefined} error={errorAt(issues, "details.version")}>
               <Input value={d.version} mono maxLength={64} onChange={(e) => setD({ version: e.target.value })} placeholder="1.0.0" />
             </Field>
           </div>
@@ -121,7 +121,7 @@ export function WebPanel({ draft, detail, services, issues, target, usedPorts, s
     <Panel title="Web page" meta={url ? <a className={`${s.mono} ${s.link}`} href={url} target="_blank" rel="noopener noreferrer">{url.replace(/^http:\/\//, "")}</a> : undefined}>
       <div className={s.twoCol}>
         <div className={s.wide} data-field="web.service">
-          <Field label="Served by" description={w.service ? undefined : target === "umbrel" ? "Without one, the tile in Umbrel doesn't open anything." : "Without one, Gluon has no link to open."} error={errorAt(issues, "web.service")}>
+          <Field label="Served by" description={w.service ? undefined : target === "umbrel" ? "Without one, the tile in Umbrel doesn't open anything." : "Without one, there's no link to open."} error={errorAt(issues, "web.service")}>
             <Select
               className={s.fill}
               value={w.service ?? ""}
@@ -137,14 +137,14 @@ export function WebPanel({ draft, detail, services, issues, target, usedPorts, s
         {w.service && (
           <>
             <div data-field="web.containerPort">
-              <Field label="It listens on" description={containerPorts.length ? `Its ports: ${containerPorts.join(", ")}` : "The port inside the container."} error={errorAt(issues, "web.containerPort")}>
+              <Field label="It listens on" description={containerPorts.length > 1 || (containerPorts.length === 1 && containerPorts[0] !== w.containerPort) ? `Its ports: ${containerPorts.join(", ")}` : containerPorts.length ? undefined : "The port inside the container."} error={errorAt(issues, "web.containerPort")}>
                 <Input value={w.containerPort ?? ""} inputMode="numeric" mono onChange={(e) => setW({ containerPort: num(e.target.value), ...(hostNet ? { port: num(e.target.value) } : {}) })} placeholder="8080" />
               </Field>
             </div>
             <div data-field="web.port">
               <Field
                 label="Opens on port"
-                description={hostNet ? "It uses the server's network, so it opens on its own port." : target === "umbrel" ? "Umbrel's proxy listens here and passes visitors on." : "Published on this server."}
+                description={hostNet ? "It uses the server's network, so this follows the port it listens on." : target === "umbrel" ? "Umbrel's proxy listens here." : undefined}
                 error={errorAt(issues, "web.port")}
               >
                 <Input value={(hostNet ? w.containerPort : w.port) ?? ""} inputMode="numeric" mono readOnly={hostNet} onChange={(e) => setW({ port: num(e.target.value) })} placeholder="8080" />
@@ -163,7 +163,7 @@ export function WebPanel({ draft, detail, services, issues, target, usedPorts, s
                   <span id="umbrel-auth">
                     Ask for the Umbrel password first
                     <span className={s.controlHint}>
-                      Turn this off if the app has its own sign-in, or if apps on your phone connect to it directly.
+                      Turn off if it has its own sign-in, or phone apps connect to it directly.
                     </span>
                   </span>
                   <Switch checked={w.umbrelAuth} onChange={(umbrelAuth) => setW({ umbrelAuth })} aria-labelledby="umbrel-auth" />
@@ -187,7 +187,7 @@ function PortSuggestion({ port, usedPorts, ownPort, disabled, onUse }: { port: n
       <button type="button" className={s.link} onClick={() => onUse(free)}>
         Use port {free} instead
       </button>
-      , which nothing on this server uses.
+      , which is free.
     </p>
   );
 }

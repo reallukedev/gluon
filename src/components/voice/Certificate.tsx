@@ -49,7 +49,7 @@ export function Certificate({ appId, details, onChanged }: { appId: string; deta
   const served = c.served;
   const days = served?.notAfter ? Math.floor((served.notAfter - Date.now()) / DAY) : null;
   const now = !served ? (
-    <>Gluon couldn&rsquo;t read the certificate Mumble presents.</>
+    <>Couldn&rsquo;t read the certificate Mumble presents.</>
   ) : served.selfSigned ? (
     <>Mumble uses a self-signed certificate, so Mumble apps ask people to trust it the first time they connect.</>
   ) : (
@@ -74,7 +74,7 @@ export function Certificate({ appId, details, onChanged }: { appId: string; deta
         </div>
 
         <p className={s.hint}>
-          Gluon can copy the certificate Caddy already keeps for one of your addresses into Mumble{c.folder ? <> (and into <span className="mono">{c.folder}</span>)</> : null}, and loads it without a restart. It copies it when Mumble&rsquo;s is missing, untrusted or within 21 days of expiring, and checks every few hours. People already connected keep the old one until they reconnect.
+          Gluon copies the certificate Caddy keeps for one of your addresses into Mumble{c.folder ? <> (and <span className="mono">{c.folder}</span>)</> : null} without a restart, whenever Mumble&rsquo;s is missing, untrusted or within 21 days of ending.
         </p>
 
         {c.blocked ? (

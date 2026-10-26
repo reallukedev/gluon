@@ -46,9 +46,9 @@ export function finalizePlan(input: FinalizeInput): MovePlan {
   const blockers = [...(input.blockers ?? []), ...r.blockers];
   const warnings = [...(input.warnings ?? []), ...r.warnings];
   const enough = input.free !== null && input.free >= needed + headroom(needed);
-  if (input.free === null) blockers.push(`Gluon couldn't check how much space is free for ${input.folder}.`);
+  if (input.free === null) blockers.push(`Couldn't check how much space is free for ${input.folder}.`);
   else if (!enough) blockers.push(`The copy needs about ${formatBytes(needed + headroom(needed))} with room to spare, and ${formatBytes(input.free)} is free where it would go. Free some space first.`);
-  if (unmeasured.length) warnings.push(`Gluon couldn't measure ${unmeasured.length === 1 ? unmeasured[0] : `${unmeasured.length} of the folders`} in time, so the space check leaves ${unmeasured.length === 1 ? "it" : "them"} out.`);
+  if (unmeasured.length) warnings.push(`Couldn't measure ${unmeasured.length === 1 ? unmeasured[0] : `${unmeasured.length} of the folders`} in time, so the space check leaves ${unmeasured.length === 1 ? "it" : "them"} out.`);
   for (const p of r.ports) {
     const who = input.portsInUse.get(`${p.host}/${p.proto}`);
     if (who) blockers.push(`Port ${p.host} is already used by ${who}. Stop it, or change the port, before moving.`);

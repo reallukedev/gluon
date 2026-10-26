@@ -114,7 +114,7 @@ export async function commitStore(storeId: string, storeName: string, apps: Reco
     void git(["--git-dir", REPO_DIR, "gc", "--auto", "--quiet"], { timeoutMs: 120_000 }).catch(() => undefined);
     return commit;
   } catch (e) {
-    if (e instanceof CommandError) throw new AppError("store_commit", `Gluon couldn't write its app store: ${e.message}`, 500);
+    if (e instanceof CommandError) throw new AppError("store_commit", `Couldn't save the app store: ${e.message}`, 500);
     throw e;
   } finally {
     fs.rmSync(stage, { recursive: true, force: true });

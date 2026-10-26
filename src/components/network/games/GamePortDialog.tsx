@@ -89,7 +89,7 @@ export function GamePortDialog({ open, onOpenChange, st, edit, onDone }: { open:
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       title={edit ? `Change ${edit.name}` : "Add a game port"}
-      description="For games that can't share an address the way Minecraft Java does. Gluon lists the port under Port forwarding, so your router can send players here."
+      description="For games that can't share an address like Minecraft Java. The port shows up under Port forwarding."
       footerStart={err && !["name", "ports", "publicPort", "address"].includes(err.field ?? "") ? <span className={s.formError}>{err.message}</span> : undefined}
       footer={
         <>

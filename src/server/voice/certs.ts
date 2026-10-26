@@ -133,12 +133,12 @@ export async function syncVoiceCert(appId: string, opts: { force?: boolean } = {
   if (!rec || !domain) return done(true, "");
   const f = await mumbleFacts(appId);
   if (!f.running) return done(false, "The voice server is stopped, so Gluon couldn't check its certificate.");
-  if (!f.icePort || !rec.secrets) return done(false, "Gluon can't reach Mumble's admin connection to load a new certificate.");
+  if (!f.icePort || !rec.secrets) return done(false, "Can't reach Mumble's admin connection to load a new certificate.");
   let c: MumbleConn;
   try {
     c = await connect({ host: LOCAL_HOST, port: f.icePort, secret: rec.secrets.write });
   } catch (e) {
-    return done(false, `Gluon couldn't reach Mumble's admin connection: ${iceError(e).message}`);
+    return done(false, `Couldn't reach Mumble's admin connection: ${iceError(e).message}`);
   }
 
   const caddy = await caddyCertificateFor(domain);
@@ -158,7 +158,7 @@ export async function syncVoiceCert(appId: string, opts: { force?: boolean } = {
       writeKeeping(files.key, caddy.key, 0o600);
       wrote = true;
     } catch (e) {
-      return done(false, `Gluon couldn't write the certificate into ${files.folder}: ${(e as Error).message}.`);
+      return done(false, `Couldn't write the certificate into ${files.folder}: ${(e as Error).message}.`);
     }
   }
   try {

@@ -90,7 +90,7 @@ export function SentTab({ compact }: { compact?: boolean }) {
 
   return (
     <>
-      {!compact && (
+      {!compact && !(show === "all" && !channel && data && items.length === 0) && (
         <div className={s.toolbar}>
           <Segmented
             aria-label="Show"
@@ -129,7 +129,7 @@ export function SentTab({ compact }: { compact?: boolean }) {
         ) : items.length === 0 ? (
           <Empty title={show === "failed" ? "Nothing failed" : show === "pending" ? "Nothing is waiting" : "Nothing sent yet"}>
             {show === "all"
-              ? "Every message Gluon sends is listed here, with whether it got through. Messages held back by quiet hours wait here too."
+              ? "Each alert sent, and whether it got through."
               : "Try another filter."}
           </Empty>
         ) : (

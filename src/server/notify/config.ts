@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { AppError } from "../errors";
+import { AppError, fieldWords, ownIssueMessage } from "../errors";
 import {
   channelConfigSchemas,
   MASK,
@@ -125,7 +125,7 @@ function mergeKeeping(kind: ChannelKind, stored: StoredConfig | null, input: Rec
 function zodFail(err: z.ZodError): never {
   const issue = err.issues[0];
   const field = issue?.path.join(".");
-  const message = issue?.message && !issue.message.startsWith("Invalid") ? issue.message : `Check ${field || "the settings"}.`;
+  const message = ownIssueMessage(issue?.message) ?? `Check ${fieldWords(field) ?? "the settings"}.`;
   throw new AppError("invalid", message, 400, field ? { field: `config.${field}` } : undefined);
 }
 

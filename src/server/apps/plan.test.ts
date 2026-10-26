@@ -54,7 +54,7 @@ describe("finalizePlan", () => {
     expect(tight.blockers).toHaveLength(1);
     expect(tight.blockers[0]).toMatch(/Free some space first/);
     expect(42 * GB + headroom(42 * GB)).toBeGreaterThan(42.5 * GB);
-    expect(finalizePlan(input({ free: null })).blockers[0]).toMatch(/couldn't check how much space/);
+    expect(finalizePlan(input({ free: null })).blockers[0]).toMatch(/^Couldn't check how much space/);
   });
 
   it("still needs 512 MB to spare for a tiny app", () => {
@@ -68,7 +68,7 @@ describe("finalizePlan", () => {
     const p = finalizePlan(input({ measured, portsInUse: new Map([["2283/tcp", "photoprism"]]) }));
     expect(p.blockers).toEqual(["Port 2283 is already used by photoprism. Stop it, or change the port, before moving."]);
     expect(p.space.unmeasured).toEqual(["/srv/umbrel/app-data/immich/data/postgres"]);
-    expect(p.warnings[0]).toMatch(/couldn't measure/);
+    expect(p.warnings[0]).toMatch(/^Couldn't measure/);
   });
 
   it("refuses when an internet address reaches a port that loses Umbrel's login", () => {

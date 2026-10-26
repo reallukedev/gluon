@@ -44,6 +44,6 @@ export const GET = route({ auth: "admin", query: z.object({ part: z.enum(["apps"
   } catch (e) {
     if (e instanceof AppError) throw e;
     console.error(`[gluon] first look: couldn't read ${what}`, e);
-    throw new AppError("scan_failed", `Gluon couldn't read ${what} just now.`, 500, e instanceof Error && e.message ? { detail: e.message.slice(0, 300) } : undefined);
+    throw new AppError("scan_failed", `Couldn't read ${what} just now.`, 500, e instanceof Error && e.message ? { detail: e.message.slice(0, 300) } : undefined);
   }
 });

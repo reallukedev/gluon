@@ -35,7 +35,7 @@ export async function clockOutcome(): Promise<Outcome> {
   ]);
   if (t.ntp === false && t.canNtp !== false) return warn("Automatic time is turned off", { detail: "The clock drifts without it, which can break certificates, sign-ins and scheduled tasks.", evidence, findings: ["system.clock"], fix: { label: "Turn on automatic time", action: "system.enableNtp" } });
   if (t.ntp && t.synced === false) return warn("The clock isn't syncing with a time server", { detail: `Automatic time is on, but the server hasn't reached ${t.server ?? "a time server"}. Check the internet connection.`, evidence, findings: ["system.clock"], fix: go("Check time settings", "/system?tab=overview") });
-  if (t.synced === null) return skip("Gluon couldn't tell whether the clock is in sync", { evidence });
+  if (t.synced === null) return skip("Couldn't tell whether the clock is in sync", { evidence });
   return ok(`The clock is in sync${t.server ? ` with ${t.server}` : ""}`, { evidence });
 }
 
@@ -75,7 +75,7 @@ export async function updatesOutcome(): Promise<Outcome> {
 
 export async function dockerDiskOutcome(): Promise<Outcome> {
   const u = await dockerUsage();
-  if (!u) return skip("Gluon couldn't ask Docker how much space it uses");
+  if (!u) return skip("Couldn't ask Docker how much space it uses");
   const total = u.images.bytes + u.containers.bytes + u.volumes.bytes + u.buildCache.bytes;
   const reclaim = u.images.reclaimable + u.containers.reclaimable + u.buildCache.reclaimable;
   const evidence = kv([

@@ -26,9 +26,10 @@ import { latestCommit } from "./github";
 import { serverChecks } from "./checks";
 import { currentJob, isRunning, startJob, type Emit } from "./jobs";
 import { analyze, detailIssues } from "@/lib/builder/analyze";
-import { parseCompose, readService, readServices, serviceNames } from "@/lib/builder/compose";
+import { parseCompose, readService, serviceNames } from "@/lib/builder/compose";
 import { envFile, nextVersion, renderApp } from "@/lib/builder/render";
 import { STORE_ID_RE, umbrelAppId } from "@/lib/builder/names";
+import { withFreeWebPort } from "@/lib/builder/start";
 import type {
   AppSpec, BuilderSource, BuilderTarget, CustomAppDetail, CustomAppListItem, GithubSource, Issue, RuntimeState, SecretNames, StoreStatus,
 } from "@/lib/builder-types";
@@ -125,7 +126,7 @@ function storeContents(override?: { appId: string; files: Record<string, string>
  */
 export async function prepareStore(): Promise<{ address: string; reachable: boolean | null; detail: string | null; storeId: string }> {
   if ((await activePlatform()) !== "umbrel") throw new AppError("platform", "Gluon's app store is for Umbrel, and Gluon isn't working with Umbrel.", 409);
-  if (!(await findUmbrel())) throw new AppError("umbrel_missing", "Gluon can't find Umbrel on this server.", 503);
+  if (!(await findUmbrel())) throw new AppError("umbrel_missing", "Can't find Umbrel on this server.", 503);
   return withStoreLock(async () => {
     let row = getStoreRow();
     if (!row) {
@@ -135,7 +136,7 @@ export async function prepareStore(): Promise<{ address: string; reachable: bool
     await ensureRepo(row.storeId, STORE_NAME);
     await commitStore(row.storeId, STORE_NAME, storeContents(), "Update the store");
     const target = await storeUrl();
-    if (!target) throw new AppError("store_address", "Gluon couldn't work out an address Umbrel can reach it at.", 500);
+    if (!target) throw new AppError("store_address", "Couldn't work out an address where Umbrel can reach Gluon.", 500);
     const probe = await umbrelCanFetch(`${target.url}/info/refs?service=git-upload-pack`);
     return { address: hideToken(target.url), reachable: probe ? probe.ok : null, detail: probe && !probe.ok ? probe.detail : null, storeId: row.storeId };
   });
@@ -218,7 +219,7 @@ async function refreshUmbrel(emit: Emit, expect?: { appId: string; version: stri
       await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
     }
   }
-  if (lastError) throw new AppError("store_refresh", `Umbrel couldn't read Gluon's store: ${lastError instanceof Error ? lastError.message : "no answer"}. Open Your apps to repair the store, then publish again.`, 502);
+  if (lastError) throw new AppError("store_refresh", `Umbrel couldn't read Gluon's store: ${lastError instanceof Error ? lastError.message : "no answer"}. Open Custom apps to repair the store, then publish again.`, 502);
   setStoreRegistered(target.url);
   const until = Date.now() + 30_000;
   while (Date.now() < until) {
@@ -352,18 +353,10 @@ export async function appDetail(id: string): Promise<CustomAppDetail> {
 
 /** The web page's port, moved off ports something already uses (and off the privileged range). */
 async function freeWebPort(spec: AppSpec, target: BuilderTarget): Promise<AppSpec> {
-  const want = spec.web.port;
-  if (!spec.web.service || !want) return spec;
+  if (!spec.web.service || !spec.web.port) return spec;
   const check = await serverChecks(spec, target, null).catch(() => null);
   if (!check) return spec;
-  const used = new Set(check.ports.filter((p) => p.proto === "tcp").map((p) => p.port));
-  // Other services of this app publish ports too.
-  const p = parseCompose(spec.compose);
-  if (p.ok) for (const f of readServices(p.doc)) for (const port of f.ports) if (port.host && !(target === "umbrel" && port.host === want)) used.add(port.host);
-  if (want >= 1024 && !used.has(want)) return spec;
-  const start = want < 1024 ? 8080 : want + 1;
-  for (let port = start; port < start + 500 && port < 65536; port++) if (!used.has(port)) return { ...spec, web: { ...spec.web, port } };
-  return spec;
+  return withFreeWebPort(spec, target, check.ports.filter((p) => p.proto === "tcp").map((p) => p.port));
 }
 
 export async function createDraft(user: User, where: Where, input: { source: BuilderSource; spec: AppSpec; secrets?: Record<string, Record<string, string>>; github?: Omit<GithubSource, "hasToken"> | null; token?: string | null }): Promise<string> {
@@ -536,7 +529,7 @@ async function publishUmbrel(id: string, user: User, where: Where, emit: Emit, o
   const store = getStoreRow();
   if (!store?.registeredUrl) throw new AppError("store_missing", "Set up Gluon's app store in Umbrel first.", 409);
   const ep = await findUmbrel();
-  if (!ep) throw new AppError("umbrel_missing", "Gluon can't find Umbrel on this server.", 503);
+  if (!ep) throw new AppError("umbrel_missing", "Can't find Umbrel on this server.", 503);
   const appId = r.appId ?? umbrelAppId(store.storeId, r.spec.details.slug);
   const secrets = await validate(r, "umbrel", r.appId, emit);
   const built = await buildIfNeeded(r, user, emit, !!opts.rebuild);
@@ -719,7 +712,7 @@ export async function startRemove(id: string, user: User, where: Where, opts: { 
 async function removeUmbrel(r: AppRow, user: User, where: Where, emit: Emit, opts: { keepData: boolean; forget: boolean }) {
   const appId = r.appId!;
   const ep = await findUmbrel();
-  if (!ep) throw new AppError("umbrel_missing", "Gluon can't find Umbrel on this server.", 503);
+  if (!ep) throw new AppError("umbrel_missing", "Can't find Umbrel on this server.", 503);
   const installed = (await umbrelApps(0)).find((a) => a.id === appId);
   let kept: string | null = null;
   if (installed) {

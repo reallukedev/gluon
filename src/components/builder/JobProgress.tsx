@@ -10,7 +10,7 @@ import s from "./builder.module.css";
  * own percentage while it downloads, the full output, and how it ended. Nothing advances on a
  * timer; every stage comes from the server.
  */
-export function JobProgress({ view, stages, running, openOutput, label, closeNote = "This keeps going if you close it. Your apps list shows how it went." }: { view: JobView; stages: { key: string; label: string }[]; running: boolean; openOutput?: boolean; label: string; closeNote?: string | null }) {
+export function JobProgress({ view, stages, running, openOutput, label, closeNote = "It keeps going if you close this. Custom apps shows how it went." }: { view: JobView; stages: { key: string; label: string }[]; running: boolean; openOutput?: boolean; label: string; closeNote?: string | null }) {
   const current = view.stage ?? stages[0]?.key ?? "";
   const ok = view.result?.ok === true;
   const failed = view.result?.ok === false;
@@ -27,8 +27,9 @@ export function JobProgress({ view, stages, running, openOutput, label, closeNot
       {stages.length > 1 && <FlowSteps label={label} steps={stages} current={ok ? stages[stages.length - 1]!.key : current} working={running && !view.result} failed={failed} complete={ok} />}
       {view.steps.length > 0 && (
         <ol className={s.jobSteps} aria-live="polite">
-          {view.steps.slice(-6).map((st, i) => (
-            <li key={`${i}-${st.text}`} data-state={st.state}>
+          {view.steps.slice(-6).map((st, i, shown) => (
+            // Keyed by position in the whole run, so older rows don't re-enter when the list scrolls on.
+            <li key={`${view.steps.length - shown.length + i}-${st.text}`} data-state={st.state} data-motion-gentle="">
               {st.text}
             </li>
           ))}
@@ -43,7 +44,7 @@ export function JobProgress({ view, stages, running, openOutput, label, closeNot
         </div>
       )}
       {view.result && (
-        <div className={s.result} data-ok={String(view.result.ok)} role="status">
+        <div className={s.result} data-ok={String(view.result.ok)} role="status" data-motion-gentle="">
           <span>{view.result.message}</span>
         </div>
       )}

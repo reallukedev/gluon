@@ -22,6 +22,7 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
   const [view, setView] = React.useState<"edit" | "changes">("edit");
   const [check, setCheck] = React.useState<ValidationResult | null>(null);
   const [checking, setChecking] = React.useState(false);
+  const [checkN, setCheckN] = React.useState(0);
   const [stream, setStream] = React.useState<StreamState>(emptyStream);
   const [streamOpen, setStreamOpen] = React.useState(false);
   const [running, setRunning] = React.useState(false);
@@ -50,6 +51,7 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
     setChecking(true);
     try {
       setCheck(await api.post<ValidationResult>(`${url}/validate`, { content: text }));
+      setCheckN((n) => n + 1);
     } catch (e) {
       setCheck({ ok: false, message: e instanceof Error ? e.message : "Couldn't check the file." });
     } finally {
@@ -89,15 +91,16 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
       setChecking(false);
     }
     setCheck(result);
+    setCheckN((n) => n + 1);
     if (!result.ok) return;
     confirm({
       title: "Apply this change?",
       consequences: [
         changes ? `${fmt.plural(changes.added, "line")} added and ${fmt.plural(changes.removed, "line")} removed. The current file is backed up first.` : "The current file is backed up first.",
         `Compose recreates any container whose settings changed${result.services?.length ? ` (of ${result.services.join(", ")})` : ""}. Those are offline for a few seconds.`,
-        "If the new version doesn't start, Gluon puts the previous one back and starts it.",
+        "If it doesn't start, the previous version goes back and starts again.",
       ],
-      confirmLabel: "Apply",
+      confirmLabel: "Apply change",
       variant: "primary",
       onConfirm: async () => void apply(),
     });
@@ -108,7 +111,7 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
       const r = await api.get<{ content: string }>(`${url}/backup?name=${encodeURIComponent(name)}`);
       setText(r.content);
       setView("changes");
-      toast.info("Loaded the backup into the editor", { description: "Review the changes, then apply to restore it." });
+      toast.info("Loaded that version", { description: "Apply to restore it." });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't open that backup.");
     }
@@ -121,7 +124,7 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
           {data.path}
         </span>
         {dirty && (
-          <span className={s.dirty}>
+          <span className={`${s.dirty} appear`}>
             Not applied yet
             {changes && (
               <span className={`${s.delta} num`}>
@@ -137,7 +140,7 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
           onChange={setView}
           options={[
             { value: "edit", label: "Edit" },
-            { value: "changes", label: dirty ? "Changes" : "Changes (none)" },
+            { value: "changes", label: "Changes" },
           ]}
         />
         {data.backups.length > 0 && (
@@ -147,7 +150,7 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
                 Earlier versions
               </Button>
             }
-            items={data.backups.slice(0, 10).map((b) => ({ label: fmt.dateTime(b.at), description: "Load into the editor to review", onSelect: () => void loadBackup(b.name) }))}
+            items={[{ kind: "label", label: "Opens in the editor to review" }, ...data.backups.slice(0, 10).map((b) => ({ label: fmt.dateTime(b.at), onSelect: () => void loadBackup(b.name) }))]}
           />
         )}
       </div>
@@ -162,13 +165,16 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
       )}
 
       {check && (
-        <Notice tone={check.ok ? "neutral" : "fault"} title={check.ok ? "The file is valid" : "Compose can't use this file yet"}>
-          {check.ok ? `Services: ${check.services?.join(", ")}.` : <span className="mono" style={{ whiteSpace: "pre-wrap" }}>{check.message}</span>}
-        </Notice>
+        // Each new result fades in, so checking twice still visibly answers.
+        <div key={checkN} className="appear">
+          <Notice tone={check.ok ? "neutral" : "fault"} title={check.ok ? "The file is valid" : "Compose can't use this file yet"}>
+            {check.ok ? `Services: ${check.services?.join(", ")}.` : <span className="mono" style={{ whiteSpace: "pre-wrap" }}>{check.message}</span>}
+          </Notice>
+        </div>
       )}
 
       <div className={s.actions}>
-        <p className={s.note}>Applying saves a backup first. If the app doesn't start with your change, Gluon puts the previous version back automatically.</p>
+        <p className={s.note}>Backed up first, and put back if the app won&apos;t start.</p>
         <Button variant="ghost" disabled={!dirty} onClick={() => {
           setText(data.content);
           setCheck(null);
@@ -176,7 +182,7 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
           Discard changes
         </Button>
         <Button loading={checking} onClick={() => void validate()}>
-          Check
+          Check file
         </Button>
         <Button
           variant="primary"

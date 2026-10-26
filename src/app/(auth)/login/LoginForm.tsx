@@ -141,7 +141,7 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
               You have <b className={s.figure}>{left}</b> left.
             </>
           )}{" "}
-          If your phone is gone for good, move two-step sign-in to your new phone and make fresh codes in Settings.
+          Lost your phone for good? Move two-step sign-in to a new one in Settings.
         </p>
         <div className={s.buttons}>
           <LinkButton href="/settings/security" variant="primary" size="lg" block>
@@ -168,8 +168,8 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
         <h2>{recovery ? "Use a recovery code" : "Enter your code"}</h2>
         <p className={s.lede}>
           {recovery
-            ? "Type one of the recovery codes you saved when you turned on two-step sign-in. Each works once."
-            : `Open your authenticator app and enter the 6-digit code for Gluon (${serverName}).`}
+            ? "One of the codes you saved with two-step sign-in. Each works once."
+            : `The 6-digit code for Gluon (${serverName}) in your authenticator app.`}
         </p>
         {recovery ? (
           <Field label="Recovery code" error={message}>
@@ -223,17 +223,7 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
     <form className={s.form} onSubmit={submitPassword} noValidate>
       <h2>Sign in</h2>
       <ZoneLine zone={zone} serverName={serverName}>
-        {zone === "home" ? (
-          <>You're on the home network.</>
-        ) : adminsNeedCode ? (
-          <>
-            You're <b>away from home</b>. Admins also need a code from their authenticator app.
-          </>
-        ) : (
-          <>
-            You're <b>away from home</b>.
-          </>
-        )}
+        {zone === "away" && adminsNeedCode ? <>Admins also need a code from their authenticator app.</> : null}
       </ZoneLine>
       <Field label="Username">
         <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus required />
@@ -243,7 +233,7 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
       </Field>
       {awayRule ? (
         <Notice tone="attention" title="Two-step sign-in needed away from home">
-          This admin account doesn't have two-step sign-in yet, so it can only sign in on the home network. Sign in there once and turn it on in Settings → Security.
+          This admin account can only sign in from home until two-step sign-in is on. Turn it on in Security settings next time you're home.
         </Notice>
       ) : (
         message && (
@@ -255,7 +245,7 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
       <Button type="submit" variant="primary" size="lg" block loading={busy} disabled={blocked}>
         {blocked ? `Try again in ${clock(wait)}` : "Sign in"}
       </Button>
-      <p className={s.foot}>Forgot your password? Ask whoever runs this server to set a temporary one for you.</p>
+      <p className={s.foot}>Forgot your password? Ask whoever runs the server to reset it.</p>
     </form>
   );
 }

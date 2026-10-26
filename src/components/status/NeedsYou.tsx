@@ -86,32 +86,42 @@ interface Leaving {
  */
 function useLeaving(findings: Finding[], hiddenByMe: React.RefObject<Set<string>>) {
   const [leaving, setLeaving] = React.useState<Leaving[]>([]);
-  const prev = React.useRef(findings);
-  // Removal timers live outside the effect: a re-render with a new (equal) list must not cancel
+  // Worked out during render, not in an effect: the leaving row must stay in the DOM through the
+  // commit that drops it from `findings`, or it remounts already faded and nothing animates.
+  const [prev, setPrev] = React.useState(findings);
+  if (prev !== findings) {
+    setPrev(findings);
+    const now = new Set(findings.map((f) => f.id));
+    const gone = prev.map((f, index) => ({ f, index })).filter((x) => !now.has(x.f.id));
+    if (gone.length) {
+      const added = gone.map(({ f, index }) => ({ f, index, resolved: !hiddenByMe.current.has(f.id) }));
+      setLeaving((l) => [...l.filter((x) => !now.has(x.f.id) && !added.some((y) => y.f.id === x.f.id)), ...added]);
+    }
+  }
+  // Removal timers live outside the render: a re-render with a new (equal) list must not cancel
   // a pending removal, or the faded row stays in the list as a blank gap.
-  const timers = React.useRef(new Set<ReturnType<typeof setTimeout>>());
+  const timers = React.useRef(new Map<Leaving, ReturnType<typeof setTimeout>>());
   React.useEffect(() => {
     const all = timers.current;
     return () => {
-      for (const t of all) clearTimeout(t);
+      for (const t of all.values()) clearTimeout(t);
       all.clear();
     };
   }, []);
   React.useEffect(() => {
-    const before = prev.current;
-    prev.current = findings;
-    const now = new Set(findings.map((f) => f.id));
-    const gone = before.map((f, index) => ({ f, index })).filter((x) => !now.has(x.f.id));
-    if (!gone.length) return;
-    const added = gone.map(({ f, index }) => ({ f, index, resolved: !hiddenByMe.current.delete(f.id) }));
-    setLeaving((l) => [...l.filter((x) => !now.has(x.f.id) && !added.some((y) => y.f.id === x.f.id)), ...added]);
-    const ms = added.some((x) => x.resolved) ? SETTLE_MS + LEAVE_MS + 40 : LEAVE_MS + 40;
-    const t = setTimeout(() => {
-      timers.current.delete(t);
-      setLeaving((l) => l.filter((x) => !added.some((y) => y.f.id === x.f.id)));
-    }, ms);
-    timers.current.add(t);
-  }, [findings, hiddenByMe]);
+    for (const l of leaving) {
+      if (timers.current.has(l)) continue;
+      hiddenByMe.current.delete(l.f.id);
+      const t = setTimeout(
+        () => {
+          timers.current.delete(l);
+          setLeaving((cur) => cur.filter((x) => x !== l));
+        },
+        l.resolved ? SETTLE_MS + LEAVE_MS + 40 : LEAVE_MS + 40,
+      );
+      timers.current.set(l, t);
+    }
+  }, [leaving, hiddenByMe]);
   // Leaving items keep their old place in the list.
   const rows: { f: Finding; leaving?: Leaving }[] = findings.map((f) => ({ f }));
   for (const l of [...leaving].sort((a, b) => a.index - b.index)) {
@@ -154,19 +164,24 @@ function useFlip(list: React.RefObject<HTMLUListElement | null>, key: string) {
 /**
  * What needs the person now, worst first, each with its remedy and a way to put it off. `foot`
  * replaces the link under the list (Status itself passes null; other pages link to Status).
+ * `empty` replaces the empty state; Status passes null and hides the whole panel instead.
  */
 export function NeedsYou({
   findings,
   onChange,
   checkedAt,
   foot = <Link href="/status">Everything that needs you, on Status</Link>,
+  empty,
 }: {
   findings: Finding[];
   onChange: () => void;
   checkedAt: number;
   foot?: React.ReactNode;
+  empty?: React.ReactNode;
 }) {
   const hiddenByMe = React.useRef(new Set<string>());
+  // Items that turn up after the first render slide in; the ones already there on load don't.
+  const [initial] = React.useState(() => new Set(findings.map((f) => f.id)));
   const listRef = React.useRef<HTMLUListElement>(null);
   const rows = useLeaving(findings, hiddenByMe);
   useFlip(listRef, rows.map((r) => r.f.id + (r.leaving ? "~" : "")).join(","));
@@ -218,9 +233,10 @@ export function NeedsYou({
   }
 
   if (!rows.length) {
+    if (empty !== undefined) return empty;
     return (
-      <Empty title="Nothing needs you.">
-        Gluon checks disks, apps, certificates and updates around the clock. Last checked at <Time ts={checkedAt} kind="time" />.
+      <Empty title="Nothing needs you">
+        Checked at <Time ts={checkedAt} kind="time" />
       </Empty>
     );
   }
@@ -240,6 +256,8 @@ export function NeedsYou({
             data-settled={done && !leaving ? "" : undefined}
             data-resolved={leaving?.resolved ? "" : undefined}
             data-leaving={leaving ? "" : undefined}
+            data-arrived={!initial.has(f.id) && !leaving ? "" : undefined}
+            data-motion-gentle=""
             aria-hidden={leaving ? true : undefined}
           >
             <span
@@ -252,7 +270,7 @@ export function NeedsYou({
               {f.cause && <p className={s.needCause}>{f.cause}</p>}
               <p className={s.needMeta}>
                 {done ? (
-                  <span className={s.needSettled}>Done. Gluon confirms it on its next check.</span>
+                  <span className={s.needSettled}>Done. Confirming on the next check.</span>
                 ) : (
                   <>
                     {f.subject && !/^(?=.*[A-Z])[A-Za-z0-9_-]{12}$/.test(f.subject) && (

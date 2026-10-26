@@ -65,10 +65,12 @@ type IconButtonProps = Omit<ButtonProps, "children" | "icon" | "iconEnd"> & {
   /** Show the label as a tooltip on hover (default true). */
   tooltip?: boolean;
   shortcut?: string;
+  /** Keep keyboard focus while disabled, e.g. a menu trigger that is busy after its own action. */
+  focusableWhenDisabled?: boolean;
 };
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { label, children, variant = "ghost", size, tooltip = true, shortcut, className, disabled, loading, type = "button", ...rest },
+  { label, children, variant = "ghost", size, tooltip = true, shortcut, className, disabled, loading, focusableWhenDisabled, type = "button", ...rest },
   ref,
 ) {
   const btn = (
@@ -77,7 +79,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
       type={type}
       aria-label={label}
       disabled={disabled || loading}
-      focusableWhenDisabled={loading}
+      focusableWhenDisabled={loading || focusableWhenDisabled}
       data-loading={loading ? "" : undefined}
       data-motion-gentle=""
       aria-busy={loading || undefined}

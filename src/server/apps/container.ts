@@ -15,6 +15,6 @@ export function containerFor<T extends AppWithContainers>(app: T, ref: string, a
   const r = ref.replace(/^\//, "");
   const c = app.containers.find((x) => x.name === r || x.id === r || (r.length >= 12 && x.id.startsWith(r)) || x.shortId === r);
   if (!c) throw notFound(`A container called ${r} in ${app.name}`);
-  if (app.self && action !== "restart") throw new AppError("self", "Gluon can't stop or pause its own container from here. Restart it instead.", 409);
+  if (app.self && action !== "restart") throw new AppError("self", "Gluon can't stop or pause its own container. Restart it instead.", 409);
   return c;
 }

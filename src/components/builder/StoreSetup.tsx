@@ -28,7 +28,7 @@ export function StoreSetupDialog({ open, onOpenChange, onDone, repair }: { open:
     } catch (e) {
       if (mine !== run.current) return;
       if (e instanceof ApiError && e.code === "reauth_cancelled") return onOpenChange(false);
-      setPhase({ kind: "error", message: e instanceof Error ? e.message : "Gluon couldn't prepare its store." });
+      setPhase({ kind: "error", message: e instanceof Error ? e.message : "Couldn't prepare the store. Try again." });
     }
   }, [onOpenChange]);
 
@@ -66,15 +66,15 @@ export function StoreSetupDialog({ open, onOpenChange, onDone, repair }: { open:
       <div className={s.stack}>
         <ul className={s.explain}>
           <li>
-            Umbrel lists a community app store called <b>Made with Gluon</b>. Apps you publish from Gluon appear there and install, update and uninstall like any other app.
+            Umbrel lists a community store called <b>Made with Gluon</b>. Apps you publish appear there and install like any other.
           </li>
           <li>
-            Umbrel reads it from Gluon at <span className={s.mono}>{host(phase.address)}</span>, inside this server. The address has a secret part, and only Umbrel and this server can read it.
+            Umbrel reads it at <span className={s.mono}>{host(phase.address)}</span>, inside this server. The address has a secret part only Umbrel and this server know.
           </li>
-          <li>Removing the store later is one click here, once no app from it is installed.</li>
+          <li>You can remove it here once no app from it is installed.</li>
         </ul>
         {phase.reachable === true && <StateLine state="running" size={12} label="Umbrel can reach Gluon" />}
-        {phase.reachable === null && <p className={s.hint}>Gluon couldn't test the connection from Umbrel's side first; adding the store tests it.</p>}
+        {phase.reachable === null && <p className={s.hint}>Couldn't test the connection from Umbrel's side yet. Adding the store tests it.</p>}
       </div>
     );
     footer = (
@@ -90,7 +90,7 @@ export function StoreSetupDialog({ open, onOpenChange, onDone, repair }: { open:
   } else if (phase.kind === "unreachable") {
     body = (
       <Notice tone="fault" title="Umbrel can't reach Gluon">
-        Umbrel tried <span className={s.mono}>{host(phase.address)}</span> and got no answer. Gluon listens on the host network; check that a firewall doesn&apos;t block Docker&apos;s networks from this port.
+        Umbrel tried <span className={s.mono}>{host(phase.address)}</span> and got no answer. Check that a firewall doesn&apos;t block Docker&apos;s networks from this port.
         {phase.detail && <pre className={`${s.log} ${s.logAfter}`}>{phase.detail}</pre>}
       </Notice>
     );
@@ -122,7 +122,7 @@ export function StoreSetupDialog({ open, onOpenChange, onDone, repair }: { open:
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => phase.kind !== "adding" && onOpenChange(o)} title={repair ? "Add Gluon's store to Umbrel again" : "Add Gluon's app store to Umbrel"} description={repair ? "Umbrel no longer lists it, so it can't install or update the apps you made." : "Gluon hosts a small app store for the apps you make. Umbrel needs to know about it once."} footer={footer}>
+    <Dialog open={open} onOpenChange={(o) => phase.kind !== "adding" && onOpenChange(o)} title={repair ? "Add Gluon's store to Umbrel again" : "Add Gluon's app store to Umbrel"} description={repair ? "Umbrel no longer lists it, so it can't install or update apps you made." : "A small store for apps you make. You add it once."} footer={footer}>
       {body}
     </Dialog>
   );

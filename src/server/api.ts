@@ -1,7 +1,7 @@
 import "server-only";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { AppError } from "./errors";
+import { AppError, fieldWords, ownIssueMessage } from "./errors";
 import { CommandError } from "./host/exec";
 import { currentAuth, hasRecentAuth, mustSetUpMfa, pendingAuth, type Session } from "./auth/session";
 import { mfaRequiredMessage } from "./auth/policy";
@@ -84,7 +84,7 @@ function zodMessage(err: z.ZodError): { message: string; field?: string } {
   const issue = err.issues[0];
   if (!issue) return { message: "Some of that didn't look right." };
   const field = issue.path.join(".");
-  const msg = issue.message && !issue.message.startsWith("Invalid") ? issue.message : `Check ${field || "the form"}.`;
+  const msg = ownIssueMessage(issue.message) ?? `Check ${fieldWords(field) ?? "the form"}.`;
   return { message: msg, field: field || undefined };
 }
 
@@ -205,10 +205,10 @@ export function route<B, Q>(opts: Options<B, Q>, fn: Handler<B, Q> | PublicHandl
         // Command lines and their output are for admins; everyone else gets a plain sentence.
         return isAdmin
           ? errorResponse("command_failed", e.message || "The server couldn't finish that.", 500, { command: e.cmd.split(" ").slice(0, 8).join(" ") })
-          : errorResponse("command_failed", "The server couldn't finish that. It's been logged.", 500);
+          : errorResponse("command_failed", "The server couldn't finish that. Try again; the details are in the server log.", 500);
       }
       console.error("[gluon] unhandled", e);
-      return errorResponse("internal", "Something went wrong on the server. It's been logged.", 500);
+      return errorResponse("internal", "Something went wrong on the server. Try again; the details are in the server log.", 500);
     }
   };
 }
@@ -302,7 +302,7 @@ export function ndjson(run: (emit: (event: unknown) => void, signal: AbortSignal
       try {
         await run(emit, signal);
       } catch (e) {
-        emit({ type: "error", message: e instanceof AppError ? e.message : "Something went wrong on the server. It's been logged." });
+        emit({ type: "error", message: e instanceof AppError ? e.message : "Something went wrong on the server. Try again; the details are in the server log." });
         if (!(e instanceof AppError)) console.error("[gluon] stream failed", e);
       } finally {
         try {

@@ -322,7 +322,7 @@ export function LogViewer({ appId, containers, initialContainer }: { appId: stri
           {!loaded ? (
             <p className={s.empty}>Loading the latest lines…</p>
           ) : n === 0 ? (
-            <p className={s.empty}>{lines.length ? "No lines match." : "Nothing logged yet. New lines appear here as they're written."}</p>
+            <p className={s.empty}>{lines.length ? "No lines match." : "Nothing logged yet."}</p>
           ) : (
             <div style={{ height: v.getTotalSize(), position: "relative" }}>
               {v.getVirtualItems().map((item) => {
@@ -369,7 +369,7 @@ export function LogViewer({ appId, containers, initialContainer }: { appId: stri
           ))}
         </div>
         {!follow && missed > 0 && (
-          <div className={s.jump}>
+          <div className={s.jump} data-motion-gentle="">
             <Button
               size="sm"
               variant="primary"

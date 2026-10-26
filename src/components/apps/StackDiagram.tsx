@@ -268,7 +268,7 @@ export function StackDiagram({ app, actions }: { app: AppDetail; actions: Diagra
               <span className={s.nodeSub}>
                 {a.kind === "public" ? "From anywhere" : "At home"}
                 {a.note && a.kind === "public" ? ` · ${a.note}` : ""}
-                {a.target ? <span className={s.linkText}> · goes to {model.ctrs.find((c) => c.id === a.target!.ctr)?.name} on port {a.target.port}</span> : <span> · Gluon can't tell which container answers</span>}
+                {a.target ? <span className={s.linkText}> · goes to {model.ctrs.find((c) => c.id === a.target!.ctr)?.name} on port {a.target.port}</span> : <span> · container not known</span>}
               </span>
             </a>
           ))

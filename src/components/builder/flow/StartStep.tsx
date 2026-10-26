@@ -106,7 +106,7 @@ function Running({ detail: d, address: { choice, update } }: { detail: CustomApp
         }
       }
     } catch (e) {
-      if (e instanceof ApiError && e.code === "reauth_cancelled") return setAddr({ state: "failed", message: "Publishing the address needs your password again. Try again when you're ready." });
+      if (e instanceof ApiError && e.code === "reauth_cancelled") return setAddr({ state: "failed", message: "Adding the address needs your password. Try again when you're ready." });
       setAddr({ state: "failed", message: e instanceof Error ? e.message : "The address wasn't added." });
     }
   }, [choice.label, name, d.spec.details.name, d.runtime?.appsId, d.appId, port, update]);
@@ -143,7 +143,7 @@ function Running({ detail: d, address: { choice, update } }: { detail: CustomApp
             )}
             {addr.state === "failed" && (
               <Notice tone="fault" title="The public address wasn't added" action={<Button size="sm" onClick={() => void publish()}>Try again</Button>}>
-                {addr.message} The app itself is running; you can also add the address on the Network page.
+                {addr.message} The app is running. You can add the address on Network later.
               </Notice>
             )}
           </div>
@@ -158,7 +158,7 @@ function Running({ detail: d, address: { choice, update } }: { detail: CustomApp
             <LinkButton href={`/apps/${encodeURIComponent(d.runtime.appsId)}`}>Show in Apps</LinkButton>
           )}
           <LinkButton href={`/apps/custom/${d.id}`} variant="ghost">
-            Open in the full builder
+            Open full builder
           </LinkButton>
           {/* A full load: this page keeps its state across same-route navigations. */}
           <Button variant="ghost" onClick={() => window.location.assign("/apps/new")}>

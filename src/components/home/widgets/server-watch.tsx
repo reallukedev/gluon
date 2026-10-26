@@ -86,11 +86,11 @@ function UptimeWidget({ size }: WidgetProps) {
   const list = [...watched].sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
   const wide = size === "w" || size === "x";
   const max = size === "s" ? 0 : watched.length;
-  const traces = size === "l" || wide;
+  const traces = size === "l" || size === "x";
   const hidden = size === "s" ? 0 : watched.length - fit;
 
   return (
-    <div className={w.body}>
+    <div key="ready" className={`${w.body} appear`} data-motion-gentle="">
       <p className={w.headline}>
         <StateLine state={down.length ? "unhealthy" : "running"} label={false} size={18} />
         <span>
@@ -103,7 +103,7 @@ function UptimeWidget({ size }: WidgetProps) {
           )}
         </span>
       </p>
-      <p className={w.sub}>{down.length ? down.map((m) => m.name).join(", ") : "Checked every minute from this server"}</p>
+      {max === 0 && <p className={w.sub}>{down.length ? down.map((m) => m.name).join(", ") : "Checked every minute"}</p>}
       {max > 0 && (
         <ul className={wide ? w.cells : w.list} role="list" ref={listRef}>
           {list.map((m, i) => {
@@ -157,14 +157,14 @@ registerWidget({
 // ---------------------------------------------------------------- activity
 
 function ActivityWidget({ size }: WidgetProps) {
-  const limit = size === "s" ? 1 : size === "m" ? 3 : size === "t" || size === "w" ? 5 : 9;
+  const limit = size === "s" ? 1 : size === "m" ? 2 : size === "t" || size === "w" ? 5 : 9;
   const { data, error, mutate } = useApi<ActivityPage>(`/api/activity?limit=${limit}`, { refresh: 30_000 });
   if (!data) return error ? <Failed title="Can't show activity" status={error.status} retry={() => void mutate()} /> : <Loading rows={Math.min(limit, 4)} />;
   if (!data.items.length) {
     return <WidgetState title="Nothing yet">Changes people make and things the server notices appear here.</WidgetState>;
   }
   return (
-    <div className={w.body}>
+    <div key="ready" className={`${w.body} appear`} data-motion-gentle="">
       <ul className={w.list} role="list" data-flush="">
         {data.items.map((e) => (
           <li key={e.id} className={w.row} data-failed={e.outcome === "failed" ? "" : undefined}>
@@ -329,7 +329,7 @@ function BusyWidget({ item, size }: WidgetProps<BusyConfig>) {
   const top = ranked[0] ? (by === "cpu" ? ranked[0].u.cpu : ranked[0].u.mem) : 0;
   const total = host.at(-1)?.mem.total ?? null;
   return (
-    <div className={w.body}>
+    <div key="ready" className={`${w.body} appear`} data-motion-gentle="">
       <ul className={w.list} role="list" data-flush="" ref={listRef}>
         {ranked.map(({ a, u }, i) => {
           const v = by === "cpu" ? u.cpu : u.mem;

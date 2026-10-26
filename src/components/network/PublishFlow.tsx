@@ -290,7 +290,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
       if (form.customHost ? !HOST_RE.test(l) : !LABEL_RE.test(l)) return { state: "unhealthy", text: form.customHost ? "Enter a full name, like photos.example.com." : "Use letters, numbers and dashes; it can't start or end with a dash." };
       if (form.customHost && (l === base || l.endsWith(`.${base}`))) return { state: "unhealthy", text: `Use the box without “more options” for names under ${base}.` };
       if (takenHost) return { state: "unhealthy", text: `Already used by ${nameOf(takenHost)}.` };
-      return { state: "running", text: form.customHost ? "Free." : "Free. The wildcard DNS record already covers it, so there's nothing to set up." };
+      return { state: "running", text: form.customHost ? "Free." : "Free. DNS already covers it." };
     }
     const p = cleanPath(form.path);
     if (!p) return null;
@@ -717,7 +717,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   icon={<Cloud />}
                   title="Direct"
                   example={`${form.label || "name"}.${base}`}
-                  text="Straight to your home. No size limits, so video and big uploads work. Recommended."
+                  text="Straight to your home. Video and big uploads work. Recommended."
                 />
                 <LaneChoice
                   on={form.lane === "cloudflare"}
@@ -725,7 +725,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   icon={<CloudSync />}
                   title="Through Cloudflare"
                   example={`${base}/${cleanPath(form.path) || "name"}`}
-                  text="Hides your home's address. Uploads over 100 MB fail, no video, and the app must support living under a path."
+                  text="Hides your home's address. Uploads stop at 100 MB, no video, and the app must work under a path."
                 />
               </div>
 
@@ -777,7 +777,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                       <span className="mono">
                         {base}/{cleanPath(form.shortPath) || "name"}
                       </span>{" "}
-                      sends people to the address above. Handy to remember; the app itself still goes direct.
+                      redirects to the address above.
                     </span>
                   </Checkbox>
                   {form.shortLink && (
@@ -818,7 +818,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   {!direct && (
                     <Checkbox checked={form.stripPrefix} onChange={(v) => set("stripPrefix", v)}>
                       Remove /{cleanPath(form.path) || "name"} before passing visits on
-                      <span className={f.hint}>For apps without a base-URL setting. Only works if the app uses relative links; otherwise set its base URL to /{cleanPath(form.path) || "name"} and leave this off.</span>
+                      <span className={f.hint}>For apps without a base-URL setting that use relative links. Otherwise set its base URL to /{cleanPath(form.path) || "name"} and leave this off.</span>
                     </Checkbox>
                   )}
                   <div className={f.row2}>
@@ -856,7 +856,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                         ? `${appName ?? "It"} asks for a login`
                         : loginVerdict === "none"
                           ? `${appName ?? "It"} has no login of its own`
-                          : `Gluon can't tell whether ${appName ?? "it"} has a login`}
+                          : `Can't tell whether ${appName ?? "it"} has a login`}
                   </p>
                   {loginEvidence && <p className={f.faint}>{loginEvidence}</p>}
                   {app && !checkingLogin && (
@@ -882,7 +882,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
               {direct ? (
                 <div className={f.scope} role="radiogroup" aria-label="What to publish">
                   <ScopeChoice on={form.scope === "all"} onPick={() => set("scope", "all")} title="The whole app" text={`Everything ${appName ?? "the app"} serves is reachable, and its own login protects it.`} />
-                  <ScopeChoice on={form.scope === "some"} onPick={() => set("scope", "some")} title="Only some paths" text="Only the paths you list are reachable; everything else answers “not found”. Useful to keep an admin page home-only." />
+                  <ScopeChoice on={form.scope === "some"} onPick={() => set("scope", "some")} title="Only some paths" text="Only the paths you list are reachable. Handy for keeping an admin page home-only." />
                 </div>
               ) : (
                 <p className={f.faint}>Addresses through Cloudflare publish the whole app.</p>
@@ -971,23 +971,20 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                     <li>
                       <span className="mono">{bare(url)}</span> sends visitors to <span className="mono">{bare(form.target) || "…"}</span>, keeping anything after the path.
                     </li>
-                    <li>{base} already points at Cloudflare, so there&rsquo;s nothing to set up.</li>
                   </>
                 ) : (
                   <>
-                    <li>
-                      {direct
-                        ? form.customHost
-                          ? knownDns?.status === "ok" && knownDns.matchesPublicIp !== false
-                            ? `${host} already points at this network.`
-                            : `Needs an A record for ${host} pointing at ${status?.publicIp.v4 ?? publicIp ?? "your internet address"} before it works.`
-                          : "The wildcard DNS record already covers this name; nothing to set up."
-                        : `${base} already points at Cloudflare; nothing to set up.`}
-                    </li>
-                    <li>{direct ? "Direct: video and big uploads work; visitors can see your home's internet address." : "Through Cloudflare: your address stays hidden, but uploads over 100 MB fail and video isn't allowed."}</li>
-                    {direct && form.https.mode === "own" && <li>The web server serves your certificate as it is. Gluon can&rsquo;t renew it, so it warns you three weeks before it ends.</li>}
-                    {direct && form.https.mode === "http" && <li>It&rsquo;s served over plain HTTP. Browsers call it not secure unless whatever is in front of this server adds HTTPS.</li>}
-                    {(!direct || form.https.mode === "auto") && (!existing || (existing.type === "subdomain" ? existing.host !== host || existing.https : true)) && <li>The web server fetches an HTTPS certificate within a minute of saving.</li>}
+                    {direct && form.customHost && (
+                      <li>
+                        {knownDns?.status === "ok" && knownDns.matchesPublicIp !== false
+                          ? `${host} already points at this network.`
+                          : `Needs an A record for ${host} pointing at ${status?.publicIp.v4 ?? publicIp ?? "your internet address"} before it works.`}
+                      </li>
+                    )}
+                    <li>{direct ? "Visitors can see your home's internet address." : "Your address stays hidden; uploads stop at 100 MB and video isn't allowed."}</li>
+                    {direct && form.https.mode === "own" && <li>Your certificate is served as it is. Gluon warns you three weeks before it ends.</li>}
+                    {direct && form.https.mode === "http" && <li>Served over plain HTTP. Browsers call it not secure unless something in front adds HTTPS.</li>}
+                    {(!direct || form.https.mode === "auto") && (!existing || (existing.type === "subdomain" ? existing.host !== host || existing.https : true)) && <li>A certificate arrives within a minute of saving.</li>}
                     <li>
                       {direct && form.scope === "some"
                         ? `Only ${onlyPaths.join(", ")} ${onlyPaths.length === 1 ? "is" : "are"} reachable; everything else answers “not found”.`
@@ -995,7 +992,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                           ? `${appName ?? "The app"} asks visitors to sign in.`
                           : loginVerdict === "none"
                             ? `${appName ?? "The app"} has no login: anyone who finds the address can use it.`
-                            : `Gluon isn't sure ${appName ?? "the app"} asks for a login; check that it does.`}
+                            : `Not sure ${appName ?? "the app"} asks for a login; check that it does.`}
                     </li>
                     {direct && form.shortLink && (
                       <li>

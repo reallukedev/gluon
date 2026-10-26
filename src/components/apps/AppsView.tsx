@@ -51,7 +51,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const term = React.useDeferredValue(q.trim().toLowerCase());
   const [filter, setFilter] = React.useState<Filter>(initialFilter);
   const [sort, setSort] = React.useState<Sort>(initialSort);
-  const [busy, setBusy] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState<{ id: string; action: "start" | "stop" | "restart" } | null>(null);
   const [confirm, confirmNode] = useConfirm();
   const [moveTarget, setMoveTarget] = React.useState<AppSummary | null>(null);
   const [moveOpen, setMoveOpen] = React.useState(false);
@@ -102,16 +102,22 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const stopped = primaries.filter((a) => a.line === "stopped");
   const counts = { problems: problems.length, stopped: apps.filter((a) => a.line === "stopped").length, public: apps.filter((a) => a.routes.some((r) => r.enabled)).length };
   const busyApps = apps.filter((a) => umbrelBusy(a.umbrel?.state));
+  // Where an app came from only tells apps apart when they didn't all come from the same place.
+  const mixed = new Set(primaries.map((a) => a.source)).size > 1;
 
+  // The row shows progress by eye; this says it out loud for screen readers.
+  const [said, say] = React.useState("");
   async function act(a: AppSummary, action: "start" | "stop" | "restart") {
-    setBusy(a.id);
-    const t = toast.loading(`${action === "restart" ? "Restarting" : action === "stop" ? "Stopping" : "Starting"} ${a.name}…`);
+    setBusy({ id: a.id, action });
+    say(`${{ start: "Starting", stop: "Stopping", restart: "Restarting" }[action]} ${a.name}…`);
     try {
-      const r = await api.post<{ message: string }>(`/api/apps/${encodeURIComponent(a.id)}/action`, { action });
-      toast.update(t, "success", { title: r.message });
-      void mutate();
+      // The row says it all: a dashed "Stopping…" line that settles into the new state.
+      await api.post(`/api/apps/${encodeURIComponent(a.id)}/action`, { action });
+      await mutate();
+      say(`${a.name} ${{ start: "started", stop: "stopped", restart: "restarted" }[action]}.`);
     } catch (e) {
-      toast.update(t, "error", { title: `Couldn't ${action} ${a.name}`, description: e instanceof Error ? e.message : undefined });
+      say("");
+      toast.error(`Couldn't ${action} ${a.name}`, { description: e instanceof Error ? e.message : undefined });
     } finally {
       setBusy(null);
     }
@@ -221,8 +227,9 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
 
   return (
     <Page>
-      <PageHeader title="Apps" summary={summary} />
+      <PageHeader title="Apps" summary={summary} actions={apps.length > 0 ? <NewAppButton /> : undefined} />
       <AppsSectionTabs current="apps" />
+      <span className="sr-only" role="status">{said}</span>
 
       {/* The table sizes its columns to this box, not the window, so the sidebar can't push it off the edge. */}
       <div className={s.list}>
@@ -288,13 +295,16 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
               : filter === "stopped"
                 ? "Every app is running."
                 : filter === "public"
-                  ? "No app is reachable from the internet. Publish one from Network → Public addresses."
+                  ? "Publish one from Network to reach it away from home."
                   : platform === "umbrel"
-                    ? "Nothing is running on this server yet. Get an app from the app store, or start a Compose stack."
-                    : "Nothing is running on this server yet. Install one from CasaOS or start a Compose stack."}
+                    ? "Get one from the app store, or make your own."
+                    : platform === "casaos"
+                      ? "Install one from CasaOS, or make your own."
+                      : "Make one here, or start a Compose stack and it shows up."}
         </Empty>
       ) : (
-        <div className={s.table} role="table" aria-label="Apps" aria-rowcount={rows.length + 1}>
+        // A new filter fades its rows in; typing in the filter box doesn't.
+        <div key={filter} className={`${s.table} appear`} role="table" aria-label="Apps" aria-rowcount={rows.length + 1}>
           <div className={s.headRow} role="row">
             {sortHead("name", "App")}
             <span role="columnheader">State</span>
@@ -311,6 +321,13 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
             const u = usage.get(a.id);
             const open = viewer.zone === "home" ? (a.urls.home ?? a.urls.away) : (a.urls.away ?? a.urls.home);
             const running = a.line !== "stopped";
+            const sub = [
+              a.copyOf ? `Old copy from ${sourceName(a.source)}` : mixed && sourceName(a.source),
+              !a.copyOf && a.containers.length > 1 && `${a.containers.length} containers`,
+              a.self && "this is Gluon",
+              a.gluonDev && "Gluon dev instance",
+              a.hidden && "hidden",
+            ].filter((t): t is string => !!t);
             const menu: MenuEntry[] = [
               { label: "Restart", icon: <Refresh />, onSelect: () => void act(a, "restart"), disabled: !running || busyState },
               running
@@ -322,7 +339,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                 ? [
                     pinHome.isPinned(a.id)
                       ? { label: "Unpin from Home", icon: <PinSlash />, onSelect: () => void pinHome.toggle(a) }
-                      : { label: "Pin to Home", icon: <Pin />, description: "Keep it on your Home page", onSelect: () => void pinHome.toggle(a) },
+                      : { label: "Pin to Home", icon: <Pin />, onSelect: () => void pinHome.toggle(a) },
                   ]
                 : []),
               a.hidden
@@ -349,24 +366,14 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                     <Link href={href} className={s.appName} title={a.name}>
                       {shortName(a.name, serverName)}
                     </Link>
-                    <span className={s.appSub}>
-                      {a.copyOf ? (
-                        <>Old copy from {sourceName(a.source)}</>
-                      ) : (
-                        <>
-                          {sourceName(a.source)}
-                          {a.containers.length > 1 && ` · ${a.containers.length} containers`}
-                        </>
-                      )}
-                      {a.self && " · this is Gluon"}
-                      {a.gluonDev && " · Gluon dev instance"}
-                      {a.hidden && " · hidden"}
-                    </span>
+                    {sub.length > 0 && <span className={s.appSub}>{sub.join(" · ")}</span>}
                   </span>
                 </span>
                 <span role="cell" className={s.stateCell}>
                   {a.moving ? (
                     <StateLine state="starting" label="Moving to Gluon…" />
+                  ) : busy?.id === a.id ? (
+                    <StateLine state="starting" label={{ start: "Starting…", stop: "Stopping…", restart: "Restarting…" }[busy.action]} />
                   ) : busyState ? (
                     <UmbrelProgress app={a} />
                   ) : (
@@ -405,7 +412,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                   )}
                   <Menu
                     trigger={
-                      <IconButton label={`${a.name} actions`} size="sm" loading={busy === a.id} disabled={busyState && a.containers.length === 0}>
+                      <IconButton label={`${a.name} actions`} size="sm" disabled={busy?.id === a.id || (busyState && a.containers.length === 0)} focusableWhenDisabled>
                         <MoreHoriz />
                       </IconButton>
                     }

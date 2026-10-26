@@ -33,7 +33,7 @@ class Problem extends AppError {
 async function open(appId: string, f?: MumbleFacts): Promise<{ f: MumbleFacts; c: MumbleConn }> {
   f ??= await mumbleFacts(appId);
   if (!f.running) throw new Problem("stopped", `${f.app.name} is stopped.`);
-  if (!f.icePort) throw new Problem("not_managed", "Gluon can't reach Mumble's admin connection yet.");
+  if (!f.icePort) throw new Problem("not_managed", "Can't reach Mumble's admin connection yet.");
   const rec = getVoice(appId);
   try {
     const c = await connect({ host: LOCAL_HOST, port: f.icePort, secret: rec?.secrets?.write ?? "" });
@@ -426,7 +426,7 @@ const STAGES = [
 export async function startManage(appId: string, user: User, where: Where) {
   const f = await mumbleFacts(appId);
   const { target, option } = await changeTarget(f);
-  if (!target) throw new AppError("cant_manage", option.why ?? "Gluon can't change this app.", 409);
+  if (!target) throw new AppError("cant_manage", option.why ?? "Can't change this app.", 409);
   const port = f.icePort && !f.iceExposed ? f.icePort : await freeIcePort();
   const secrets: IceSecrets = { write: token(24), read: token(24) };
   const previous = getVoice(appId);
@@ -487,7 +487,7 @@ export async function startRemoveEnvPassword(appId: string, user: User, where: W
   const env = envFor("serverpassword", f.env);
   if (!env) throw new AppError("nothing", "The compose file doesn't set a join password.", 409);
   const { target, option } = await changeTarget(f);
-  if (!target) throw new AppError("cant_change", option.why ?? "Gluon can't change this app.", 409);
+  if (!target) throw new AppError("cant_change", option.why ?? "Can't change this app.", 409);
   startJob(jobKey(appId), "publish", [{ key: "apply", label: "Change the app" }, { key: "connect", label: "Connect" }], async (emit: Emit) => {
     emit({ type: "stage", stage: "apply" });
     // A password saved over Ice would still apply after the restart; clear that too.
@@ -496,6 +496,6 @@ export async function startRemoveEnvPassword(appId: string, user: User, where: W
     emit({ type: "stage", stage: "connect" });
     const ok = await waitForIce(appId, 60_000);
     audit(user, { action: "voice.password.remove", target: appId, summary: `Removed the join password of ${f.app.name}` }, where);
-    return { ok: true, message: ok ? "Anyone can join without a password now." : "The password is gone from the compose file. Gluon couldn't reconnect yet; check the app if it doesn't come back." };
+    return { ok: true, message: ok ? "Anyone can join without a password now." : "The password is gone from the compose file. Couldn't reconnect yet; check the app if it doesn't come back." };
   });
 }

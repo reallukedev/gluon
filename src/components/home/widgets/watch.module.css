@@ -2,9 +2,9 @@
 .body { height: 100%; display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); }
 .center { display: grid; place-items: center; height: 100%; text-align: center; padding: 16px 16px calc(16px + var(--title-h, 0px)); color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 .center b { display: block; margin-bottom: 4px; font-size: var(--text-md); color: var(--ink); }
-.headline { display: flex; align-items: center; gap: 10px; margin: 0; font-size: var(--text-lg); font-weight: 620; line-height: 1.25; }
-.sub { margin: 0; font-size: var(--text-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.subWrap { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 44ch; }
+.headline { flex: none; display: flex; align-items: center; gap: 10px; margin: 0; font-size: var(--text-lg); font-weight: 620; line-height: 1.25; }
+.sub { flex: none; margin: 0; font-size: var(--text-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subWrap { flex: none; margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 44ch; }
 
 /* Lists show whole rows only: a row that doesn't fit is hidden (useFit) and counted in the link underneath. */
 .list { flex: 1 1 auto; list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }

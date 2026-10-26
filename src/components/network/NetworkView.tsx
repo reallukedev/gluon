@@ -103,7 +103,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
         void status.mutate();
         void exposure.mutate();
         const fresh = res.warnings.filter((w) => w.isNew);
-        if (!opts.quiet) toast.success(opts.success ?? "Saved. The web server is using the new addresses.");
+        if (!opts.quiet) toast.success(opts.success ?? "Saved. The new addresses are live.");
         for (const w of fresh) toast.attention("Reachable without a login", { description: w.message, timeout: 12_000 });
         return res;
       } catch (e) {
@@ -124,7 +124,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     try {
       const [fresh] = await Promise.all([api.get<NetworkStatus>("/api/network/status?refresh=1"), ddns.mutate()]);
       await status.mutate(fresh, { revalidate: false });
-      toast.success("Checked every address just now.");
+      toast.success("Checked every address");
     } catch (e) {
       toast.error("Couldn't run the checks", { description: e instanceof Error ? e.message : undefined });
     } finally {
@@ -137,7 +137,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     try {
       const fresh = await api.get<ExposureReport>("/api/network/exposure?refresh=1");
       await exposure.mutate(fresh, { revalidate: false });
-      if (!quiet) toast.success("Checked again just now.");
+      if (!quiet) toast.success("Checked again");
     } catch (e) {
       if (!quiet) toast.error("Couldn't check", { description: e instanceof Error ? e.message : undefined });
     } finally {
@@ -277,7 +277,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
 
   // ---- the header sentence: state first.
   let summary: React.ReactNode = "Checking your apps on the internet…";
-  if (routes.error && !data) summary = "Gluon can't read your public addresses right now.";
+  if (routes.error && !data) summary = "Can't read your public addresses right now.";
   else if (entries) {
     // Sites from Sites aren't apps and have no login to ask about; they only come up here when they're broken.
     const sites = entries.filter((e) => e.on && e.site);
@@ -310,7 +310,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
         </>
       );
     else if (!status.data) summary = `${count(n)} on the internet. Checking each one…`;
-    else if (unsure.length) summary = `${count(n)} on the internet, all working. Gluon isn't sure whether ${unsure.map((e) => e.name).join(" and ")} ${unsure.length === 1 ? "has" : "have"} a login.`;
+    else if (unsure.length) summary = `${count(n)} on the internet, all working. Not sure whether ${unsure.map((e) => e.name).join(" and ")} ${unsure.length === 1 ? "has" : "have"} a login.`;
     else {
       const partial = live.filter((e) => e.login.tone === "partial");
       summary = partial.length
@@ -381,7 +381,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
         <div className={s.stack}>
           {!data.caddyRunning && (
             <Notice tone="fault" title="The web server isn't answering">
-              Gluon can&rsquo;t reach Caddy, so nothing can be published or changed until it&rsquo;s back. Check that the proxy app is running in Apps.
+              Nothing can be published or changed until Caddy answers. Check that the proxy app is running in Apps.
             </Notice>
           )}
           {showDrift && (
@@ -402,6 +402,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
                 }}
                 detailsId={detailsId}
                 detailsTitle={hop && hop !== "apps" ? HOP_TITLE[hop] : undefined}
+                checking={checking}
               >
                 {hop === "dns" && <DnsDetails status={status.data} statusError={status.error?.message ?? null} onRecheck={() => void recheck()} checking={checking} />}
                 {hop === "router" && <RouterDetails status={status.data} ddns={ddns.data} ddnsError={ddns.error?.message ?? null} />}
@@ -412,7 +413,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
 
           {status.error && !status.data && (
             <Notice tone="fault" title="Couldn't check the addresses" action={<Button size="sm" onClick={() => void recheck()}>Try again</Button>}>
-              {status.error.message} The list is still accurate; only the live checks are missing.
+              {status.error.message} The list is right; only the live checks are missing.
             </Notice>
           )}
 

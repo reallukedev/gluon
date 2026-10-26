@@ -146,7 +146,7 @@ export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: bo
       size="wide"
       title={on ? "Calls across networks" : "Make calls work everywhere"}
       description={
-        on ? undefined : st?.builtIn ? "Two phones on different networks often can't reach each other directly. Quark has a relay built in that carries the call between them." : "Two phones on different networks often can't reach each other directly. A small relay on this server carries the call between them."
+        on ? undefined : "Phones on different networks often can't reach each other directly. A relay on this server carries the call between them."
       }
       footer={
         on ? (
@@ -177,10 +177,10 @@ export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: bo
           {!on && (
             <p className={s.hint}>
               {st.builtIn
-                ? "Nothing to install: Quark has the relay built in. Turning calls on tells chat apps to use it."
+                ? "Nothing to install: Quark has the relay built in."
                 : st.relay
-                  ? `Gluon gives chat apps logins for ${st.relay.name}, which is already on this server.`
-                  : "Gluon installs coturn as an app called Call relay. It only relays calls to the internet, never into your home network, and chat apps get logins that expire."}
+                  ? `Chat apps get logins for ${st.relay.name}, already on this server.`
+                  : "Gluon installs coturn as an app called Call relay. It never relays into your home network, and its logins expire."}
             </p>
           )}
           {job && <JobProgress view={job} stages={STAGES} running={busy} label="Installing the call relay" closeNote="Keep this open: once the relay runs, Gluon gives Prosody its secret." />}

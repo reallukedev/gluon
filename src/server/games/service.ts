@@ -80,7 +80,7 @@ function readFile(file: string): { raw: string | null; error: string | null } {
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     if (code === "ENOENT") return { raw: null, error: null };
-    return { raw: null, error: code === "EACCES" ? "Gluon isn't allowed to read it." : `Gluon couldn't read it (${code ?? "error"}).` };
+    return { raw: null, error: code === "EACCES" ? "No permission to read it." : `Couldn't read it (${code ?? "error"}).` };
   }
 }
 
@@ -130,7 +130,7 @@ async function load(): Promise<Ctx> {
     } else {
       const { raw, error } = readFile(router.file);
       if (error) {
-        info.reason = `Gluon can't open ${router.file}: ${error}`;
+        info.reason = `Can't open ${router.file}: ${error}`;
       } else {
         const parsed: ReturnType<typeof parseRoutes> = raw === null ? { ok: true, doc: emptyDoc() } : parseRoutes(raw);
         if (!parsed.ok) {
@@ -383,7 +383,7 @@ async function reload(r: Router | null): Promise<{ applied: boolean; note: strin
   try {
     await docker().getContainer(r.c.Id).kill({ signal: "SIGHUP" });
   } catch (e) {
-    return { applied: false, note: `Gluon couldn't signal mc-router (${e instanceof Error ? e.message : "error"}). Restart it to use the change.` };
+    return { applied: false, note: `Couldn't signal mc-router (${e instanceof Error ? e.message : "error"}). Restart it to use the change.` };
   }
   for (let i = 0; i < 8; i++) {
     await sleep(i === 0 ? 150 : 300);
@@ -397,7 +397,7 @@ async function reload(r: Router | null): Promise<{ applied: boolean; note: strin
 
 function needWritable(ctx: Ctx): { r: Router; file: string; doc: RoutesDoc } {
   if (ctx.info.status === "missing" || !ctx.router) throw new AppError("no_mc_router", "mc-router isn't installed on this server.", 409);
-  if (!ctx.info.editable || !ctx.doc || !ctx.info.file) throw new AppError("routes_locked", ctx.info.reason ?? "Gluon can't change mc-router's routes file.", 409);
+  if (!ctx.info.editable || !ctx.doc || !ctx.info.file) throw new AppError("routes_locked", ctx.info.reason ?? "Can't change mc-router's routes file.", 409);
   return { r: ctx.router, file: ctx.info.file, doc: ctx.doc };
 }
 
@@ -487,7 +487,7 @@ export function restoreMcHistory(user: User, where: Where, id: number): Promise<
   return locked(async () => {
     const ctx = await load();
     if (!ctx.router || !ctx.info.file) throw new AppError("no_mc_router", "mc-router's routes file isn't on this server.", 409);
-    if (!ctx.doc && !ctx.info.broken) throw new AppError("routes_locked", ctx.info.reason ?? "Gluon can't change mc-router's routes file.", 409);
+    if (!ctx.doc && !ctx.info.broken) throw new AppError("routes_locked", ctx.info.reason ?? "Can't change mc-router's routes file.", 409);
     if (!writable(ctx.info.file)) throw new AppError("routes_locked", `Gluon isn't allowed to change ${ctx.info.file}.`, 409);
     ensure();
     const row = one<{ at: number; content: string; summary: string }>("SELECT at, content, summary FROM mc_router_history WHERE id = ? AND file = ?", id, ctx.info.file);

@@ -10,7 +10,7 @@ import { Notice, Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
 import { TimeChart } from "@/components/charts/TimeChart";
-import { checksToBuckets, monitorLine, ms, pct, Trace, TraceLegend } from "./monitorBits";
+import { monitorLine, ms, pct, Trace, TraceLegend } from "./monitorBits";
 import s from "./alerts.module.css";
 
 /** Everything about one monitor: uptime, the week at a glance, response times, outages, raw checks. */
@@ -19,7 +19,6 @@ export function MonitorDetailDialog({ id, open, onOpenChange, footer }: { id: st
   const { data, error } = useApi<Detail>(open && id ? `/api/alerts/monitors/${encodeURIComponent(id)}` : null, { refresh: 30_000 });
   const d = data && data.id === id ? data : null;
   const st = d ? monitorLine(d) : null;
-  const recent = React.useMemo(() => (d ? checksToBuckets(d.checks.slice(0, 120)) : []), [d]);
   const points = React.useMemo(
     () => (d ? d.checks.filter((c) => c.ok && c.latencyMs !== null).map((c) => [c.at, c.latencyMs!] as [number, number]).reverse() : []),
     [d],
@@ -79,16 +78,6 @@ export function MonitorDetailDialog({ id, open, onOpenChange, footer }: { id: st
 
           <div className={s.block}>
             <div className={s.blockHead}>
-              <span className="label">Latest checks</span>
-              <span className={`${s.muted} num`} style={{ fontSize: "var(--text-sm)" }}>
-                {recent.length ? `last ${recent.length}, one line each` : ""}
-              </span>
-            </div>
-            {recent.length ? <Trace buckets={recent} bucketMs={0} label={`${d.name}, latest checks`} tall /> : <p className={s.muted}>No checks yet.</p>}
-          </div>
-
-          <div className={s.block}>
-            <div className={s.blockHead}>
               <span className="label">Last 7 days, by hour</span>
             </div>
             <Trace buckets={d.week} bucketMs={3_600_000} since={d.createdAt} label={`${d.name}, last 7 days`} tall />
@@ -105,7 +94,7 @@ export function MonitorDetailDialog({ id, open, onOpenChange, footer }: { id: st
             {points.length > 1 ? (
               <TimeChart series={[{ key: "ms", label: "Response time", points, area: true }]} format={(v) => ms(v)} formatTime={(t) => fmt.time(t)} height={130} label={`${d.name} response time`} />
             ) : (
-              <p className={s.muted}>Not enough successful checks yet to draw this.</p>
+              <p className={s.muted}>Not enough checks yet.</p>
             )}
           </div>
 
@@ -114,7 +103,7 @@ export function MonitorDetailDialog({ id, open, onOpenChange, footer }: { id: st
               <span className="label">Outages, last 30 days</span>
             </div>
             {d.incidents.length === 0 ? (
-              <p className={s.muted}>None. Every check passed.</p>
+              <p className={s.muted}>None.</p>
             ) : (
               <ul className={s.outages} role="list">
                 {d.incidents.map((o) => (

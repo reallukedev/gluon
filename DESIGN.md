@@ -390,7 +390,7 @@ Inline notices and toasts lead with a 2px mark in a 6px column: an ink line for 
 
 ### Navigation
 - **Sidebar:** host name at 18px 600 and 86% width with its address and zone underneath; micro-caps group labels; 34px links in ink-2 with muted 17px iconoir icons at 1.5 stroke.
-- **Active:** plate fill with a hairline ring (a slightly lifted graphite in dark mode), ink text, and a 2px ink rule on the rail's left edge.
+- **Active:** plate fill with a hairline ring (a slightly lifted graphite in dark mode), and ink text. No mark on the rail's edge.
 - **Counts:** right-aligned tabular figures with the doubled sodium mark for "needs you".
 - **Mobile:** solid top bar and a drawer that slides on `--ease-drawer` over 400ms and follows the finger.
 
@@ -433,6 +433,10 @@ Time charts draw a 1.5px ink line with a 7% area, dashed hairline grid, tabular 
 **The Bar Fill Exception Rule.** `width` is not a transition property, with one deliberate exception: small, absolutely positioned bars (usage, upload and job progress fills, and the 2px tab indicator), which sit out of flow and cannot shift anything around them.
 
 **The Damped Settle Rule.** State transitions use `--ease-out` (cubic-bezier(0.23, 1, 0.32, 1)) at 150–250 ms. Sheets and drawers use `--ease-drawer` at 400ms. The command palette does not animate. Reduced motion, from the system or the person's own setting, collapses all of it.
+
+**The Pointer Settles, the Keyboard Jumps Rule.** A page reached by a click settles in (200ms fade and a 6px rise); one reached by a keyboard chord, the palette or a first load appears at once. The shell sets `data-nav="enter"` on the root for 260ms after a clicked path change, so query-only changes (a folder in Files) stay still. Skeletons wait 120ms before fading in so a fast load never flashes grey.
+
+Copy follows `docs/COPY.md`: one sentence of state, each fact once per screen, verb-first buttons, no em dashes.
 
 ## Do's and Don'ts
 

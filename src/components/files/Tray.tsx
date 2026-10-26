@@ -108,10 +108,11 @@ export function Tray({ jobs, onCancelJob, onUndo, onClearJobs }: { jobs: FileJob
         }
       >
         <div className={s.trayBody}>
+          {activeUploads.length > 0 && !interrupted.length && <p className={s.trayKeep}>Keep this tab open until they finish.</p>}
           {interrupted.length > 0 && (
             <div className={s.trayNote}>
               <p>
-                {fmt.plural(interrupted.length, "upload")} stopped when the page was closed. Choose the same files again to continue where they left off.
+                {fmt.plural(interrupted.length, "upload")} stopped when the page closed. Choose the same files to pick up where they left off.
               </p>
               <Button size="sm" onClick={() => picker.current?.click()}>
                 Choose files

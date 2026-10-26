@@ -49,7 +49,7 @@ function DeviceItem({ d, open, onToggle }: { d: DeviceT; open: boolean; onToggle
         <span className={s.seen}>{d.online ? "Online" : d.lastActivity ? <Time ts={d.lastActivity} /> : "Offline"}</span>
       </button>
       {open && (
-        <div className={`${s.details} ${s.dlWrap}`} id={id}>
+        <div className={`${s.details} ${s.dlWrap}`} id={id} data-motion-gentle="">
           <DefinitionList
             items={[
               ["MAC address", d.mac ? <span className="mono">{d.mac}</span> : <span className={s.faint}>Not listed</span>],

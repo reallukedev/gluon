@@ -5,25 +5,21 @@ import { OpenNewWindow } from "iconoir-react";
 import type { StatusApp } from "@/server/status";
 import type { Finding } from "@/server/findings";
 import type { LineState } from "@/lib/types";
-import { useLive } from "@/lib/client/live";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
 import { instanceHints, sourceName } from "@/lib/app-names";
 import { StateLine } from "@/components/ui/StateLine";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { AppIcon } from "@/components/apps/AppIcon";
-import { CpuMeter, MemMeter, useAppUsage } from "@/components/apps/Meters";
 import r from "./roster.module.css";
 
 /**
- * Every app on the server in plain words: what state it's in, what it's using, and a way in.
- * Apps that aren't right come first; stopped apps and old copies left by another installer fold
- * away, since nobody needs to read them to know whether things are fine.
+ * Every app on the server in plain words: what state it's in and a way in. What each one uses is
+ * the console's job, right above. Apps that aren't right come first; stopped apps and old copies
+ * left by another installer fold away, since nobody needs to read them to know things are fine.
  */
 export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Finding[] }) {
   const { viewer, prefs } = usePrefs();
   const fmt = useFormat();
-  const { host } = useLive();
-  const memTotal = host.at(-1)?.mem.total ?? null;
 
   const byId = React.useMemo(() => new Map(apps.map((a) => [a.id, a])), [apps]);
   const findingFor = React.useMemo(() => {
@@ -35,8 +31,6 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
   const current = apps.filter((a) => !(a.copyOf && byId.has(a.copyOf.id)));
   const copies = apps.filter((a) => a.copyOf && byId.has(a.copyOf.id));
   const hints = instanceHints(current);
-  const usage = useAppUsage(apps);
-  const memScale = Math.max(0, ...[...usage.values()].map((u) => u.mem));
 
   const needsLook = (a: StatusApp) => findingFor.has(a.id) || a.line === "unhealthy" || a.line === "starting" || a.line === "paused" || a.line === "unknown";
   const byName = (x: StatusApp, y: StatusApp) => x.name.localeCompare(y.name);
@@ -50,27 +44,17 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
       app={a}
       hint={opts.copy ? `Old copy from ${sourceName(a.source)}` : hints.get(a.id) ?? null}
       finding={findingFor.get(a.id) ?? null}
-      usage={usage.get(a.id) ?? null}
-      memScale={memScale}
-      memTotal={memTotal}
       openHref={openHref(a.urls, viewer.zone)}
       newTab={prefs.openLinks === "new"}
     />
   );
 
   if (!current.length) {
-    return <p className={r.none}>No apps are installed yet. Apps you install from the app store, or start with Docker, show up here.</p>;
+    return <p className={r.none}>No apps yet. Apps from the app store or Docker show up here.</p>;
   }
 
   return (
     <div className={r.roster}>
-      <div className={r.head} aria-hidden>
-        <span>App</span>
-        <span>State</span>
-        <span className={`${r.headNum} ${r.cpu}`}>CPU</span>
-        <span className={r.headNum}>Memory</span>
-        <span />
-      </div>
       {trouble.length > 0 && (
         <section aria-label="Apps that need a look">
           <h3 className={`label ${r.group}`}>
@@ -114,10 +98,7 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
               summary={copies.length === 1 ? "1 old copy from another installer" : `${copies.length} old copies from other installers`}
               meta={<span className={r.foldMeta}>{listNames(copies)}</span>}
             >
-              <p className={r.foldNote}>
-                Left behind when these apps were installed again with a different installer. The copy in use is the one above; open an old copy to
-                remove it and free the space it takes.
-              </p>
+              <p className={r.foldNote}>Left behind by a reinstall. The copy in use is above; open an old one to remove it.</p>
               <ul className={r.list} role="list">
                 {copies.map((a) => row(a, { copy: true }))}
               </ul>
@@ -133,25 +114,18 @@ function RosterRow({
   app: a,
   hint,
   finding,
-  usage,
-  memScale,
-  memTotal,
   openHref: href,
   newTab,
 }: {
   app: StatusApp;
   hint: string | null;
   finding: Finding | null;
-  usage: { cpu: number; mem: number; cpuSeries: number[] } | null;
-  memScale: number;
-  memTotal: number | null;
   openHref: string | null;
   newTab: boolean;
 }) {
   const parts = a.containers.length;
   const where = [hint ?? sourceName(a.source), parts > 1 ? `${parts} parts` : null].filter(Boolean).join(" · ");
   const state = stateOf(a, finding);
-  const running = a.line !== "stopped";
   return (
     <li className={r.row} data-state={state.line}>
       <Link href={`/apps/${encodeURIComponent(a.id)}`} className={r.main}>
@@ -174,8 +148,6 @@ function RosterRow({
           )}
         </span>
       </span>
-      <span className={`${r.meter} ${r.cpu}`}>{running ? <CpuMeter series={usage?.cpuSeries ?? null} value={usage?.cpu ?? null} name={a.name} /> : null}</span>
-      <span className={`${r.meter} ${r.mem}`}>{running ? <MemMeter value={usage?.mem ?? null} scale={memScale} total={memTotal} name={a.name} /> : null}</span>
       <span className={r.open}>
         {href && a.line !== "stopped" && (
           <a href={href} className={r.openLink} target={newTab ? "_blank" : undefined} rel="noopener noreferrer" aria-label={`Open ${a.name}`}>

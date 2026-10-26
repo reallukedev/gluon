@@ -137,7 +137,7 @@ const unsupported = (gateway: string, name: string | null) =>
 export async function routerStatus(): Promise<RouterStatus> {
   const [me, needs] = await Promise.all([whereAmI(), portNeeds()]);
   const base: RouterStatus = { gateway: me.gateway, model: null, firmware: null, supported: false, connected: false, codeRejected: false, connectedBy: null, server: { ip: me.lanIp, mac: me.mac, name: me.hostname }, needs: needs.map((need) => ({ need, status: "unknown", service: null, device: null, ours: false })), leftovers: [], error: null };
-  if (!me.gateway) return { ...base, error: "Gluon can't find your router: this server has no default route." };
+  if (!me.gateway) return { ...base, error: "Can't find your router: this server has no default route." };
   const id = knownIdentity(me.gateway) ?? (await identify(me.gateway).catch(() => ({ kind: "unreachable" as const })));
   if (id.kind === "unreachable") return { ...base, error: `Your router at ${me.gateway} didn't answer.` };
   if (id.kind !== "bgw") return base;
@@ -152,13 +152,13 @@ export async function routerStatus(): Promise<RouterStatus> {
     return { ...st, needs: states.map((s) => ({ ...s, ours: !!s.service && created.includes(s.service) })), leftovers: leftovers(created, states, snap.services, snap.forwards) };
   } catch (e) {
     if (e instanceof AppError && e.code === "router_code_rejected") return { ...st, codeRejected: true, error: e.message };
-    return { ...st, error: e instanceof Error ? e.message : "Gluon couldn't read your router." };
+    return { ...st, error: e instanceof Error ? e.message : "Couldn't read your router." };
   }
 }
 
 export async function connectRouter(user: User, where: Where, code: string): Promise<RouterStatus> {
   const me = await whereAmI();
-  if (!me.gateway) throw new AppError("no_router", "Gluon can't find your router: this server has no default route.", 409);
+  if (!me.gateway) throw new AppError("no_router", "Can't find your router: this server has no default route.", 409);
   const id = await identify(me.gateway);
   if (id.kind === "unreachable") throw new AppError("router_unreachable", `Your router at ${me.gateway} didn't answer. Try again in a minute.`, 502);
   if (id.kind !== "bgw") throw unsupported(me.gateway, id.name);
@@ -199,7 +199,7 @@ const nameLimit = (page: Page) => {
  */
 export async function fixForwarding(user: User, where: Where, keys: string[] | null): Promise<{ done: string[]; status: RouterStatus }> {
   const me = await whereAmI();
-  if (!me.gateway || !me.mac) throw new AppError("no_router", "Gluon can't tell which device on your router is this server.", 409);
+  if (!me.gateway || !me.mac) throw new AppError("no_router", "Can't tell which device on your router is this server.", 409);
   if (!access(me.gateway)) throw new AppError("router_not_connected", "Connect Gluon to your router first.", 409);
   const all = await portNeeds();
   const needs = all.filter((n) => !keys || keys.includes(n.key));
@@ -218,7 +218,7 @@ export async function fixForwarding(user: User, where: Where, keys: string[] | n
         if (step.kind === "add-service") {
           const { page } = await r.get("services");
           const f = serviceForm(page);
-          if (!f) throw new AppError("router_page", "Gluon couldn't find the form for adding a custom service on your router, so it changed nothing more.", 502);
+          if (!f) throw new AppError("router_page", "Couldn't find the form for adding a custom service on your router, so nothing more was changed.", 502);
           const proto = protocolOption(f.protocol, step.need.protocol);
           if (!proto) throw new AppError("router_page", `Your router doesn't offer ${step.need.protocol.toUpperCase()} for custom services.`, 502);
           await r.submit("services", f.form, { [f.name]: step.service, [f.min]: String(step.need.min), [f.max]: String(step.need.max), [f.hostPort]: String(step.need.hostPort), [f.protocol.name]: proto }, f.add);
@@ -233,7 +233,7 @@ export async function fixForwarding(user: User, where: Where, keys: string[] | n
           const service = named.get(step.service) ?? step.service;
           const { page } = await r.get("apphosting");
           const f = forwardForm(page);
-          if (!f) throw new AppError("router_page", "Gluon couldn't find the NAT/Gaming form on your router, so it changed nothing more.", 502);
+          if (!f) throw new AppError("router_page", "Couldn't find the NAT/Gaming form on your router, so nothing more was changed.", 502);
           const names = serviceNames(service);
           const svc = names.map((n) => serviceOption(f.service, n)).find((v) => v !== null) ?? null;
           const dev = deviceOption(f.device, me.mac!);
@@ -276,7 +276,7 @@ export async function removeForwarding(user: User, where: Where, target: { key: 
     try {
       if (fwd) {
         const form = fwd.remove && now.hostingPage.forms.find((f) => f.buttons.some((b) => b.name === fwd.remove!.name));
-        if (!form) throw new AppError("router_page", `Gluon couldn't find the Remove button for "${name}" under NAT/Gaming, so it changed nothing.`, 502);
+        if (!form) throw new AppError("router_page", `Couldn't find the Remove button for "${name}" under NAT/Gaming, so nothing was changed.`, 502);
         await r.submit("apphosting", form, {}, fwd.remove!);
         if (readForwards((await r.get("apphosting")).page).some((f) => f.service === name)) throw new AppError("router_refused", `Your router kept the forward for "${name}". Remove it under NAT/Gaming on the router.`, 502);
       }
@@ -312,7 +312,7 @@ export async function restartRouter(user: User, where: Where): Promise<{ request
     let page = "restart";
     let found = restartButton((await r.get(page)).page);
     if (!found) found = restartButton((await r.get((page = "reset"))).page);
-    if (!found) throw new AppError("router_page", "Gluon couldn't find a plain Restart button on your router's Restart Device or Resets pages, so it didn't press anything. Restart it from the router's own page instead.", 502);
+    if (!found) throw new AppError("router_page", "Couldn't find a plain Restart button on your router's Restart Device or Resets pages, so nothing was pressed. Restart it from the router's own page instead.", 502);
     const at = now();
     await r.submit(page, found.form, {}, found.button, { drops: true });
     return at;

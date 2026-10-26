@@ -40,9 +40,9 @@ export default async function SetupPage() {
       <div className={s.form}>
         <h2>Finish setting up at home</h2>
         <ZoneLine zone="away" serverName={serverName}>
-          You&apos;re reaching this server over the internet. The first admin account can only be created from a device on the home network.
+          The first admin account can only be made from the home network.
         </ZoneLine>
-        <p className={s.foot}>Open Gluon on a phone or computer connected to your home Wi-Fi, at the server&apos;s local address.</p>
+        <p className={s.foot}>Open the server&apos;s local address on a device on your home Wi-Fi.</p>
       </div>
     );
   }

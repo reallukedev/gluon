@@ -1,6 +1,8 @@
 import type { ActivityItem } from "@/lib/people-types";
 import { alertsHref, peopleHref } from "@/lib/settings-links";
 
+const OPAQUE_ID = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)[A-Za-z0-9_-]{10,}$/; // generated ids mix case and digits; "HomeAssistant" is a name
+
 export interface Names {
   people: Map<string, string>;
   apps: Map<string, string>;
@@ -21,6 +23,8 @@ export function targetLink(e: ActivityItem, names: Names): { href: string | null
   if (person) return { href: peopleHref({ person: t }), label: person };
   if (a.startsWith("household.report")) return { href: peopleHref({ tab: "reports" }), label: app ?? "the report" };
   if (a.startsWith("people.")) return { href: peopleHref(), label: app ?? t };
+  // An app that's gone leaves only its generated id behind, which means nothing to anyone.
+  if (!app && OPAQUE_ID.test(t)) return null;
   if (app || a.startsWith("app.") || a.startsWith("apps.") || a.startsWith("stack.") || a.startsWith("container.") || a.startsWith("finding.app.")) {
     return { href: `/apps/${encodeURIComponent(t)}`, label: app ?? t };
   }

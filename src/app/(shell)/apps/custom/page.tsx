@@ -3,7 +3,7 @@ import { listCustomApps, storeStatus } from "@/server/appstore/service";
 import { CustomAppsView } from "@/components/builder/CustomAppsView";
 import type { CustomAppsResponse } from "@/lib/builder-types";
 
-export const metadata = { title: "Your apps" };
+export const metadata = { title: "Custom apps" };
 
 export default async function CustomAppsPage() {
   await requireAdmin();

@@ -69,7 +69,7 @@ async function lsblk(warnings: string[]): Promise<LsblkNode[]> {
       /* try the next way */
     }
   }
-  warnings.push("Gluon couldn't list the disks (lsblk failed).");
+  warnings.push("Couldn't list the disks (lsblk failed).");
   return [];
 }
 
@@ -216,7 +216,7 @@ async function build(): Promise<InventoryState> {
   const [nodes, containers, apps] = await Promise.all([
     lsblk(warnings),
     listContainerRefs().catch(() => {
-      warnings.push("Gluon couldn't ask Docker which apps use each drive.");
+      warnings.push("Couldn't ask Docker which apps use each drive.");
       return [] as ContainerRef[];
     }),
     listApps().catch(() => []),

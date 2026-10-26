@@ -37,9 +37,11 @@ interface Props {
   detailsId: string;
   children?: React.ReactNode;
   detailsTitle?: string;
+  /** A recheck is running: hop states dim until the results land. */
+  checking?: boolean;
 }
 
-export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, detailsTitle }: Props) {
+export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, detailsTitle, checking }: Props) {
   const toggle = (hop: HopId) => onOpen(open === hop ? null : hop);
   // On phones the details sit below the whole vertical map: bring them into view.
   React.useEffect(() => {
@@ -54,7 +56,7 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
           <span className={m.zoneCf}>Cloudflare DNS</span>
           <span className={m.zoneHome}>Your home</span>
         </div>
-        <div className={m.grid}>
+        <div className={m.grid} data-checking={checking ? "" : undefined}>
           <div className={`${m.node} ${m.visitor}`}>
             <span className={m.nodeHead}>
               <Internet className={m.icon} />
@@ -131,20 +133,20 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
           <p>
             <Cloud className={m.laneKey} aria-hidden />
             <span>
-              <b>Direct</b> <span className="mono">name.{b}</span>: visitors connect straight to your home. No size limits, so it suits video and big uploads; your home&rsquo;s internet address is visible to them.
+              <b>Direct</b> <span className="mono">name.{b}</span>: straight to your home, no size limits, and visitors see your internet address.
             </span>
           </p>
           <p>
             <CloudSync className={m.laneKey} aria-hidden />
             <span>
-              <b>Through Cloudflare</b> <span className="mono">{b}/…</span>: Cloudflare stands in between and hides your address, but uploads over 100 MB fail and streaming video breaks its rules.
+              <b>Through Cloudflare</b> <span className="mono">{b}/…</span>: hides your address, but uploads stop at 100 MB and video streaming breaks its rules.
             </span>
           </p>
         </figcaption>
       </figure>
 
       {open && open !== "apps" && (
-        <section id={detailsId} className={m.details} aria-label={detailsTitle} data-motion-gentle="">
+        <section key={open} id={detailsId} className={m.details} aria-label={detailsTitle} data-motion-gentle="">
           <div className={m.detailsHead}>
             <h3 className={m.detailsTitle}>{detailsTitle}</h3>
             <IconButton label="Close details" size="sm" onClick={() => onOpen(null)}>

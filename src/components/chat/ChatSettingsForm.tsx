@@ -177,7 +177,7 @@ export function ChatSettingsForm({ host, disabled, saver, multipleHosts, onCalls
         <Setting
           toggle
           title="Photos and files"
-          desc={host.ownComponents.files ? `Set up in Prosody's config file at ${host.ownComponents.files}.` : `Uploads go through https://${host.host}, so Gluon points that address at the chat server's web port. Files are deleted after the time you choose.`}
+          desc={host.ownComponents.files ? `Set up in Prosody's config file at ${host.ownComponents.files}.` : `Uploads go through https://${host.host} and are deleted after the time you choose.`}
           control={!host.ownComponents.files && <Switch checked={v.files.on} disabled={off} onChange={(on) => set("files", { ...v.files, on })} aria-label="Photos and files" />}
         >
           {v.files.on && !host.ownComponents.files && (
@@ -238,7 +238,7 @@ export function ChatSettingsForm({ host, disabled, saver, multipleHosts, onCalls
           }
         />
 
-        <Setting title="Admin contact" desc="Shown to chat apps and other servers that need to reach whoever runs this one, for example about spam.">
+        <Setting title="Admin contact" desc="Shown to apps and other servers that need to reach you, for example about spam.">
           <div className={s.settingMore}>
             <Field label="Chat or email address" optional error={errors.contact}>
               <Input value={v.contact ?? ""} disabled={off} onChange={(e) => set("contact", e.target.value || null)} placeholder={`you@${host.host}`} spellCheck={false} autoCapitalize="off" mono />

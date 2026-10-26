@@ -199,7 +199,7 @@ export function NotifyStep() {
 
   const head = (
     <StepHead title="Where should problems reach you?">
-      <p>When something breaks, like an app that stops or a drive that&apos;s nearly full, Gluon can tell you straight away instead of waiting for you to look.</p>
+      <p>Get a message when an app stops or a drive fills up.</p>
     </StepHead>
   );
 
@@ -237,7 +237,7 @@ export function NotifyStep() {
             <SubscribedRow key={s.channelId} id={s.channelId} name={s.channelName} kind={s.channelKind} />
           ))}
         </ul>
-        <p className={o.note}>Add more places, quiet hours and what each one sends in Settings → Notifications.</p>
+        <p className={o.note}>More places and quiet hours are in Notification settings.</p>
         <Actions
           primary={
             <Button variant="primary" onClick={next}>
@@ -317,7 +317,7 @@ export function NotifyStep() {
                 <span>Send a test to check it arrives.</span>
               </li>
             </ol>
-            <Field label="Topic" error={fe("topic")} description="Anyone who knows a topic on ntfy.sh can read it, so this one is hard to guess on purpose.">
+            <Field label="Topic" error={fe("topic")} description="Anyone with the topic name can read it, so it's hard to guess on purpose.">
               <Input mono value={d.topic} onChange={(e) => set("topic", e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={64} />
             </Field>
             <Disclosure summary="Use your own ntfy server" defaultOpen={!!fe("server")}>
@@ -344,7 +344,7 @@ export function NotifyStep() {
             {!useVia && (
               <fieldset className={o.fieldset}>
                 <legend>Mail server</legend>
-                <p className={o.note}>The server Gluon sends through: your email provider&apos;s SMTP details, often in its help pages under &ldquo;other mail apps&rdquo;.</p>
+                <p className={o.note}>Your email provider&apos;s SMTP details, often in its help under &ldquo;other mail apps&rdquo;.</p>
                 <div className={o.pair}>
                   <Field label="Server" error={fe("host")}>
                     <Input mono value={d.host} onChange={(e) => set("host", e.target.value)} placeholder="smtp.example.com" autoCapitalize="none" spellCheck={false} />

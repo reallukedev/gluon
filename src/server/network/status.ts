@@ -37,7 +37,7 @@ const g = globalThis as G;
 const st = () => (g.__gluonNetStatus ??= { at: 0, value: null, running: null, pendingSince: new Map() });
 
 export const NOT_CONFIGURED = () =>
-  new AppError("no_routes", "Gluon can't read the public addresses file (routes.json in ~/proxy/caddy). Check that the proxy folder is mounted at /proxy-caddy.", 503);
+  new AppError("no_routes", "Can't read the public addresses file (routes.json in ~/proxy/caddy). Check that the proxy folder is mounted at /proxy-caddy.", 503);
 
 /** Global IPv6 addresses of the host (not docker/veth), from /proc/1/net/if_inet6. */
 export function hostGlobalIpv6(): string[] {
@@ -138,7 +138,7 @@ function ownCertTls(t: TlsResult, host: string): TlsResult {
   if (t.status === "expired") return { ...base, message: `Your certificate for ${host} expired ${-(t.daysLeft ?? 0)} day${t.daysLeft === -1 ? "" : "s"} ago. Replace it in the address's HTTPS settings.` };
   if (t.status === "pending") return { ...base, status: "invalid", message: `Caddy isn't serving your certificate for ${host}. Save the address again to put it back in place.` };
   if ((t.status === "ok" || t.status === "expiring") && t.daysLeft !== null && t.daysLeft < OWN_CERT_WARN_DAYS) {
-    return { ...base, status: "expiring", message: `Your certificate for ${host} ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}. Gluon can't renew a certificate you supply, so replace it before then.` };
+    return { ...base, status: "expiring", message: `Your certificate for ${host} ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}. Certificates you supply don't renew on their own, so replace it before then.` };
   }
   if (t.status === "ok") return { ...base, message: `Your own certificate, valid for ${t.daysLeft} more days${t.issuer ? `, issued by ${t.issuer}` : ""}.` };
   return base;

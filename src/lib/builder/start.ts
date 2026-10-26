@@ -29,6 +29,24 @@ export function nextFreePort(want: number, used: { has: (p: number) => boolean }
   return null;
 }
 
+/**
+ * The web page's port for a new draft, moved off ports something already uses (and off the
+ * privileged range). `serverPorts` are the TCP ports the server already uses; this app's own count too.
+ */
+export function withFreeWebPort(spec: AppSpec, target: BuilderTarget, serverPorts: Iterable<number>): AppSpec {
+  const want = spec.web.port;
+  if (!spec.web.service || !want) return spec;
+  const used = new Set(serverPorts);
+  const p = parseCompose(spec.compose);
+  // The web service's own mapping of `want` is the web page itself, not something in its way.
+  const isWeb = (f: { name: string }, port: { host: number | null }) => port.host === want && (target === "umbrel" || f.name === spec.web.service);
+  if (p.ok) for (const f of readServices(p.doc)) for (const port of f.ports) if (port.host && !isWeb(f, port)) used.add(port.host);
+  if (want >= 1024 && !used.has(want)) return spec;
+  const start = want < 1024 ? 8080 : want + 1;
+  for (let port = start; port < start + 500 && port < 65536; port++) if (!used.has(port)) return { ...spec, web: { ...spec.web, port } };
+  return spec;
+}
+
 /** The port most likely to be the web page. */
 export function pickWebPort(ports: { port: number; proto: "tcp" | "udp" }[]): number | null {
   const tcp = ports.filter((p) => p.proto === "tcp" && !NOT_WEB.has(p.port)).map((p) => p.port);

@@ -1010,7 +1010,7 @@ async function readPosture(): Promise<Omit<SshPosture, "seenFromOutside" | "bloc
       root: null,
       maxAuthTries: null,
       allowUsers: [],
-      error: missing ? null : "Gluon couldn't read the SSH settings.",
+      error: missing ? null : "Couldn't read the SSH settings.",
     };
   }
   g.__gluonPosture = { at: Date.now(), posture };

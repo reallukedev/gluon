@@ -244,7 +244,7 @@ export function CommandPalette({ open, onOpenChange, nav, pins }: { open: boolea
       <Dialog.Root open={open} onOpenChange={(o) => onOpenChange(o)}>
         <Dialog.Portal>
           <Dialog.Backdrop className={s.backdrop} />
-          <Dialog.Popup className={s.popup} initialFocus={inputRef} aria-label="Search">
+          <Dialog.Popup className={s.popup} initialFocus={inputRef} aria-label="Search" data-palette="">
             <div className={s.inputRow}>
               <Search className={s.searchIcon} aria-hidden />
               <input

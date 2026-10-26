@@ -14,28 +14,28 @@ import s from "./docker.module.css";
 const COPY: Record<CleanupKind, { title: string; lead: string; noun: [string, string]; verb: string; empty: string }> = {
   images: {
     title: "Remove unused images",
-    lead: "No container uses these. Apps download their image again when they need it; the ones that can't be downloaded again are marked and left unticked.",
+    lead: "No container uses these. Apps download them again when needed; ones that can't be downloaded again start unticked.",
     noun: ["image", "images"],
     verb: "Remove",
     empty: "Every image is in use by a container. Nothing to remove.",
   },
   containers: {
     title: "Remove stopped containers",
-    lead: "Removing a container deletes its own changes to its files (not its volumes or folders). Containers that belong to an app are left unticked: the app's installer recreates them when it starts.",
+    lead: "Removing a container deletes files written inside it, not its volumes or folders. App containers start unticked; their app recreates them.",
     noun: ["stopped container", "stopped containers"],
     verb: "Remove",
     empty: "Every container is running. Nothing to remove.",
   },
   volumes: {
     title: "Remove unused volumes",
-    lead: "No container uses these. What's inside is deleted for good. Unnamed volumes are usually scratch space; named ones may hold an app's data, so they start unticked.",
+    lead: "No container uses these, and what's inside is deleted for good. Named volumes may hold an app's data, so they start unticked.",
     noun: ["volume", "volumes"],
     verb: "Delete",
     empty: "Every volume is used by a container. Nothing to remove.",
   },
   buildcache: {
     title: "Clear the build cache",
-    lead: "Docker keeps steps of earlier image builds to make the next build faster. Clearing it frees the space; the next build of a local image (Gluon's own updates, for one) starts from scratch and takes longer.",
+    lead: "Steps of earlier builds, kept to speed up the next one. After clearing, the next local build (Gluon's own updates, for one) takes longer.",
     noun: ["cache entry", "cache entries"],
     verb: "Clear",
     empty: "The build cache has nothing it can let go of.",

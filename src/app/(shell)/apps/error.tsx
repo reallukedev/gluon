@@ -6,17 +6,16 @@ import { Button } from "@/components/ui/Button";
 export default function AppsError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <Page>
-      <PageHeader title="Apps didn't load" summary="Gluon couldn't read the apps on this server just now. Nothing was changed." />
+      <PageHeader title="Apps" summary="Couldn't read the apps on this server. Nothing was changed." />
       <Notice
         tone="fault"
-        title="Couldn't load your apps"
         action={
           <Button size="sm" onClick={reset}>
             Try again
           </Button>
         }
       >
-        Docker may be restarting or busy. Try again in a moment.{error.digest ? ` If it keeps happening, the server log has the details (reference ${error.digest}).` : ""}
+        Docker may be restarting. Try again in a moment.{error.digest ? ` If it keeps failing, the server log has the details (${error.digest}).` : ""}
       </Notice>
     </Page>
   );

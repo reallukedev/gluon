@@ -6,7 +6,7 @@ import type { WidgetProps, SettingsProps } from "../types";
 import { useApi } from "@/lib/client/api";
 import { useLive } from "@/lib/client/live";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
-import { StateLine } from "@/components/ui/StateLine";
+import { StateLine, lineLabel } from "@/components/ui/StateLine";
 import { TimeChart } from "@/components/charts/TimeChart";
 import { UsageBar, Skeleton } from "@/components/ui/Surface";
 import { Field, Input, Checkbox } from "@/components/ui/Field";
@@ -234,9 +234,11 @@ export function StatusWidget({ size }: WidgetProps) {
     );
   }
   const total = admin ? data.findings.length : 0;
+  // With nothing to list, the room below the verdict shows it: one line per app, in the StateLine grammar.
+  const strip = findings.length === 0 && size !== "s" ? data.apps.filter((a) => admin || a.household) : [];
   const hidden = total - (size === "s" ? 0 : fit);
   return (
-    <div className={s.status}>
+    <div key="ready" className={`${s.status} appear`} data-motion-gentle="">
       <div className={s.statusHead}>
         <span className={s.statusMark} data-tone={data.verdict.tone} aria-hidden />
         <div className={s.statusWords}>
@@ -260,6 +262,15 @@ export function StatusWidget({ size }: WidgetProps) {
           ))}
         </ul>
       )}
+      {strip.length > 0 && (
+        <div className={s.statusLines} role="img" aria-label={stripLabel(strip)}>
+          {strip.map((a) => (
+            <span key={a.id} title={`${a.name}: ${lineLabel(a.line).toLowerCase()}`}>
+              <StateLine state={a.line} size={26} />
+            </span>
+          ))}
+        </div>
+      )}
       {admin && total > 0 && (hidden > 0 || size === "s") && (
         <Link href="/status" className={s.statusAll}>
           {hidden === total ? `See ${total === 1 ? "it" : `all ${total}`} on Status` : `${hidden} more on Status`}
@@ -267,6 +278,12 @@ export function StatusWidget({ size }: WidgetProps) {
       )}
     </div>
   );
+}
+
+function stripLabel(apps: StatusPayload["apps"]): string {
+  const running = apps.filter((a) => a.line === "running").length;
+  const n = apps.length;
+  return running === n ? `${n === 1 ? "1 app" : `All ${n} apps`} running` : `${running} of ${n} apps running`;
 }
 
 // ---------------------------------------------------------------- machine
@@ -318,7 +335,7 @@ export function VitalsWidget({ size }: WidgetProps) {
     </div>
   );
   return (
-    <div className={s.vitals} style={{ "--cols": cols } as React.CSSProperties} data-offline={status === "offline" ? "" : undefined}>
+    <div key="ready" className={`${s.vitals} appear`} data-motion-gentle="" style={{ "--cols": cols } as React.CSSProperties} data-offline={status === "offline" ? "" : undefined}>
       {status === "offline" && <Age at={last.t} expectMs={10_000} className={s.vitalsAge} />}
       {tile(
         viewer.role === "admin" ? "CPU" : "Processor",
@@ -407,7 +424,7 @@ export function StorageWidget({ size }: WidgetProps) {
   }
   const hidden = rows.length - fit;
   return (
-    <div className={s.storageWrap}>
+    <div key="ready" className={`${s.storageWrap} appear`} data-motion-gentle="">
       <div className={s.storage} ref={listRef}>
         {rows.map((f, i) => {
           const name = driveNames.get(f.mount);

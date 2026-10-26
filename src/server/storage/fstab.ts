@@ -86,7 +86,7 @@ export function readFstabText(): string {
     return fs.readFileSync(hostPath(FSTAB), "utf8");
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return "";
-    throw new AppError("fstab_unreadable", `Gluon couldn't read /etc/fstab: ${(e as Error).message}`, 500);
+    throw new AppError("fstab_unreadable", `Couldn't read /etc/fstab: ${(e as Error).message}`, 500);
   }
 }
 
@@ -350,7 +350,7 @@ export async function writeFstab(next: string, expectCurrent: string): Promise<F
   try {
     st = fs.lstatSync(live);
   } catch (e) {
-    throw new AppError("fstab_unreadable", `Gluon couldn't read /etc/fstab: ${(e as Error).message}`, 500);
+    throw new AppError("fstab_unreadable", `Couldn't read /etc/fstab: ${(e as Error).message}`, 500);
   }
   if (st.isSymbolicLink()) throw new AppError("fstab_link", "/etc/fstab is a link to another file, so Gluon won't edit it. Change it by hand.", 409);
   const current = fs.readFileSync(live, "utf8");
@@ -365,7 +365,7 @@ export async function writeFstab(next: string, expectCurrent: string): Promise<F
     writeFileDurable(hostPath(backup), current, st.mode & 0o7777);
     fs.chownSync(hostPath(backup), st.uid, st.gid);
   } catch (e) {
-    throw new AppError("fstab_backup", `Gluon couldn't back up /etc/fstab, so it didn't change it: ${(e as Error).message}`, 500);
+    throw new AppError("fstab_backup", `Couldn't back up /etc/fstab, so it wasn't changed: ${(e as Error).message}`, 500);
   }
 
   // Temp file + verification.
@@ -374,7 +374,7 @@ export async function writeFstab(next: string, expectCurrent: string): Promise<F
     writeFileDurable(hostPath(tmp), next, st.mode & 0o7777);
     fs.chownSync(hostPath(tmp), st.uid, st.gid);
     const [now, then] = await Promise.all([verifyFstabFile(FSTAB), verifyFstabFile(tmp)]);
-    if (then.crashed) throw new AppError("fstab_invalid", "Gluon couldn't check the new /etc/fstab (findmnt failed), so it left the file alone.", 500, { output: then.output });
+    if (then.crashed) throw new AppError("fstab_invalid", "Couldn't check the new /etc/fstab (findmnt failed), so the file was left alone.", 500, { output: then.output });
     const known = new Set(now.errors.map(verifyKey));
     const fresh = then.errors.filter((e) => !known.has(verifyKey(e)));
     if (fresh.length || then.parseErrors > now.parseErrors) {

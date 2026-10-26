@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import type { MonitorCheck, MonitorView, StripBucket } from "@/lib/alerts-types";
+import type { MonitorView, StripBucket } from "@/lib/alerts-types";
 import type { LineState } from "@/lib/types";
 import { useFormat } from "@/components/PrefsProvider";
 import s from "./trace.module.css";
@@ -30,18 +30,6 @@ export function monitorLine(m: Pick<MonitorView, "state" | "consecutiveFailures"
     case "idle":
       return { line: "stopped", label: "App is stopped" };
   }
-}
-
-/** Turn raw checks (newest first, as the API sends them) into one-check buckets, oldest first. */
-export function checksToBuckets(checks: MonitorCheck[]): StripBucket[] {
-  return [...checks].reverse().map((c) => ({
-    start: c.at,
-    checks: 1,
-    ok: c.ok ? 1 : 0,
-    ratio: c.ok ? 1 : 0,
-    state: c.ok ? "up" : "down",
-    avgMs: c.ok ? c.latencyMs : null,
-  }));
 }
 
 function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {

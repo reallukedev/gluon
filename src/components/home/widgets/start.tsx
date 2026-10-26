@@ -13,6 +13,7 @@ import { Greeting } from "../Greeting";
 import { StartSearch } from "../StartSearch";
 import { Preview } from "../previews";
 import { SetUp } from "./kit";
+import { useHome } from "../context";
 import st from "./start.module.css";
 
 // ================================================================ greeting
@@ -30,12 +31,16 @@ function useToday() {
 function GreetingWidget() {
   const fmt = useFormat();
   const now = useToday();
+  // A clock on the same page already says the date.
+  const clock = useHome().pinned("clock");
   return (
     <div className={st.greeting}>
       <Greeting />
-      <p className={st.today} suppressHydrationWarning>
-        {now ? fmt.date(now, { weekday: true, year: false }) : " "}
-      </p>
+      {!clock && (
+        <p className={st.today} suppressHydrationWarning>
+          {now ? fmt.date(now, { weekday: true, year: false }) : " "}
+        </p>
+      )}
     </div>
   );
 }

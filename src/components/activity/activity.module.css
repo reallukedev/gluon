@@ -32,14 +32,14 @@
 @media (max-width: 900px) { .day { top: calc(56px + env(safe-area-inset-top)); } }
 .dayCount { font-size: var(--text-xs); color: var(--muted); }
 
-.row { display: grid; grid-template-columns: 72px 28px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 12px 16px 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
+.row { display: grid; grid-template-columns: 84px 28px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 12px 16px 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
 /* The timeline grows as you scroll (a year of entries): rows off screen skip layout and paint until they're near. */
 .row { content-visibility: auto; contain-intrinsic-size: auto 70px; }
 .day + .row { border-top: 0; }
 .row[data-fresh] { animation: arrive var(--dur-slow) var(--ease-out); }
 @keyframes arrive { from { opacity: 0; transform: translateY(calc(-4px * var(--motion))); } }
 .time { display: grid; gap: 1px; padding-top: 5px; color: var(--muted); font-size: var(--text-sm); }
-.timeFrom { font-size: var(--text-xs); color: var(--faint); }
+.timeFrom { font-size: var(--text-xs); color: var(--faint); white-space: nowrap; }
 .actor { display: grid; place-items: center; }
 /* The server is a square plate; people are round. The shape says who acted, colour isn't needed. */
 .serverTile { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; border: 1px dashed var(--line-strong); color: var(--muted); background: var(--panel); }
@@ -72,7 +72,7 @@
 .skeletons { display: grid; gap: 0; padding: 0 18px; }
 .skeletons .skelRow { min-height: 70px; border-top: 1px solid var(--line); }
 .skeletons .skelRow:first-child { border-top: 0; }
-.skelRow { display: grid; grid-template-columns: 72px 28px 1fr; gap: 14px; align-items: center; }
+.skelRow { display: grid; grid-template-columns: 84px 28px 1fr; gap: 14px; align-items: center; }
 @media (max-width: 640px) {
   .row { grid-template-columns: 28px minmax(0, 1fr); gap: 4px 12px; padding: 12px 14px; }
   .actor { grid-column: 1; grid-row: 1 / span 2; align-self: start; }

@@ -77,11 +77,11 @@ async function appPlan(appId: string): Promise<Plan> {
       run: async (ctx) => {
         const r = await routeStatus(ctx);
         const d = r?.dns;
-        if (!d) return skip("Gluon couldn't look up the name");
+        if (!d) return skip("Couldn't look up the name");
         const evidence = kv([["Name", d.name], ["A", d.a.join(", ")], ["AAAA", d.aaaa.join(", ")], ["Resolver", d.resolver], ["Via Cloudflare", d.proxied ? "yes" : "no"]]);
         if (d.status === "missing") return fail(`${publicHost} has no DNS record`, { value: "missing", detail: d.message, evidence, findings: [`net.dns:${publicHost}`], fix: go("See DNS", "/network?tab=dns") });
         if (d.status === "mismatch") return warn(`${publicHost} points somewhere else`, { value: "elsewhere", detail: d.message, evidence, findings: [`net.dns:${publicHost}`], fix: go("See DNS", "/network?tab=dns") });
-        if (d.status === "error") return warn(`Gluon couldn't look up ${publicHost}`, { detail: d.message, evidence });
+        if (d.status === "error") return warn(`Couldn't look up ${publicHost}`, { detail: d.message, evidence });
         return ok(`${publicHost} points at this network`, { value: d.proxied ? "proxied" : d.a[0] ?? "ok", evidence });
       },
     });
@@ -261,7 +261,7 @@ async function appPlan(appId: string): Promise<Plan> {
 
 async function addressPlan(routeId: string): Promise<Plan> {
   const cfg = tryReadConfig();
-  if (!cfg) throw new AppError("no_routes", "Gluon can't read your public addresses (routes.json).", 503);
+  if (!cfg) throw new AppError("no_routes", "Can't read your public addresses (routes.json).", 503);
   const r = routeId === FALLBACK_ID ? null : cfg.routes.find((x) => x.id === routeId);
   if (routeId !== FALLBACK_ID && !r) throw new AppError("not_found", "That address doesn't exist any more. Pick another one.", 404);
   const hostName = r?.type === "subdomain" ? r.host : cfg.base_domain;
@@ -376,7 +376,7 @@ async function addressPlan(routeId: string): Promise<Plan> {
       label: "App",
       run: async (ctx) => {
         const a = (await status(ctx))?.app;
-        if (!a) return skip("Gluon doesn't know which app is behind it");
+        if (!a) return skip("Can't tell which app is behind it");
         const app = (await apps(ctx)).find((x) => x.id === a.appId);
         if (!app) return skip(`${a.name} isn't installed here`);
         const o = containersOutcome(app, await containerVerdicts(app));
@@ -791,7 +791,7 @@ async function drivePlan(diskId: string): Promise<Plan> {
         try {
           ({ stdout } = await host("journalctl", ["-k", "--since", "-7d", "--no-pager", "-o", "short-iso", "-q"], { timeoutMs: 20_000, maxBuffer: 64 * 1024 * 1024, okCodes: [1] }));
         } catch {
-          return skip("Gluon couldn't read the kernel log");
+          return skip("Couldn't read the kernel log");
         }
         const lines = stdout.split("\n").filter((l) => re.test(l) && bad.test(l));
         const evidence = lines.length ? lines.slice(-12).join("\n") : `No errors mentioning ${names.join(", ")} in the last 7 days.`;
@@ -844,7 +844,7 @@ async function safetyPlan(): Promise<Plan> {
         const fix = go("Review exposure", "/network?tab=exposure");
         if (x.login.verdict === "no-login") return fail(`${who} is open to anyone at ${e.label}`, { detail: "It has no login of its own. Turn one on, or take it off the internet.", evidence, findings: [`net.exposed:${e.id}`], fix });
         if (x.adminUi) return warn(`${who}'s admin screens are reachable from the internet`, { detail: "It can change this server or your home. It has a login; use a strong password and two-step sign-in if it offers one, or keep it home-only.", evidence, fix });
-        if (x.login.verdict === "unknown") return warn(`Gluon can't tell whether ${who} asks for a login`, { detail: "Open the address from outside your network to check, then record the answer on the app.", evidence, fix });
+        if (x.login.verdict === "unknown") return warn(`Can't tell whether ${who} asks for a login`, { detail: "Open the address from outside your network to check, then record the answer on the app.", evidence, fix });
         if (x.onlyPaths?.length) return ok(`${who} is only partly public, and asks for a login`, { evidence });
         return ok(`${who} asks for a login`, { evidence });
       },

@@ -57,15 +57,9 @@ export function PreviewBody({ entry, fit = "contain", textHeight = "min(56dvh, 5
       return (
         <div className={s.fallback}>
           <KindIcon kind={entry.kind} type={entry.type} className={s.fallbackGlyph} />
-          <p className={s.fallbackTitle}>{entry.kind === "other" ? "Gluon can't show this kind of file." : `Gluon can't show ${KIND_LABEL[entry.kind].toLowerCase()} files like this one.`}</p>
+          <p className={s.fallbackTitle}>No preview for this {entry.kind === "other" ? "file" : KIND_LABEL[entry.kind].toLowerCase()}</p>
           <p className={s.fallbackText}>
-            {entry.kind === "video"
-              ? "Open it in Jellyfin or another player, or download it to watch with VLC."
-              : entry.kind === "disk-image"
-                ? "Disk images install systems or run virtual machines. Download it to use it."
-                : entry.kind === "archive"
-                  ? "Extract it to see what's inside, or download it."
-                  : "Download it and open it with an app on your device."}
+            {entry.kind === "video" ? "Play it in Jellyfin, or download it." : entry.kind === "archive" ? "Extract it to see what's inside, or download it." : "Download it to open it on your device."}
           </p>
           <div className={s.fallbackActions}>
             <Button icon={<Download />} onClick={() => downloadUrl(rawUrl(entry.path, true))}>
@@ -134,8 +128,8 @@ function TextView({ entry, height }: { entry: FileEntry; height: string }) {
     return (
       <div className={s.fallback}>
         <KindIcon kind={entry.kind} className={s.fallbackGlyph} />
-        <p className={s.fallbackTitle}>This file isn't text.</p>
-        <p className={s.fallbackText}>Download it and open it with an app that understands it.</p>
+        <p className={s.fallbackTitle}>This file isn't text</p>
+        <p className={s.fallbackText}>Download it to open it on your device.</p>
       </div>
     );
   }

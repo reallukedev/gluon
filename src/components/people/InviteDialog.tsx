@@ -66,7 +66,6 @@ export function InviteDialog({ open, onOpenChange, onCreated }: { open: boolean;
       open={open}
       onOpenChange={onOpenChange}
       title={made ? `Invite for ${made.displayName ?? "someone new"}` : "Invite someone"}
-      description={made ? undefined : "They get a link to choose their own username and password."}
       footer={
         made ? (
           <Button variant="primary" onClick={() => onOpenChange(false)}>
@@ -95,15 +94,13 @@ export function InviteDialog({ open, onOpenChange, onCreated }: { open: boolean;
         ]}
       />
       {made ? (
-        <div className={s.inviteMade}>
+        <div className={`${s.inviteMade} ${s.reveal}`}>
           <div className={s.qrCol}>
             {qr ? <div className={s.qr} role="img" aria-label="QR code of the invite link" dangerouslySetInnerHTML={{ __html: qr }} /> : <Skeleton width={168} height={168} radius={10} />}
             <span className={s.qrHint}>Scan with a phone camera</span>
           </div>
           <div className={s.linkCol}>
-            <p className={s.hint}>
-              Send this link to {made.displayName ?? "them"} in a message, or let them scan the code. They choose their own username and password.
-            </p>
+            <p className={s.hint}>Send it to {made.displayName ?? "them"} in a message, or let them scan the code.</p>
             <div className={s.link}>
               <Input mono readOnly value={made.url} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
               <CopyButton value={made.url} size="md">
@@ -121,7 +118,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: { open: boolean;
               Works once, until <Time ts={made.expiresAt} kind="dateTime" /> (7 days).
             </p>
             <Notice tone="attention" title="You won't see this link again">
-              Gluon only keeps a fingerprint of it. If it gets lost, cancel it and make a new one.
+              If it gets lost, cancel it and make a new one.
             </Notice>
           </div>
         </div>
@@ -151,8 +148,8 @@ export function InviteDialog({ open, onOpenChange, onCreated }: { open: boolean;
             <span className={s.roleLabel}>They'll be</span>
             {(
               [
-                ["member", "In the household", "Opens their apps, sees if something is broken and reports problems. Can't change anything risky."],
-                ["admin", "An admin", "Can change everything on the server, including other people's accounts. Needs two-step verification to sign in from outside home."],
+                ["member", "In the household", "Opens their apps and reports problems. Can't change anything risky."],
+                ["admin", "An admin", "Can change everything, including other people's accounts. Needs two-step sign-in away from home."],
               ] as const
             ).map(([v, label, desc]) => (
               <button key={v} type="button" role="radio" data-role={v} aria-checked={role === v} tabIndex={role === v ? 0 : -1} className={s.roleChoice} onClick={() => setRole(v)}>

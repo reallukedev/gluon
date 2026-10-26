@@ -80,6 +80,8 @@ export function TrafficTab() {
 
   const chartName = (i: { name: string; kind?: InterfaceInfo["kind"]; dockerNetwork?: string | null }) => (i.dockerNetwork ? `${i.name} · ${i.dockerNetwork}` : i.kind ? `${i.name} · ${KIND[i.kind]}` : i.name);
 
+  const ifaces = list.filter((i) => which === "all" || i.kind !== "veth");
+
   return (
     <div className={s.stack}>
       <Panel
@@ -102,9 +104,9 @@ export function TrafficTab() {
             <Skeleton height={170} />
           </div>
         ) : shown.length === 0 && fallbackNames.length === 0 ? (
-          <Empty title="No active interfaces">Gluon doesn't see traffic on any {which === "main" ? "wired or Wi-Fi " : ""}interface yet.</Empty>
+          <Empty title="No active interfaces">No traffic on any {which === "main" ? "wired or Wi-Fi " : ""}interface yet.</Empty>
         ) : (
-          <div className={s.charts}>
+          <div className={`${s.charts} appear`}>
             {(shown.length ? shown : fallbackNames.map((name) => ({ name }) as { name: string })).map((i) => {
               const now = live.host.at(-1)?.net.ifaces[i.name];
               return (
@@ -127,7 +129,7 @@ export function TrafficTab() {
         <p className={s.legend}>
           <span data-tone="ink">In</span>
           <span data-tone="muted">Out</span>
-          <span>Last 5 minutes. Hover a chart to read an exact moment.</span>
+          <span>Last 5 minutes</span>
         </p>
       </Panel>
 
@@ -139,7 +141,7 @@ export function TrafficTab() {
         ) : rows.length === 0 ? (
           <Empty title="No containers running">Start an app and its traffic shows up here.</Empty>
         ) : (
-          <div role="table" aria-label="Traffic by container" className={s.table}>
+          <div role="table" aria-label="Traffic by container" className={`${s.table} appear`}>
             <div role="row" className={`${s.head} ${s.ctrGrid}`}>
               <SortHeader label="Container" k="name" sort={sort} onSort={setSort} />
               <SortHeader label="In" k="rx" sort={sort} onSort={setSort} align="end" />
@@ -187,11 +189,11 @@ export function TrafficTab() {
           <div className={s.pad}>
             <Skeleton height={160} />
           </div>
+        ) : ifaces.length === 0 ? (
+          <Empty title="No interfaces found" />
         ) : (
-          <ul className={s.ifList} role="list">
-            {list
-              .filter((i) => which === "all" || i.kind !== "veth")
-              .map((i) => (
+          <ul className={`${s.ifList} appear`} role="list">
+            {ifaces.map((i) => (
                 <li key={i.name} className={s.ifRow}>
                   <div className={s.ifName}>
                     <span className="mono">{i.name}</span>

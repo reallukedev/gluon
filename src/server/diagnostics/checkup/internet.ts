@@ -136,7 +136,7 @@ export function publicIpCheck(group: string): CheckSpec {
         if (d.proxied) proxied++;
       }
       const evidence = kv(rows);
-      if (!ip) return warn("Gluon couldn't find this network's public address", { detail: "Neither the DDNS updater's log nor Cloudflare's trace gave one, so DNS couldn't be compared.", evidence });
+      if (!ip) return warn("Couldn't find this network's public address", { detail: "Neither the DDNS updater's log nor Cloudflare's trace gave one, so DNS couldn't be compared.", evidence });
       if (traced && st.publicIp.v4 && traced !== st.publicIp.v4) {
         return warn(`Your public address changed to ${traced}`, { detail: `The DDNS updater last saw ${st.publicIp.v4}. It should update DNS within a few minutes.`, evidence, fix: go("See DNS", "/network?tab=dns") });
       }

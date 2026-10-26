@@ -39,27 +39,27 @@ export function ReviewStep({ draft, detail: d, issues, checking, checkError, onR
   const secretCount = Object.values(draft.secrets).reduce((n, k) => n + k.length, 0);
 
   const facts: [React.ReactNode, React.ReactNode][] = [
-    [target === "umbrel" ? "Installs in" : "Runs with", target === "umbrel" ? "Umbrel, from Gluon's app store" : "Docker Compose, run by Gluon"],
+    [target === "umbrel" ? "Installs in" : "Runs with", target === "umbrel" ? "Umbrel, from Gluon's app store" : "Docker Compose"],
     [target === "umbrel" ? "Umbrel app id" : "Folder", <span key="w" className="mono">{target === "umbrel" ? d.plannedAppId ?? "…" : `${store?.composeRoot ?? "…"}/${d.appId ?? draft.spec.details.slug}`}</span>],
     ["On your network", url ? <span key="u" className="mono">{url.replace(/^http:\/\//, "")}</span> : "No web page"],
   ];
   if (url) facts.push(["On the internet", address.on && routes ? <span key="a" className="mono">{`${address.label || suggestLabel(name)}.${routes.config.base_domain}`}</span> : "Not published"]);
-  if (secretCount) facts.push(["Secrets", `${secretCount} kept encrypted, outside the files below`]);
+  if (secretCount) facts.push(["Secrets", `${secretCount}, stored encrypted outside these files`]);
 
   return (
     <div className={f.stack}>
       <Panel title="Before it starts" meta={checking ? <StateLine state="starting" size={12} label="Checking ports and images" /> : undefined}>
         {needsStore && (
           <div className={f.notice}>
-            <Notice tone="attention" title="Gluon's store isn't in Umbrel yet" action={<Button size="sm" onClick={onSetUpStore}>Set up the store</Button>}>
-              Umbrel installs apps from app stores, so it needs to know about Gluon&apos;s once.
+            <Notice tone="attention" title="Add Gluon's store to Umbrel first" action={<Button size="sm" onClick={onSetUpStore}>Set up the store</Button>}>
+              Umbrel installs apps from stores. You do this once.
             </Notice>
           </div>
         )}
         {checkError && !checking && (
           <div className={f.notice}>
-            <Notice tone="attention" title="Gluon couldn't check ports and images" action={<Button size="sm" onClick={onRecheck}>Check again</Button>}>
-              {checkError} Starting checks them again, so it can still go ahead.
+            <Notice tone="attention" title="Couldn't check ports and images" action={<Button size="sm" onClick={onRecheck}>Check again</Button>}>
+              {checkError} Starting checks again, so you can still go ahead.
             </Notice>
           </div>
         )}
@@ -71,7 +71,7 @@ export function ReviewStep({ draft, detail: d, issues, checking, checkError, onR
             <Skeleton width="55%" height={14} />
           </div>
         ) : checkError ? null : (
-          <StateLine state="running" size={12} label="Nothing to fix. The ports are free and the images exist." />
+          <StateLine state="running" size={12} label="Nothing to fix. Ports are free and images exist." />
         )}
       </Panel>
       <Panel title="Where it runs">

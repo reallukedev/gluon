@@ -148,7 +148,7 @@ async function readGroup(s: State, gateway: string, group: Group) {
     s.error = null;
   } catch (e) {
     const fails = (s.failures[group] = (s.failures[group] ?? 0) + 1);
-    s.error = e instanceof AppError ? e.message : "Gluon couldn't read your router.";
+    s.error = e instanceof AppError ? e.message : "Couldn't read your router.";
     // A full session pool is the router's, not the page's: leave it alone for a while.
     if (e instanceof AppError && e.code === "router_busy") s.pauseUntil = now() + Math.min(10 * 60_000, 60_000 * fails);
   }
@@ -172,7 +172,7 @@ export async function tick(): Promise<void> {
         s.identity = await identify(here.gateway);
         s.error = s.identity.kind === "unreachable" ? `Your router at ${here.gateway} didn't answer.` : null;
       } catch (e) {
-        s.error = e instanceof AppError ? e.message : "Gluon couldn't reach your router.";
+        s.error = e instanceof AppError ? e.message : "Couldn't reach your router.";
         if (e instanceof AppError && e.code === "router_busy") s.pauseUntil = now() + 60_000;
       }
       s.identifiedAt = now();
@@ -240,7 +240,7 @@ function raiseDown(s: State, since: number) {
     severity: "fault",
     subject: "internet",
     title: "Your internet connection is down",
-    cause: `Your ${model} says its ${fiber ? "fiber " : ""}connection to AT&T is down, so nothing outside your home can reach this server, and apps that need the internet can't reach it either. Gluon sends this when it can and says when it's back. It often clears on its own within minutes; if it doesn't, check the router's lights${fiber ? " and the fiber cable" : ""}, then call AT&T.`,
+    cause: `Your ${model} says its ${fiber ? "fiber " : ""}connection to AT&T is down, so nothing outside your home can reach this server and apps can't reach the internet. It often clears on its own within minutes; if it doesn't, check the router's lights${fiber ? " and the fiber cable" : ""}, then call AT&T.`,
     detail: { since },
     remedy: { action: "", label: "See what the router says", href: "/network/router" },
   });

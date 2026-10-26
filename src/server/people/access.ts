@@ -15,7 +15,7 @@ async function appsOrExplain() {
   try {
     return await listApps();
   } catch {
-    throw new AppError("docker_unavailable", "Gluon can't reach Docker right now, so it can't list the apps. Check that Docker is running.", 503);
+    throw new AppError("docker_unavailable", "Can't reach Docker, so the apps can't be listed. Check that Docker is running.", 503);
   }
 }
 

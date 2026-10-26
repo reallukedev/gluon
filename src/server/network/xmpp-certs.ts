@@ -116,7 +116,7 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
   if (own) src = readOwnCert(host);
   else {
     const caddy = await caddyCerts();
-    if (!caddy) return { ...base, message: `Gluon can't find Caddy's certificates in the ${CADDY_CONTAINER} container.` };
+    if (!caddy) return { ...base, message: `Can't find Caddy's certificates in the ${CADDY_CONTAINER} container.` };
     src = pickCaddyPair(caddy, host);
   }
 

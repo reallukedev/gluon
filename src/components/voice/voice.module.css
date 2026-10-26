@@ -286,3 +286,6 @@
   border-radius: var(--radius-control);
   background: var(--sunk);
 }
+
+/* Someone joining fades into the list instead of popping in. */
+.person { transition: opacity var(--dur-base) var(--ease-out); @starting-style { opacity: 0; } }

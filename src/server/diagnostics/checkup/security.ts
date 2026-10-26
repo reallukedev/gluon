@@ -132,7 +132,7 @@ export async function sshFailuresOutcome(): Promise<Outcome> {
   try {
     ({ stdout } = await host("journalctl", ["-u", "ssh", "-u", "sshd", "--since", "-7d", "--no-pager", "-o", "cat", "-q"], { timeoutMs: 15_000, maxBuffer: 32 * 1024 * 1024, okCodes: [1] }));
   } catch {
-    return skip("Gluon couldn't read SSH's log");
+    return skip("Couldn't read SSH's log");
   }
   const fails: { user: string; ip: string }[] = [];
   let accepted = 0;

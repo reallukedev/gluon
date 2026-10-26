@@ -77,7 +77,7 @@ export function HomeReach({ report, error, refreshing, onRefresh }: { report: Ex
           <p className={s.panelNote}>
             {report.counts.lanAllInterfaces === 0
               ? "Nothing else on this server accepts connections from other devices."
-              : `${fmt.plural(report.counts.lanAllInterfaces, "other service")} on this server ${report.counts.lanAllInterfaces === 1 ? "accepts" : "accept"} connections from devices at home (and anything on your Wi-Fi). They aren't reachable from the internet.`}
+              : `${fmt.plural(report.counts.lanAllInterfaces, "other service")} on this server ${report.counts.lanAllInterfaces === 1 ? "answers" : "answer"} devices at home, not the internet.`}
           </p>
           {flags.length > 0 && (
             <ul className={s.flags} role="list">
@@ -116,7 +116,7 @@ export function HomeReach({ report, error, refreshing, onRefresh }: { report: Ex
               </div>
             )}
             {rows.length === 0 ? (
-              <Empty title="Nothing to show">Gluon couldn&rsquo;t list what&rsquo;s listening, or the filters hide everything.</Empty>
+              <Empty title="Nothing to show">Couldn&rsquo;t list what&rsquo;s listening, or the filters hide everything.</Empty>
             ) : (
               <div role="table" aria-label="Reachable at home" className={`${s.table} ${s.flushTable}`}>
                 <div role="row" className={`${s.thead} ${s.lanGrid}`}>

@@ -24,7 +24,7 @@ export function localAvailability(user: Pick<User, "role">): LocalWidgetAvailabi
     out.push({ type: "server.schedule", available: sched.available, reason: sched.reason });
     // Space works anywhere Gluon can see a filesystem; without history yet, the widget says it's still learning.
     const seen = filesystems().length > 0;
-    out.push({ type: "server.space", available: seen, reason: seen ? null : "Gluon can't see any disks on this machine yet." });
+    out.push({ type: "server.space", available: seen, reason: seen ? null : "Can't see any disks on this machine yet." });
   }
   return out;
 }

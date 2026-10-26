@@ -132,7 +132,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
     confirm({
       title: `Delete ${d.spec.details.name || "this draft"}?`,
       description: "It was never published, so nothing runs anywhere.",
-      consequences: ["Its settings, secrets and build history are deleted.", "Images Gluon built for it are removed from this server."],
+      consequences: ["Its settings, secrets and build history are deleted.", "Images built for it are removed."],
       confirmLabel: "Delete draft",
       onConfirm: async () => {
         await api.del(`/api/custom-apps/${d.id}`);
@@ -147,9 +147,9 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
   const where = target === "umbrel" ? "Umbrel" : "Docker Compose";
   const running = d.runtime && (d.runtime.state === "ready" || d.runtime.state === "running");
   const summary = jobRunning ? (
-    <>{rt.label}… This page follows along.</>
+    <>{rt.label}…</>
   ) : !published ? (
-    <>A draft. {target === "umbrel" ? "It isn't in Umbrel yet." : "It isn't running yet."} Changes save as you go.</>
+    <>{target === "umbrel" ? "A draft, not in Umbrel yet." : "A draft, not running yet."}</>
   ) : (
     <>
       Version <b className="num">{d.publishedVersion}</b> {d.runtime?.state === "not-installed" ? (target === "umbrel" ? "is in Gluon's store but not installed in Umbrel." : "isn't running.") : running ? `runs in ${where}.` : `is ${rt.label.toLowerCase()} in ${where}.`}
@@ -183,7 +183,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
   return (
     <Page>
       <PageHeader
-        back={{ href: "/apps/custom", label: "Your apps" }}
+        back={{ href: "/apps/custom", label: "Custom apps" }}
         title={
           <span className={s.title}>
             <AppIcon src={draft.spec.details.icon} name={draft.spec.details.name || "App"} size={40} />
@@ -214,7 +214,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
               </Button>
             }
           >
-            This app was changed in another tab or by a publish. Load the latest to keep editing; what you typed since then isn&apos;t saved.
+            Another tab or a publish changed it. Load the latest to keep editing; what you typed since isn&apos;t saved.
           </Notice>
         </div>
       )}
@@ -305,7 +305,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
                 <Button variant={published && installedNow && !changed && !jobRunning ? "secondary" : "primary"} block onClick={() => openJob(jobRunning ? { kind: "attach" } : undefined)}>
                   {jobRunning ? "Show progress" : publishLabel}
                 </Button>
-                {published && installedNow && !changed && !jobRunning && <p className={s.hint}>Publishing again downloads the images again, so a newer :latest arrives.</p>}
+                {published && installedNow && !changed && !jobRunning && <p className={s.hint}>Pulls the images again, so a newer :latest arrives.</p>}
               </div>
               <SaveLine state={draft.state} savedAt={draft.savedAt} error={draft.error} onRetry={() => void draft.save()} />
             </div>
@@ -374,15 +374,15 @@ function RemoveDialog({ open, onOpenChange, detail, target, onConfirm }: { open:
     ? [
         installed ? `Umbrel stops ${name} and uninstalls it; its tile goes away.` : `${name} isn't installed, so only its listing goes.`,
         keepData
-          ? "Its data folder is moved to Home › Gluon kept data in Umbrel's Files, so you can bring it back."
+          ? "Its data folder moves to Home › Gluon kept data in Umbrel's Files, so you can bring it back."
           : "Umbrel deletes its data folder, with everything the app saved. This can't be undone.",
-        "Its listing leaves Gluon's store. Folders on the server it used (outside its data folder) aren't touched.",
-        forget ? "Gluon forgets the app too: its settings, secrets and builds." : "The app stays here as a draft, so you can publish it again.",
+        "Its listing leaves Gluon's store. Other folders it used aren't touched.",
+        forget ? "Its settings, secrets and builds are deleted too." : "It stays here as a draft you can publish again.",
       ]
     : [
         `Its containers stop and are removed.`,
         keepData ? "Its folder (with its data) stays on the server." : "Its folder, with everything the app saved, is deleted. This can't be undone.",
-        forget ? "Gluon forgets the app too: its settings, secrets and builds." : "The app stays here as a draft, so you can publish it again.",
+        forget ? "Its settings, secrets and builds are deleted too." : "It stays here as a draft you can publish again.",
       ];
   return (
     <Dialog
@@ -416,7 +416,7 @@ function RemoveDialog({ open, onOpenChange, detail, target, onConfirm }: { open:
           Keep its data
         </Checkbox>
         <Checkbox checked={forget} onChange={setForget}>
-          Also delete it from Gluon
+          Also delete its settings and builds
         </Checkbox>
       </div>
     </Dialog>

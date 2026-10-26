@@ -73,12 +73,12 @@ export function FstabPanel({ disks, onPersist, busy }: { disks: DiskView[]; onPe
       <Panel title="What connects at startup" meta={<span className="mono">/etc/fstab</span>} flush>
         <div className={s.explainWrap}>
           <p className={s.explain}>
-          When the server starts, Linux reads a short list called <b>fstab</b> and connects each drive to its folder. A drive that isn't on the list stays disconnected after a restart, and apps that keep files on it find their folders empty.
+Drives on this list reconnect to their folders when the server starts. Anything else stays disconnected after a restart.
           </p>
         </div>
         {error && (
           <div className={s.pad}>
-            <Notice tone="fault">Gluon couldn't read /etc/fstab: {error.message}</Notice>
+            <Notice tone="fault" title="Couldn't read /etc/fstab">{error.message}</Notice>
           </div>
         )}
         {!data && !error && (
@@ -98,7 +98,7 @@ export function FstabPanel({ disks, onPersist, busy }: { disks: DiskView[]; onPe
                     <span className="mono">{vol.primaryMount}</span>
                   </p>
                   <p className={s.fstabWords}>
-                    Connected now, but not on the list: after a restart it won't be.
+                    Connected now, but won't be after a restart.
                     {vol.usedBy.length > 0 && ` ${[...new Set(vol.usedBy.map((u) => u.app))].join(", ")} would find ${vol.usedBy.length === 1 ? "its folder" : "their folders"} empty.`}
                   </p>
                 </div>
@@ -109,7 +109,7 @@ export function FstabPanel({ disks, onPersist, busy }: { disks: DiskView[]; onPe
             ))}
           </ul>
         )}
-        {data && data.entries.length === 0 && !loose.length && <Empty title="The list is empty">Only what the system connects by itself is there at startup.</Empty>}
+        {data && data.entries.length === 0 && !loose.length && <Empty title="Nothing on the list" />}
         {data && data.entries.length > 0 && (
           <ul className={s.fstab} role="list" aria-label="On the list">
             {data.entries.map((e) => {
@@ -149,13 +149,13 @@ export function FstabPanel({ disks, onPersist, busy }: { disks: DiskView[]; onPe
         )}
       </Panel>
 
-      <Panel title="Earlier versions" meta={<span>Gluon keeps the last 10</span>} flush>
+      <Panel title="Earlier versions" meta={<span>Last 10 kept</span>} flush>
         {!data ? (
           <div className={s.pad}>
             <Skeleton height={40} />
           </div>
         ) : data.backups.length === 0 ? (
-          <Empty title="No backups yet">Every time Gluon changes the startup list it first saves a copy, named with the date and time.</Empty>
+          <Empty title="No earlier versions yet">A copy is saved before every change.</Empty>
         ) : (
           <ul className={s.simpleRows} role="list">
             {data.backups.map((b) => (
@@ -189,7 +189,7 @@ export function ChangesPanel({ onOpen }: { onOpen: (id: string) => void }) {
           <Skeleton height={80} />
         </div>
       )}
-      {rows && rows.length === 0 && <Empty title="No changes yet">When you mount, rename or set up a drive here, each step is recorded so you can see exactly what happened.</Empty>}
+      {rows && rows.length === 0 && <Empty title="No changes yet">Every step of a drive change is recorded here.</Empty>}
       {rows && rows.length > 0 && (
         <ul className={s.simpleRows} role="list">
           {rows.map((j) => (

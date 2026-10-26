@@ -96,7 +96,7 @@ export async function startCalls(user: User, where: Where, appId: string): Promi
   const host = snap.hosts[0];
   if (!host) throw new AppError("invalid", "This Prosody has no chat domain yet.", 400);
   const lanIp = await serverLanIp();
-  if (!lanIp) throw new AppError("no_lan_ip", "Gluon can't tell this server's address on your home network, which the relay needs.", 409);
+  if (!lanIp) throw new AppError("no_lan_ip", "Can't tell this server's address on your home network, which the relay needs.", 409);
   const draftId = await createDraft(user, where, { source: "compose", spec: coturnRecipe({ domain: host.host, lanIp }), secrets: { turn: { TURN_SECRET: newTurnSecret() } } });
   return { draftId };
 }
@@ -131,7 +131,7 @@ export async function finishCalls(user: User, where: Where, appId: string, draft
     if (d.status !== "published") throw new AppError("not_ready", "The relay isn't installed yet. Wait for it to finish.", 409);
   }
   const relay = await relayApp();
-  if (!relay) throw new AppError("no_relay", "Gluon can't find the call relay.", 409);
+  if (!relay) throw new AppError("no_relay", "Can't find the call relay.", 409);
   const secret = await relaySecret(relay);
   const t = await prosodyFor(appId);
   await putProsodyFile(t, PROSODY_TURN_SECRET, secret);

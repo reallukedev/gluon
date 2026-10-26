@@ -256,7 +256,7 @@ export function humanError(e: unknown): string {
     case "EDQUOT":
       return "A disk quota was exceeded.";
     default:
-      return (err?.message && !err.message.includes("/proc/1/root") ? err.message : null) ?? "Something went wrong. It's been logged.";
+      return (err?.message && !err.message.includes("/proc/1/root") ? err.message : null) ?? "Something went wrong. Try again; the details are in the server log.";
   }
 }
 

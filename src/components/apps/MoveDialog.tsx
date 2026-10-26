@@ -77,7 +77,7 @@ export function MoveDialog({
         setPhase("done");
       }
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Gluon couldn't work out the move.");
+      setLoadError(e instanceof Error ? e.message : "Couldn't work out the move. Try again.");
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export function MoveDialog({
       if (r && !r.job && ++misses >= 3) {
         // The server has no move for this app: it never started, or Gluon restarted mid-move.
         clearInterval(t);
-        setStartError("Gluon has no move running for this app. Check both copies on the Apps page, then review the move again.");
+        setStartError("No move is running for this app. Check both copies in Apps, then review the move again.");
         setPhase("review");
         void load();
         return;
@@ -157,7 +157,7 @@ export function MoveDialog({
           setView(replay(job.events));
           setPhase("running");
         } else {
-          setStartError(e instanceof Error ? e.message : "Gluon couldn't start the move.");
+          setStartError(e instanceof Error ? e.message : "Couldn't start the move. Try again.");
           setPhase("review");
           if (e instanceof ApiError && (e.code === "conflict" || e.code === "cant_move")) void load();
         }
@@ -227,7 +227,7 @@ export function MoveDialog({
       onOpenChange={onOpenChange}
       size="wide"
       title={phase === "done" && result?.ok ? `${app.name} runs from Gluon` : `Move ${app.name} to Gluon`}
-      description={phase === "review" ? `Gluon copies ${app.name} into its own apps folder and runs it there. The ${from} copy is stopped, not deleted.` : undefined}
+      description={phase === "review" ? `Copies ${app.name} into Gluon's apps folder and runs it there. The ${from} copy is stopped, not deleted.` : undefined}
       footerStart={phase === "review" ? "Nothing changes until you start the move." : running ? "It keeps going if you close this." : undefined}
       footer={footer}
     >
@@ -380,7 +380,7 @@ function Review({ plan, from }: { plan: MovePlan; from: string }) {
           <h3 id="move-stays" className={s.groupTitle}>
             Used where it is <span className="num">{plan.stays.length + plan.sharedVolumes.length}</span>
           </h3>
-          <p className={s.hint}>The copy reads these in place. Gluon never copies or deletes them.</p>
+          <p className={s.hint}>The copy reads these in place. They're never copied or deleted.</p>
           <ul className={s.list}>
             {plan.stays.map((p) => (
               <li key={p.path} className={s.stay}>

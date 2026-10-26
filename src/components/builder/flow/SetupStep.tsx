@@ -32,7 +32,7 @@ export function SetupStep({ draft, detail, services, yamlBroken, issues, target,
     <div className={f.stack}>
       <Panel title="About">
         <div data-field="details.name">
-          <Field label="Name" description={target === "umbrel" ? "What Umbrel shows under its icon." : `What it's called in Gluon. Its folder is named ${d.slug}.`} error={errorAt(issues, "details.name") ?? errorAt(issues, "details.slug")}>
+          <Field label="Name" description={target === "umbrel" ? "Shown under its icon in Umbrel." : `Its folder is ${d.slug}.`} error={errorAt(issues, "details.name") ?? errorAt(issues, "details.slug")}>
             <Input value={d.name} maxLength={80} onChange={(e) => setName(e.target.value)} />
           </Field>
           <FieldNotes issues={issuesAt(issues, "details.name")} />
@@ -40,7 +40,7 @@ export function SetupStep({ draft, detail, services, yamlBroken, issues, target,
       </Panel>
       {yamlBroken ? (
         <Notice tone="fault" title="The compose file has an error" action={<LinkButton size="sm" href={`/apps/custom/${detail.id}?tab=compose`}>Open Compose</LinkButton>}>
-          Fix it in the full builder first. These settings can only edit a file Gluon can read.
+          Fix it in the full builder, then come back to these settings.
         </Notice>
       ) : (
         <>
@@ -49,7 +49,7 @@ export function SetupStep({ draft, detail, services, yamlBroken, issues, target,
             <ServiceEssentials key={svc.name} draft={draft} form={svc} issues={issuesAt(issues, `services.${svc.name}`, true)} target={target} places={places} usedPorts={usedPorts} onFix={onFix} />
           ))}
           <p className={s.hint}>
-            Ports, networks, labels, limits and health checks are in the{" "}
+            Ports, networks, limits and health checks are in the{" "}
             <Link className={s.link} href={`/apps/custom/${detail.id}?tab=services`}>
               full builder
             </Link>

@@ -132,7 +132,7 @@ function options(detail: InstallDetail, latest: GithubTarget | null, relation: U
       : kind === "docker"
         ? "Gluon was started with docker run, so it can't recreate its own container. Run it with Docker Compose to update from here."
         : kind === "unknown"
-          ? "Gluon can't find its own container, so it can't replace itself."
+          ? "Can't find Gluon's own container, so the update has nothing to replace."
           : !latest
             ? "Nothing to download yet."
             : relation === "ahead"
@@ -351,7 +351,7 @@ async function startUpdateClaimed(opts: Parameters<typeof startUpdate>[0]): Prom
         if (detail.umbrel && detail.container) return ["umbrel", detail.umbrel.appId, detail.umbrel.appDataDir, detail.umbrel.umbrelContainer ?? "-", detail.container.name];
         if (detail.compose && detail.container)
           return ["compose", detail.compose.workdir, detail.compose.project, detail.compose.service, detail.compose.image, detail.container.name, detail.compose.configFiles.join(",")];
-        throw new Error("Gluon can't tell how it's installed.");
+        throw new Error("Can't tell how Gluon is installed.");
       };
       if (opts.method === "github") {
         const t = target!;
@@ -379,7 +379,7 @@ async function startUpdateClaimed(opts: Parameters<typeof startUpdate>[0]): Prom
       );
     }
   } catch (e) {
-    const message = (e as Error).message || "Gluon couldn't start the update.";
+    const message = (e as Error).message || "Couldn't start the update.";
     run("UPDATE self_updates SET outcome = 'failed', message = ?, finished_at = ? WHERE id = ?", message, now(), id);
     throw new AppError("start_failed", `The update couldn't start: ${message}`, 500);
   }

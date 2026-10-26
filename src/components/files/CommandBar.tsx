@@ -265,7 +265,7 @@ export function useCommand(c: {
       }
       case "action": {
         const hits = commands.filter((x) => !parsed.text || has(`${x.label} ${x.words}`, parsed.text));
-        if (!hits.length) return [{ title: "Actions", items: [], empty: "No action matches. Try a word like rename, move, zip or upload." }];
+        if (!hits.length) return [{ title: "Actions", items: [], empty: "No action matches. Try rename, move, zip or upload." }];
         return GROUPS.map((g) => ({ title: g === "Selection" ? `${fmt.plural(sel.length, "selected item")}` : g, items: hits.filter((x) => x.group === g).map((x): Item => ({ key: x.id, type: "cmd", cmd: x })) })).filter((x) => x.items.length);
       }
       case "dest": {
@@ -430,7 +430,6 @@ export function CommandBar() {
   const scopeName = c.scope ? (c.scope === "/" ? "Computer" : baseName(c.scope)) : f.screen === "trash" ? "Files" : "Every folder";
   const narrow = useMediaQuery("(max-width: 720px)");
   const mod = useModKey();
-  const what = n === 1 ? selection.entries[0]!.name : fmt.plural(n, "item");
   const placeholder = narrow
     ? n
       ? `Act on ${fmt.plural(n, "item")}`
@@ -438,7 +437,7 @@ export function CommandBar() {
         ? "Search this folder"
         : "Search everything"
     : n
-      ? `Type > to act on ${what}, or move to …`
+      ? "Type > for actions, or move to …"
       : f.screen === "browse"
         ? "Find in this folder, type a path, or > for actions"
         : "Search every folder: a name, *.mkv, photos this week…";
@@ -555,26 +554,21 @@ export function CommandBar() {
         <div ref={list} className={s.panel} id="files-command-results" role="listbox" aria-label="Results" tabIndex={-1} onKeyDown={onKey}>
           {c.parsed.mode === "find" && c.parsed.tokens.length > 0 && (
             <p className={s.understood}>
-              Looking for {c.parsed.tokens.map((t) => (t.type === "size" ? `over ${fmt.bytes(t.bytes)}` : t.label.toLowerCase())).join(", ")}
-              {c.parsed.name && <> with “{c.parsed.name}” in the name or a folder on the way</>}, in {c.scope ? `${scopeName} and every folder inside it` : "every folder you can open"}.
+              {c.parsed.tokens.map((t) => (t.type === "size" ? `over ${fmt.bytes(t.bytes)}` : t.label.toLowerCase())).join(", ").replace(/^./, (x) => x.toUpperCase())}
+              {c.parsed.name && <> matching “{c.parsed.name}”</>}, in {c.scope ? `${scopeName} and below` : "every folder you can open"}.
             </p>
           )}
           {c.found.error && <Notice tone="fault" title="The search stopped">{c.found.error}</Notice>}
-          {c.found.timedOut && <Notice tone="attention">The search took longer than 30 seconds and stopped early. Search inside a smaller folder to see everything.</Notice>}
+          {c.found.timedOut && <Notice tone="attention">Stopped after 30 seconds. Search a smaller folder to see everything.</Notice>}
           <Sections c={c} />
         </div>
       )}
-      <p className={s.hints} aria-hidden>
-        {c.active ? (
-          <>
-            <kbd>↑</kbd> <kbd>↓</kbd> choose · <kbd>↵</kbd> open · <kbd>{mod}↵</kbd> quick look{c.parsed.mode === "path" && <> · <kbd>Tab</kbd> completes</>} · <kbd>Esc</kbd> back
-          </>
-        ) : (
-          <>
-            Type to find · <kbd>/</kbd> a path · <kbd>&gt;</kbd> actions · <kbd>Space</kbd> quick look · <kbd>?</kbd> all keys
-          </>
-        )}
-      </p>
+      {/* Keys only while results are open; the placeholder teaches the rest, and ? lists every key. */}
+      {c.active && (
+        <p className={s.hints} aria-hidden>
+          <kbd>↑</kbd> <kbd>↓</kbd> choose · <kbd>↵</kbd> open · <kbd>{mod}↵</kbd> quick look{c.parsed.mode === "path" && <> · <kbd>Tab</kbd> completes</>} · <kbd>Esc</kbd> back
+        </p>
+      )}
     </div>
   );
 }
@@ -619,7 +613,7 @@ function Sections({ c }: { c: CommandState }) {
             )}
           </section>
         ))}
-      {!anything && !c.searching && c.parsed.mode === "find" && <p className={s.none}>Try part of the name, a word like “photos” or “this week”, or * as a wildcard (for example *.mkv).</p>}
+      {!anything && !c.searching && c.parsed.mode === "find" && <p className={s.none}>Try part of the name, “photos”, “this week” or *.mkv.</p>}
     </>
   );
 }

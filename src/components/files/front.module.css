@@ -6,7 +6,9 @@
 .title { margin: 0; font-family: var(--font-display); font-stretch: 90%; font-size: var(--text-lg); font-weight: 600; color: var(--ink); }
 .count { flex: 1; font-size: var(--text-xs); font-weight: 600; color: var(--muted); }
 .empty { margin: 0; color: var(--muted); font-size: var(--text-sm); }
-.strip { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 8px; margin: -2px -2px 0; scroll-snap-type: x proximity; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.strip { display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 8px; margin: -2px -2px 0; scroll-snap-type: x proximity; scroll-padding-inline: 2px; scrollbar-width: thin; }
+/* Only while hovered: with scroll snap, a standing `contain` makes Safari load the strip scrolled to its far end. */
+@media (hover: hover) and (pointer: fine) { .strip:hover { overscroll-behavior-x: contain; } }
 .strip[data-all] { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); overflow: visible; }
 .tile { flex: none; display: grid; align-content: start; gap: 6px; width: 168px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; scroll-snap-align: start; cursor: pointer; }
 .strip[data-all] .tile { width: auto; }

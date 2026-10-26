@@ -13,17 +13,17 @@ import o from "../onboarding.module.css";
 function installedHow(i: Install): string {
   switch (i.kind) {
     case "umbrel":
-      return "It was installed through Umbrel.";
+      return ", installed through Umbrel.";
     case "casaos":
-      return "It was installed through CasaOS.";
+      return ", installed through CasaOS.";
     case "compose":
-      return "It runs with Docker Compose.";
+      return ", running with Docker Compose.";
     case "docker":
-      return "It was started with docker run.";
+      return ", started with docker run.";
     case "development":
-      return "This is a development copy.";
+      return ", running from source. Pull and restart it to update.";
     default:
-      return "";
+      return ".";
   }
 }
 
@@ -76,13 +76,14 @@ export function UpdatesStep() {
   const version = data?.running.version;
   return (
     <>
-      <StepHead title="How should Gluon update itself?">
+      <StepHead title={dev ? "Updating Gluon" : "How should Gluon update itself?"}>
         {data ? (
           <p>
-            You&apos;re running Gluon <span className="num">{version}</span>. {installedHow(data.install)}
+            You&apos;re on Gluon <span className="num">{version}</span>
+            {installedHow(data.install)}
           </p>
         ) : (
-          <p>New versions of Gluon fix problems and add things. Choose which ones to follow and whether to install them for you.</p>
+          <Skeleton width="60%" height={14} />
         )}
       </StepHead>
 
@@ -96,30 +97,26 @@ export function UpdatesStep() {
           </div>
           <Skeleton height={64} radius={10} />
         </div>
-      ) : (
+      ) : dev ? null : (
         <div className={o.stack}>
           {!canAuto && (
-            <Notice tone="neutral" title={dev ? "This copy doesn't update itself" : "Gluon can't update itself here"}>
-              {dev
-                ? "It runs from source, so pull the changes and restart it to update. Nothing to choose here."
-                : `${data.options.find((x) => !x.available)?.reason ?? "Gluon couldn't tell how it was installed."} It will still tell you when a new version is out.`}
+            <Notice tone="neutral" title="Gluon can't update itself here">
+              {`${data.options.find((x) => !x.available)?.reason ?? "Couldn't tell how Gluon was installed."} You'll still hear when a new version is out.`}
             </Notice>
           )}
 
-          {!dev && (
-            <ChannelChoice value={draft.channel} onChange={(channel) => set({ channel })} />
-          )}
+          <ChannelChoice value={draft.channel} onChange={(channel) => set({ channel })} />
 
-          {!dev && canAuto && (
+          {canAuto && (
             <div className={o.rowsPanel}>
               <SettingRow
                 label="Install updates automatically"
                 description={
                   !draft.auto
-                    ? "Off. Gluon tells you when an update is ready and waits for you."
+                    ? "Off. You'll be told when an update is ready."
                     : draft.channel === "nightly" && draft.nightlyTiming === "asap"
-                      ? "Each change is installed soon after it lands. If it doesn't come back healthy, the previous version is put back."
-                      : `Installs around ${hourLabel(draft.hour, prefs.clock)}, at most once a day. If it doesn't come back healthy, the previous version is put back.`
+                      ? "Each change installs soon after it lands. A bad update rolls back by itself."
+                      : `Around ${hourLabel(draft.hour, prefs.clock)}, at most once a day. A bad update rolls back by itself.`
                 }
               >
                 <Switch checked={draft.auto} onChange={(auto) => set({ auto })} aria-label="Install updates automatically" />

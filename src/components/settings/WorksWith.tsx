@@ -46,10 +46,11 @@ function statusSentence(p: PlatformInfo): string {
     return `${lead}${how}.${also}`;
   }
   // Plain Docker.
-  if (auto) return "Neither Umbrel nor CasaOS was found, so Gluon manages apps with Docker on its own.";
+  // The cards already say neither was found.
+  if (auto) return "";
   const found = [p.umbrel.found && umbrelName(p), p.casaos.found && casaName(p)].filter(Boolean) as string[];
-  if (found.length === 0) return "Gluon manages apps with Docker on its own. Neither Umbrel nor CasaOS is installed.";
-  return `Gluon manages apps with Docker on its own. ${found.join(" and ")} ${found.length > 1 ? "are" : "is"} installed, but Gluon leaves ${found.length > 1 ? "them" : "it"} alone.`;
+  if (found.length === 0) return "Apps are managed with Docker alone.";
+  return `Apps are managed with Docker alone. ${found.join(" and ")} ${found.length > 1 ? "are" : "is"} installed but left alone.`;
 }
 
 /** Which home server OS Gluon works alongside. Saved the moment it changes. */
@@ -127,10 +128,10 @@ export function WorksWith() {
               );
             })}
           </div>
-          <p className={s.worksWithStatus} role="status" aria-live="polite">
+          <p className={s.worksWithStatus} role="status" aria-live="polite" hidden={!statusSentence(data)}>
             {statusSentence(data)}
           </p>
-          <p className={s.hint}>This decides where apps are installed, updated and removed, and which app store Gluon shows.</p>
+          <p className={s.hint}>Decides how apps install and which app store you see.</p>
           <Missing info={data} />
         </div>
       ) : null}
@@ -142,15 +143,15 @@ export function WorksWith() {
 function Missing({ info }: { info: PlatformInfo }) {
   if (info.setting === "umbrel" && !info.umbrel.found) {
     return (
-      <Notice tone="attention" title="Gluon can't reach Umbrel">
-        Until it can, the app store is empty and installing, updating or uninstalling apps won't work. Check that Umbrel is running, or choose Automatic so Gluon falls back to what it finds.
+      <Notice tone="attention" title="Can't reach Umbrel">
+        The app store is empty and apps can't be installed or changed. Start Umbrel, or choose Automatic.
       </Notice>
     );
   }
   if (info.setting === "casaos" && !info.casaos.found) {
     return (
       <Notice tone="attention" title="CasaOS isn't installed on this server">
-        Until it is, there's no app store and Gluon manages apps with Docker on its own. Choose Automatic so Gluon works with what it finds.
+        There's no app store, so apps are managed with Docker alone. Choose Automatic to use what's here.
       </Notice>
     );
   }

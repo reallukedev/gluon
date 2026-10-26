@@ -37,6 +37,8 @@
 .statusItem a > span:nth-child(3) { flex: none; max-width: 40%; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) { .statusItem a:hover { color: var(--ink); } }
 .statusItem a:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; border-radius: 4px; }
+.statusLines { flex: none; margin-top: auto; display: flex; align-items: flex-end; gap: 9px; height: 26px; overflow: hidden; }
+.statusLines > span { display: inline-flex; }
 .statusAll { flex: none; align-self: flex-start; margin-top: auto; font-size: var(--text-sm); color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line-strong); }
 @media (hover: hover) and (pointer: fine) { .statusAll:hover { color: var(--ink); text-decoration-color: currentColor; } }
 @media (max-width: 640px) { .statusItem a > span:nth-child(3) { display: none; } }

@@ -51,7 +51,7 @@ export function VoicePanel({ appId, appName, running }: { appId: string; appName
 
   if (error && !data) {
     return (
-      <Notice tone="fault" title="Gluon couldn't read this voice server" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+      <Notice tone="fault" title="Couldn't read this voice server" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
         {error.message}
       </Notice>
     );

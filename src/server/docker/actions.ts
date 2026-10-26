@@ -20,7 +20,7 @@ function composeArgs(app: AppSummary, ...rest: string[]) {
 /** Guard: Gluon must not stop or recreate itself from the UI. */
 function guardSelf(app: AppSummary, action: AppAction) {
   if (app.self && action !== "restart") {
-    throw new AppError("self", "Gluon can't stop or update itself from here. Restart it instead, or use the terminal.");
+    throw new AppError("self", "Gluon can't stop or update itself. Restart it instead, or use the terminal.");
   }
 }
 

@@ -69,7 +69,7 @@ export function NetworksView({ initial, initialError, initialQuery }: { initial:
   const connected = new Set((networks ?? []).flatMap((n) => n.containers.map((c) => c.id))).size;
 
   const summary = !networks ? (
-    error ? "Gluon couldn't get the list from Docker." : "Asking Docker…"
+    error ? "Couldn't get the list from Docker." : "Asking Docker…"
   ) : (
     <>
       <b>
@@ -181,7 +181,7 @@ export function NetworksView({ initial, initialError, initialQuery }: { initial:
         error ? null : <TableSkeleton columns={COLUMNS} />
       ) : shown.length === 0 ? (
         <Empty title={term ? `Nothing matches “${q.trim()}”` : filter === "empty" ? "Every network has something connected" : "Only Docker's own networks"}>
-          {term ? "Try a network name, an address like 172.20, or a container." : filter === "empty" ? "There's nothing to tidy up here." : "Compose creates a network for each stack; you can also create one to let containers from different stacks reach each other by name."}
+          {term ? "Try a network name, an address like 172.20, or a container." : filter === "empty" ? "There's nothing to tidy up here." : "Compose makes one for each stack. Create one to let apps from different stacks talk."}
         </Empty>
       ) : (
         <div className={`${s.table} ${s.networks}`} role="table" aria-label="Networks" aria-rowcount={shown.length + 1}>
@@ -405,7 +405,7 @@ function CreateNetworkDialog({ open, onClose, onCreated }: { open: boolean; onCl
       open={open}
       onOpenChange={(o) => !o && !busy && onClose()}
       title="Create a network"
-      description="A bridge network: containers on it reach each other by name. Use it to let apps from different stacks talk."
+      description="Containers on it reach each other by name, across stacks."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -488,7 +488,7 @@ function ConnectDialog({ network, candidates, onClose, onDone }: { network: Dock
       open={open}
       onOpenChange={(o) => !o && !busy && onClose()}
       title={network ? `Connect a container to ${network.name}` : "Connect a container"}
-      description="It keeps its other networks. Containers on the server's own network (host mode) can't join others, so they aren't listed."
+      description="It keeps its other networks. Host-mode containers can't join, so they aren't listed."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>

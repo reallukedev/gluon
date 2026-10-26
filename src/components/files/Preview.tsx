@@ -31,8 +31,12 @@ interface Props {
   onSaved?: () => void;
 }
 
-export function Preview({ entry, siblings, onNavigate, onClose, canWrite, onExtract, onSaved }: Props) {
+export function Preview({ entry: open, siblings, onNavigate, onClose, canWrite, onExtract, onSaved }: Props) {
   const fmt = useFormat();
+  // Keep showing the last file while the dialog closes, so it can animate out.
+  const last = React.useRef(open);
+  if (open) last.current = open;
+  const entry = last.current;
   const [dirty, setDirty] = React.useState(false);
   const [confirm, confirmNode] = useConfirm();
   const discard = React.useCallback(
@@ -67,7 +71,7 @@ export function Preview({ entry, siblings, onNavigate, onClose, canWrite, onExtr
   // Quick Look keys: ← and → step through the folder, Space closes (as it opened). Not while typing,
   // in the text editor, or on a player's own controls.
   React.useEffect(() => {
-    if (!entry) return;
+    if (!open) return;
     const onKey = (ev: KeyboardEvent) => {
       if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       if ((ev.target as HTMLElement)?.closest("input,textarea,select,video,audio,button,[contenteditable],[role=menu]")) return;
@@ -79,7 +83,7 @@ export function Preview({ entry, siblings, onNavigate, onClose, canWrite, onExtr
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entry, prev, next, go, close]);
+  }, [open, prev, next, go, close]);
 
   const phone = useMediaQuery("(max-width: 640px)");
   const swipe = React.useRef<{ x: number; y: number } | null>(null);
@@ -94,7 +98,7 @@ export function Preview({ entry, siblings, onNavigate, onClose, canWrite, onExtr
 
   return (
     <Dialog
-      open
+      open={!!open}
       onOpenChange={(o) => !o && close()}
       size="xwide"
       title={<span className="truncate" title={entry.name} style={{ display: "block" }}>{entry.name}</span>}
@@ -170,15 +174,13 @@ export function Preview({ entry, siblings, onNavigate, onClose, canWrite, onExtr
         {entry.preview === null && (
           <div className={s.previewFallback}>
             <KindIcon kind={entry.kind} type={entry.type} className={s.previewGlyph} />
-            <p className={s.previewFallbackTitle}>Gluon can't show {entry.kind === "other" ? "this kind of file" : `${KIND_LABEL[entry.kind].toLowerCase()} files like this one`} in the browser.</p>
+            <p className={s.previewFallbackTitle}>No preview for this {entry.kind === "other" ? "file" : KIND_LABEL[entry.kind].toLowerCase()}</p>
             <p className="muted">
               {entry.kind === "video"
-                ? "Open it in Jellyfin or another player, or download it to watch with VLC."
-                : entry.kind === "disk-image"
-                  ? "Disk images are used to install systems or run virtual machines. Download it to use it."
-                  : entry.kind === "archive"
-                    ? "Extract it to see what's inside, or download it."
-                    : "Download it and open it with an app on your device."}
+                ? "Play it in Jellyfin, or download it."
+                : entry.kind === "archive"
+                  ? "Extract it to see what's inside, or download it."
+                  : "Download it to open it on your device."}
             </p>
             <div className={s.previewFallbackActions}>
               <Button variant="primary" icon={<Download />} onClick={() => downloadUrl(rawUrl(entry.path, true))}>
@@ -211,8 +213,8 @@ function ImagePreview({ entry }: { entry: FileEntry }) {
     return (
       <div className={s.previewFallback}>
         <KindIcon kind="image" className={s.previewGlyph} />
-        <p className={s.previewFallbackTitle}>Your browser can't show this image.</p>
-        <p className="muted">Download it and open it with an app on your device.</p>
+        <p className={s.previewFallbackTitle}>Your browser can't show this image</p>
+        <p className="muted">Download it to open it on your device.</p>
       </div>
     );
   }
@@ -296,8 +298,8 @@ function TextPreview({ entry, canWrite, onDirty, onSaved, confirm }: { entry: Fi
     return (
       <div className={s.previewFallback}>
         <KindIcon kind={entry.kind} className={s.previewGlyph} />
-        <p className={s.previewFallbackTitle}>This file isn't text.</p>
-        <p className="muted">Download it and open it with an app that understands it.</p>
+        <p className={s.previewFallbackTitle}>This file isn't text</p>
+        <p className="muted">Download it to open it on your device.</p>
       </div>
     );
   }
@@ -384,7 +386,7 @@ function TextPreview({ entry, canWrite, onDirty, onSaved, confirm }: { entry: Fi
             </span>
           }
         >
-          It was changed <Time ts={conflict.mtime} />, after you opened it. Saving yours replaces those changes.
+          It changed <Time ts={conflict.mtime} />, after you opened it. Saving yours replaces that version.
         </Notice>
       )}
       {reading ? (

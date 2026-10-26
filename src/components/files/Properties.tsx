@@ -136,7 +136,20 @@ export function FolderSizeValue({ path, autoStart }: { path: string; autoStart?:
   );
 }
 
-const RELATION: Record<AppUse["relation"], string> = { this: "uses this folder", within: "uses a folder above this one", below: "uses a folder inside this one" };
+const RELATION: Record<AppUse["relation"], string> = { this: "uses this folder", within: "uses a folder above", below: "uses a folder inside" };
+
+/** One row per app: its containers often mount the same folder more than once. */
+function byApp(uses: AppUse[]) {
+  const apps = new Map<string, { first: AppUse; rw: boolean; relations: Set<AppUse["relation"]>; mounts: Map<string, AppUse> }>();
+  for (const u of uses) {
+    const a = apps.get(u.appId) ?? { first: u, rw: false, relations: new Set(), mounts: new Map() };
+    a.rw ||= u.rw;
+    a.relations.add(u.relation);
+    a.mounts.set(`${u.source}\n${u.destination}`, u);
+    apps.set(u.appId, a);
+  }
+  return [...apps.values()];
+}
 
 export function UsedBy({ path, onFixOwnership }: { path: string; onFixOwnership?: (path: string) => void }) {
   const { data, error } = useApi<{ path: string; uses: AppUse[] }>(`/api/files/used-by?path=${encodeURIComponent(path)}`);
@@ -146,7 +159,7 @@ export function UsedBy({ path, onFixOwnership }: { path: string; onFixOwnership?
         <h3 className={s.subTitle}>Used by apps</h3>
         {onFixOwnership && data && data.uses.length > 0 && (
           <Button size="sm" icon={<UserCrown />} onClick={() => onFixOwnership(path)}>
-            Fix ownership for an app
+            Fix ownership
           </Button>
         )}
       </div>
@@ -156,37 +169,33 @@ export function UsedBy({ path, onFixOwnership }: { path: string; onFixOwnership?
         <Skeleton height={48} />
       ) : data.uses.length === 0 ? (
         <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
-          No app's containers mount this folder, anything inside it, or a folder above it.
+          No app uses this folder.
         </p>
       ) : (
-        <ul className={s.usedList}>
-          {data.uses.map((u, i) => (
-            <li key={`${u.container}-${u.destination}-${i}`} className={s.usedRow}>
-              <AppIcon src={u.icon} name={u.appName} size={28} />
-              <div className={s.usedText}>
-                <span>
-                  <b>{u.appName}</b> {RELATION[u.relation]} {u.rw ? "and can change it" : "read-only"}
-                </span>
-                <span className="muted">
-                  {u.containerPath ? (
-                    <>
-                      Inside {u.container} it's <span className="mono">{u.containerPath}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="mono">{u.source}</span> → <span className="mono">{u.destination}</span>
-                    </>
-                  )}
-                  {u.runsAs && (
-                    <>
-                      {" "}· runs as {u.runsAs.root ? "root" : `${u.runsAs.user ?? u.runsAs.uid}:${u.runsAs.group ?? u.runsAs.gid}`}
-                    </>
-                  )}
-                  {u.containerState !== "running" && ` · ${u.containerState}`}
-                </span>
-              </div>
-            </li>
-          ))}
+        <ul className={`${s.usedList} appear`}>
+          {byApp(data.uses).map(({ first: u, rw, relations, mounts }) => {
+            const runsAs = u.runsAs ? (u.runsAs.root ? "runs as root" : `runs as ${u.runsAs.user ?? u.runsAs.uid}:${u.runsAs.group ?? u.runsAs.gid}`) : null;
+            return (
+              <li key={u.appId} className={s.usedRow}>
+                <AppIcon src={u.icon} name={u.appName} size={28} />
+                <div className={s.usedText}>
+                  <span>
+                    <b>{u.appName}</b>{" "}
+                    <span className="muted">
+                      {[...relations].map((r) => RELATION[r]).join(", ")}
+                      {!rw && ", read-only"}
+                    </span>
+                  </span>
+                  {[...mounts.values()].map((m) => (
+                    <span key={`${m.source}-${m.destination}`} className="mono muted truncate" title={`${m.source} → ${m.destination}`}>
+                      {m.containerPath ?? `${m.source} → ${m.destination}`}
+                    </span>
+                  ))}
+                  {(runsAs || u.containerState !== "running") && <span className="muted">{[runsAs, u.containerState !== "running" ? u.containerState : null].filter(Boolean).join(" · ")}</span>}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

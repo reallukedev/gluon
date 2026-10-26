@@ -46,7 +46,7 @@ async function freeSlug(base: string): Promise<string> {
     const slug = n === 1 ? base : `${base.slice(0, 27)}-${n}`;
     if (!ids.has(slug) && !hostExists(`${root}/${slug}`)) return slug;
   }
-  throw new AppError("invalid", "Pick another name; Gluon couldn't find a free id for it.", 409, { field: "name" });
+  throw new AppError("invalid", "Couldn't find a free id for that name. Pick another name.", 409, { field: "name" });
 }
 
 /** Check the answers and make the builder draft. Ice's secrets are saved for the app it becomes. */

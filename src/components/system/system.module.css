@@ -228,3 +228,7 @@
 
 .waiting { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 8px 0; }
 .waitingText { margin: 0 0 2px; font-size: var(--text-lg); line-height: 1.4; }
+
+/* ---------------------------------------------------------------- host errors */
+
+.errorDetail { display: block; margin: 4px 0 0; padding: 10px 12px; border-radius: var(--radius-small); background: var(--panel); font-size: var(--text-xs); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }

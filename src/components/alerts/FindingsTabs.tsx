@@ -52,7 +52,7 @@ export function QuietFindings({ findings, onChange }: { findings: Finding[]; onC
         </Panel>
       )}
       {snoozed.length > 0 && (
-        <Panel title="Snoozed" meta={<span className={s.panelNote}>Each comes back at its time if it's still true</span>} flush>
+        <Panel title="Snoozed" meta={<span className={s.panelNote}>Back on the list at its time, if still true</span>} flush>
           <FindingList quiet items={snoozed} note={(f) => <>back <Time ts={f.snoozedUntil!} kind="dateTime" /></>} actions={back} />
         </Panel>
       )}
@@ -90,7 +90,7 @@ function FindingList({
               {f.cause && <p className={s.findingCause}>{f.cause}</p>}
               <p className={s.findingMeta}>
                 {done ? (
-                  <span className={s.settledNote}>Done. Gluon confirms it on its next check.</span>
+                  <span className={s.settledNote}>Done. Confirming on the next check.</span>
                 ) : (
                   <>
                     {f.subject && (
@@ -141,7 +141,7 @@ export function HistoryTab() {
   if (!items.length) {
     return (
       <Panel flush>
-        <Empty title="No history yet">Problems that were found and then cleared, by a fix or on their own, are listed here with how long they lasted.</Empty>
+        <Empty title="No past problems">Cleared problems land here, with how long each lasted.</Empty>
       </Panel>
     );
   }

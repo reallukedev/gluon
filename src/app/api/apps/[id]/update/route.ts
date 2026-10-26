@@ -10,7 +10,7 @@ import { lockApps } from "@/server/apps/lock";
 export const POST = route({ auth: "admin", recent: true }, async ({ req, params, user, ip, zone }) => {
   const app = await getApp(decodeURIComponent(String(params.id)));
   if (!app) throw notFound("That app");
-  if (app.self) throw new AppError("self", "Gluon can't update itself from here.");
+  if (app.self) throw new AppError("self", "Gluon can't update itself from here. Update it in Settings.");
   const lock = lockApps([app.id], `${app.name} is updating`);
   const run = (fn: (emit: (e: unknown) => void) => Promise<void>) => ndjson((emit) => fn(emit).finally(() => lock.release()), req.signal);
   const signal = req.signal;

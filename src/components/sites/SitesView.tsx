@@ -24,9 +24,9 @@ function summaryOf(sites: SiteSummary[]): React.ReactNode {
   const broken = sites.filter((x) => x.state === "broken");
   return (
     <>
-      <b>{sites.length === 1 ? (live ? `${sites[0]!.name} is live.` : `${sites[0]!.name} isn't live.`) : live === sites.length ? `All ${sites.length} sites are live.` : `${live} of ${sites.length} sites ${live === 1 ? "is" : "are"} live.`}</b>
-      {broken.length === 1 && ` ${broken[0]!.name} isn't serving anything; publish it again.`}
-      {broken.length > 1 && ` ${broken.length} aren't serving anything; publish them again.`}
+      <b>{sites.length === 1 ? (live ? `${sites[0]!.name} is live.` : sites[0]!.state === "draft" ? `${sites[0]!.name} isn't published yet.` : `${sites[0]!.name} isn't live.`) : live === sites.length ? `All ${sites.length} sites are live.` : `${live} of ${sites.length} sites ${live === 1 ? "is" : "are"} live.`}</b>
+      {broken.length === 1 && ` ${broken[0]!.name} isn't serving anything. Publish it again.`}
+      {broken.length > 1 && ` ${broken.length} aren't serving anything. Publish them again.`}
       {pending.length === 1 && ` ${pending[0]!.name} has changes you haven't published.`}
       {pending.length > 1 && ` ${pending.length} have changes you haven't published.`}
     </>
@@ -94,11 +94,11 @@ export function SitesView({ initial }: { initial?: SitesList }) {
               </>
             }
           >
-            A site is a folder of web pages: HTML, CSS, scripts and images. Start from a simple page and edit it here, or upload one you already have. Publishing gives it an address like blog.{base}.
+            Start from a simple page or upload your own. It gets an address like <span className="mono">blog.{base}</span>.
           </Empty>
         </Panel>
       ) : sites ? (
-        <Panel flush title="Your sites" meta={<span className="num">{plural(sites.length, "site")}</span>}>
+        <Panel flush className="appear">
           <div role="table" aria-label="Sites">
             <div role="row" className={`${s.row} ${s.head}`}>
               <span role="columnheader" className={s.colSite}>
@@ -173,7 +173,7 @@ function SiteRow({ site: x, onOpen }: { site: SiteSummary; onOpen: () => void })
       </span>
       <span role="cell" className={s.colState}>
         <StateLine state={st.line} label={st.label} />
-        {x.changes && (x.state === "live" || x.state === "off") && <span className={s.sub}>Has unpublished changes</span>}
+        {x.changes && (x.state === "live" || x.state === "off") && <span className={s.sub}>Unpublished changes</span>}
       </span>
       <span role="cell" className={s.colWhen}>
         {x.live?.at ? (

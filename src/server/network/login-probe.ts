@@ -125,7 +125,7 @@ function judge(f: Fetched): Omit<LoginProbe, "checkedAt"> {
     if (scripted) return { result: "unknown", evidence: "Its page is built in the browser, so Gluon can't see whether it asks for a login.", fingerprint: name, admin };
     return { result: "none", evidence: "Its home page opened without asking for a login.", fingerprint: name, admin };
   }
-  if (f.status >= 200 && f.status < 300 && /json/i.test(type)) return { result: "unknown", evidence: "It answers like an API; Gluon can't tell whether it checks credentials.", fingerprint: name, admin };
+  if (f.status >= 200 && f.status < 300 && /json/i.test(type)) return { result: "unknown", evidence: "It answers like an API, so there's no way to tell whether it checks credentials.", fingerprint: name, admin };
   return { result: "unknown", evidence: `Its home page answered HTTP ${f.status}.`, fingerprint: name, admin };
 }
 

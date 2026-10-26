@@ -4,10 +4,10 @@ import { Pause, Play, Search } from "iconoir-react";
 import type { AddrScope, Connection, ConnectionsSnapshot } from "@/lib/diagnostics-types";
 import { useStream } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Panel, Skeleton, Empty, Notice } from "@/components/ui/Surface";
+import { Panel, Skeleton, Empty } from "@/components/ui/Surface";
 import { Segmented, Checkbox } from "@/components/ui/Field";
 import { Button, IconButton } from "@/components/ui/Button";
-import { LiveStatus } from "./LiveStatus";
+import { LiveStatus, StreamError } from "./LiveStatus";
 import ins from "./instruments.module.css";
 import s from "./diagnostics.module.css";
 
@@ -79,15 +79,30 @@ export function ConnectionsTab() {
         </Checkbox>
       </div>
 
-      {error && <Notice tone="fault" title="The connection list stopped updating">{error}</Notice>}
+      {error && <StreamError what="connection list" error={error} stale={!!snap} />}
 
-      {!snap ? (
+      {!snap && error ? null : !snap ? (
         <div className={s.stack}>
           <Skeleton height={90} radius={12} />
           <Skeleton height={320} radius={12} />
         </div>
+      ) : snap.connections.length === 0 ? (
+        <Panel flush>
+          <Empty
+            title="No open connections"
+            action={
+              snap.counts.hiddenLocal ? (
+                <Button size="sm" onClick={() => setLocal(true)}>
+                  Show {snap.counts.hiddenLocal} inside this machine
+                </Button>
+              ) : undefined
+            }
+          >
+            Nothing on this server is talking to anything right now.
+          </Empty>
+        </Panel>
       ) : (
-        <>
+        <div className={`${s.stack} appear`}>
           <Reach snap={snap} scope={scope} onScope={setScope} includeLocal={local} />
 
           <div className={s.cols}>
@@ -146,9 +161,7 @@ export function ConnectionsTab() {
           >
             {snap.truncated && <p className={s.panelNote}>Showing the first 1,500 connections.</p>}
             {rows.length === 0 ? (
-              <Empty title={term || dir !== "all" || scope !== "all" ? "Nothing matches" : "No connections"}>
-                {term || dir !== "all" || scope !== "all" ? "Try a different filter." : "Nothing on this server is talking to anything right now."}
-              </Empty>
+              <Empty title="Nothing matches">Try a different filter.</Empty>
             ) : (
               <div role="table" aria-label="Connections" className={s.table}>
                 <div role="row" className={`${s.head} ${s.connGrid}`}>
@@ -211,7 +224,7 @@ export function ConnectionsTab() {
               </div>
             )}
           </Panel>
-        </>
+        </div>
       )}
     </div>
   );

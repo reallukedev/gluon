@@ -34,14 +34,13 @@
 .net[data-size="m"], .net[data-size="w"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); grid-template-rows: auto auto 1fr; column-gap: 24px; row-gap: 6px; }
 .net[data-size="m"] .netHead, .net[data-size="w"] .netHead { grid-column: 1; }
 .net[data-size="m"] .netFigures, .net[data-size="w"] .netFigures { grid-column: 1; }
-.net[data-size="m"] .sentence, .net[data-size="w"] .sentence { grid-column: 2; grid-row: 1 / 3; align-self: center; -webkit-line-clamp: 3; }
+.net[data-size="m"] .sentence, .net[data-size="w"] .sentence { grid-column: 2; grid-row: 1 / 3; align-self: start; padding-top: 1px; -webkit-line-clamp: 3; }
 .net[data-size="m"] .stripWrap, .net[data-size="m"] .learning, .net[data-size="w"] .stripWrap, .net[data-size="w"] .learning { grid-column: 1 / -1; align-self: end; }
-/* Phones: wide tiles are short (two 64px rows), so one column with the essentials. */
+/* Phones: one column, the sentence under the strip. */
 @media (max-width: 720px) {
   .net[data-size="m"], .net[data-size="w"] { display: flex; gap: 6px; }
-  .net[data-size="m"] .axis, .net[data-size="w"] .axis, .net[data-size="m"] .netFigures, .net[data-size="w"] .netFigures { display: none; }
-  .net[data-size="m"] .headMs, .net[data-size="w"] .headMs { display: inline; }
-  .net[data-size="m"] .sentence, .net[data-size="w"] .sentence { -webkit-line-clamp: 1; font-size: var(--text-xs); }
+  .net[data-size="m"] .sentence, .net[data-size="w"] .sentence { order: 1; -webkit-line-clamp: 2; }
+  .net[data-size="m"] .stripWrap, .net[data-size="w"] .stripWrap { align-self: stretch; }
 }
 
 /* ---------------------------------------------------------------- Guest Wi-Fi */

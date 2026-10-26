@@ -42,12 +42,12 @@ function tlsLine(t: TlsResult, own: boolean): { state: LineState; label: string 
 function CheckedLine({ status, onRecheck, checking }: { status: NetworkStatus | undefined; onRecheck: () => void; checking: boolean }) {
   return (
     <div className={s.checked}>
-      {status ? (
+      {status && !checking ? (
         <span>
-          Checked <Time ts={status.checkedAt} /> from outside, the way visitors see it.
+          Checked <Time ts={status.checkedAt} /> from outside
         </span>
       ) : (
-        <span>Checking…</span>
+        <span aria-live="polite">Checking from outside…</span>
       )}
       <Button size="sm" icon={<Refresh />} loading={checking} onClick={onRecheck}>
         Check now
@@ -59,8 +59,8 @@ function CheckedLine({ status, onRecheck, checking }: { status: NetworkStatus | 
 export function DnsDetails({ status, statusError, onRecheck, checking }: { status: NetworkStatus | undefined; statusError: string | null; onRecheck: () => void; checking: boolean }) {
   const records: { key: string; dns: DnsResult; note: string }[] = [];
   if (status) {
-    if (status.wildcard) records.push({ key: "*", dns: status.wildcard, note: "Direct lane: covers every name.subdomain without its own record" });
-    if (status.base) records.push({ key: "base", dns: status.base, note: "Cloudflare lane: short links and everything else" });
+    if (status.wildcard) records.push({ key: "*", dns: status.wildcard, note: "Direct: any name without its own record" });
+    if (status.base) records.push({ key: "base", dns: status.base, note: "Through Cloudflare: short links and the rest" });
     const seen = new Set<string>();
     for (const r of status.routes) {
       if (!r.enabled || !r.dns || r.type !== "subdomain" || seen.has(r.host)) continue;
@@ -70,9 +70,6 @@ export function DnsDetails({ status, statusError, onRecheck, checking }: { statu
   }
   return (
     <div className={s.hopBody}>
-      <p className={s.hopLead}>
-        When someone types an address, DNS tells their browser where to go. Direct names point at your router{status?.base?.proxied ? <>; <span className="mono">{status.baseDomain}</span> points at Cloudflare, which passes visits on</> : null}. Names outside <span className="mono">{status?.baseDomain ?? "the main domain"}</span> need records wherever their own DNS is managed.
-      </p>
       {statusError && !status && (
         <Notice tone="fault" title="Couldn't check DNS" action={<Button size="sm" onClick={onRecheck}>Try again</Button>}>
           {statusError}
@@ -81,7 +78,7 @@ export function DnsDetails({ status, statusError, onRecheck, checking }: { statu
       {!status ? (
         !statusError && <Skeleton height={150} radius={8} />
       ) : (
-        <div role="table" aria-label="DNS records" className={s.table}>
+        <div role="table" aria-label="DNS records" aria-busy={checking} className={s.table} data-checking={checking ? "" : undefined}>
           <div role="row" className={`${s.thead} ${s.dnsGrid}`}>
             <span role="columnheader">Name</span>
             <span role="columnheader">Points at</span>
@@ -122,12 +119,10 @@ export function RouterDetails({ status, ddns, ddnsError }: { status: NetworkStat
   const v6 = status?.publicIp.v6 ?? d?.ipv6?.addresses ?? [];
   return (
     <div className={s.hopBody}>
-      <p className={s.hopLead}>
-        Your internet provider gives your home one public address, and it can change. An updater keeps the DNS records pointing at it. Your router forwards web traffic (ports 80 and 443) to this server.
-      </p>
-      <div className={s.hopActions}>
+      <div className={s.hopIntro}>
+        <p className={s.hopLead}>Your home&rsquo;s internet address can change; an updater keeps DNS pointing at it.</p>
         <LinkButton size="sm" href="/network/router" iconEnd={<NavArrowRight />}>
-          What the router says
+          Open the router page
         </LinkButton>
       </div>
       {ddnsError && !d ? (
@@ -136,12 +131,13 @@ export function RouterDetails({ status, ddns, ddnsError }: { status: NetworkStat
         <Skeleton height={160} radius={8} />
       ) : (
         <>
-          <p className={s.hopState}>
-            <StateLine state={!d.container.exists ? "unknown" : d.state === "ok" ? "running" : d.state === "fault" ? "unhealthy" : d.state === "attention" ? "attention" : "unknown"} label={d.container.exists ? d.summary : "No address updater found"} />
-          </p>
-          {!d.container.exists && (
+          {d.container.exists ? (
+            <p className={s.hopState}>
+              <StateLine state={d.state === "ok" ? "running" : d.state === "fault" ? "unhealthy" : d.state === "attention" ? "attention" : "unknown"} label={d.summary} />
+            </p>
+          ) : (
             <Empty title="No address updater found">
-              Gluon looks for a container named cloudflare-ddns (favonia/cloudflare-ddns). Without one, your DNS records won&rsquo;t follow if your internet address changes.
+              Run a cloudflare-ddns container (favonia/cloudflare-ddns) so DNS follows when your internet address changes.
             </Empty>
           )}
           {d.errors.length > 0 && (
@@ -214,9 +210,7 @@ export function CaddyDetails({
   const certs = certRows(status);
   return (
     <div className={s.hopBody}>
-      <p className={s.hopLead}>
-        Caddy is the web server on this machine that answers every visit: it holds the HTTPS certificates (from Let&rsquo;s Encrypt and renewed on their own, unless you supplied your own) and hands each address to its app. Gluon writes its settings file, the Caddyfile, every time you save.
-      </p>
+      <p className={s.hopLead}>Caddy answers every visit, holds the certificates and sends each address to its app.</p>
       <p className={s.hopState}>
         <StateLine state={data.caddyRunning ? "running" : "unhealthy"} label={data.caddyRunning ? "Answering on ports 80 and 443" : "Not answering: Gluon can't reach it, so changes can't be applied"} />
       </p>
@@ -231,7 +225,7 @@ export function CaddyDetails({
       ) : certs.length === 0 ? (
         <p className={s.faint}>No certificates yet. Put an app on the internet and Caddy fetches one within a minute.</p>
       ) : (
-        <div role="table" aria-label="Certificates" className={s.table}>
+        <div role="table" aria-label="Certificates" aria-busy={checking} className={s.table} data-checking={checking ? "" : undefined}>
           <div role="row" className={`${s.thead} ${s.certGrid}`}>
             <span role="columnheader">Name</span>
             <span role="columnheader">Valid until</span>

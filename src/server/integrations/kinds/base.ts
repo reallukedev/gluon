@@ -236,7 +236,7 @@ export async function runTest(fn: () => Promise<TestOutcome>): Promise<TestOutco
   } catch (e) {
     if (e instanceof AppError) return fail(e.message);
     console.error("[gluon] integration test crashed", e);
-    return fail("The test failed unexpectedly. It's been logged.");
+    return fail("The test stopped with an unexpected error. Try again; the details are in the server log.");
   }
 }
 

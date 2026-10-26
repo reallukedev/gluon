@@ -102,7 +102,7 @@ export function Channels({ appId, live, rootName, onEdit, onChanged }: { appId: 
       </ul>
       {live.channels.length <= 1 && (
         <div className={s.panelNote}>
-            <p className={s.hint}>Everyone talks in one room until you add channels. People can move between channels themselves in their Mumble app.</p>
+            <p className={s.hint}>Everyone talks in one room until you add channels.</p>
           </div>
       )}
       {confirmNode}

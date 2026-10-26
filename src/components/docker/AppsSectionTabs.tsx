@@ -27,7 +27,7 @@ export function AppsPlatform({ value, children }: { value: Platform; children: R
 const LAST_DOCKER = "gluon:apps-docker";
 
 /**
- * Sits under the page header on every Apps page: Apps, App store (with Umbrel), Your apps, Docker.
+ * Sits under the page header on every Apps page: All apps, App store (with Umbrel), Custom, Docker.
  * The Docker tab reopens the Docker page you used last in this session.
  */
 export function AppsSectionTabs({ current, docker }: { current: AppsSection; docker?: DockerPart }) {
@@ -50,9 +50,9 @@ export function AppsSectionTabs({ current, docker }: { current: AppsSection; doc
   // A store page opened directly (a bookmark) still shows its tab, whatever the platform.
   const store = platform === "umbrel" || current === "store";
   const items = [
-    { value: "apps" as const, label: "Apps" },
+    { value: "apps" as const, label: "All apps" },
     ...(store ? [{ value: "store" as const, label: "App store" }] : []),
-    { value: "custom" as const, label: "Your apps" },
+    { value: "custom" as const, label: "Custom" },
     { value: "docker" as const, label: "Docker" },
   ];
   const href = (v: AppsSection) => (v === "apps" ? "/apps" : v === "store" ? "/apps/store" : v === "custom" ? "/apps/custom" : dockerHref(docker ?? lastDocker));

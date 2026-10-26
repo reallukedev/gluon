@@ -28,8 +28,8 @@ export function Found() {
 
   return (
     <>
-      <StepHead title={<>Here&apos;s what Gluon found on {plan.serverName}</>}>
-        <p>Gluon has looked around the server. It hasn&apos;t changed anything on it, and it only changes things when you ask.</p>
+      <StepHead title={<>What&apos;s on {plan.serverName}</>}>
+        <p>A first look. Nothing on the server has been changed.</p>
       </StepHead>
 
       <div className={o.readings}>
@@ -121,7 +121,9 @@ function AppsReading({ d }: { d: InventoryApps }) {
       </>
     );
   }
-  const parts = (Object.keys(SOURCE_WORDS) as (keyof InventoryApps["sources"])[]).filter((k) => d.sources[k] > 0).map((k) => `${d.sources[k]} ${SOURCE_WORDS[k]}`);
+  const used = (Object.keys(SOURCE_WORDS) as (keyof InventoryApps["sources"])[]).filter((k) => d.sources[k] > 0);
+  // One source needs no count: the figure above already says how many.
+  const how = used.length === 1 ? `${SOURCE_WORDS[used[0]!][0]!.toUpperCase()}${SOURCE_WORDS[used[0]!].slice(1)}.` : used.length ? `${listJoin(used.map((k) => `${d.sources[k]} ${SOURCE_WORDS[k]}`))}.` : null;
   const stopped = d.total - d.running;
   const more = d.total - d.sample.length;
   return (
@@ -141,7 +143,8 @@ function AppsReading({ d }: { d: InventoryApps }) {
         )}
       </ul>
       <p className={o.detail}>
-        {parts.length > 1 ? `${listJoin(parts)}.` : parts[0] ? `All ${parts[0]}.` : null} {d.running} running{stopped > 0 ? `, ${stopped} not running` : ""}.
+        {how}
+        {stopped > 0 ? ` ${stopped} not running.` : ""}
       </p>
     </>
   );
@@ -152,7 +155,7 @@ function DrivesReading({ d }: { d: InventoryDrives }) {
     return (
       <>
         <Figure n="None" unit="found" />
-        <p className={o.detail}>Gluon couldn&apos;t see any drives. Storage explains what it could and couldn&apos;t read.</p>
+        <p className={o.detail}>Storage shows what couldn&apos;t be read.</p>
       </>
     );
   }
@@ -181,14 +184,14 @@ function DrivesReading({ d }: { d: InventoryDrives }) {
 function AddressesReading({ d }: { d: InventoryAddresses }) {
   const self = d.gluon ? (
     <p className={o.detail}>
-      Gluon itself is reachable at <span className="mono">{d.gluon}</span>.
+      Gluon is at <span className="mono">{d.gluon}</span>.
     </p>
   ) : null;
   if (!d.configured) {
     return (
       <>
         <Figure n="None" unit="set up" />
-        <p className={o.detail}>Gluon didn&apos;t find a proxy it can manage, so it isn&apos;t publishing anything. Network can set one up later.</p>
+        <p className={o.detail}>No proxy to manage yet. Network can set one up.</p>
         {self}
       </>
     );
@@ -197,7 +200,7 @@ function AddressesReading({ d }: { d: InventoryAddresses }) {
     return (
       <>
         <Figure n="None" unit="yet" />
-        <p className={o.detail}>Nothing is published to the internet through Gluon&apos;s proxy.</p>
+        <p className={o.detail}>Nothing is published to the internet.</p>
         {self}
       </>
     );
@@ -225,7 +228,7 @@ function AttentionReading({ d }: { d: InventoryAttention }) {
     return (
       <>
         <Figure n={0} mark={<StateLine state="running" size={18} />} />
-        <p className={o.detail}>Nothing needs you right now. Gluon keeps checking from here on.</p>
+        <p className={o.detail}>Checks keep running from now on.</p>
       </>
     );
   }

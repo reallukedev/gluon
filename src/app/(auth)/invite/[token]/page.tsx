@@ -28,7 +28,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     return (
       <div className={s.form}>
         <h2>This invite has expired</h2>
-        <p className={s.lede}>Invite links work once and last a week. Ask whoever sent it for a new one.</p>
+        <p className={s.lede}>Links work once and last a week. Ask whoever sent it for a new one.</p>
       </div>
     );
   }

@@ -168,7 +168,7 @@ export function TrafficPanel({ o }: { o: RouterOverview }) {
               label={`Internet traffic for the whole home over the last ${span}`}
             />
           ) : (
-            <p className={s.lead}>Gluon works this out from the router&rsquo;s byte counters, so the line starts after its second reading. While this page is open it reads every 15 seconds; otherwise every 2 minutes.</p>
+            <p className={s.lead}>The line starts after the router&rsquo;s second reading.</p>
           )}
         </>
       )}

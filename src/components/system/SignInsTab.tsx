@@ -15,6 +15,7 @@ import { StateLine, type LineState } from "@/components/ui/StateLine";
 import { SignInChart } from "./SignInChart";
 import { KIND_HELP, KIND_ORDER, KIND_WORDS, methodWords, ZONE_WORDS } from "./loginWords";
 import s from "./signins.module.css";
+import { HostError } from "./HostError";
 
 // ---------------------------------------------------------------- tab
 
@@ -27,9 +28,12 @@ export function SignInsTab({ live }: { live: SWRResponse<LiveLogins, ApiError> }
   if (!data) {
     if (error) {
       return (
-        <Notice tone="fault" title="Couldn't see who is signed in" action={<Button onClick={() => void mutate()}>Try again</Button>}>
-          {error.message}
-        </Notice>
+        <HostError
+          error={error}
+          title="Couldn't see who is signed in"
+          missing={{ title: "Can't see sign-ins here", body: "Sign-ins come from systemd's loginctl, which this machine doesn't have." }}
+          onRetry={() => mutate()}
+        />
       );
     }
     return <SignInsSkeleton />;
@@ -527,7 +531,7 @@ function PosturePanel({ posture }: { posture: SshPosture }) {
           ))}
         </ul>
       )}
-      <p className={s.foot}>Gluon only reads these settings; it never changes how SSH is set up.</p>
+      <p className={s.foot}>Gluon reads these settings and never changes them.</p>
     </Panel>
   );
 }

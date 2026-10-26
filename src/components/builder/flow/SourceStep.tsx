@@ -39,10 +39,10 @@ export interface CreateBody {
 export type Create = (body: CreateBody, then: "flow" | "builder") => void;
 
 const SOURCES: { value: FlowSource; title: string; desc: string; icon: React.ReactNode }[] = [
-  { value: "image", title: "Image", desc: "One container from Docker Hub, GitHub's registry or any other. Search by name.", icon: <Box3dPoint /> },
-  { value: "run", title: "docker run", desc: "Paste the command from an app's instructions; Gluon turns it into a compose file.", icon: <Terminal /> },
-  { value: "compose", title: "Compose file", desc: "Paste a docker-compose.yml, or copy one from an app already on this server.", icon: <PageIcon /> },
-  { value: "github", title: "GitHub", desc: "Gluon reads the repository and builds it on this server if it has to.", icon: <Github /> },
+  { value: "image", title: "Image", desc: "One container from Docker Hub or any other registry.", icon: <Box3dPoint /> },
+  { value: "run", title: "docker run", desc: "Paste the command from an app's install guide.", icon: <Terminal /> },
+  { value: "compose", title: "Compose file", desc: "Paste a docker-compose.yml or copy one from an app here.", icon: <PageIcon /> },
+  { value: "github", title: "GitHub", desc: "Read from GitHub and built on this server when needed.", icon: <Github /> },
 ];
 
 /** Secret names and values from a prepared compose file, as the create request wants them. */
@@ -90,7 +90,7 @@ function Actions({ ready, busy, onGo, children }: { ready: boolean; busy: "flow"
     <div className={s.formActions}>
       {children}
       <Button variant="ghost" disabled={!ready || !!busy} loading={busy === "builder"} onClick={() => onGo("builder")}>
-        Open in the full builder
+        Open full builder
       </Button>
       <Button variant="primary" disabled={!ready || !!busy} loading={busy === "flow"} onClick={() => onGo("flow")}>
         Continue
@@ -151,7 +151,7 @@ function FromImage({ io, busy, onCreate }: { io: SourceIO; busy: "flow" | "build
       <ImageField value={image} onChange={setImage} lookup={lookup} autoFocus>
         {r?.exists && draft && (r.ports.length > 0 || r.volumes.length > 0 || draft.said.length > 0) && (
           <div className={s.suggest}>
-            <span>Gluon sets up what the image asks for:</span>
+            <span>Set up from the image:</span>
             <ul>
               {webPort && <li>Its web page, on port {webPort}</li>}
               {otherPorts.length > 0 && <li>{otherPorts.length === 1 ? "Port" : "Ports"} {otherPorts.map((p) => `${p.port}${p.proto === "udp" ? "/udp" : ""}`).join(", ")}, open on the server too</li>}
@@ -163,7 +163,7 @@ function FromImage({ io, busy, onCreate }: { io: SourceIO; busy: "flow" | "build
           </div>
         )}
       </ImageField>
-      <NameField value={name} onChange={setName} touched={touched} placeholder="Jellyfin" description="What the app is called here. You can change it later." />
+      <NameField value={name} onChange={setName} touched={touched} placeholder="Jellyfin" />
       <Actions ready={ready} busy={busy ?? queued} onGo={go} />
     </div>
   );
@@ -196,7 +196,7 @@ function FromRun({ io, target, busy, onCreate }: { io: SourceIO; target: Builder
 
   return (
     <div className={s.stack}>
-      <Field label="The command" description="Backslashes at the ends of lines, quotes and LinuxServer's #optional notes all work." error={text.trim() && run && !run.ok ? run.error : null}>
+      <Field label="docker run command" description="Line breaks, quotes and #optional notes all work." error={text.trim() && run && !run.ok ? run.error : null}>
         <TextArea value={text} onChange={(e) => setText(e.target.value)} rows={9} mono spellCheck={false} autoCapitalize="off" autoCorrect="off" autoFocus placeholder={RUN_EXAMPLE} className={f.runInput} />
       </Field>
       {run?.ok && prepared && (
@@ -225,7 +225,7 @@ function FromRun({ io, target, busy, onCreate }: { io: SourceIO; target: Builder
             )}
             <Disclosure summary="Show the compose file">
               <div className={s.editorWrap}>
-                <YamlEditor value={prepared.text} readOnly height={280} label="The compose file Gluon made" />
+                <YamlEditor value={prepared.text} readOnly height={280} label="Generated compose file" />
               </div>
             </Disclosure>
           </div>
@@ -277,7 +277,7 @@ function FromCompose({ io, target, busy, onCreate }: { io: SourceIO; target: Bui
       copied.current = c.content;
       io.set({ compose: c.content, composeIcon: a?.icon ?? null, ...(a ? { names: { compose: a.name } } : {}) });
     } catch (e) {
-      if (n === seq.current) setAppError(e instanceof Error ? e.message : "Gluon couldn't read that app's compose file.");
+      if (n === seq.current) setAppError(e instanceof Error ? e.message : "Couldn't read that app's compose file.");
     } finally {
       if (n === seq.current) setLoadingApp(false);
     }
@@ -312,7 +312,7 @@ function FromCompose({ io, target, busy, onCreate }: { io: SourceIO; target: Bui
   return (
     <div className={s.stack}>
       {candidates.length > 0 && (
-        <Field label="Copy from an app on this server" optional description="Its compose file becomes a new app; the running one isn't touched." error={appError}>
+        <Field label="Copy from an app on this server" optional description="The running app isn't touched." error={appError}>
           <Select className={s.fill} value={fromApp} onChange={copyFrom} placeholder="Choose an app" options={[{ value: "", label: "Paste one instead" }, ...candidates.map((a) => ({ value: a.id, label: a.name, description: a.configFile ?? undefined }))]} />
         </Field>
       )}
@@ -328,7 +328,7 @@ function FromCompose({ io, target, busy, onCreate }: { io: SourceIO; target: Bui
           {prepared.said.length > 0 ? (
             <div className={s.suggest}>
               <span>
-                Gluon will make {prepared.said.length === 1 ? "this change" : `these ${prepared.said.length} changes`} so it runs {target === "umbrel" ? "under Umbrel" : "here"}:
+                {prepared.said.length === 1 ? "One change" : `${prepared.said.length} changes`} so it runs {target === "umbrel" ? "under Umbrel" : "here"}:
               </span>
               <ul>
                 {prepared.said.map((t, i) => (
@@ -337,7 +337,7 @@ function FromCompose({ io, target, busy, onCreate }: { io: SourceIO; target: Bui
               </ul>
               <Disclosure summary="Show the file after these changes">
                 <div className={s.editorWrap}>
-                  <YamlEditor value={prepared.text} original={deferred} readOnly height={300} label="Compose file after Gluon's changes" />
+                  <YamlEditor value={prepared.text} original={deferred} readOnly height={300} label="Compose file after changes" />
                 </div>
               </Disclosure>
             </div>
@@ -347,10 +347,10 @@ function FromCompose({ io, target, busy, onCreate }: { io: SourceIO; target: Bui
           <p className={s.hint}>
             {prepared.web.service ? (
               <>
-                The web page looks like <span className={s.mono}>{prepared.web.service}</span> on port <span className={`${s.mono} num`}>{prepared.web.containerPort}</span>. You can change it next.
+                Web page: <span className={s.mono}>{prepared.web.service}</span> on port <span className={`${s.mono} num`}>{prepared.web.containerPort}</span>. You can change it next.
               </>
             ) : (
-              "No service publishes a web port, so you'll pick the web page next (or leave it without one)."
+              "No service publishes a web port. You can pick one next, or leave it without."
             )}
           </p>
           {errors.length > 0 && (
@@ -394,7 +394,7 @@ function FromGithub({ io, target, busy, onCreate }: { io: SourceIO; target: Buil
       setFound(r);
       setName(r.prefill.details.name ?? titleize(r.repo));
     } catch (e) {
-      setErr({ message: e instanceof Error ? e.message : "Gluon couldn't read that repository.", field: e instanceof ApiError ? e.field : undefined });
+      setErr({ message: e instanceof Error ? e.message : "Couldn't read that repository. Check the name and try again.", field: e instanceof ApiError ? e.field : undefined });
       if (e instanceof ApiError && e.field === "token") setShowToken(true);
     } finally {
       setReading(false);
@@ -434,19 +434,19 @@ function FromGithub({ io, target, busy, onCreate }: { io: SourceIO; target: Buil
           void read();
         }}
       >
-        <Field label="Repository" description="owner/name, or its address on github.com (a link to a folder or branch works too)." error={fieldErr("repo")}>
+        <Field label="Repository" description="owner/name, or any github.com link to it." error={fieldErr("repo")}>
           <Input value={repo} onChange={(e) => reset(setRepo)(e.target.value)} placeholder="paperless-ngx/paperless-ngx" mono spellCheck={false} autoCapitalize="off" autoCorrect="off" autoFocus />
         </Field>
         <div className={s.twoCol}>
-          <Field label="Branch" optional description={parsed?.branch ? `From the link: ${parsed.branch}` : "Its main branch if empty."} error={fieldErr("branch")}>
+          <Field label="Branch" optional description={parsed?.branch ? `From the link: ${parsed.branch}` : "Main branch if empty."} error={fieldErr("branch")}>
             <Input value={branch} onChange={(e) => reset(setBranch)(e.target.value)} placeholder={parsed?.branch ?? "main"} mono spellCheck={false} autoCapitalize="off" />
           </Field>
-          <Field label="Folder" optional description="Where the app is, if not at the top." error={fieldErr("path")}>
+          <Field label="Folder" optional description="If the app isn't at the top." error={fieldErr("path")}>
             <Input value={path} onChange={(e) => reset(setPath)(e.target.value)} placeholder={parsed?.path ?? "apps/web"} mono spellCheck={false} autoCapitalize="off" />
           </Field>
         </div>
         {showToken ? (
-          <Field label="Access token" optional description="For private repositories: a fine-grained token with read access to its contents. Gluon keeps it encrypted and never shows it again." error={fieldErr("token")}>
+          <Field label="Access token" optional description="A fine-grained token that can read its contents. Stored encrypted, never shown again." error={fieldErr("token")}>
             <Input value={token} onChange={(e) => setToken(e.target.value)} type="password" autoComplete="off" mono placeholder="github_pat_…" />
           </Field>
         ) : (

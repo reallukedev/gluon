@@ -26,7 +26,13 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-.appRowWrap { border-top: 1px solid var(--line); scroll-margin-top: 90px; transition: background-color var(--dur-base) ease; }
+.appRowWrap {
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 90px;
+  /* A newly published app fades into the list rather than popping in. */
+  transition: background-color var(--dur-base) ease, opacity var(--dur-base) var(--ease-out);
+  @starting-style { opacity: 0; }
+}
 .appRowWrap:first-child { border-top: 0; }
 .appRowWrap[data-highlight] { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .appRow { min-height: 64px; padding-top: 11px; padding-bottom: 11px; cursor: pointer; transition: background-color var(--dur-fast) ease; }
@@ -35,6 +41,7 @@
   .appRow:hover { background: var(--panel-2); }
   .appRow:hover .colGo { color: var(--ink); transform: translateX(2px); }
 }
+.appIcon, .appMain { transition: opacity var(--dur-base) var(--ease-out); }
 .appRowWrap[data-off] .appIcon, .appRowWrap[data-off] .appMain { opacity: 0.55; }
 .colApp { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
 .appHead .colApp { display: block; padding-left: 44px; }
@@ -78,6 +85,9 @@
   padding: 10px 12px;
   border-radius: var(--radius-control);
   background: var(--sunk);
+  /* A problem that turns up under a row eases in instead of shoving the list. */
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style { opacity: 0; transform: translateY(calc(-4px * var(--motion))); }
 }
 .fix[data-tone="attention"] { background: var(--attn-soft); }
 .fix[data-tone="fault"] { background: var(--fault-soft); }
@@ -88,7 +98,7 @@
 .fixText { font-size: var(--text-sm); color: var(--ink); line-height: 1.45; }
 .fixText b { font-weight: 620; }
 .fixActions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
-.flags { list-style: none; margin: 0; padding: 12px 0 0; }
+.flags { list-style: none; margin: 0; padding: 0; }
 .flags .fix { margin: 0 18px 10px; }
 
 @media (max-width: 900px) {
@@ -150,6 +160,8 @@
 .addrs { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-control); }
 .addr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, auto) 40px 32px; gap: 12px; align-items: center; min-height: 54px; padding: 8px 8px 8px 14px; border-top: 1px solid var(--line); }
 .addr:first-child { border-top: 0; }
+.addr { transition: opacity var(--dur-base) var(--ease-out); @starting-style { opacity: 0; } }
+.addrMain { transition: opacity var(--dur-base) var(--ease-out); }
 .addr[data-off] .addrMain { opacity: 0.6; }
 .addrMain { display: grid; gap: 2px; min-width: 0; }
 .addrState { min-width: 0; font-size: var(--text-sm); }
@@ -171,9 +183,16 @@
 .dNote { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.55; max-width: 70ch; overflow-wrap: anywhere; }
 
 /* ---------------------------------------------------------------- hop details + tables */
-.hopBody { display: grid; gap: 14px; min-width: 0; }
+.hopBody { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 .hopLead { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.55; max-width: 84ch; }
+.hopIntro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+/* A check in flight: the state column dims until fresh results land, then the lines settle. */
+.table [role="cell"]:last-child { transition: opacity var(--dur-base) var(--ease-out); }
+.table[data-checking] [role="cell"]:last-child { opacity: 0.45; }
 .hopState { font-size: var(--text-md); }
+/* Long updater summaries wrap beside their line instead of widening the page. */
+.hopState > span { align-items: flex-start; }
+.hopState > span > :last-child { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
 .subhead { font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
 .checked { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: var(--text-sm); color: var(--muted); }
 .hopActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -206,7 +225,7 @@
 }
 
 /* ---------------------------------------------------------------- at home */
-.panelNote { padding: 12px 18px 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.5; max-width: 90ch; }
+.panelNote { padding: 12px 18px; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.5; max-width: 90ch; }
 .foldRow { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; padding: 0 18px 12px; }
 .metaChecks { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--text-sm); }
 

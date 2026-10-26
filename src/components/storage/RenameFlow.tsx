@@ -133,7 +133,7 @@ export function RenameFlow({ from, onClose, onDone }: { from: string | null; onC
         ...(p.files.some((f) => f.changes.length) ? [`${fmt.plural(p.files.filter((f) => f.changes.length).length, "file")} ${p.files.filter((f) => f.changes.length).length === 1 ? "is" : "are"} updated; each keeps a backup next to it.`] : []),
         p.fstab.action !== "none" ? "/etc/fstab is updated (a backup is kept)." : "/etc/fstab doesn't change.",
         p.symlink ? `${p.from} keeps working as a link to ${p.to}.` : `${p.from} stops existing. Anything still using it by name will break.`,
-        "If any step fails, Gluon puts everything back the way it was.",
+        "If any step fails, everything is put back.",
       ],
       confirmLabel: "Move it",
       variant: "primary",
@@ -187,7 +187,7 @@ export function RenameFlow({ from, onClose, onDone }: { from: string | null; onC
         open={!!from}
         onOpenChange={(o) => !o && close()}
         title={phase === "run" ? `Moving ${from} to ${plan?.to ?? to}` : `Rename ${from ?? ""}`}
-        description={phase === "choose" ? "Give the drive's folder a new name. Gluon finds every app that uses it, updates their settings, restarts them, and shows you every change before it makes it." : undefined}
+        description={phase === "choose" ? "Apps that use it are updated and restarted. You see every change first." : undefined}
         size="xwide"
         footer={footer}
       >
@@ -208,7 +208,7 @@ export function RenameFlow({ from, onClose, onDone }: { from: string | null; onC
         <div className={`${s.phaseBody} appear`} key={phase}>
         {phase === "choose" && (
           <div className={s.stack}>
-            <Field label="New place" description="A new or empty folder, for example /mnt/photos. Letters, numbers, dots, dashes and underscores.">
+            <Field label="New place" description="A new or empty folder. Letters, numbers, dots, dashes and underscores.">
               <Input
                 mono
                 value={to}
@@ -224,7 +224,7 @@ export function RenameFlow({ from, onClose, onDone }: { from: string | null; onC
             </Field>
             <SettingRow
               label={`Leave a link at ${from}`}
-              description={`Anything that still uses ${from} (a script, an app Gluon can't edit) keeps working, because the old path points to the new one. Turn it off for a clean move.`}
+              description={`Scripts and apps that still use ${from} keep working. Turn it off for a clean move.`}
             >
               <Switch checked={symlink} onChange={setSymlink} aria-label="Leave a compatibility link" />
             </SettingRow>
@@ -321,8 +321,8 @@ export function RenameFlow({ from, onClose, onDone }: { from: string | null; onC
                 ))
               )}
               {plan.files.some((f) => f.untouched.length) && (
-                <Disclosure summary="Other mentions Gluon leaves alone" meta={plan.files.reduce((n, f) => n + f.untouched.length, 0)}>
-                  <p className={s.muted}>These are paths inside containers, labels or commands, not folders on this server.</p>
+                <Disclosure summary="Other mentions, left alone" meta={plan.files.reduce((n, f) => n + f.untouched.length, 0)}>
+                  <p className={s.muted}>Paths inside containers, labels or commands, not folders on this server.</p>
                   {plan.files
                     .filter((f) => f.untouched.length)
                     .map((f) => (

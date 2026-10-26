@@ -123,13 +123,13 @@ export function MountDialog({ vol, disk, onClose, onDone }: { vol: VolumeView | 
       }
     >
       <div className={s.stack}>
-        <Field label="Folder" description="Usually a new folder under /mnt. Gluon creates it if it doesn't exist.">
+        <Field label="Folder" description="Usually a new folder under /mnt. It's created if needed.">
           <Input mono value={target} onChange={(e) => setTarget(e.target.value)} spellCheck={false} autoComplete="off" />
         </Field>
-        <SettingRow label="Connect it again after a restart" description="Puts it on the startup list (/etc/fstab). With nofail, the server still starts if the drive is missing.">
+        <SettingRow label="Connect it again after a restart" description="Adds it to /etc/fstab with nofail, so the server still starts without it.">
           <Switch checked={persist} onChange={setPersist} aria-label="Mount it again after a restart" />
         </SettingRow>
-        <SettingRow label="Read-only" description={vol?.deviceReadOnly ? "The drive is write-protected, so it can only be read." : "Apps can read files but can't change anything."}>
+        <SettingRow label="Read-only" description={vol?.deviceReadOnly ? "The drive is write-protected." : "Apps can read files but can't change anything."}>
           <Switch checked={readOnly} onChange={setReadOnly} disabled={vol?.deviceReadOnly} aria-label="Read-only" />
         </SettingRow>
         {vol && (
@@ -206,7 +206,7 @@ export function UnmountDialog({ target, onClose, onDone }: { target: string | nu
       open={!!target}
       onOpenChange={(o) => !o && onClose()}
       title={`Unmount ${target ?? ""}`}
-      description="Its files stay on the drive; they just stop appearing in this folder until it's mounted again."
+      description="Its files stay on the drive and come back when it's mounted again."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -246,7 +246,7 @@ export function UnmountDialog({ target, onClose, onDone }: { target: string | nu
                 </li>
               ))}
             </ul>
-            {apps.length > 0 && <p className={s.muted}>Stopping an app from its page is safe: its files stay where they are.</p>}
+            {apps.length > 0 && <p className={s.muted}>Stopping an app keeps its files where they are.</p>}
           </Notice>
         )}
         {plan && (
@@ -318,7 +318,7 @@ export function PersistDialog({ target, hdd, users = [], onClose, onDone }: { ta
       open={!!target}
       onOpenChange={(o) => !o && onClose()}
       title={`Keep ${target ?? ""} after a restart`}
-      description="Gluon puts it on the startup list, by an ID that doesn't change when drives are added or moved."
+      description="Adds it to the startup list by an ID that stays the same when drives move."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -346,7 +346,7 @@ export function PersistDialog({ target, hdd, users = [], onClose, onDone }: { ta
         <SettingRow label="Don't record access times (noatime)" description={hdd ? "Recommended for hard drives: fewer writes, and it lets them sleep." : "Saves a few writes. Rarely matters on SSDs."}>
           <Switch checked={noatime} onChange={setNoatime} aria-label="noatime" />
         </SettingRow>
-        <p className={s.hint}>The new list is checked before it's used. “nofail” means the server still starts normally if this drive is ever missing; it waits at most {fmt.duration(30)} for it.</p>
+        <p className={s.hint}>The new list is checked before it's used. With nofail the server still starts if the drive is missing, after waiting up to {fmt.duration(30)}.</p>
         {error && <Notice tone="fault">{error}</Notice>}
       </div>
     </Dialog>

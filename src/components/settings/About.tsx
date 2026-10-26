@@ -56,9 +56,8 @@ export function About() {
           ]}
         />
         <p className={s.hint} style={{ marginTop: 14 }}>
-          Accounts, settings, alerts and history all live in this folder inside Gluon&apos;s container. There&apos;s no export button yet: to back Gluon up, include this
-          folder with your apps&apos; data. Keep <span className="mono">secret.key</span> with it, or saved notification and connected-app keys can&apos;t be read after
-          a restore.
+          Everything Gluon keeps is in this folder. To back it up, copy the folder with your apps&apos; data, <span className="mono">secret.key</span> included: without
+          it, saved notification and app keys can&apos;t be read after a restore.
         </p>
       </Panel>
       <p className={s.hint}>Nothing leaves this server unless you set up a notification channel or connect an app.</p>

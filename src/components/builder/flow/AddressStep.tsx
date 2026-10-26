@@ -37,8 +37,8 @@ export function AddressStep({ draft, name, choice: { choice, update }, onBack, o
             <Skeleton width="70%" height={14} />
           </div>
         ) : error ? (
-          <Notice title={unavailable ? "Public addresses aren't set up on this server" : "Gluon couldn't read the public addresses"}>
-            {error.message} You can add an address later on the <Link className={s.link} href="/network">Network</Link> page.
+          <Notice title={unavailable ? "Public addresses aren't set up on this server" : "Couldn't read the public addresses"}>
+            {error.message} You can add one later on <Link className={s.link} href="/network">Network</Link>.
           </Notice>
         ) : data ? (
           <div className={s.stack}>
@@ -46,19 +46,19 @@ export function AddressStep({ draft, name, choice: { choice, update }, onBack, o
               <span id="addr-on">
                 Give it an address on the internet
                 <span className={s.controlHint}>
-                  People open it at an address under <span className="mono">{data.config.base_domain}</span>, from anywhere. Caddy passes them to port <span className="mono num">{port}</span> on this server.
+                  Opens from anywhere at an address under <span className="mono">{data.config.base_domain}</span>, sent to port <span className="mono num">{port}</span>.
                 </span>
               </span>
               <Switch checked={on} onChange={(on) => update({ on, label, ack: on ? choice.ack : false })} aria-labelledby="addr-on" />
             </div>
             {on && (
               <div className={`${s.stack} ${f.reveal}`} data-motion-gentle="">
-                <Field label="Address" description={wildcard ? `*.${data.config.base_domain} already points here, so it works without a DNS change.` : "Add a DNS record for it if your domain doesn't have a wildcard. The Network page shows how."} error={err}>
+                <Field label="Address" description={wildcard ? `*.${data.config.base_domain} already points here. No DNS change needed.` : "Needs a DNS record unless your domain has a wildcard. Network shows how."} error={err}>
                   <AffixInput before="https://" after={`.${data.config.base_domain}`} value={label} mono spellCheck={false} autoCapitalize="off" onChange={(e) => update({ label: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 63) })} aria-label="Subdomain" />
                 </Field>
                 <Notice tone="attention" title={`Anyone with the address can reach ${name}`}>
                   <div className={f.ack}>
-                    <p>Gluon can&apos;t tell whether {name} asks for a password. Check that it does before you share the address.</p>
+                    <p>Check that {name} asks for a password before you share the address.</p>
                     <Checkbox checked={choice.ack} onChange={(ack) => update({ ack })}>
                       {name} has its own sign-in, or anyone may use it
                     </Checkbox>

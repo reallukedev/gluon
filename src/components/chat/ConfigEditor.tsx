@@ -33,7 +33,7 @@ export function ConfigEditor({ appId, onSaved }: { appId: string; onSaved: () =>
     if (data && text === null) setText(data.main);
   }, [data, text]);
 
-  if (error) return <Notice tone="fault" title="Gluon couldn't read the config file">{error.message}</Notice>;
+  if (error) return <Notice tone="fault" title="Couldn't read the config file">{error.message}</Notice>;
   if (!data || text === null) return <Skeleton height={360} radius={0} />;
   const changed = text !== data.main;
   const server = data.server;

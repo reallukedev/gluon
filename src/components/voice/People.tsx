@@ -53,12 +53,12 @@ export function People({ appId, live, rootName, onChanged }: { appId: string; li
     <Panel title="Who's here now" meta={<span className={s.num}>{live.users.length}</span>} flush>
       {sorted.length === 0 ? (
         <div className={s.empty}>
-          <p>Nobody is connected. People show up here the moment they join, with the channel they&rsquo;re in.</p>
+          <p>Nobody is connected right now.</p>
         </div>
       ) : (
         <ul className={s.list} aria-live="polite">
           {sorted.map((u) => (
-            <li key={u.session} className={s.row}>
+            <li key={u.session} className={`${s.row} ${s.person}`}>
               <div className={s.who}>
                 <span className={s.mark} data-guest={u.userId < 0 ? "" : undefined} aria-hidden>
                   {initial(u.name)}

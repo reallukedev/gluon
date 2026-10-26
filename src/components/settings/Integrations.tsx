@@ -28,7 +28,11 @@ import {
 } from "@/lib/widgets-types";
 import s from "./settings.module.css";
 import x from "./integrations.module.css";
+import { SectionHeader } from "./SectionHeader";
 import { ConnectDialog, type ConnectTarget } from "@/components/home/connect/Connect";
+
+/** "Home Assistant" and "Homeassistant" are the same app. */
+const squash = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const KIND_ICON: Partial<Record<IntegrationKind, string>> = {
   jellyfin: "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/jellyfin.svg",
@@ -79,7 +83,7 @@ export function Integrations() {
   const [confirm, confirmNode] = useConfirm();
   const [testing, setTesting] = React.useState<string | null>(null);
 
-  if (viewer.role !== "admin") return <Notice>Only admins can manage connected apps.</Notice>;
+  if (viewer.role !== "admin") return <SectionHeader summary="Only admins can manage connected apps." />;
 
   const kindInfo = (k: IntegrationKind) => kinds.data?.find((i) => i.kind === k);
   const refresh = () => {
@@ -161,203 +165,206 @@ export function Integrations() {
   };
 
   return (
-    <div className={s.stack}>
-      <p className={x.summary}>
-        {!list.data
-          ? "Checking what's connected…"
-          : items.length === 0
-            ? open.length
-              ? `Nothing connected yet. ${open.length === 1 ? "1 app on this server is" : `${open.length} apps on this server are`} ready${open.some((o) => o.sv.connect?.signIn) ? "; Jellyfin and Immich only need you to sign in" : ""}.`
-              : "Nothing connected yet."
-            : `${broken ? `${broken === 1 ? "1 connection isn't" : `${broken} connections aren't`} working. ` : ""}${items.length === 1 ? "1 app" : `${items.length} apps`} connected${shared ? `, ${shared} shared with the household` : ""}.${open.length ? ` ${open.length === 1 ? "1 more is" : `${open.length} more are`} ready to connect.` : ""}`}
-      </p>
+    <>
+      <SectionHeader
+        summary={
+          !list.data
+            ? "Checking what's connected…"
+            : items.length === 0
+              ? open.length
+                ? `Nothing connected yet. ${open.length === 1 ? "1 app is" : `${open.length} apps are`} ready to connect.`
+                : "Keys that let home page widgets read from your apps."
+              : `${broken ? `${broken === 1 ? "1 connection isn't" : `${broken} connections aren't`} working. ` : ""}${items.length === 1 ? "1 app" : `${items.length} apps`} connected${shared ? `, ${shared} shared with the household` : ""}.${open.length ? ` ${open.length === 1 ? "1 more is" : `${open.length} more are`} ready.` : ""}`
+        }
+      />
+      <div className={s.stack}>
 
-      {(items.length > 0 || !list.data || list.error || (catalog.data && open.length === 0)) && (
-        <Panel
-          title="Connections"
-          flush
-          meta={
-            <Button size="sm" icon={<Plus />} onClick={() => setForm({ mode: "create" })} disabled={!kinds.data}>
-              Connect an app
-            </Button>
-          }
-        >
-          {list.error && !list.data ? (
-            <div className={x.pad}>
-              <Notice
-                tone="fault"
-                title="Couldn't load connections"
-                action={
-                  <Button size="sm" onClick={() => list.mutate()}>
-                    Try again
-                  </Button>
-                }
-              >
-                {list.error.message}
-              </Notice>
-            </div>
-          ) : !list.data ? (
-            <ul className={x.list} aria-busy="true">
-              {[0, 1].map((i) => (
-                <li key={i} className={x.row}>
-                  <Skeleton width={32} height={32} radius={8} />
-                  <span style={{ display: "grid", gap: 6 }}>
-                    <Skeleton width="40%" height={13} />
-                    <Skeleton width="60%" height={11} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : items.length === 0 ? (
-            <div className={x.pad}>
-              <Empty title="No connected apps">
-                Connect Jellyfin, Immich, your music server and others. Their widgets then appear in “Add a widget” on the home page, for everyone you share them with.
-                {open.length > 0 ? " Gluon found some on this server below; Jellyfin and Immich only need you to sign in." : ""}
-              </Empty>
-            </div>
-          ) : (
-            <ul className={x.list} role="list">
-              {items.map((it) => (
-                <li key={it.id} className={x.row} id={`integration-${it.id}`}>
-                  <AppIcon src={appOf(it)?.icon ?? KIND_ICON[it.kind] ?? null} name={it.name} size={32} />
-                  <div className={x.text}>
-                    <span className={x.name}>
-                      <span className="truncate" title={it.name}>
-                        {it.name}
-                      </span>
-                      <span className={x.kind}>{appOf(it) && appOf(it)!.name !== it.name ? `in ${appOf(it)!.name}` : (kindInfo(it.kind)?.label ?? it.kind)}</span>
-                    </span>
-                    <span className={`${x.address} mono`} title={it.baseUrl}>
-                      {it.baseUrl}
-                    </span>
-                    <StatusLine it={it} />
-                  </div>
-                  <label className={x.share}>
-                    <Switch checked={it.shared} onChange={(v) => void share(it, v)} aria-label={`Share ${it.name} with the household`} />
-                    <span>Household can use</span>
-                  </label>
-                  <div className={x.actions}>
-                    <Button size="sm" icon={<Refresh />} loading={testing === it.id} onClick={() => void test(it)}>
-                      Check
-                    </Button>
-                    <Menu
-                      trigger={
-                        <IconButton label={`${it.name} options`} size="sm">
-                          <MoreHoriz />
-                        </IconButton>
-                      }
-                      items={[
-                        ...(serviceOf(it)?.connect?.signIn
-                          ? [
-                              {
-                                label: `Sign in to ${kindInfo(it.kind)?.label ?? it.name} again`,
-                                description: "Gluon makes a fresh key named “Gluon”",
-                                icon: <LogIn />,
-                                onSelect: () => reconnect(it),
-                              },
-                            ]
-                          : []),
-                        {
-                          label: "Edit",
-                          icon: <EditPencil />,
-                          onSelect: () => setForm({ mode: "edit", integration: it }),
-                        },
-                        "separator",
-                        {
-                          label: "Remove",
-                          icon: <Trash />,
-                          danger: true,
-                          onSelect: () => remove(it),
-                        },
-                      ]}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-      )}
-      {items.length > 0 && (
-        <p className={s.hint}>
-          <b>Household can use</b> lets everyone signed in add that app's widgets: what's playing, new posters, photo counts, accessory states. They never see the key or the
-          address, and can't change anything in the app. Off means only admins can.
-        </p>
-      )}
-
-      {(open.length > 0 || catalog.isLoading) && (
-        <Panel
-          title="Ready to connect on this server"
-          flush
-          meta={
-            items.length === 0 && list.data ? (
-              <Button size="sm" variant="ghost" icon={<Plus />} onClick={() => setForm({ mode: "create" })} disabled={!kinds.data}>
-                Another app
+        {(items.length > 0 || !list.data || list.error || (catalog.data && open.length === 0)) && (
+          <Panel
+            title="Connections"
+            flush
+            meta={
+              <Button size="sm" icon={<Plus />} onClick={() => setForm({ mode: "create" })} disabled={!kinds.data}>
+                Connect an app
               </Button>
-            ) : undefined
-          }
-        >
-          {!catalog.data ? (
-            <div className={x.pad}>
-              <Skeleton height={44} />
-            </div>
-          ) : (
-            <ul className={x.list} role="list">
-              {open.map(({ app, sv }) => (
-                <li key={sv.key} className={x.row} data-suggestion="">
-                  <AppIcon src={app.icon ?? KIND_ICON[sv.kind] ?? null} name={app.name} size={32} />
-                  <div className={x.text}>
-                    <span className={x.name}>
-                      <span className="truncate">{sv.label}</span>
-                      {app.name !== sv.label && <span className={x.kind}>in {app.name}</span>}
-                    </span>
-                    <span className={`${x.address} mono`}>{sv.connect?.baseUrl}</span>
-                    {sv.line !== "running" && (
-                      <span className={x.status}>
-                        <StateLine state={sv.line} size={11} /> Not running right now
-                      </span>
-                    )}
-                    {sv.connect?.note && <span className={x.note}>{sv.connect.note}</span>}
-                  </div>
-                  <div className={x.actions}>
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        setConnect({
-                          appId: app.appId,
-                          appName: app.name,
-                          icon: app.icon,
-                          line: app.line,
-                          service: sv,
-                        })
-                      }
-                    >
-                      {sv.connect?.signIn ? "Sign in to connect" : "Connect"}
+            }
+          >
+            {list.error && !list.data ? (
+              <div className={x.pad}>
+                <Notice
+                  tone="fault"
+                  title="Couldn't load connections"
+                  action={
+                    <Button size="sm" onClick={() => list.mutate()}>
+                      Try again
                     </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-      )}
-      {catalog.data && open.length === 0 && apps.some((a) => a.services.length > 0) && <p className={s.hint}>Everything Gluon can read from on this server is connected.</p>}
+                  }
+                >
+                  {list.error.message}
+                </Notice>
+              </div>
+            ) : !list.data ? (
+              <ul className={x.list} aria-busy="true">
+                {[0, 1].map((i) => (
+                  <li key={i} className={x.row}>
+                    <Skeleton width={32} height={32} radius={8} />
+                    <span style={{ display: "grid", gap: 6 }}>
+                      <Skeleton width="40%" height={13} />
+                      <Skeleton width="60%" height={11} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : items.length === 0 ? (
+              <div className={x.pad}>
+                <Empty title="No connected apps">
+                  Connect Jellyfin, Immich, your music server and others. Their widgets then appear in “Add a widget” on the home page, for everyone you share them with.
+                  {open.length > 0 ? " Gluon found some on this server below; Jellyfin and Immich only need you to sign in." : ""}
+                </Empty>
+              </div>
+            ) : (
+              <ul className={x.list} role="list">
+                {items.map((it) => (
+                  <li key={it.id} className={x.row} id={`integration-${it.id}`}>
+                    <AppIcon src={appOf(it)?.icon ?? KIND_ICON[it.kind] ?? null} name={it.name} size={32} />
+                    <div className={x.text}>
+                      <span className={x.name}>
+                        <span className="truncate" title={it.name}>
+                          {it.name}
+                        </span>
+                        <span className={x.kind}>{appOf(it) && appOf(it)!.name !== it.name ? `in ${appOf(it)!.name}` : (kindInfo(it.kind)?.label ?? it.kind)}</span>
+                      </span>
+                      <span className={`${x.address} mono`} title={it.baseUrl}>
+                        {it.baseUrl}
+                      </span>
+                      <StatusLine it={it} />
+                    </div>
+                    <label className={x.share}>
+                      <Switch checked={it.shared} onChange={(v) => void share(it, v)} aria-label={`Share ${it.name} with the household`} />
+                      <span>Household can use</span>
+                    </label>
+                    <div className={x.actions}>
+                      <Button size="sm" icon={<Refresh />} loading={testing === it.id} onClick={() => void test(it)}>
+                        Check
+                      </Button>
+                      <Menu
+                        trigger={
+                          <IconButton label={`${it.name} options`} size="sm">
+                            <MoreHoriz />
+                          </IconButton>
+                        }
+                        items={[
+                          ...(serviceOf(it)?.connect?.signIn
+                            ? [
+                                {
+                                  label: `Sign in to ${kindInfo(it.kind)?.label ?? it.name} again`,
+                                  description: "Gluon makes a fresh key named “Gluon”",
+                                  icon: <LogIn />,
+                                  onSelect: () => reconnect(it),
+                                },
+                              ]
+                            : []),
+                          {
+                            label: "Edit",
+                            icon: <EditPencil />,
+                            onSelect: () => setForm({ mode: "edit", integration: it }),
+                          },
+                          "separator",
+                          {
+                            label: "Remove",
+                            icon: <Trash />,
+                            danger: true,
+                            onSelect: () => remove(it),
+                          },
+                        ]}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
+        {items.length > 0 && (
+          <p className={s.hint}>
+            <b>Household can use</b> lets everyone add that app's widgets. They never see the key or address, and can't change anything in the app.
+          </p>
+        )}
 
-      <ConnectDialog target={connect} open={!!connect} onOpenChange={(o) => !o && setConnect(null)} onConnected={refresh} />
-      {form && kinds.data && (
-        <IntegrationForm
-          key={form.mode === "edit" ? form.integration.id : `new:${form.kind ?? ""}:${form.prefill?.baseUrl ?? ""}`}
-          state={form}
-          kinds={kinds.data}
-          onClose={() => setForm(null)}
-          onSaved={() => {
-            setForm(null);
-            refresh();
-          }}
-        />
-      )}
-      {confirmNode}
-    </div>
+        {(open.length > 0 || catalog.isLoading) && (
+          <Panel
+            title="Ready to connect on this server"
+            flush
+            meta={
+              items.length === 0 && list.data ? (
+                <Button size="sm" variant="ghost" icon={<Plus />} onClick={() => setForm({ mode: "create" })} disabled={!kinds.data}>
+                  Another app
+                </Button>
+              ) : undefined
+            }
+          >
+            {!catalog.data ? (
+              <div className={x.pad}>
+                <Skeleton height={44} />
+              </div>
+            ) : (
+              <ul className={x.list} role="list">
+                {open.map(({ app, sv }) => (
+                  <li key={sv.key} className={x.row} data-suggestion="">
+                    <AppIcon src={app.icon ?? KIND_ICON[sv.kind] ?? null} name={app.name} size={32} />
+                    <div className={x.text}>
+                      <span className={x.name}>
+                        <span className="truncate">{sv.label}</span>
+                        {squash(app.name) !== squash(sv.label) && <span className={x.kind}>in {app.name}</span>}
+                      </span>
+                      <span className={`${x.address} mono`}>{sv.connect?.baseUrl}</span>
+                      {sv.line !== "running" && (
+                        <span className={x.status}>
+                          <StateLine state={sv.line} size={11} /> Not running right now
+                        </span>
+                      )}
+                      {sv.connect?.note && <span className={x.note}>{sv.connect.note}</span>}
+                    </div>
+                    <div className={x.actions}>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          setConnect({
+                            appId: app.appId,
+                            appName: app.name,
+                            icon: app.icon,
+                            line: app.line,
+                            service: sv,
+                          })
+                        }
+                      >
+                        {sv.connect?.signIn ? "Sign in to connect" : "Connect"}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
+        {catalog.data && open.length === 0 && apps.some((a) => a.services.length > 0) && <p className={s.hint}>Everything Gluon can read from on this server is connected.</p>}
+
+        <ConnectDialog target={connect} open={!!connect} onOpenChange={(o) => !o && setConnect(null)} onConnected={refresh} />
+        {form && kinds.data && (
+          <IntegrationForm
+            key={form.mode === "edit" ? form.integration.id : `new:${form.kind ?? ""}:${form.prefill?.baseUrl ?? ""}`}
+            state={form}
+            kinds={kinds.data}
+            onClose={() => setForm(null)}
+            onSaved={() => {
+              setForm(null);
+              refresh();
+            }}
+          />
+        )}
+        {confirmNode}
+      </div>
+    </>
   );
 }
 

@@ -7,7 +7,9 @@ export type CollectionSection = "apps" | "folders" | "widgets" | "from-apps";
 export interface HomeContextValue {
   openCollection: (section?: CollectionSection) => void;
   arranging: boolean;
+  /** Whether a kind of item is on this Home (the greeting leaves the date to a clock). */
+  pinned: (type: string) => boolean;
 }
 
-export const HomeContext = React.createContext<HomeContextValue>({ openCollection: () => undefined, arranging: false });
+export const HomeContext = React.createContext<HomeContextValue>({ openCollection: () => undefined, arranging: false, pinned: () => false });
 export const useHome = () => React.useContext(HomeContext);

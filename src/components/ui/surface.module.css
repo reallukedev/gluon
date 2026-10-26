@@ -1,5 +1,8 @@
 /* Page scaffolding */
 .page { padding: 28px var(--gutter) 64px; max-width: 1480px; margin: 0 auto; width: 100%; }
+/* A new page settles in after a pointer navigation. Keyboard jumps, query changes and the first load stay instant (Shell sets data-nav). */
+:global(:root[data-nav="enter"]) .page { animation: pageIn var(--dur-base) var(--ease-out); }
+@keyframes pageIn { from { opacity: 0; transform: translateY(calc(6px * var(--motion))); } }
 .pageNarrow { max-width: 880px; }
 
 .header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; flex-wrap: wrap; }
@@ -64,8 +67,10 @@
 /* Skeleton */
 /* A calm breathing plate (opacity only, so it stays under reduced motion). Content that replaces a
    skeleton can take the global `appear` class to fade in over 200ms instead of popping. */
-.skeleton { background: var(--sunk); border-radius: 6px; animation: pulse 1.6s ease-in-out infinite; }
+.skeleton { background: var(--sunk); border-radius: 6px; animation: skeletonIn var(--dur-base) ease 120ms both, pulse 1.6s ease-in-out 320ms infinite; }
 @keyframes pulse { 50% { opacity: 0.55; } }
+/* Held back 120ms so a fast load goes straight to content without a flash of grey. */
+@keyframes skeletonIn { from { opacity: 0; } }
 
 /* Notice (inline) */
 .notice {

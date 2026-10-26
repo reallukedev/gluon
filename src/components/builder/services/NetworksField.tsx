@@ -63,7 +63,7 @@ export function NetworksField({ draft, form: f, issues, target }: { draft: Draft
           ))
         )}
       </div>
-      {error && <p className={s.hint}>Gluon couldn&apos;t list this server&apos;s networks: {error.message}</p>}
+      {error && <p className={s.hint}>Couldn&apos;t list this server&apos;s networks: {error.message}</p>}
       {adding === null ? (
         <Button size="sm" variant="ghost" icon={<Plus />} className={s.addRow} onClick={() => setAdding("")}>
           Make a network for this app

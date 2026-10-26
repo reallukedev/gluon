@@ -12,6 +12,7 @@ import { Button, IconButton } from "@/components/ui/Button";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
 import { ACTION_LABEL, availableActions, bootLabel, serviceLine, useServiceActions } from "./serviceActions";
 import { ServiceDialog } from "./ServiceDialog";
+import { HostError } from "./HostError";
 import s from "./system.module.css";
 
 type Filter = "all" | "running" | "stopped" | "failed";
@@ -43,9 +44,12 @@ export function ServicesTab({ list, initialUnit }: { list: SWRResponse<{ service
   if (!data) {
     if (error) {
       return (
-        <Notice tone="fault" title="Couldn't list the services" action={<Button onClick={refresh}>Try again</Button>}>
-          {error.message}
-        </Notice>
+        <HostError
+          error={error}
+          title="Couldn't list the services"
+          missing={{ title: "No systemd on this server", body: "Services come from systemd, which this machine doesn't run." }}
+          onRetry={() => mutate()}
+        />
       );
     }
     return <ServicesSkeleton />;

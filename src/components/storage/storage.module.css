@@ -342,7 +342,12 @@
   overflow: hidden;
   animation: mapIn var(--dur-base) var(--ease-out);
 }
+.map[data-zoom] { animation-duration: var(--dur-slow); }
+.map[data-zoom="in"] { animation-name: mapZoomIn; }
+.map[data-zoom="out"] { animation-name: mapZoomOut; }
 @keyframes mapIn { from { opacity: 0.4; } }
+@keyframes mapZoomIn { from { opacity: 0.3; transform: scale(calc(1 - 0.06 * var(--motion))); } }
+@keyframes mapZoomOut { from { opacity: 0.3; transform: scale(calc(1 + 0.04 * var(--motion))); } }
 .block {
   position: absolute;
   display: flex;
@@ -367,7 +372,9 @@ button.block { cursor: pointer; }
 .block[data-kind="other"] { background: var(--panel-2); color: var(--muted); }
 .block[data-kind="free"] { background: var(--panel); color: var(--muted); }
 .block[data-kind="free"]::before { content: ""; position: absolute; inset: 6px; border: 1px dashed var(--line-strong); border-radius: 4px; pointer-events: none; }
-.block[data-active]::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px var(--ink); pointer-events: none; }
+/* The ring follows the pointer with a short crossfade, so sweeping across the map reads as one moving mark. */
+.block::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px var(--ink); pointer-events: none; opacity: 0; transition: opacity var(--dur-press) var(--ease-out); }
+.block[data-active]::after { opacity: 1; }
 .block:focus-visible { outline: 2px solid var(--ink); z-index: 3; }
 @media (hover: hover) and (pointer: fine) {
   button.block:hover { background: color-mix(in oklab, var(--ink) calc(var(--shade, 6%) + 5%), var(--panel)); }

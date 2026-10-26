@@ -199,6 +199,16 @@ export function SpaceMap({
   const nested = new Set(blocks.filter((b) => b.depth === 2).map((b) => b.parent));
   const pct = (x: number) => (x < 0.001 ? "<0.1%" : x < 0.1 ? `${(x * 100).toFixed(1)}%` : `${Math.round(x * 100)}%`);
   const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Drilling in grows the next map out of the block you clicked; going up settles it from slightly larger.
+  const drill = React.useRef<{ path: string; x: number; y: number } | null>(null);
+  const prevPath = React.useRef(result.path);
+  const zoom = React.useRef<{ dir: "in" | "out"; origin: string } | null>(null);
+  if (prevPath.current !== result.path) {
+    const d = drill.current;
+    zoom.current = d && d.path === result.path ? { dir: "in", origin: `${d.x}px ${d.y}px` } : { dir: result.path.length < prevPath.current.length ? "out" : "in", origin: "50% 50%" };
+    prevPath.current = result.path;
+    drill.current = null;
+  }
 
   const label = (b: Block) => {
     const hs = hintsFor(b.path, hints);
@@ -207,7 +217,7 @@ export function SpaceMap({
 
   return (
     <div ref={ref} className={s.mapWrap}>
-      <div className={s.map} style={{ height: H }} role="group" aria-label={`Space used in ${result.path}, as a map`} key={result.path} onMouseLeave={() => {
+      <div className={s.map} style={{ height: H, transformOrigin: zoom.current?.origin }} data-zoom={zoom.current?.dir} data-motion-gentle="" role="group" aria-label={`Space used in ${result.path}, as a map`} key={result.path} onMouseLeave={() => {
           if (hoverTimer.current) clearTimeout(hoverTimer.current);
           onActive(null);
         }}>
@@ -241,7 +251,17 @@ export function SpaceMap({
           );
           const mark = hs.length > 0 && b.w >= 18 && b.h >= 18 && <span className={s.blockMark} aria-hidden />;
           return drillable ? (
-            <button key={b.key} type="button" {...common} tabIndex={b.depth === 1 ? 0 : -1} aria-label={label(b)} onClick={() => onDrill(b.path!)}>
+            <button
+              key={b.key}
+              type="button"
+              {...common}
+              tabIndex={b.depth === 1 ? 0 : -1}
+              aria-label={label(b)}
+              onClick={() => {
+                drill.current = { path: b.path!, x: b.x + b.w / 2, y: b.y + b.h / 2 };
+                onDrill(b.path!);
+              }}
+            >
               {content}
               {mark}
             </button>

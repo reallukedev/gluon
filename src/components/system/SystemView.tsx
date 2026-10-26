@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import type { LiveLogins, PowerStatus, ServiceInfo, SystemOverview, UpdatesStatus } from "@/lib/system-types";
-import { useApi, useStream } from "@/lib/client/api";
+import { useApi, useStream, type ApiError } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Page, PageHeader } from "@/components/ui/Surface";
 import { Tabs } from "@/components/ui/Tabs";
@@ -11,6 +11,7 @@ import { ServicesTab } from "./ServicesTab";
 import { PowerTab } from "./PowerTab";
 import { SignInsTab } from "./SignInsTab";
 import { peopleList } from "./loginWords";
+import { hostFailure } from "./hostFailure";
 import s from "./system.module.css";
 
 export type SystemTab = "overview" | "updates" | "services" | "sign-ins" | "power";
@@ -30,6 +31,16 @@ export function updatesOverdue(u: UpdatesStatus | undefined): boolean {
   if (!u) return false;
   const t = Date.now();
   return (!!u.oldestSecurityAt && u.counts.security > 0 && t - u.oldestSecurityAt > 3 * DAY) || (!!u.oldestPendingAt && t - u.oldestPendingAt > 30 * DAY);
+}
+
+/** The summary when updates or services couldn't be read (or are still loading). */
+function unreadSummary(updatesError: ApiError | null, servicesError: ApiError | null): string {
+  const failed = [updatesError && "updates", servicesError && "services"].filter(Boolean) as string[];
+  if (!failed.length) return "Checking updates and services.";
+  const list = failed.join(" and ");
+  const missing = [updatesError, servicesError].every((e) => !e || hostFailure(e).kind === "missing");
+  if (missing) return `${list[0]!.toUpperCase()}${list.slice(1)} ${failed.length > 1 ? "aren't" : "isn't"} available on this server.`;
+  return `Couldn't check ${list}.`;
 }
 
 export function SystemView({ tab, unit, initial }: { tab: SystemTab; unit: string | null; initial: SystemInitial }) {
@@ -95,7 +106,7 @@ export function SystemView({ tab, unit, initial }: { tab: SystemTab; unit: strin
     ) : u && services.data ? (
       "Everything is running and up to date."
     ) : (
-      "Updates, services, sign-ins and power for this server."
+      unreadSummary(updates.error && !u ? updates.error : null, services.error && !services.data ? services.error : null)
     );
 
   return (

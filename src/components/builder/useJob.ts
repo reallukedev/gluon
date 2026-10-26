@@ -45,7 +45,7 @@ export function useJob(detail: CustomAppDetail, opts: { beforeStart: () => Promi
           },
           abort.current.signal,
         );
-        if (!ended) setView((v) => reduceJob(v ?? emptyJob, { type: "error", message: "Gluon lost track of it before it finished. It may still be running; this page shows how it ends." }));
+        if (!ended) setView((v) => reduceJob(v ?? emptyJob, { type: "error", message: "Lost track of it before it finished. It may still be running; this page shows how it ends." }));
       } catch (e) {
         if ((e as Error)?.name === "AbortError") return;
         setView(null);

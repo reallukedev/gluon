@@ -80,7 +80,7 @@ export function DnsHelp({ host, baseDomain, purpose, known, publicIp }: Props) {
           </>
         ) : (
           <>
-            {dns?.status === "error" ? `Gluon couldn't look up ${settled} just now. If it doesn't exist yet, add` : `${settled} has no DNS record yet. Add`} {records.length > 1 ? "these records" : "this record"} wherever the domain&rsquo;s DNS is managed:
+            {dns?.status === "error" ? `Couldn't look up ${settled} just now. If it doesn't exist yet, add` : `${settled} has no DNS record yet. Add`} {records.length > 1 ? "these records" : "this record"} wherever the domain&rsquo;s DNS is managed:
           </>
         )}
       </p>

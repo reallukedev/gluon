@@ -68,7 +68,7 @@ export function isDockerDown(e: unknown): boolean {
   return code === "ECONNREFUSED" || code === "ENOENT" || code === "EACCES" || code === "ECONNRESET" || code === "EPIPE";
 }
 
-export const DOCKER_DOWN_MESSAGE = "Gluon can't reach Docker. Check that Docker is running on the server and that Gluon's container has /var/run/docker.sock mounted.";
+export const DOCKER_DOWN_MESSAGE = "Can't reach Docker. Check that Docker is running on the server and that Gluon's container has /var/run/docker.sock mounted.";
 
 /** Turn any Docker failure into an AppError whose message a person can act on. */
 export function dockerError(e: unknown, doing: string): AppError {

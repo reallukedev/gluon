@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import dynamic from "next/dynamic";
-import type { ChannelView, MonitorView } from "@/lib/alerts-types";
+import type { ChannelView, DeliveryPage, MonitorView } from "@/lib/alerts-types";
 import { alertsHref, type AlertsTab } from "@/lib/settings-links";
 import { useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
@@ -26,6 +26,10 @@ export function AlertsSettings({ tab, monitorId, channelId }: { tab: AlertsTab; 
   const fmt = useFormat();
   const { data: monitors } = useApi<MonitorView[]>(MONITORS_URL, { refresh: 30_000 });
   const { data: channels } = useApi<ChannelView[]>(CHANNELS_URL, { refresh: 60_000 });
+  // Same key as the Sent list's first page, so this costs no extra request.
+  const { data: sent } = useApi<DeliveryPage>(tab === "notifications" ? "/api/alerts/deliveries?limit=50" : null, { refresh: 20_000 });
+  // Nothing can have been sent before there's a channel; an empty log would only repeat that.
+  const showSent = !!channels?.length || !!sent?.items.length;
 
   const watched = monitors?.filter((m) => m.state !== "paused" && m.state !== "idle") ?? [];
   const down = watched.filter((m) => m.state === "down").length;
@@ -70,13 +74,15 @@ export function AlertsSettings({ tab, monitorId, channelId }: { tab: AlertsTab; 
         {tab === "notifications" && (
           <>
             <ChannelsTab highlight={channelId} />
-            <div className={s.sentSection}>
-              <Section title="Sent" meta="Every message Gluon sent, and whether it got through">
-                <div className={s.stackBody}>
-                  <SentTab />
-                </div>
-              </Section>
-            </div>
+            {showSent && (
+              <div className={s.sentSection}>
+                <Section title="Sent">
+                  <div className={s.stackBody}>
+                    <SentTab />
+                  </div>
+                </Section>
+              </div>
+            )}
           </>
         )}
         {tab === "history" && <HistoryTab />}

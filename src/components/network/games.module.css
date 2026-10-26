@@ -86,6 +86,8 @@
 .emptyWrap { border-top: 1px solid var(--line); }
 .emptyWrap > div { padding: 24px 18px 28px; }
 .emptyLine { padding: 14px 18px 16px; border-top: 1px solid var(--line); }
+/* A one-line empty state reads as part of its subhead. */
+.subhead + .emptyLine { border-top: 0; padding-top: 0; }
 .emptyLine p { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 80ch; }
 .none { padding: 14px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); }
 .filter { padding: 0 12px 12px 18px; max-width: 420px; }

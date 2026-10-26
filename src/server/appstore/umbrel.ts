@@ -24,7 +24,7 @@ export class UmbrelError extends AppError {}
 
 async function trpc<T>(path: string, input: unknown, opts: { mutation?: boolean; timeoutMs?: number } = {}): Promise<T> {
   const ep = await findUmbrel();
-  if (!ep) throw new UmbrelError("umbrel_missing", "Gluon can't find Umbrel on this server.", 503);
+  if (!ep) throw new UmbrelError("umbrel_missing", "Can't find Umbrel on this server.", 503);
   const q = !opts.mutation && input !== undefined ? `?input=${encodeURIComponent(JSON.stringify(input))}` : "";
   let res: Response;
   try {

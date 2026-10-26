@@ -183,10 +183,10 @@ export function MonitorForm({
       title={monitor ? (auto ? `Timing for ${monitor.name}` : `Edit ${monitor.name}`) : "Add a monitor"}
       description={
         auto
-          ? "This monitor follows its app or public address automatically. You can change how often it checks and when it counts as down."
+          ? "Follows its app or public address on its own. Only its timing can change."
           : monitor
             ? undefined
-            : "Gluon checks the address on a schedule and tells you when it stops answering."
+            : "Get told when an address stops answering."
       }
       footer={
         <>
@@ -243,7 +243,7 @@ export function MonitorForm({
             <Field
               label={d.kind === "http" ? "Address" : "Host and port"}
               error={fieldErr("target")}
-              description={d.kind === "http" ? "The full address, including http:// or https://. Add a path to check one page." : "Checks that something accepts connections, e.g. a NAS on 192.168.1.20:445."}
+              description={d.kind === "http" ? "Include http:// or https://. Add a path to check one page." : "Checks that something accepts connections, e.g. a NAS on 192.168.1.20:445."}
             >
               <Input
                 mono

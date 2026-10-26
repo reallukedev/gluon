@@ -260,9 +260,8 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
       if (plan.dirs.length) refresh();
       const list = plan.files.map((p) => ({ file: incoming.files[p.index]!.file, dir: p.dir ? joinPath(dest, p.dir) : dest, conflict: p.conflict }));
       if (!list.length) return void (plan.dirs.length ? toast.success(`Made ${fmt.plural(plan.dirs.length, "folder")} in ${baseName(dest) || "/"}`) : toast.info("Nothing to upload. Everything was skipped."));
+      // The tray shows the upload; a toast on top of it would say the same thing twice.
       uploads.enqueue(list);
-      const bytes = list.reduce((a, x) => a + x.file.size, 0);
-      toast.info(`Uploading ${fmt.plural(list.length, "file")} (${fmt.bytes(bytes)}) to ${baseName(dest) || "/"}`, { description: "Keep this tab open. If the connection drops, uploads continue where they stopped." });
     } catch (e) {
       fail("Couldn't start the upload")(e);
     }

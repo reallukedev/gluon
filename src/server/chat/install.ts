@@ -71,7 +71,7 @@ async function freeSlug(server: ChatServerKind): Promise<string> {
   const root = await appsRoot().catch(() => null);
   const free = (slug: string) => !ids.has(slug) && !(root && hostExists(path.posix.join(root, slug)));
   for (const slug of [server, "chat-server", ...[2, 3, 4, 5, 6, 7, 8, 9].map((n) => `${server}-${n}`)]) if (free(slug)) return slug;
-  throw new AppError("no_name", "Gluon couldn't find a free name for the chat server app.", 409);
+  throw new AppError("no_name", "Couldn't find a free name for the chat server app.", 409);
 }
 
 export async function startChatInstall(user: User, where: Where, a: ChatInstall): Promise<string> {
@@ -132,7 +132,7 @@ export async function finishChatInstall(user: User, where: Where, draftId: strin
  */
 async function setUpQuark(appId: string, a: ChatInstall, settings: ChatSettings, password: string): Promise<string> {
   const app = await getApp(appId);
-  if (!app?.containers.some((c) => QUARK_IMAGE_RE.test(c.image))) throw new AppError("not_ready", "Gluon can't find the Quark container.", 409);
+  if (!app?.containers.some((c) => QUARK_IMAGE_RE.test(c.image))) throw new AppError("not_ready", "Can't find the Quark container.", 409);
   const t = await until("Quark starting", async () => {
     invalidateApps();
     const x = await quarkFor(appId);
@@ -163,7 +163,7 @@ async function setUpProsody(appId: string, a: ChatInstall, settings: ChatSetting
   // rewrites them, so a bad file from an earlier attempt can't keep Prosody down.
   const app = await getApp(appId);
   const container = app?.containers.find((c) => /prosody/i.test(c.image));
-  if (!app?.workingDir || !container) throw new AppError("not_ready", "Gluon can't find the chat server's folder.", 409);
+  if (!app?.workingDir || !container) throw new AppError("not_ready", "Can't find the chat server's folder.", 409);
   writeConfd(path.posix.join(app.workingDir, "data", "conf.d"), settings, { host: a.domain, publicBase: getSetting("publicHost").trim() ? publicBaseUrl() : null });
   await docker().getContainer(container.id).restart({ t: 10 });
   invalidateApps();
@@ -207,7 +207,7 @@ async function publishChatDomain(user: User, where: Where, appId: string, a: Cha
       await saveRoutes(user, where, { rev: configRev(current), routes: [...current.routes, route], fallback: current.fallback });
       routeAdded = true;
     } catch (e) {
-      notes.push(`Gluon couldn't add ${a.domain} on Network (${(e as Error).message}). Add it there as a chat server.`);
+      notes.push(`Couldn't add ${a.domain} on Network (${(e as Error).message}). Add it there as a chat server.`);
     }
   }
   return routeAdded;

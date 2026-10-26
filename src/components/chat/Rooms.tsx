@@ -64,7 +64,7 @@ export function Rooms({ appId, host, onChanged }: { appId: string; host: ChatHos
     >
       {host.rooms.length === 0 ? (
         <div className={s.empty}>
-          <p>No group chats yet. Make one here, or create it from any chat app; it shows up here either way.</p>
+          <p>No group chats yet. Make one here or in any chat app.</p>
         </div>
       ) : (
         <ul className={s.rooms}>

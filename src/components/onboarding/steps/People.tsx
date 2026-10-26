@@ -85,7 +85,7 @@ export function PeopleStep() {
   return (
     <>
       <StepHead title="Who else lives here?">
-        <p>Invite the people who use the apps on this server. Each gets a link to choose their own username and password, and sees only what you share with them.</p>
+        <p>Each person gets a link to make their own sign-in, and sees only what you share with them.</p>
       </StepHead>
 
       {made ? (
@@ -123,14 +123,14 @@ export function PeopleStep() {
                 {lanOnly && (
                   <>
                     {" "}
-                    It points at the home network, so it opens on Wi-Fi at home. A public name in <Link href="/settings/server">Settings → Server</Link> makes links that work anywhere.
+                    It only opens on Wi-Fi at home. Set a public name in <Link href="/settings/server">Server settings</Link> for links that work anywhere.
                   </>
                 )}
               </p>
             </div>
           </div>
           <Notice tone="attention" title="Send it now">
-            This is the only time the link is shown. If it gets lost, cancel it in Settings → People and make a new one.
+            The link is only shown once. If it gets lost, cancel it in People settings and make a new one.
           </Notice>
           <div>
             <Button onClick={another}>Invite someone else</Button>
@@ -138,7 +138,7 @@ export function PeopleStep() {
         </section>
       ) : (
         <form id="invite-form" className={o.stack} onSubmit={(e) => void create(e)} noValidate>
-          <Field label="Their name" optional description="Shown on their invite page. They can change it.">
+          <Field label="Their name" optional description="Shown on their invite. They can change it.">
             <Input ref={nameRef} value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoComplete="off" placeholder="e.g. Sam" />
           </Field>
           <div

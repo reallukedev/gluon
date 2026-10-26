@@ -107,7 +107,7 @@ export function addressChecks(): CheckSpec[] {
         id: "addresses.config",
         group: g,
         label: "Public addresses",
-        run: async () => skip("Gluon can't read routes.json, so public addresses weren't checked", { detail: "Check that ~/proxy/caddy is mounted into Gluon at /proxy-caddy." }),
+        run: async () => skip("Can't read routes.json, so public addresses weren't checked", { detail: "Check that ~/proxy/caddy is mounted into Gluon at /proxy-caddy." }),
       },
     ];
   }

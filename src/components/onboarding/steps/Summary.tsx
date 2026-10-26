@@ -39,13 +39,13 @@ export function Summary() {
       label: "Updates",
       set: u.touched,
       text: !u.touched
-        ? "Not chosen. Gluon follows Stable and tells you when an update is ready."
+        ? "Stable, installed when you say."
         : !u.auto
-          ? `${channel}. Gluon tells you when one is ready and waits for you.`
+          ? `${channel}, installed when you say.`
           : u.channel === "nightly" && u.nightlyTiming === "asap"
             ? `${channel}, installed automatically as they land.`
             : `${channel}, installed automatically around ${hourLabel(u.hour, prefs.clock)}.`,
-      where: { href: "/settings/updates", label: "Settings → Updates" },
+      where: { href: "/settings/updates", label: "Change" },
     });
   }
   if (data) {
@@ -53,8 +53,8 @@ export function Summary() {
       key: "alerts",
       label: "Alerts",
       set: data.alerts.length > 0,
-      text: data.alerts.length ? `Problems reach you on ${listJoin(data.alerts.map((a) => a.name))}.` : "Problems only show up in Gluon, on Status. Nothing is sent to you.",
-      where: { href: "/settings/notifications", label: "Settings → Notifications" },
+      text: data.alerts.length ? `Problems reach you on ${listJoin(data.alerts.map((a) => a.name))}.` : "Only on Status. Nothing is sent to you.",
+      where: { href: "/settings/notifications", label: "Change" },
     });
   }
   if (data?.invites) {
@@ -70,7 +70,7 @@ export function Summary() {
       // Invites out but nobody in yet: the dashed "on its way" line.
       pending: !joined.length && waiting.length > 0,
       text: parts.length ? parts.join(" ") : "Just you for now.",
-      where: { href: "/settings/people", label: "Settings → People" },
+      where: { href: "/settings/people", label: "Change" },
     });
   }
   if (data && (data.mfa || plan.steps.includes("security"))) {
@@ -79,14 +79,14 @@ export function Summary() {
       label: "Two-step sign-in",
       set: data.mfa,
       text: data.mfa ? "On. Signing in asks for a code from your phone." : "Off. Worth turning on, since Gluon can be reached from outside.",
-      where: { href: "/settings/security", label: "Settings → Security" },
+      where: { href: "/settings/security", label: data.mfa ? "Change" : "Turn on" },
     });
   }
 
   return (
     <>
       <StepHead title={`${plan.serverName} is set up`}>
-        <p>Here&apos;s how things stand. All of it can be changed later, in the place named on each line.</p>
+        <p>Anything below can be changed later in Settings.</p>
       </StepHead>
 
       {error && !data ? (
@@ -115,6 +115,7 @@ export function Summary() {
               <Link
                 className={o.summaryWhere}
                 href={l.where.href}
+                aria-label={`${l.where.label}: ${l.label}`}
                 onClick={(e) => {
                   // Following a link from here finishes first run too (a new tab just opens the page).
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
@@ -128,8 +129,6 @@ export function Summary() {
           ))}
         </ul>
       )}
-
-      <p className={o.note}>From here on Gluon keeps watching. Anything that needs you shows up in Status, with its fix.</p>
 
       <Actions
         primary={

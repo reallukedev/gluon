@@ -6,12 +6,12 @@ import { Pause, Play, Search } from "iconoir-react";
 import type { ProcessInfo, ProcessSnapshot } from "@/lib/diagnostics-types";
 import { useStream } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Panel, Skeleton, Empty, Notice } from "@/components/ui/Surface";
+import { Panel, Skeleton, Empty } from "@/components/ui/Surface";
 import { Segmented, Checkbox } from "@/components/ui/Field";
 import { IconButton } from "@/components/ui/Button";
 import { UsageBar } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
-import { LiveStatus } from "./LiveStatus";
+import { LiveStatus, StreamError } from "./LiveStatus";
 import { Faceplate } from "./Faceplate";
 import s from "./diagnostics.module.css";
 
@@ -41,8 +41,10 @@ export function ProcessesTab() {
 
   return (
     <div className={s.stack}>
-      {error && <Notice tone="fault" title="The process list stopped updating">{error}</Notice>}
+      {error && <StreamError what="process list" error={error} stale={!!snap} />}
       <Faceplate snap={snap} />
+      {error && !snap ? null : (
+        <>
 
       <div className={s.toolbar}>
         <label className={s.filter}>
@@ -62,13 +64,15 @@ export function ProcessesTab() {
 
       <Panel flush>
         {!snap ? (
-          <div className={s.pad}>
-            <Skeleton height={360} />
+          <div className={s.pad} style={{ display: "grid", gap: 10 }}>
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} height={34} />
+            ))}
           </div>
         ) : list.length === 0 ? (
-          <Empty title="Nothing matches">Only the 30 busiest processes are listed; try a broader filter.</Empty>
+          <Empty title="Nothing matches">Only the 30 busiest are listed. Try a broader filter.</Empty>
         ) : (
-          <div role="table" aria-label="Processes" className={s.table}>
+          <div role="table" aria-label="Processes" className={`${s.table} appear`}>
             <div role="row" className={`${s.head} ${s.procGrid}`}>
               <span role="columnheader" className={s.end}>PID</span>
               <span role="columnheader">Process</span>
@@ -83,7 +87,9 @@ export function ProcessesTab() {
           </div>
         )}
       </Panel>
-      <p className={s.faint}>The 30 busiest programs, updated every few seconds. CPU is a share of one thread, like top: 200% means two threads are fully busy.</p>
+      <p className={s.faint}>The 30 busiest. CPU counts per thread, like top: 200% is two busy threads.</p>
+        </>
+      )}
     </div>
   );
 }

@@ -89,7 +89,7 @@ function SpaceWidget({ size }: WidgetProps) {
     return `Steady · ${fmt.bytes(d.avail)} free`;
   };
   return (
-    <div className={m.body}>
+    <div key="ready" className={`${m.body} appear`} data-motion-gentle="">
       <p className={m.headline}>
         <StateLine state={line} size={18} />
         <span>
@@ -104,17 +104,19 @@ function SpaceWidget({ size }: WidgetProps) {
           )}
         </span>
       </p>
-      <p className={m.sub}>
-        {lead
-          ? `At this rate: +${fmt.bytes(lead.perDay!)} a day, ${fmt.bytes(lead.avail)} left.${filling.length > 1 ? ` ${filling.length - 1} more ${filling.length === 2 ? "disk is" : "disks are"} filling.` : ""}`
-          : learning
-            ? "Gluon needs about half a day of history. Check back later."
-            : "Based on the last week. Nothing will run out at this rate."}
-      </p>
+      {!(learning && size === "m") && (
+        <p className={m.sub}>
+          {lead
+            ? `At this rate: +${fmt.bytes(lead.perDay!)} a day, ${fmt.bytes(lead.avail)} left.${filling.length > 1 ? ` ${filling.length - 1} more ${filling.length === 2 ? "disk is" : "disks are"} filling.` : ""}`
+            : learning
+              ? "Needs about half a day of history."
+              : "Based on the last week. Nothing will run out at this rate."}
+        </p>
+      )}
       {size !== "s" && (
         <ul className={m.list} role="list" ref={listRef}>
           {disks.map((d, i) => (
-            <li key={d.mount} className={m.disk} aria-hidden={i >= fit || undefined}>
+            <li key={d.mount} className={m.disk} data-size={size} aria-hidden={i >= fit || undefined}>
               <span className={m.diskHead}>
                 <span className={`${m.diskName} ${names.has(d.mount) ? "" : "mono"}`} title={d.mount}>
                   {nameOf(d.mount)}
@@ -129,9 +131,11 @@ function SpaceWidget({ size }: WidgetProps) {
           ))}
         </ul>
       )}
-      <Link href="/storage?tab=space" className={m.link}>
-        {hidden > 0 ? `${hidden} more in Storage` : "See what's using space"}
-      </Link>
+      {(hidden > 0 || size !== "m") && (
+        <Link href="/storage?tab=space" className={m.link}>
+          {hidden > 0 ? `${hidden} more in Storage` : "See what's using space"}
+        </Link>
+      )}
     </div>
   );
 }

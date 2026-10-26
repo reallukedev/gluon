@@ -101,7 +101,6 @@ export function TerminalView({ initialTarget, initialRun, initialMode, userId }:
     ) : target === "host" ? (
       <>
         Commands run on <b>this server</b>
-        {hostName ? ` (${hostName})` : ""}
         {who}. They&apos;re recorded in Activity.
       </>
     ) : (

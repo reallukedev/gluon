@@ -339,7 +339,7 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
               </div>
               {d.server.includes("ntfy.sh") && (
                 <p className={s.note}>
-                  Topics on ntfy.sh are public: anyone who guesses the name can read them. Use a long, random topic or an access token.
+                  Anyone who guesses an ntfy.sh topic can read it. Use a long, random one or an access token.
                 </p>
               )}
               <Field label="Sign-in">
@@ -511,7 +511,7 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
                       ? "In Discord: channel settings → Integrations → Webhooks → Copy Webhook URL."
                       : d.format === "slack"
                         ? "From a Slack app's Incoming Webhooks page (starts with https://hooks.slack.com/)."
-                        : "Gluon POSTs a JSON object with event, level, title, body and link.")
+                        : "Gets a JSON POST with event, level, title, body and link.")
                   }
                 >
                   <Input mono type="password" autoComplete="off" value={d.url} onChange={(e) => set("url", e.target.value)} placeholder={saved("url") ? String(channel?.config?.url ?? "") : "https://…"} spellCheck={false} />
@@ -663,7 +663,7 @@ function XmppFields({
   return (
     <>
       {admin && (
-        <Field label="Send from" description={d.xmode === "account" ? "Gluon signs in as this account to send. A separate account just for alerts works best." : undefined}>
+        <Field label="Send from" description={d.xmode === "account" ? "A separate account just for alerts works best." : undefined}>
           <Segmented
             aria-label="Send from"
             value={d.xmode}
@@ -682,7 +682,7 @@ function XmppFields({
             {stopped.length
               ? `${stopped[0]!.problem} Start it, then come back.`
               : admin
-                ? "Gluon sends through a chat server it runs (Quark or Prosody). Set one up from Apps, or send from an XMPP account you already have."
+                ? "Install Quark or Prosody from Apps, or send from an XMPP account you have."
                 : "Ask whoever looks after the server to set up a chat server. Until then, use ntfy or email."}
           </Notice>
         ) : error && !data ? (
@@ -696,7 +696,7 @@ function XmppFields({
               error={fe("app", "domain")}
               description={
                 sender
-                  ? `Messages come from ${sender}. Gluon creates that account the first time it sends, so people can add it as a contact. If this chat server stops, it can't tell you so: keep a second channel too, like ntfy or email.`
+                  ? `Messages come from ${sender}, created on first send. If this server stops it can't tell you, so keep a second channel too.`
                   : "Loading the chat servers…"
               }
             >
@@ -758,7 +758,7 @@ function XmppFields({
                 label="Group chats"
                 optional
                 error={fe("rooms")}
-                description={d.xmode === "server" ? "Also post in a group chat on this server, like a household one." : "Also post in a group chat. Gluon joins just long enough to post, and needs to be a member of members-only ones."}
+                description={d.xmode === "server" ? "Also post in a group chat on this server, like a household one." : "Also post in a group chat. Members-only rooms need this account as a member."}
               >
                 <Input mono value={d.xrooms} onChange={(e) => set("xrooms", e.target.value)} placeholder={rooms[0] ?? "family@rooms.chat.example.com"} autoCapitalize="off" spellCheck={false} />
               </Field>

@@ -1,5 +1,5 @@
 import "server-only";
-import { AppError, badRequest } from "../errors";
+import { AppError, badRequest, fieldWords, ownIssueMessage } from "../errors";
 import type { User } from "../auth/users";
 import { cached } from "../integrations/cache";
 import { KINDS } from "../integrations/registry";
@@ -80,14 +80,14 @@ function parseConfig(type: WidgetType, raw: unknown): Record<string, unknown> {
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = issue?.path.join(".");
-    const msg = issue?.message && !issue.message.startsWith("Invalid") ? issue.message : `Check the widget's ${field || "settings"}.`;
+    const msg = ownIssueMessage(issue?.message) ?? `Check ${fieldWords(field) ?? "the widget's settings"}.`;
     throw badRequest(msg, field ? { field: `config.${field}` } : undefined);
   }
   return parsed.data as Record<string, unknown>;
 }
 
 export async function widgetData(user: User, req: WidgetRequest): Promise<WidgetResponse> {
-  if (!isWidgetType(req.type)) throw badRequest("Gluon doesn't know that kind of widget.");
+  if (!isWidgetType(req.type)) throw badRequest("That kind of widget doesn't exist. Pick one from the list.");
   const type = req.type;
   const config = parseConfig(type, req.config);
   const ttl = WIDGET_REFRESH_MS[type];
@@ -135,7 +135,7 @@ export async function widgetData(user: User, req: WidgetRequest): Promise<Widget
       case "link.status":
         return linkStatus((config as { url: string }).url, policy);
       default:
-        throw badRequest("Gluon doesn't know that kind of widget.");
+        throw badRequest("That kind of widget doesn't exist. Pick one from the list.");
     }
   };
   const r = await cached(key, ttl, load, { staleMs: STALE_MS[type] });
@@ -150,7 +150,7 @@ export async function widgetBatch(user: User, reqs: WidgetRequest[]): Promise<Wi
         return { key, ok: true, ...(await widgetData(user, req)) };
       } catch (e) {
         const err =
-          e instanceof AppError ? { code: e.code, message: e.message } : { code: "internal", message: "Something went wrong on the server. It's been logged." };
+          e instanceof AppError ? { code: e.code, message: e.message } : { code: "internal", message: "Something went wrong on the server. Try again; the details are in the server log." };
         if (!(e instanceof AppError)) console.error("[gluon] widget data failed", e);
         return { key, ok: false, type: isWidgetType(req.type) ? req.type : null, error: err };
       }

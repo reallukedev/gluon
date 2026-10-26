@@ -55,7 +55,7 @@ export function AppsStep() {
   return (
     <>
       <StepHead title="Pick the apps for your Home">
-        <p>The ones you pick sit on your Home page, ready to open. The rest are still there when you search.</p>
+        <p>The rest stay a search away.</p>
       </StepHead>
 
       {apps.error && !apps.data ? (
@@ -71,7 +71,7 @@ export function AppsStep() {
           ))}
         </ul>
       ) : list.length === 0 ? (
-        <p className={o.note}>Nothing has been shared with you yet. When {plan.admin ?? "the admin"} shares an app, it shows up on your Home page by itself.</p>
+        <p className={o.note}>Nothing yet. Apps {plan.admin ?? "the admin"} shares appear on Home by themselves.</p>
       ) : (
         <div className={o.stack}>
           <div className={o.picksHead}>

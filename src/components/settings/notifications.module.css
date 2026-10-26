@@ -41,3 +41,12 @@
 }
 .change[data-hidden] { visibility: hidden; }
 @media (max-width: 560px) { .subHead > .kindIcon { align-self: start; } }
+
+/* A row revealed by the choice above it settles in from just above; it leaves instantly. */
+.reveal {
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(calc(-4px * var(--motion)));
+  }
+}

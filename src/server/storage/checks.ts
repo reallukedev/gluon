@@ -143,7 +143,7 @@ function checkSmart(s: InventoryState) {
         severity: "info",
         subject: d.path,
         title: `The ${named(d)} has ${sm.reallocated} replaced bad sector${sm.reallocated === 1 ? "" : "s"}`,
-        cause: "The number hasn't gone up recently, so the drive is coping. Gluon will tell you if it starts rising.",
+        cause: "The number hasn't gone up recently, so the drive is coping. You'll get an alert if it starts rising.",
         detail: { disk: d.id, smart: sm },
         remedy: { action: "", label: "See drive health", href: diskHref(d) },
       });

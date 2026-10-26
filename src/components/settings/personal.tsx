@@ -111,7 +111,7 @@ export function Appearance() {
                 </span>
                 <span className={s.choiceText}>
                   {m === "system" ? "Match my device" : m === "light" ? "Light" : "Dark"}
-                  <small suppressHydrationWarning>{m === "system" ? (sysDark ? "Dark right now" : "Light right now") : m === "light" ? "Bone plate, dark ink" : "Graphite, lamp-lit ink"}</small>
+                  {m === "system" && <small suppressHydrationWarning>{sysDark ? "Dark right now" : "Light right now"}</small>}
                 </span>
               </button>
             ))}
@@ -120,7 +120,7 @@ export function Appearance() {
 
         <Panel title="Colour for “needs you”">
           <p className={s.hint} style={{ marginBottom: 14 }}>
-            The one colour Gluon keeps for things you have to act on. Pick whichever you see most clearly; the doubled line means the same whatever its colour.
+            Marks what you have to act on. Pick the one you see best.
           </p>
           <div className={s.swatches} role="group" aria-label="Colour for things that need you">
             {ATTENTION.map((a) => (
@@ -148,7 +148,7 @@ export function Appearance() {
               ]}
             />
           </SettingRow>
-          <SettingRow label="Density" description="Compact fits more rows on screen.">
+          <SettingRow label="Density">
             <Segmented
               aria-label="Density"
               value={prefs.density}
@@ -166,8 +166,8 @@ export function Appearance() {
             label="Reduce motion"
             description={
               sysCalm && prefs.motion !== "reduce"
-                ? "Your device already asks for less motion, so Gluon keeps movement to a minimum."
-                : "Things change in place instead of sliding. Gluon also follows your device's setting."
+                ? "Already on, because your device asks for less motion."
+                : "Things change in place instead of sliding."
             }
           >
             <Switch checked={prefs.motion === "reduce"} onChange={(v) => void set({ motion: v ? "reduce" : "system" })} aria-label="Reduce motion" />
@@ -259,16 +259,18 @@ export function HomePrefs() {
   return (
     <div className={s.stack}>
       <Panel title="Your home page">
-        <SettingRow label="Widgets" description="Add, move, resize and remove widgets right on the page.">
+        <SettingRow label="Widgets">
           <LinkButton href="/?edit=1">Customise home page</LinkButton>
         </SettingRow>
         <SettingRow label="Greeting" description={`“Good morning, ${prefs.greetingName || viewer.displayName.split(" ")[0]}.” at the top of the page.`}>
           <Switch checked={prefs.greeting} onChange={(v) => void set({ greeting: v })} aria-label="Greeting" />
         </SettingRow>
         {prefs.greeting && (
-          <SettingRow stack label="Call me" description="Leave empty to use your first name.">
-            <Input value={name} placeholder={viewer.displayName.split(" ")[0]} onChange={(e) => setName(e.target.value)} onBlur={() => name !== prefs.greetingName && void set({ greetingName: name.trim() })} maxLength={40} aria-label="Call me" />
-          </SettingRow>
+          <div className={`${s.reveal} ${s.revealRow}`}>
+            <SettingRow stack label="Call me">
+              <Input value={name} placeholder={viewer.displayName.split(" ")[0]} onChange={(e) => setName(e.target.value)} onBlur={() => name !== prefs.greetingName && void set({ greetingName: name.trim() })} maxLength={40} aria-label="Call me" />
+            </SettingRow>
+          </div>
         )}
         <SettingRow label="Page width">
           <Segmented
@@ -282,7 +284,7 @@ export function HomePrefs() {
             ]}
           />
         </SettingRow>
-        <SettingRow label="Open Gluon on" description="Where you land after signing in or opening the installed app.">
+        <SettingRow label="Open Gluon on" description="After you sign in or open the app.">
           <Select
             aria-label="Open Gluon on"
             value={prefs.startPage}
@@ -298,7 +300,7 @@ export function HomePrefs() {
       </Panel>
 
       <Panel title="Search and links">
-        <SettingRow label="Search with" description="Used by the search box on your home page.">
+        <SettingRow label="Search with">
           <Select
             aria-label="Search engine"
             value={prefs.searchEngine}
@@ -307,9 +309,11 @@ export function HomePrefs() {
           />
         </SettingRow>
         {prefs.searchEngine === "custom" && (
-          <Field label="Search address" description="Put %s where your search goes, e.g. https://search.example.com/?q=%s" error={custom && !customValid ? "Include %s and start with https://" : null}>
-            <Input value={custom} onChange={(e) => setCustom(e.target.value)} onBlur={() => customValid && custom !== prefs.searchCustomUrl && void set({ searchCustomUrl: custom })} mono inputMode="url" />
-          </Field>
+          <div className={s.reveal}>
+            <Field label="Search address" description="Put %s where the search goes: https://search.example.com/?q=%s" error={custom && !customValid ? "Include %s and start with https://" : null}>
+              <Input value={custom} onChange={(e) => setCustom(e.target.value)} onBlur={() => customValid && custom !== prefs.searchCustomUrl && void set({ searchCustomUrl: custom })} mono inputMode="url" />
+            </Field>
+          </div>
         )}
         <SettingRow label="Open apps and links in a new tab">
           <Switch checked={prefs.openLinks === "new"} onChange={(v) => void set({ openLinks: v ? "new" : "same" })} aria-label="Open apps and links in a new tab" />
@@ -349,11 +353,6 @@ export function Formats() {
         </span>
         <span className={s.specimenLine}>
           <span className="num">{now === null ? "\u00a0" : formatDate(now, eff, { weekday: true, year: true })}</span>
-          <span className={s.specimenUnits}>
-            <span className="num">{formatBytes(2e12, prefs.bytes)}</span>
-            <span className="num">{formatRate(12_500_000, prefs.rates)}</span>
-            <span className="num">{formatTemp(62, prefs.temperature)}</span>
-          </span>
         </span>
       </div>
       <Panel title="Time and date">
@@ -382,7 +381,7 @@ export function Formats() {
             ]}
           />
         </SettingRow>
-        <SettingRow label="Time zone" description={prefs.timezone === "auto" ? `Following this device: ${(timeZone ?? "unknown").replace(/_/g, " ")}` : "Times everywhere in Gluon are shown in this zone."}>
+        <SettingRow label="Time zone" description={prefs.timezone === "auto" ? `Following this device: ${(timeZone ?? "unknown").replace(/_/g, " ")}` : undefined}>
           <Select
             aria-label="Time zone"
             value={prefs.timezone}
@@ -398,8 +397,8 @@ export function Formats() {
             value={prefs.bytes}
             onChange={(v) => void set({ bytes: v })}
             options={[
-              { value: "decimal", label: "GB (like disk makers)" },
-              { value: "binary", label: "GiB (like Linux)" },
+              { value: "decimal", label: "GB, as on the box" },
+              { value: "binary", label: "GiB, as in Linux" },
             ]}
           />
         </SettingRow>

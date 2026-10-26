@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ImageLookup } from "@/lib/builder-types";
-import { draftFromImage, prepareCompose } from "./start";
+import { blankDetails, draftFromImage, prepareCompose, withFreeWebPort } from "./start";
+import { renderApp } from "./render";
 import { parseCompose, readService } from "./compose";
 import { analyze, applyAllFixes, applyFix } from "./analyze";
 import { dataFolderFor, mediaKind } from "./names";
@@ -131,6 +132,20 @@ volumes:
     const p = prepareCompose(PAPERLESS, "umbrel", "compose");
     expect(svc(p.text, "webserver").ports).toEqual([]);
     expect(p.said.some((s) => s.includes("Umbrel's proxy now serves port 8000"))).toBe(true);
+  });
+
+  it("publishes the web page once, on the port the file already gives it", () => {
+    const p = prepareCompose(`services:\n  web:\n    image: nginx\n    ports:\n      - "8099:80"\n`, "compose", "compose");
+    const spec = withFreeWebPort({ details: blankDetails("Web"), web: p.web, compose: p.text }, "compose", [8080]);
+    expect(spec.web).toMatchObject({ service: "web", containerPort: 80, port: 8099 });
+    const out = renderApp({ spec, target: "compose", appId: "web", version: "1.0.0", secrets: {}, images: {}, gluonUrl: "http://gluon" });
+    expect(svc(out.files["docker-compose.yml"]!, "web").ports.map((r) => `${r.host}:${r.container}`)).toEqual(["8099:80"]);
+  });
+
+  it("still moves the web page off a port another app uses", () => {
+    const p = prepareCompose(`services:\n  web:\n    image: nginx\n    ports:\n      - "8099:80"\n`, "compose", "compose");
+    const spec = withFreeWebPort({ details: blankDetails("Web"), web: p.web, compose: p.text }, "compose", [8099]);
+    expect(spec.web.port).toBe(8100);
   });
 });
 

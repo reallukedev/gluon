@@ -133,7 +133,7 @@ export function DraftFlow({ initial, initialStep, target: platformTarget }: { in
           </Button>
         }
       >
-        This app was changed in another tab or in the builder. Load the latest to keep going; what you typed since then isn&apos;t saved.
+        Another tab or the builder changed it. Load the latest to keep going; what you typed since isn&apos;t saved.
       </Notice>
     ) : null;
 

@@ -26,12 +26,7 @@ export function Hello() {
       <StepHead title={`Welcome, ${firstName(viewer.displayName, viewer.username)}`}>
         <p>
           {plan.invitedBy ? `${plan.invitedBy} invited you to ${plan.serverName}, the server at home. ` : `This is ${plan.serverName}, the server at home. `}
-          Gluon is its front door: the apps that live on it, in one place, on any device.
-        </p>
-        <p>
-          {plan.canSeeStatus
-            ? `If one of them stops working, Status shows whether it's down for everyone and lets you tell ${admin} with a short note.`
-            : `If one of them stops working, let ${admin} know.`}
+          Its apps open from here, on any device.
         </p>
       </StepHead>
 
@@ -51,7 +46,7 @@ export function Hello() {
             ))}
           </ul>
         ) : apps.length === 0 ? (
-          <p className={o.note}>Nothing yet. When {admin} shares an app with you, it shows up on your Home page by itself.</p>
+          <p className={o.note}>Nothing yet. Apps {admin} shares appear on Home by themselves.</p>
         ) : (
           <ul className={`${o.tiles} appear`}>
             {apps.slice(0, 12).map((a) => (

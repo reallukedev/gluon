@@ -120,7 +120,7 @@ async function selfUpdateWatch() {
       await announce({
         kind: "gluon.failed",
         key: r.id,
-        title: `Gluon couldn't update to ${r.to_version}`,
+        title: `Couldn't update to ${r.to_version}`,
         body: `${r.message ?? "The update didn't finish."} It's still running ${r.from_version}.`,
         link: `${base()}/settings/updates`,
         linkLabel: "See the update log",

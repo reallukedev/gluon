@@ -32,7 +32,7 @@ export function ServicesTab({ draft, services, issues, target, source, yamlBroke
   if (yamlBroken) {
     return (
       <Notice tone="fault" title="The compose file has an error" action={<Button size="sm" onClick={onOpenCompose}>Open Compose</Button>}>
-        Fix it in Compose first. The form can only edit a file it can read.
+        Fix it in Compose, then come back to this form.
       </Notice>
     );
   }
@@ -41,7 +41,7 @@ export function ServicesTab({ draft, services, issues, target, source, yamlBroke
     <>
       {services.length === 0 && (
         <Empty title="No services yet" action={<Button icon={<Plus />} onClick={() => setAdding(true)}>Add a service</Button>}>
-          A service is one container. Most apps need one; some add a database or a cache.
+          A service is one container. Most apps need one.
         </Empty>
       )}
       {services.map((f) => (

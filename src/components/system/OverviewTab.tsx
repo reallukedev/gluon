@@ -228,16 +228,16 @@ function TimePanel({ overview, onChanged }: { overview: SystemOverview; onChange
       : t.synced
         ? `In sync${t.server ? ` with ${t.server}` : ""}.`
         : t.ntp
-          ? "On, but not in sync yet. Check the internet connection if this lasts."
-          : "Unknown";
+          ? "On, not in sync yet. If this lasts, check the internet connection."
+          : "This server doesn't say.";
 
   return (
     <Panel title="Time" id="time">
-      <SettingRow label="Timezone" description="Used for scheduled restarts, logs and apps that follow the server's clock." stack>
+      <SettingRow label="Timezone" description="Scheduled restarts and logs follow it." stack>
         <TimezonePicker value={t.timezone} disabled={busy === "tz"} onChange={(tz) => void put({ timezone: tz }, "tz")} />
       </SettingRow>
       <SettingRow label="Set time automatically" description={syncText}>
-        <Switch checked={!!t.ntp} disabled={busy === "ntp" || t.canNtp === false} onChange={(v) => void put({ ntp: v }, "ntp")} aria-label="Set time automatically" />
+        <Switch checked={!!t.ntp} disabled={busy === "ntp" || t.canNtp === false || t.ntp == null} onChange={(v) => void put({ ntp: v }, "ntp")} aria-label="Set time automatically" />
       </SettingRow>
     </Panel>
   );

@@ -110,6 +110,38 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
   // Close the mobile drawer on navigation.
   React.useEffect(() => setDrawerOpen(false), [pathname]);
 
+  // A new page settles in when a click took you there. Keyboard jumps, palette picks, query-only
+  // changes (a folder in Files, a tab) and the first load stay still.
+  const lastInput = React.useRef<"pointer" | "key">("key");
+  React.useEffect(() => {
+    const pointer = (e: PointerEvent) => {
+      lastInput.current = (e.target as Element | null)?.closest?.("[data-palette]") ? "key" : "pointer";
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") lastInput.current = "key";
+    };
+    window.addEventListener("pointerdown", pointer, { capture: true, passive: true });
+    window.addEventListener("keydown", key, { capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", pointer, { capture: true });
+      window.removeEventListener("keydown", key, { capture: true });
+    };
+  }, []);
+  const lastPath = React.useRef(pathname);
+  React.useLayoutEffect(() => {
+    if (lastPath.current === pathname) return;
+    lastPath.current = pathname;
+    if (lastInput.current !== "pointer") return;
+    const root = document.documentElement;
+    root.dataset.nav = "enter";
+    // Outlasts the 200ms settle, then lets go so nothing already on screen can replay it.
+    const t = setTimeout(() => delete root.dataset.nav, 260);
+    return () => {
+      clearTimeout(t);
+      delete root.dataset.nav;
+    };
+  }, [pathname]);
+
   // Page chrome (e.g. the Status header) can ask for the palette without owning its state.
   React.useEffect(() => {
     const open = () => setPaletteOpen(true);

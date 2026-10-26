@@ -72,7 +72,7 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
     );
 
   const summary = !volumes ? (
-    error ? "Gluon couldn't get the list from Docker." : "Asking Docker…"
+    error ? "Couldn't get the list from Docker." : "Asking Docker…"
   ) : volumes.length === 0 ? (
     "No Docker volumes yet."
   ) : (
@@ -82,7 +82,7 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
         {totalBytes !== null ? (
           <>
             {" "}
-            hold <span className="num">{fmt.bytes(totalBytes)}</span>.
+            {volumes.length === 1 ? "holds" : "hold"} <span className="num">{fmt.bytes(totalBytes)}</span>.
           </>
         ) : (
           "."
@@ -453,8 +453,8 @@ function VolumeDetail({ volume: v, size, onRemove }: { volume: DockerVolume; siz
           ) : (
             <p className={s.faint} style={{ fontSize: "var(--text-sm)" }}>
               {v.anonymous
-                ? "Unnamed volumes are created when an image asks for storage and no one names it. Once their container is gone, nothing uses them again."
-                : "Its data stays until you delete it. An app that's reinstalled with the same Compose name picks it up again."}
+                ? "Made when an image asked for storage without a name. Nothing uses it once its container is gone."
+                : "Its data stays until you delete it. Reinstalling the app under the same Compose name picks it up again."}
             </p>
           )}
           <div className={s.detailActions}>
@@ -504,7 +504,7 @@ function CreateVolumeDialog({ open, onClose, onCreated }: { open: boolean; onClo
       open={open}
       onOpenChange={(o) => !o && !busy && onClose()}
       title="Create a volume"
-      description="An empty local volume. Name it in a Compose file's volumes section (as external) to use it."
+      description="An empty local volume. Use it from a Compose file as an external volume."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>

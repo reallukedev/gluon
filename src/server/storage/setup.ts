@@ -268,7 +268,7 @@ async function runSetup(job: Job, w: SetupWork, user: User, where: Where) {
         severity: "attention",
         subject: disk.path,
         title: `Setting up ${disk.title} didn't finish cleanly`,
-        cause: `It stopped at "${failedAt}" and Gluon couldn't tidy up everything: ${failures.join("; ")}.`,
+        cause: `It stopped at "${failedAt}" and not everything could be tidied up: ${failures.join("; ")}.`,
         detail: { jobId: job.id },
         remedy: { action: "", label: "See what happened", href: `/storage?job=${job.id}` },
       });

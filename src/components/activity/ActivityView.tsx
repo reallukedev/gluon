@@ -191,7 +191,11 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
   const complete = !cursor || (groups.length > 1 && groups[0]?.key === todayKey);
   const latest = items[0];
   const summary = filterKey ? (
-    "Showing only what matches your filters."
+    cursor ? (
+      "Newest matches first."
+    ) : (
+      `${fmt.plural(items.length, "entry", "entries")} ${items.length === 1 ? "matches" : "match"}.`
+    )
   ) : today ? (
     <>
       <b>
@@ -228,17 +232,25 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
           <Search aria-hidden />
           <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Search what happened" aria-label="Search activity" spellCheck={false} />
         </label>
-        <Segmented
+        <Select
           aria-label="Who"
-          value={kind}
-          onChange={setKind}
+          value={user ? `p:${user}` : kind}
+          onChange={(v) => {
+            if (v.startsWith("p:")) {
+              setKind("all");
+              setUser(v.slice(2));
+            } else {
+              setKind(v as Kind);
+              setUser("");
+            }
+          }}
           options={[
             { value: "all", label: "Everyone" },
             { value: "user", label: "People" },
-            { value: "system", label: "The server" },
+            { value: "system", label: serverName },
+            ...people.map((p) => ({ value: `p:${p.id}`, label: p.name })),
           ]}
         />
-        <Select aria-label="Person" value={user} onChange={setUser} options={[{ value: "", label: "Any person" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
         <Segmented
           aria-label="Result"
           value={result}
@@ -294,7 +306,7 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
             <Empty title={filtered ? "Nothing matches" : "Nothing recorded yet"} action={filtered ? <Button onClick={clearAll}>Show everything</Button> : undefined}>
               {filtered
                 ? `Try fewer filters${personName ? ` or someone other than ${personName}` : ""}.`
-                : "Everything people change (restarts, settings, sign-ins) and everything the server notices on its own shows up here as it happens."}
+                : "Changes people make, and what the server notices, show up here."}
             </Empty>
           ) : (
             <ol className={`${s.list} appear`} aria-live="polite" aria-relevant="additions">
@@ -302,10 +314,13 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
                 <React.Fragment key={g.key}>
                   <li className={s.day}>
                     <span className="label">{dayLabel(g.ts, fmt.date)}</span>
-                    <span className={`${s.dayCount} num`}>
-                      {fmt.plural(g.count, "entry", "entries")}
-                      {g.problems ? ` · ${g.problems} went wrong` : ""}
-                    </span>
+                    {/* Today's count is already in the summary. */}
+                    {(filtered || g !== today) && (
+                      <span className={`${s.dayCount} num`}>
+                        {fmt.plural(g.count, "entry", "entries")}
+                        {g.problems ? ` · ${g.problems} went wrong` : ""}
+                      </span>
+                    )}
                   </li>
                   {g.runs.map((r) => (
                     <Row key={r.key} run={r} fresh={fresh.current.has(r.items[0]!.id)} names={names} serverName={serverName} onPerson={setUser} onTarget={setTarget} />
@@ -323,7 +338,7 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
                   )}
                 </li>
               ) : (
-                items.length > 20 && <li className={s.sentinel}>That's everything Gluon has kept (a year).</li>
+                items.length > 20 && <li className={s.sentinel}>That&apos;s all of it. Entries are kept for a year.</li>
               )}
             </ol>
           )}
@@ -385,7 +400,6 @@ const Row = React.memo(function Row({ run, fresh, names, serverName, onPerson, o
         </p>
         <div className={s.sub}>
           <Time ts={e.at} kind="time" className={`${s.subTime} num`} />
-          {!person && <span>Noticed by {serverName}</span>}
           {link &&
             (link.href ? (
               <Link href={link.href} className={s.target} title={e.target ?? undefined}>

@@ -31,10 +31,10 @@ function WhereToLook({ where }: { where: CodeWhere }) {
     case "umbrel":
       return (
         <>
-          <p>In Umbrel, right-click the Gluon icon on the home screen and choose Troubleshoot. The code is in the app&apos;s log.</p>
+          <p>In Umbrel, right-click the Gluon icon and choose Troubleshoot. The code is in the log.</p>
           {where.container && (
             <p>
-              Signed in to the server with SSH? This shows it too: <Command cmd={`docker logs ${where.container}`} />
+              Or over SSH: <Command cmd={`docker logs ${where.container}`} />
             </p>
           )}
         </>
@@ -46,14 +46,14 @@ function WhereToLook({ where }: { where: CodeWhere }) {
         </p>
       );
     case "development":
-      return <p>This is a development copy: the code is in the terminal running the dev server.</p>;
+      return <p>It&apos;s in the terminal running the dev server.</p>;
     default:
       return (
         <>
           <p>
-            On the server, run <Command cmd="docker logs gluon" /> (use the container&apos;s name if you gave it another).
+            On the server, run <Command cmd="docker logs gluon" /> with your container&apos;s name.
           </p>
-          <p>On Umbrel: right-click the Gluon icon, choose Troubleshoot, and read the app&apos;s log.</p>
+          <p>On Umbrel, right-click the Gluon icon and choose Troubleshoot.</p>
         </>
       );
   }
@@ -108,9 +108,9 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
     return (
       <div className={`${s.form} appear`}>
         <h2>Gluon is already set up</h2>
-        <p className={s.lede}>Someone finished setting up {serverName} a moment ago, perhaps in another window. Sign in with the account made there.</p>
+        <p className={s.lede}>Someone just finished setting up {serverName}, maybe in another window. Sign in with that account.</p>
         <LinkButton href="/login" variant="primary" size="lg" block>
-          Go to sign in
+          Sign in
         </LinkButton>
       </div>
     );
@@ -122,14 +122,10 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
   return (
     <form className={s.form} onSubmit={submit} noValidate data-wide="">
       <h2>Set up Gluon</h2>
-      <p className={s.lede}>Two things: prove you can reach the server, then make the admin account. The rest of the household comes afterwards.</p>
+      <p className={s.lede}>Prove you can reach the server, then make your admin account.</p>
 
       <div className={s.codeGroup}>
-        <Field
-          label="Setup code"
-          error={err("code")}
-          description="A one-time code Gluon printed when it started, so only someone with access to the server can claim it."
-        >
+        <Field label="Setup code" error={err("code")}>
           <Input
             ref={codeRef}
             value={f.code}
@@ -146,7 +142,7 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
         <div className={s.where}>
           <WhereToLook where={where} />
           <p className={s.whereNote}>
-            Look for the line that starts with <b>Setup code</b>. It stays the same until setup is finished, even if Gluon restarts.
+            Look for the line starting <b>Setup code</b>. It survives restarts.
           </p>
         </div>
       </div>
@@ -154,7 +150,7 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
       <Field label="Your name" optional>
         <Input value={f.displayName} onChange={set("displayName")} autoComplete="name" placeholder="e.g. Sam" maxLength={60} />
       </Field>
-      <Field label="Username" error={err("username")} description="What you'll type to sign in. Letters, numbers, dots and dashes.">
+      <Field label="Username" error={err("username")} description="Letters, numbers, dots and dashes.">
         <Input value={f.username} onChange={set("username")} autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={32} />
       </Field>
       <div className={s.passwordPair}>

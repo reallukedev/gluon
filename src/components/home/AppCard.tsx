@@ -198,7 +198,7 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
   // No address: nothing to open, so the card is information, not a link.
   if (!href || editing) {
     return (
-      <div className={c.card} data-size={size} data-state={state} data-static="">
+      <div key="ready" className={`${c.card} appear`} data-motion-gentle="" data-size={size} data-state={state} data-static="">
         <div className={c.face}>{face}</div>
         {body}
         {!href && !editing && size === "i" && <span className={c.nolink}>No web page</span>}
@@ -206,7 +206,7 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
     );
   }
   return (
-    <a className={c.card} data-size={size} data-state={state} href={href} target={target} rel="noopener noreferrer" aria-label={label} title={hint ? `${app.name} · ${hint}` : app.name}>
+    <a key="ready" className={`${c.card} appear`} data-motion-gentle="" data-size={size} data-state={state} href={href} target={target} rel="noopener noreferrer" aria-label={label} title={hint ? `${app.name} · ${hint}` : app.name}>
       <span className={c.face}>{face}</span>
       {body}
     </a>

@@ -65,7 +65,7 @@ export function EnvGroup({ draft, form: f, issues, imageEnv = [], onFix }: { dra
     <section className={s.group} data-field={base}>
       <div className={s.groupHead}>
         <h3 className={s.groupTitle}>Environment</h3>
-        <span className={s.groupDesc}>Locked values are secrets: encrypted, never shown again, and kept out of the compose file.</span>
+        <span className={s.groupDesc}>Locked values are secrets: encrypted and kept out of the compose file.</span>
       </div>
       {missingLs.length > 0 && (
         <p className={s.hint}>

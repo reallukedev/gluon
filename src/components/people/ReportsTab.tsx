@@ -65,7 +65,7 @@ export function ReportsTab({ focus }: { focus: string | null }) {
             { value: "all", label: "All" },
           ]}
         />
-        <p className={s.hint}>Mark a report as seen and its sender knows you're on it. Replies reach them on their Status page.</p>
+        <p className={s.hint}>Senders see each step and your replies on their Status page.</p>
       </div>
       )}
       {error && !data ? (
@@ -79,8 +79,7 @@ export function ReportsTab({ focus }: { focus: string | null }) {
             </div>
           ) : items.length === 0 ? (
             <Empty title={view === "new" ? "No new reports" : view === "seen" ? "Nothing you're working on" : view === "fixed" ? "Nothing fixed yet" : "No reports yet"}>
-              When someone in the household taps “Something's not working” on their Status page, it lands here and you're alerted. Mark it as seen, reply, and mark it
-              fixed; they see each step on their Status page and, if they've set it up, get a message when you reply.
+              {view === "all" || all.length === 0 ? "When someone taps “Something's not working” on their Status page, it lands here and you're alerted." : null}
             </Empty>
           ) : (
             <ul className={`${s.reports} appear`} role="list">

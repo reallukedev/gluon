@@ -57,7 +57,7 @@ export function NewAppView({ initialSource, initialDraft, initialStep, missingDr
       window.history.replaceState(null, "", `/apps/new?draft=${r.id}&step=setup`);
       setDetail(d);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gluon couldn't make the draft.");
+      setError(e instanceof Error ? e.message : "Couldn't make the draft.");
     } finally {
       inflight.current = false;
       setBusy(null);
@@ -68,7 +68,7 @@ export function NewAppView({ initialSource, initialDraft, initialStep, missingDr
   if (draftError) {
     return (
       <FlowFrame step="setup">
-        <Notice tone="fault" title="Gluon couldn't load this draft" action={<Button size="sm" onClick={() => window.location.reload()}>Try again</Button>}>
+        <Notice tone="fault" title="Couldn't load this draft" action={<Button size="sm" onClick={() => window.location.reload()}>Try again</Button>}>
           {draftError} The draft is still there; nothing was changed.
         </Notice>
       </FlowFrame>
@@ -81,7 +81,7 @@ export function NewAppView({ initialSource, initialDraft, initialStep, missingDr
     <FlowFrame step={loading ? "setup" : "source"}>
       {missingDraft && (
         <div className={f.notice}>
-          <Notice title="That draft isn't here any more">It was deleted, or published and removed. Start again below; nothing else changed.</Notice>
+          <Notice title="That draft is gone">It was deleted or removed. Start again below.</Notice>
         </div>
       )}
       {error && (

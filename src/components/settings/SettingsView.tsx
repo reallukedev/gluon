@@ -11,7 +11,6 @@ import { SectionHeaderProvider } from "./SectionHeader";
 import { SEARCH_ENGINES } from "@/lib/prefs";
 import { orderedNav } from "@/lib/nav";
 import { useNavAccess } from "@/components/shell/Shell";
-import { formatBytes, formatDate, formatTemp, formatTime } from "@/lib/format";
 import { usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Skeleton } from "@/components/ui/Surface";
 import { Appearance, HomePrefs, Formats } from "./personal";
@@ -74,10 +73,8 @@ const ICON: Record<string, React.ReactNode> = {
 
 /** One sentence of state under each section title, for the sections whose state is the viewer's own. */
 function useSummary(id: string, fallback: string): React.ReactNode {
-  const { prefs, viewer, timeZone } = usePrefs();
+  const { prefs, viewer } = usePrefs();
   const access = useNavAccess();
-  const [now, setNow] = React.useState<number | null>(null);
-  React.useEffect(() => setNow(Date.now()), []);
   switch (id) {
     case "appearance": {
       const theme = prefs.theme === "system" ? "Matching your device" : prefs.theme === "dark" ? "Dark" : "Light";
@@ -98,11 +95,6 @@ function useSummary(id: string, fallback: string): React.ReactNode {
     case "navigation": {
       const nav = orderedNav(viewer.role, prefs.sidebarOrder, prefs.sidebarHidden, access);
       return `${nav.visible.length} of ${nav.all.length} pages in the sidebar${nav.hidden.length ? `, ${nav.hidden.length} tucked away` : ""}. Single-key shortcuts are ${prefs.shortcuts ? "on" : "off"}.`;
-    }
-    case "formats": {
-      if (now === null) return fallback;
-      const eff = { ...prefs, timezone: timeZone ?? "UTC" };
-      return `${formatTime(now, eff)} on ${formatDate(now, eff, { year: true })}. Sizes like ${formatBytes(2e12, prefs.bytes)}, temperatures in ${formatTemp(20, prefs.temperature).replace(/[\d.\s]/g, "")}.`;
     }
     default:
       return fallback;
@@ -175,7 +167,7 @@ export function SettingsView({ sections, section, data = null }: { sections: Set
         </nav>
         <div className={s.content}>
           {current.ownHeader ? (
-            <SectionHeaderProvider value={{ title: current.label, back }}>{own}</SectionHeaderProvider>
+            <SectionHeaderProvider value={{ title: current.label, back }}>{own ?? (C ? <C /> : null)}</SectionHeaderProvider>
           ) : (
             <>
               <PageHeader title={current.label} summary={summary} back={back} />

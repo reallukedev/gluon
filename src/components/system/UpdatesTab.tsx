@@ -18,6 +18,7 @@ import { InstallDialog, InstallProgress } from "./InstallProgress";
 import { updatesOverdue } from "./SystemView";
 import s from "./system.module.css";
 import u from "./updates.module.css";
+import { HostError } from "./HostError";
 
 const DAY = 86_400_000;
 const DOCKER = /^(docker-ce|docker\.io|containerd|containerd\.io|moby-engine)$/;
@@ -198,9 +199,12 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
   if (!data) {
     if (error) {
       return (
-        <Notice tone="fault" title="Couldn't read the list of updates" action={<Button onClick={() => void mutate()}>Try again</Button>}>
-          {error.message}
-        </Notice>
+        <HostError
+          error={error}
+          title="Couldn't check for updates"
+          missing={{ title: "No apt on this server", body: "System updates need apt, the installer Debian and Ubuntu use." }}
+          onRetry={() => mutate()}
+        />
       );
     }
     return <UpdatesSkeleton />;
@@ -214,7 +218,7 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
   function askInstall(pkgs: PendingPackage[], everything: boolean) {
     const n = pkgs.length;
     const consequences: React.ReactNode[] = [`Downloads and installs ${fmt.plural(n, "package")}. It takes a few minutes and apps keep running.`];
-    if (pkgs.some((p) => DOCKER.test(p.name))) consequences.push("Docker will restart, so your apps blink off for a few seconds. Gluon restarts too; this page reconnects on its own.");
+    if (pkgs.some((p) => DOCKER.test(p.name))) consequences.push("Docker restarts, so apps go offline for a few seconds. Gluon restarts too, and this page reconnects on its own.");
     const reboot = pkgs.filter((p) => p.needsReboot);
     if (reboot.length)
       consequences.push(`${reboot.length === 1 ? reboot[0]!.name : `${reboot.length} of them`} only take${reboot.length === 1 ? "s" : ""} effect after restarting the server. Gluon will remind you.`);
@@ -389,7 +393,7 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
         }}
         title={dialog?.title ?? "Installing updates"}
         description={
-          reconnecting ? "Gluon lost its connection (it may be restarting with Docker). The install keeps going; reconnecting…" : "You can close this page; the install keeps going on the server."
+          reconnecting ? "Lost the connection, probably while Gluon restarts with Docker. The install keeps going. Reconnecting…" : "You can close this page; the install keeps going on the server."
         }
         state={dialogState}
         running={running}
@@ -595,7 +599,7 @@ function History({ runs, loading, error }: { runs?: UpdateRunSummary[]; loading:
       ) : error ? (
         <p className={s.panelLead}>Couldn't load past updates: {error}</p>
       ) : !runs?.length ? (
-        <Empty title="Nothing installed from Gluon yet">Each time you install updates here, the result and the full output are kept for a year.</Empty>
+        <Empty title="No installs yet">Updates you install here are kept for a year, with their output.</Empty>
       ) : (
         <ul className={s.runList}>
           {runs.map((r) => (

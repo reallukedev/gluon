@@ -567,11 +567,14 @@ export const Browser = React.memo(function Browser() {
   const firstBroken = brokenAt >= 0 ? brokenAt : folders.length - 1;
   const showPreview = !!fileOpen && view !== "grid" && (!phone || phonePreview);
   const current = phone ? (onPlaces ? -1 : phonePreview && fileOpen ? folders.length : sel.col) : null;
+  // A phone shows one column at a time: the next one slides in from the side it lies on.
+  const nav = React.useRef<{ at: number | null; dir: "in" | "out" | null }>({ at: current, dir: null });
+  if (current !== nav.current.at) nav.current = { at: current, dir: current !== null && nav.current.at !== null && current < nav.current.at ? "out" : "in" };
 
   return (
     <>
       <FolderNotices listing={deepListing} />
-      <div className={s.frame} data-phone={phone ? "" : undefined} data-files-keys="" {...osDrop}>
+      <div className={s.frame} data-phone={phone ? "" : undefined} data-nav={phone ? (nav.current.dir ?? undefined) : undefined} data-files-keys="" {...osDrop}>
         <div className={s.bar}>
           {phone && (
             <IconButton label="Back" disabled={onPlaces} onClick={() => (phonePreview ? setPhonePreview(false) : back(sel.col))}>
@@ -630,10 +633,10 @@ export const Browser = React.memo(function Browser() {
               return single ? <FolderPane key={folder} {...common} view={view as "list" | "grid"} admin={f.admin} active={!onPlaces} /> : <FolderColumn key={folder} {...common} open={folders[col + 1] ?? null} active={sel.col === col && !onPlaces} />;
             })}
           {!single && !showPreview && !phone && deepListing && deepListing.path === deepest && <FolderSummary listing={deepListing} />}
-          {showPreview && <PreviewColumn entry={fileOpen!} phoneCurrent={phone ? current === folders.length : undefined} writable={writableAt(sel.col)} onRename={(e) => setRenaming({ path: e.path })} siblings={rowsOf(sel.col).filter((r): r is FileEntry => !!r && !isDirLike(r))} />}
+          {showPreview && <PreviewColumn entry={fileOpen!} phoneCurrent={phone ? current === folders.length : undefined} writable={writableAt(sel.col)} siblings={rowsOf(sel.col).filter((r): r is FileEntry => !!r && !isDirLike(r))} />}
         </div>
 
-        <StatusLine selected={selected} size={selSize} listing={listings.current.get(folders[sel.col] ?? deepest) ?? deepListing} writable={writableAt(sel.col)} phone={phone} clipboard={!!clipboard && writableAt(last)} onPaste={() => void f.actions.paste(deepest)} onClear={clear} onRename={one && writableAt(sel.col) ? () => setRenaming({ path: one.path }) : undefined} onNewFolder={() => void newFolder()} onUpload={() => f.actions.pickFiles(deepest)} menu={selected.length ? menuFor(sel.col, selected) : []} dir={folders[sel.col] ?? deepest} />
+        <StatusLine selected={selected} size={selSize} writable={writableAt(sel.col)} phone={phone} clipboard={!!clipboard && writableAt(last)} onPaste={() => void f.actions.paste(deepest)} onClear={clear} onRename={one && writableAt(sel.col) ? () => setRenaming({ path: one.path }) : undefined} onNewFolder={() => void newFolder()} onUpload={() => f.actions.pickFiles(deepest)} menu={selected.length ? menuFor(sel.col, selected) : []} dir={folders[sel.col] ?? deepest} />
 
         {dropping && (
           <div className={s.drop} data-refused={dropping.ok ? undefined : ""} aria-hidden>
@@ -693,10 +696,10 @@ function ErrorNotice({ error, path, onGo }: { error: ApiError; path: string; onG
 function FolderNotices({ listing }: { listing: ListingT | undefined }) {
   if (!listing) return null;
   const notes: React.ReactNode[] = [];
-  if (listing.access === "read") notes.push(<Notice key="ro" title="View only">This folder is shared with you to view. You can open and download files here, but not change them.</Notice>);
+  if (listing.access === "read") notes.push(<Notice key="ro" title="View only">You can open and download files here, but not change them.</Notice>);
   else if (listing.protectedReason) notes.push(<Notice key="prot" title="View only here">{listing.protectedReason}</Notice>);
-  if (listing.sortLimited) notes.push(<Notice key="big">This folder has {listing.total.toLocaleString()} items, so it's sorted by name. Sorting by size or date works in folders with fewer than 20,000 items.</Notice>);
-  if (listing.truncated) notes.push(<Notice key="trunc" tone="attention" title="Only part of this folder is listed">It holds more than {(250_000).toLocaleString()} items; the first ones are shown. Use the bar above to search for the rest.</Notice>);
+  if (listing.sortLimited) notes.push(<Notice key="big">Sorted by name: with {listing.total.toLocaleString()} items, sorting by size or date isn't available.</Notice>);
+  if (listing.truncated) notes.push(<Notice key="trunc" tone="attention" title="Only part of this folder is listed">It holds more than {(250_000).toLocaleString()} items. Search to find the rest.</Notice>);
   return notes.length ? <div className={s.notices}>{notes}</div> : null;
 }
 
@@ -970,6 +973,8 @@ function useFolder(p: FolderProps) {
   const max = React.useMemo(() => L.rows.reduce((m, r) => Math.max(m, r ? (sizeOf(r) ?? 0) : 0), 0), [L.rows]);
   const selfDrop = useDropTarget(p.folder, p.onDropItems, p.writable);
   const [ctx, setCtx] = React.useState<MenuEntry[]>([]);
+  // Rows that replace a skeleton fade in; a folder already in the cache just appears.
+  const waited = React.useRef(!L.listing).current;
   const onContextMenu = (ev: React.MouseEvent) => {
     const el = (ev.target as HTMLElement).closest<HTMLElement>("[data-index]");
     const e = el ? L.rows[Number(el.dataset.index)] : undefined;
@@ -978,10 +983,10 @@ function useFolder(p: FolderProps) {
     if (!inSel && !p.sel?.paths.has(e.path)) p.onChoose(Number(el!.dataset.index));
     setCtx(p.menuFor(inSel ? L.rows.filter((r): r is FileEntry => !!r && p.sel!.paths.has(r.path)) : [e]));
   };
-  return { L, max, selfDrop, ctx, onContextMenu };
+  return { L, max, selfDrop, ctx, onContextMenu, waited };
 }
 
-function FolderState({ L, folder }: { L: ReturnType<typeof useListing>; folder: string }) {
+function FolderState({ L, folder, touch }: { L: ReturnType<typeof useListing>; folder: string; touch: boolean }) {
   const f = useFiles();
   const fmt = useFormat();
   if (L.error) return <ErrorNotice error={L.error} path={folder} onGo={(p) => f.go(p)} />;
@@ -991,24 +996,14 @@ function FolderState({ L, folder }: { L: ReturnType<typeof useListing>; folder: 
   return (
     <div className={s.empty}>
       <p className={s.emptyTitle}>{l.counts.hidden ? `Only ${fmt.plural(l.counts.hidden, "hidden item")} here` : "Empty folder"}</p>
-      <p className={s.emptyText}>{w ? "Drag files here from your computer, or:" : "Nothing has been put here yet."}</p>
-      {w && (
-        <span className={s.emptyActions}>
-          <Button size="sm" icon={<Upload />} onClick={() => f.actions.pickFiles(folder)}>
-            Upload
-          </Button>
-          <Button size="sm" variant="ghost" icon={<FolderPlus />} onClick={() => f.browser.current?.newFolder()}>
-            New folder
-          </Button>
-        </span>
-      )}
+      {w && !touch && <p className={s.emptyText}>Drop files here to upload them.</p>}
     </div>
   );
 }
 
 /** One column of the column view: a folder's contents, virtualised, with the open folder marked. */
 function FolderColumn(p: FolderProps & { open: string | null; active: boolean }) {
-  const { L, selfDrop, ctx, onContextMenu } = useFolder(p);
+  const { L, selfDrop, ctx, onContextMenu, waited } = useFolder(p);
   const scroller = React.useRef<HTMLDivElement>(null);
   const rowH = p.touch ? ROW_TOUCH : ROW;
   const v = useVirtualizer({ count: L.total, getScrollElement: () => scroller.current, estimateSize: () => rowH, overscan: 12 });
@@ -1024,7 +1019,6 @@ function FolderColumn(p: FolderProps & { open: string | null; active: boolean })
     if (i >= 0) v.scrollToIndex(i, { align: "auto" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusIdx, openIdx]);
-  const fmt = useFormat();
 
   return (
     <ContextMenu items={ctx} disabled={p.touch}>
@@ -1046,9 +1040,9 @@ function FolderColumn(p: FolderProps & { open: string | null; active: boolean })
       >
         <div ref={scroller} className={s.colScroll}>
           {!L.listing || L.error || !L.total ? (
-            <FolderState L={L} folder={p.folder} />
+            <FolderState L={L} folder={p.folder} touch={p.touch} />
           ) : (
-            <div style={{ height: v.getTotalSize(), position: "relative" }}>
+            <div className={waited ? "appear" : undefined} style={{ height: v.getTotalSize(), position: "relative" }}>
               {items.map((it) => {
                 const e = L.rows[it.index];
                 return (
@@ -1086,12 +1080,6 @@ function FolderColumn(p: FolderProps & { open: string | null; active: boolean })
             </div>
           )}
         </div>
-        {L.listing && (
-          <div className={`${s.colFoot} num`} aria-hidden>
-            {fmt.plural(L.total, "item")}
-            {L.listing.access === "read" && " · view only"}
-          </div>
-        )}
       </div>
     </ContextMenu>
   );
@@ -1227,8 +1215,7 @@ const ColRow = React.memo(function ColRow(p: RowProps) {
 // ---------------------------------------------------------------- the deepest folder as a list or a grid
 
 function FolderPane(p: FolderProps & { view: "list" | "grid"; admin: boolean; active: boolean }) {
-  const { L, max, selfDrop, ctx, onContextMenu } = useFolder(p);
-  const fmt = useFormat();
+  const { L, max, selfDrop, ctx, onContextMenu, waited } = useFolder(p);
   const scroller = React.useRef<HTMLDivElement>(null);
   const [width, setWidth] = React.useState(800);
   React.useLayoutEffect(() => {
@@ -1319,9 +1306,9 @@ function FolderPane(p: FolderProps & { view: "list" | "grid"; admin: boolean; ac
         )}
         <div ref={scroller} className={s.colScroll} data-pad={grid ? "" : undefined}>
           {!L.listing || L.error || !L.total ? (
-            <FolderState L={L} folder={p.folder} />
+            <FolderState L={L} folder={p.folder} touch={p.touch} />
           ) : (
-            <div style={{ height: v.getTotalSize(), position: "relative" }}>
+            <div className={waited ? "appear" : undefined} style={{ height: v.getTotalSize(), position: "relative" }}>
               {items.map((it) => {
                 if (!grid) {
                   const e = L.rows[it.index];
@@ -1346,12 +1333,6 @@ function FolderPane(p: FolderProps & { view: "list" | "grid"; admin: boolean; ac
             </div>
           )}
         </div>
-        {L.listing && (
-          <div className={`${s.colFoot} num`} aria-hidden>
-            {fmt.plural(L.total, "item")}
-            {L.listing.access === "read" && " · view only"}
-          </div>
-        )}
       </div>
     </ContextMenu>
   );
@@ -1471,7 +1452,7 @@ const Tile = React.memo(function Tile(p: RowProps & { size: number }) {
 
 // ---------------------------------------------------------------- the end: the file itself
 
-function PreviewColumn({ entry, phoneCurrent, writable, onRename, siblings }: { entry: FileEntry; phoneCurrent?: boolean; writable: boolean; onRename: (e: FileEntry) => void; siblings: FileEntry[] }) {
+function PreviewColumn({ entry, phoneCurrent, writable, siblings }: { entry: FileEntry; phoneCurrent?: boolean; writable: boolean; siblings: FileEntry[] }) {
   const f = useFiles();
   const look = () => f.look(entry, siblings);
   return (
@@ -1482,21 +1463,14 @@ function PreviewColumn({ entry, phoneCurrent, writable, onRename, siblings }: { 
             <PreviewBody entry={entry} textHeight="300px" canExtract={writable} onExtract={(e) => void f.actions.extract(e)} />
           </div>
           <h2 className={s.previewName}>{entry.name}</h2>
-          <div className={s.previewActions}>
-            <Button size="sm" variant="primary" icon={<Download />} onClick={() => void f.actions.download([entry])}>
-              Download
-            </Button>
-            {entry.preview && (
+          {/* Download, Rename and the rest sit in the status line under the columns. */}
+          {entry.preview && (
+            <div className={s.previewActions}>
               <Button size="sm" icon={<Eye />} onClick={look}>
                 Quick look
               </Button>
-            )}
-            {writable && (
-              <IconButton label="Rename" size="sm" shortcut="F2" onClick={() => onRename(entry)}>
-                <EditPencil />
-              </IconButton>
-            )}
-          </div>
+            </div>
+          )}
           <Facts entry={entry} admin={f.admin} />
           {f.admin && isDirLike(entry) && <UsedBy path={entry.path} />}
         </div>
@@ -1509,16 +1483,11 @@ function PreviewColumn({ entry, phoneCurrent, writable, onRename, siblings }: { 
 function FolderSummary({ listing: l }: { listing: ListingT }) {
   const f = useFiles();
   const fmt = useFormat();
-  const c = l.counts;
-  const files = c.files + c.links + c.other;
-  const parts = [c.dirs ? fmt.plural(c.dirs, "folder") : null, files ? fmt.plural(files, "file") : null].filter(Boolean);
-  const drive = l.fs ? f.places?.places.find((p) => (p.kind === "drive" || p.kind === "root") && p.path === l.fs!.mount) : undefined;
+  // What it holds and the space left are in the page summary; this adds what isn't.
   const rows: [string, React.ReactNode][] = [
-    ["Holds", <span key="h" className="num">{parts.length ? parts.join(" and ") : c.hidden ? `Only ${fmt.plural(c.hidden, "hidden item")}` : "Nothing yet"}</span>],
     ...(l.self.dirSize ? ([["Size", <span key="s" className="num">{fmt.bytes(l.self.dirSize.bytes)}</span>]] as [string, React.ReactNode][]) : []),
-    ...(l.fs ? ([["Drive", <span key="d" className="num">{fmt.bytes(l.fs.avail)} free of {fmt.bytes(l.fs.size)}{f.admin && drive ? ` on ${drive.label}` : ""}</span>]] as [string, React.ReactNode][]) : []),
     ["Modified", <FileTime key="m" ts={l.self.mtime} />],
-    ["You can", l.access === "write" && !l.protectedReason ? "Look, add and change things" : "Look and download"],
+    ["Access", l.access === "write" && !l.protectedReason ? "Can edit" : "View only"],
   ];
   return (
     <section className={`${s.col} ${s.previewCol} ${s.summaryCol}`} aria-label={`About ${l.name || "this folder"}`}>
@@ -1534,7 +1503,6 @@ function FolderSummary({ listing: l }: { listing: ListingT }) {
             ))}
           </dl>
           {f.admin && <UsedBy path={l.path} onFixOwnership={(p) => f.actions.fixOwnership(p)} />}
-          <p className={s.summaryHint}>Select something to see it here.</p>
         </div>
       </div>
     </section>
@@ -1546,7 +1514,6 @@ function FolderSummary({ listing: l }: { listing: ListingT }) {
 function StatusLine(p: {
   selected: FileEntry[];
   size: string | null;
-  listing: ListingT | undefined;
   writable: boolean;
   phone: boolean;
   clipboard: boolean;
@@ -1562,7 +1529,6 @@ function StatusLine(p: {
   const fmt = useFormat();
   const n = p.selected.length;
   const paths = p.selected.map((e) => e.path);
-  const l = p.listing;
   return (
     <div className={s.status} role="toolbar" aria-label={n ? `${fmt.plural(n, "item")} selected` : "This folder"}>
       <span className={`${s.statusText} num`} aria-live="polite">
@@ -1571,18 +1537,7 @@ function StatusLine(p: {
             <b>{n === 1 ? p.selected[0]!.name : `${fmt.plural(n, "item")} selected`}</b>
             {p.size && <span className="muted"> · {p.size}</span>}
           </>
-        ) : l ? (
-          <>
-            <b>{l.path === "/" ? "Computer" : l.name}</b>
-            <span className="muted">
-              {" "}
-              · {fmt.plural(l.total, "item")}
-              {l.fs && !p.phone ? ` · ${fmt.bytes(l.fs.avail)} free` : ""}
-            </span>
-          </>
-        ) : (
-          <Skeleton width={180} height={12} />
-        )}
+        ) : null}
       </span>
       <span className={s.statusActions}>
         {n ? (

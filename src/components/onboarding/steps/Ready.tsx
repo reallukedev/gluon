@@ -23,18 +23,18 @@ export function Ready() {
         {n === null && !home.error && !apps.error ? (
           <Skeleton width="70%" height={14} />
         ) : (
-          <p>{n ? "Open any of them from there, on this device or any other you sign in on." : "Apps show up there as soon as they're shared with you."}</p>
+          <p>{n ? "Open them from any device you sign in on." : "Apps appear there as soon as they're shared with you."}</p>
         )}
       </StepHead>
 
       <ul className={o.plain}>
         <li>
           {plan.canSeeStatus
-            ? `If something stops working, open Status and choose Report a problem. ${admin} will see it.`
-            : `If something stops working, let ${admin} know.`}
+            ? `Something broken? Choose Report a problem on Status and ${admin} will see it.`
+            : `Something broken? Let ${admin} know.`}
         </li>
-        <li>Everything on Home can be pinned and unpinned. Open Collection at the top of Home for more apps, folders and widgets, or press and hold anything on Home (right-click on a computer) to unpin it.</li>
-        <li>Theme, text size and how times are shown are in Settings.</li>
+        <li>Collection, at the bottom of Home, adds apps and widgets. Press and hold, or right-click, anything there to unpin it.</li>
+        <li>Theme and text size are in Settings.</li>
       </ul>
 
       <Actions

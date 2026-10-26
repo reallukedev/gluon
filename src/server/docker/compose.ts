@@ -90,7 +90,7 @@ export async function applyCompose(
   signal?: AbortSignal,
 ): Promise<void> {
   const app = await appWithCompose(id);
-  if (app.self) throw new AppError("self", "Gluon can't edit its own compose file from here.");
+  if (app.self) throw new AppError("self", "Gluon can't edit its own compose file.");
   const file = app.configFile.split(",")[0]!;
   const current = fs.readFileSync(hostPath(file), "utf8");
   if (hashOf(current) !== expectedHash) throw conflict("The file changed on the server since you opened it. Reload to see the latest version.");

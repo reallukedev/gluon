@@ -194,7 +194,7 @@ export async function startRun(user: { id: string; username: string }, opts: Sta
         },
         where,
       );
-      throw new AppError("start_failed", "Gluon couldn't start the update on the host. Nothing was installed.", 500, { error: (e as Error).message });
+      throw new AppError("start_failed", "Couldn't start the update on the host. Nothing was installed.", 500, { error: (e as Error).message });
     }
 
     const summary =
