@@ -288,6 +288,15 @@
   :root[data-motion="reduce"] :not([data-motion-gentle])::after {
     animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; transition-delay: 0ms !important;
   }
+
+  /*
+   * Arrival fades (`appear`, @starting-style) are for things that turn up while you watch, not for the
+   * page turning up: the first paint until hydration, and the moment after a navigation while Shell holds
+   * data-nav. Otherwise content the server already rendered, or SWR already had, fades in a second time
+   * under the page's own settle (a keyframe animation, so it still plays).
+   */
+  :root:not([data-hydrated]) #main *,
+  :root[data-nav] #main * { transition: none !important; }
 }
 
 /* ------------------------------------------------------------------ utilities */

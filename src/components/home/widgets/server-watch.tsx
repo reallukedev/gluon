@@ -24,6 +24,7 @@ import { WidgetState, useFit } from "./kit";
 import { activityHref, alertsHref } from "@/lib/settings-links";
 import { Preview } from "../previews";
 import { useHome } from "../context";
+import { activityLimit } from "@/lib/home";
 import w from "./watch.module.css";
 
 // ---------------------------------------------------------------- shared bits
@@ -165,7 +166,7 @@ registerWidget({
 // ---------------------------------------------------------------- activity
 
 function ActivityWidget({ size }: WidgetProps) {
-  const limit = size === "s" ? 1 : size === "m" ? 2 : size === "t" || size === "w" ? 5 : 9;
+  const limit = activityLimit(size);
   const { data, error, mutate } = useApi<ActivityPage>(`/api/activity?limit=${limit}`, { refresh: 30_000 });
   if (!data) return error ? <Failed title="Can't show activity" status={error.status} retry={() => void mutate()} /> : <Loading rows={Math.min(limit, 4)} />;
   if (!data.items.length) {

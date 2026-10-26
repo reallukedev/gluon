@@ -11,6 +11,9 @@
   margin: 0 auto;
   padding: 28px var(--gutter) 24px;
 }
+/* Settles in after a click like any page (Shell sets data-nav). */
+:global(:root[data-nav="enter"]) .page { animation: pageIn var(--dur-base) var(--ease-out); }
+@keyframes pageIn { from { opacity: 0; transform: translateY(calc(6px * var(--motion))); } }
 @media (max-width: 900px) {
   .page { height: calc(100dvh - 56px - env(safe-area-inset-top)); min-height: 480px; padding-bottom: 16px; }
 }

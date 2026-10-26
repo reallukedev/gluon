@@ -17,7 +17,8 @@ export function MachineVitals() {
             <Skeleton width={70} height={11} />
             <Skeleton width={90} height={26} style={{ marginTop: 6 }} />
             <Skeleton width={140} height={11} style={{ marginTop: 6 }} />
-            <Skeleton height={56} style={{ marginTop: 8 }} />
+            {/* The chart and its time labels, so the panel keeps its height when the readings land. */}
+            <Skeleton height={65} style={{ marginTop: 8 }} />
           </div>
         ))}
       </div>

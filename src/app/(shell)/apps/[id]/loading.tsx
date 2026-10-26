@@ -4,7 +4,7 @@ import s from "@/components/apps/routeStates.module.css";
 /** An app's page while it loads: icon and name, state, tabs, then its panels. */
 export default function AppLoading() {
   return (
-    <Page>
+    <Page pending>
       <div role="status" aria-label="Loading the app">
         <Skeleton width={48} height={12} radius={3} />
         <div className={s.titleRow}>

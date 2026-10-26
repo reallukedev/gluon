@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import type { LiveLogins, PowerStatus, ServiceInfo, SystemOverview, UpdatesStatus } from "@/lib/system-types";
+import type { LiveLogins, MemoryBreakdown, PowerStatus, ServiceInfo, SystemOverview, UpdatesStatus } from "@/lib/system-types";
 import { useApi, useStream, type ApiError } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Page, PageHeader } from "@/components/ui/Surface";
@@ -20,6 +20,7 @@ export interface SystemInitial {
   updates?: UpdatesStatus;
   services?: { services: ServiceInfo[] };
   overview?: SystemOverview;
+  memory?: MemoryBreakdown;
   power?: PowerStatus;
   logins?: LiveLogins;
 }
@@ -140,7 +141,7 @@ export function SystemView({ tab, unit, initial }: { tab: SystemTab; unit: strin
         aria-label="System sections"
       />
       <div className={s.tabBody}>
-        {tab === "overview" && <OverviewTab initial={initial.overview} />}
+        {tab === "overview" && <OverviewTab initial={initial.overview} memory={initial.memory} />}
         {tab === "updates" && <UpdatesTab status={updates} />}
         {tab === "services" && <ServicesTab list={services} initialUnit={unit} />}
         {tab === "sign-ins" && <SignInsTab live={logins} />}

@@ -3,6 +3,7 @@ import { requireUser } from "@/server/auth/session";
 import { statusFor } from "@/server/status";
 import { getSetting } from "@/server/settings";
 import { listAllOpen } from "@/server/findings";
+import { listChannelsFor } from "@/server/notify/channels";
 import { activityHref, alertsHref } from "@/lib/settings-links";
 import { StatusView } from "@/components/status/StatusView";
 
@@ -27,5 +28,6 @@ export default async function StatusPage({ searchParams }: { searchParams: Searc
   // The open findings are among all of them: hand over the same objects so the page carries each once.
   const allFindings = listAllOpen();
   const byId = new Map(allFindings.map((f) => [f.id, f]));
-  return <StatusView initial={{ ...initial, findings: initial.findings.map((f) => byId.get(f.id) ?? f) }} allFindings={allFindings} />;
+  const alertsUnreachable = !listChannelsFor(user).some((c) => c.enabled);
+  return <StatusView initial={{ ...initial, findings: initial.findings.map((f) => byId.get(f.id) ?? f) }} allFindings={allFindings} alertsUnreachable={alertsUnreachable} />;
 }

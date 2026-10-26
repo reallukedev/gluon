@@ -4,6 +4,7 @@ import { updatesStatus } from "@/server/system/updates";
 import { listServices } from "@/server/system/services";
 import { powerStatus } from "@/server/system/power";
 import { liveLogins } from "@/server/system/logins";
+import { memoryBreakdown } from "@/server/system/memory";
 import { SystemView, type SystemTab, type SystemInitial } from "@/components/system/SystemView";
 
 export const metadata = { title: "System" };
@@ -16,13 +17,14 @@ export default async function SystemPage({ searchParams }: { searchParams: Promi
   const tab: SystemTab = TABS.includes(sp.tab as SystemTab) ? (sp.tab as SystemTab) : "overview";
   // Each is best effort: a slow or failing host command shouldn't blank the page; the client retries.
   const soft = <T,>(p: Promise<T>) => p.catch(() => undefined);
-  const [updates, services, overview, power, logins] = await Promise.all([
+  const [updates, services, overview, memory, power, logins] = await Promise.all([
     soft(updatesStatus()),
     soft(listServices().then((list) => ({ services: list }))),
     tab === "overview" ? soft(systemOverview()) : undefined,
+    tab === "overview" ? soft(memoryBreakdown()) : undefined,
     tab === "power" ? soft(powerStatus()) : undefined,
     tab === "sign-ins" ? soft(liveLogins()) : undefined,
   ]);
-  const initial: SystemInitial = { updates, services, overview, power, logins };
+  const initial: SystemInitial = { updates, services, overview, memory, power, logins };
   return <SystemView tab={tab} unit={typeof sp.unit === "string" ? sp.unit : null} initial={initial} />;
 }

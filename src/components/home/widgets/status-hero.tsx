@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/Toast";
 import { MoodCoil, type Mood } from "@/components/brand/MoodCoil";
 import { shortName } from "@/lib/app-names";
 import { Age, WidgetState } from "./kit";
+import { useHome } from "../context";
 import h from "./statusHero.module.css";
 
 /**
@@ -151,6 +152,7 @@ function Fix({ remedy, finding, onFixed }: { remedy: Remedy; finding: Finding; o
 
 export function StatusWidget({ size }: WidgetProps) {
   const { viewer, serverName } = usePrefs();
+  const home = useHome();
   const admin = viewer.role === "admin";
   const { data, error, mutate } = useApi<StatusPayload>(STATUS_KEY, { refresh: STATUS_REFRESH });
   // A fix that worked: the coil lets go and the sentence says so while the next checks confirm it.
@@ -229,7 +231,7 @@ export function StatusWidget({ size }: WidgetProps) {
         </div>
       )}
       <div className={h.coil}>
-        <MoodCoil mood={say?.mood ?? "quiet"} />
+        <MoodCoil mood={say?.mood ?? "quiet"} draw={home.entrance} />
       </div>
     </div>
   );

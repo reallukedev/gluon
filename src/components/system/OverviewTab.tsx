@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import type { RestartNeeded, SystemOverview } from "@/lib/system-types";
+import type { MemoryBreakdown, RestartNeeded, SystemOverview } from "@/lib/system-types";
 import { api, useApi, ApiError } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Panel, Notice, Skeleton, DefinitionList } from "@/components/ui/Surface";
@@ -16,7 +16,7 @@ import { TimezonePicker } from "./TimezonePicker";
 import { upFor } from "@/lib/words";
 import s from "./system.module.css";
 
-export function OverviewTab({ initial }: { initial?: SystemOverview }) {
+export function OverviewTab({ initial, memory }: { initial?: SystemOverview; memory?: MemoryBreakdown }) {
   const fmt = useFormat();
   const { data, error, isLoading, mutate } = useApi<SystemOverview>("/api/system/overview", { refresh: 30_000, fallbackData: initial });
   const restart = useApi<RestartNeeded>("/api/system/restart-needed", {
@@ -49,7 +49,7 @@ export function OverviewTab({ initial }: { initial?: SystemOverview }) {
         <Facts overview={data} />
       </section>
       <Panel title="Right now" meta={<LiveMeta />} flush>
-        <Faceplate overview={data} />
+        <Faceplate overview={data} memory={memory} />
       </Panel>
       <div className={s.grid}>
         <Panel title="Hardware and software">

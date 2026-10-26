@@ -1,6 +1,9 @@
 .page { padding: 32px var(--gutter) 64px; margin: 0 auto; width: 100%; max-width: 1480px; }
 .page[data-width="comfortable"] { max-width: 1120px; }
 .page[data-width="full"] { max-width: none; }
+/* Home settles in after a click like any page (Shell sets data-nav), unless its own entrance is playing. */
+:global(:root[data-nav="enter"]) .page:not(:has(.grid[data-enter])) { animation: pageIn var(--dur-base) var(--ease-out); }
+@keyframes pageIn { from { opacity: 0; transform: translateY(calc(6px * var(--motion, 1))); } }
 
 /* The only fixed thing on Home: two buttons at the very bottom, after everything pinned. */
 .foot { display: flex; justify-content: center; gap: 6px; margin-top: 32px; }

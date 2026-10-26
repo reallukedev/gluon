@@ -1,11 +1,10 @@
 "use client";
-import * as React from "react";
 import s from "./moodCoil.module.css";
 
 /**
  * The gluon coil as a mood: open and slowly breathing in green when all is well, wound tighter in sodium when
- * something needs the person. Same trochoid as the mark (mark.ts), drawn at hero size. It sketches itself in once
- * per browser session; reduced motion shows it drawn and still.
+ * something needs the person. Same trochoid as the mark (mark.ts), drawn at hero size. With `draw` it sketches itself
+ * in (Home passes its once-a-session entrance); reduced motion shows it drawn and still.
  */
 
 export type Mood = "calm" | "tense" | "fault" | "quiet";
@@ -32,28 +31,7 @@ function trochoid(loops: number, a: number): string {
 const CALM = trochoid(2, 17);
 const TENSE = trochoid(3, 13);
 
-const DRAWN = "gluon.coil.drawn";
-let drawSnapshot: boolean | null = null;
-function clientDraw() {
-  if (drawSnapshot === null) {
-    try {
-      drawSnapshot = !sessionStorage.getItem(DRAWN);
-      sessionStorage.setItem(DRAWN, "1");
-    } catch {
-      drawSnapshot = false;
-    }
-  }
-  return drawSnapshot;
-}
-const noopSubscribe = () => () => {};
-
-export function MoodCoil({ mood, className }: { mood: Mood; className?: string }) {
-  const draw = React.useSyncExternalStore(noopSubscribe, clientDraw, () => false);
-  React.useEffect(() => {
-    // Later mounts in this session (back to Home, a resize) arrive already drawn.
-    const t = setTimeout(() => (drawSnapshot = false), 1600);
-    return () => clearTimeout(t);
-  }, []);
+export function MoodCoil({ mood, draw, className }: { mood: Mood; draw?: boolean; className?: string }) {
   return (
     <svg className={`${s.coil} ${className ?? ""}`} viewBox={`0 0 ${W} 64`} fill="none" aria-hidden data-mood={mood} data-draw={draw ? "" : undefined}>
       <g className={s.calm} data-motion-gentle="">

@@ -13,7 +13,7 @@ export default function Loading() {
   const pathname = usePathname();
   if (APPS_LIST.test(pathname)) return <AppsListSkeleton />;
   return (
-    <Page>
+    <Page pending>
       <div role="status" aria-label="Loading">
         <Skeleton width={220} height={36} radius={6} />
         <Skeleton width="min(520px, 80%)" height={16} radius={4} style={{ marginTop: 14 }} />

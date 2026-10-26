@@ -78,6 +78,16 @@ function subscribe(l: () => void) {
   };
 }
 
+// Only pages that show live numbers load this module, and they load it before they hydrate: open the
+// stream now so the first readings are usually here when the page can show them, instead of a skeleton
+// that fills in a beat later. If nothing subscribes soon after, let it go.
+if (typeof window !== "undefined") {
+  open();
+  setTimeout(() => {
+    if (!listeners.size) close();
+  }, 5_000);
+}
+
 const getSnapshot = () => state;
 const serverSnapshot: LiveState = { host: [], containers: [], status: "connecting" };
 

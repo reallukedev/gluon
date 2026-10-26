@@ -14,11 +14,11 @@ import f from "./faceplate.module.css";
  * The machine as an instrument plate: every processor thread as a live hairline, memory as one
  * bar split by app, and every temperature sensor on one graduated scale with its limits ticked.
  */
-export function Faceplate({ overview }: { overview: SystemOverview }) {
+export function Faceplate({ overview, memory }: { overview: SystemOverview; memory?: MemoryBreakdown }) {
   return (
     <div className={f.plate}>
       <CpuThreads overview={overview} />
-      <MemoryBar overview={overview} />
+      <MemoryBar overview={overview} initial={memory} />
       <TempScale overview={overview} />
     </div>
   );
@@ -63,7 +63,8 @@ function CpuThreads({ overview }: { overview: SystemOverview }) {
           Processor
         </h3>
         <span className={f.figure}>
-          {avg === null ? <Skeleton width={48} height={26} /> : <span className="num">{avg}</span>}
+          {/* Two figures wide, like most readings, so the % beside it doesn't shift when the first one lands. */}
+          {avg === null ? <Skeleton width="2ch" height={26} /> : <span className="num">{avg}</span>}
           <small>%</small>
         </span>
       </header>
@@ -110,12 +111,10 @@ function shortCpu(model: string) {
 
 // ---------------------------------------------------------------- memory
 
-function MemoryBar({ overview }: { overview: SystemOverview }) {
+function MemoryBar({ overview, initial }: { overview: SystemOverview; initial?: MemoryBreakdown }) {
   const fmt = useFormat();
   const router = useRouter();
-  const { data } = useApi<MemoryBreakdown>("/api/system/memory", {
-    refresh: 10_000,
-  });
+  const { data } = useApi<MemoryBreakdown>("/api/system/memory", { refresh: 10_000, fallbackData: initial });
   const live = useMachineReadings().readings.mem;
   const total = data?.total ?? overview.memory.total;
   const used = data?.used ?? overview.memory.used;

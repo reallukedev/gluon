@@ -1,5 +1,5 @@
 "use client";
-import useSWR, { type SWRConfiguration } from "swr";
+import useSWR, { useSWRConfig, type SWRConfiguration } from "swr";
 import * as React from "react";
 
 export class ApiError extends Error {
@@ -94,8 +94,10 @@ export function useApi<T>(url: string | null, opts: SWRConfiguration & { refresh
   });
   // A part of the page that hydrates late (slow Safari, Suspense) can find its data already cached.
   // Render what the server rendered until hydration is over, or React throws the page's HTML away.
+  // Data the server handed over (fallbackData, or an SWRConfig fallback for this key) is what it rendered.
+  const { fallback } = useSWRConfig();
   const hydrated = React.useSyncExternalStore(noSubscribe, () => true, () => false);
-  if (hydrated || rest.fallbackData !== undefined) return res;
+  if (hydrated || rest.fallbackData !== undefined || (url !== null && fallback[url] !== undefined)) return res;
   return {
     get data() { return undefined; },
     get error() { return undefined; },

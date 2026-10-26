@@ -11,7 +11,9 @@ export interface HomeContextValue {
   pinned: (type: string) => boolean;
   /** The status hero is on Home at a size that shows its fix button, so app cards leave the fix to it. */
   heroFix: boolean;
+  /** Home's once-a-session entrance is playing (the coil draws itself with it). */
+  entrance: boolean;
 }
 
-export const HomeContext = React.createContext<HomeContextValue>({ openCollection: () => undefined, arranging: false, pinned: () => false, heroFix: false });
+export const HomeContext = React.createContext<HomeContextValue>({ openCollection: () => undefined, arranging: false, pinned: () => false, heroFix: false, entrance: false });
 export const useHome = () => React.useContext(HomeContext);

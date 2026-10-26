@@ -2,7 +2,6 @@
 import { Combobox } from "@base-ui/react/combobox";
 import { Check, NavArrowDown } from "iconoir-react";
 import { useApi } from "@/lib/client/api";
-import { Skeleton } from "@/components/ui/Surface";
 import p from "@/components/ui/popup.module.css";
 import s from "./system.module.css";
 
@@ -13,10 +12,10 @@ export function TimezonePicker({ value, onChange, disabled }: { value: string | 
   const { data, error } = useApi<{ timezones: string[] }>("/api/system/time", {
     revalidateOnFocus: false,
   });
-  const zones = data?.timezones ?? [];
+  // The current zone shows at once and the list arrives behind it, so the field never swaps in for a placeholder.
+  const zones = data?.timezones ?? (value ? [value] : []);
 
-  if (!data && !error) return <Skeleton height={34} width={280} radius={7} />;
-  if (error || zones.length === 0) {
+  if (error || (data && zones.length === 0)) {
     return (
       <span className={s.sub}>
         <span className="mono">{value ?? "Not set"}</span> · can't be changed from here.
@@ -35,7 +34,7 @@ export function TimezonePicker({ value, onChange, disabled }: { value: string | 
       autoHighlight
       openOnInputClick
       limit={1000}
-      disabled={disabled}
+      disabled={disabled || !data}
     >
       <Combobox.InputGroup className={s.comboGroup}>
         <Combobox.Input className={s.comboInput} placeholder="Search, e.g. Chicago or Europe" aria-label="Timezone" spellCheck={false} />

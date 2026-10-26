@@ -24,7 +24,7 @@ const XtermPane = dynamic<XtermPaneProps>(() => import("./XtermPane"), {
 
 type Mode = "commands" | "terminal";
 
-export function TerminalView({ initialTarget, initialRun, initialMode, userId }: { initialTarget: TargetId | null; initialRun: string | null; initialMode: Mode; userId: string }) {
+export function TerminalView({ initialTarget, initialRun, initialMode, initialTargets, userId }: { initialTarget: TargetId | null; initialRun: string | null; initialMode: Mode; initialTargets?: TargetList; userId: string }) {
   const [target, setTarget] = React.useState<TargetId>(initialTarget ?? "host");
   const [mode, setMode] = React.useState<Mode>(initialMode);
   const [termUsed, setTermUsed] = React.useState(initialMode === "terminal");
@@ -39,7 +39,7 @@ export function TerminalView({ initialTarget, initialRun, initialMode, userId }:
     if (last) setTarget(last);
   }, [initialTarget, userId]);
 
-  const targets = useApi<TargetList>("/api/terminal/targets", { refresh: 30_000 });
+  const targets = useApi<TargetList>("/api/terminal/targets", { refresh: 30_000, fallbackData: initialTargets });
   const probe = useApi<TargetProbe>(`/api/terminal/probe?target=${encodeURIComponent(target)}`, { revalidateOnFocus: false, dedupingInterval: 60_000, shouldRetryOnError: false, keepPreviousData: false });
   const { history, count, add, clear } = useHistory(userId, target);
 

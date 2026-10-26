@@ -3,7 +3,7 @@ import { Page, PageHeader, Skeleton } from "@/components/ui/Surface";
 /** While the server reads your places: the front page's shape, so arriving at Files isn't blank. */
 export default function FilesLoading() {
   return (
-    <Page>
+    <Page pending>
       <PageHeader title="Files" summary={<Skeleton width={260} height={12} />} />
       <div aria-busy aria-label="Loading Files" style={{ display: "grid", gap: 28 }}>
         <Skeleton height={46} radius={8} />

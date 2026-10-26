@@ -33,10 +33,10 @@ import s from "./status.module.css";
  * Status: is everything working? Members see a calm page of their apps. Admins see the verdict, what
  * needs them (with remedies), the machine and the apps.
  */
-export function StatusView({ initial, allFindings }: { initial: StatusPayload; allFindings?: Finding[] }) {
+export function StatusView({ initial, allFindings, alertsUnreachable }: { initial: StatusPayload; allFindings?: Finding[]; alertsUnreachable?: boolean }) {
   const { viewer } = usePrefs();
   if (viewer.role !== "admin") return <MemberView initial={initial} />;
-  return <AdminStatus initial={initial} allFindings={allFindings} />;
+  return <AdminStatus initial={initial} allFindings={allFindings} alertsUnreachable={alertsUnreachable} />;
 }
 
 function MemberView({ initial }: { initial: StatusPayload }) {
@@ -44,7 +44,7 @@ function MemberView({ initial }: { initial: StatusPayload }) {
   return <MemberStatus data={data} />;
 }
 
-function AdminStatus({ initial, allFindings }: { initial: StatusPayload; allFindings?: Finding[] }) {
+function AdminStatus({ initial, allFindings, alertsUnreachable }: { initial: StatusPayload; allFindings?: Finding[]; alertsUnreachable?: boolean }) {
   const { data = initial, mutate, error } = useApi<StatusPayload>("/api/status", { refresh: 10_000, fallbackData: initial });
   const { mutate: globalMutate } = useSWRConfig();
   // Everything that shows findings refreshes together: the verdict, the lists and the sidebar count.
@@ -63,7 +63,7 @@ function AdminStatus({ initial, allFindings }: { initial: StatusPayload; allFind
             {error.message} Showing the last reading; trying again.
           </Notice>
         )}
-        <Overview data={data} allFindings={allFindings} refresh={refresh} />
+        <Overview data={data} allFindings={allFindings} alertsUnreachable={alertsUnreachable} refresh={refresh} />
       </div>
     </Page>
   );
@@ -94,10 +94,11 @@ function Verdict({ data }: { data: StatusPayload }) {
   );
 }
 
-function Overview({ data, allFindings, refresh }: { data: StatusPayload; allFindings: Finding[] | undefined; refresh: () => void }) {
+function Overview({ data, allFindings, alertsUnreachable, refresh }: { data: StatusPayload; allFindings: Finding[] | undefined; alertsUnreachable?: boolean; refresh: () => void }) {
   const { data: all } = useApi<Finding[]>(FINDINGS_URL, { refresh: 15_000, fallbackData: allFindings });
   const { data: channels } = useApi<ChannelView[]>(CHANNELS_URL, { refresh: 60_000 });
-  const unreachable = !!channels && !channels.some((c) => c.enabled);
+  // The server's answer holds the line in place until the channels arrive, so it doesn't push the page down.
+  const unreachable = channels ? !channels.some((c) => c.enabled) : !!alertsUnreachable;
   const attentionMounts = new Set(data.findings.map((f) => f.subject ?? ""));
   const needsCount = data.findings.length;
   // The panel outlives its last item long enough for that item to settle and slide out.

@@ -1,7 +1,8 @@
 /* Page scaffolding */
 .page { padding: 28px var(--gutter) 64px; max-width: 1480px; margin: 0 auto; width: 100%; }
-/* A new page settles in after a pointer navigation. Keyboard jumps, query changes and the first load stay instant (Shell sets data-nav). */
-:global(:root[data-nav="enter"]) .page { animation: pageIn var(--dur-base) var(--ease-out); }
+/* A new page settles in after a pointer navigation. Keyboard jumps, query changes and the first load stay instant (Shell sets data-nav).
+   A loading stand-in (data-pending) stays still too: the page that replaces it settles instead. */
+:global(:root[data-nav="enter"]) .page:not([data-pending]) { animation: pageIn var(--dur-base) var(--ease-out); }
 @keyframes pageIn { from { opacity: 0; transform: translateY(calc(6px * var(--motion))); } }
 .pageNarrow { max-width: 880px; }
 

@@ -55,11 +55,11 @@ export const Front = React.memo(function Front() {
     <div className={s.front} data-files-keys="">
       <Shelf title="Changed in the last two weeks" state={recent} sort="mtime" withFolder empty="Nothing changed in the last two weeks." />
       <PlacesRack />
-      {/* Later shelves wait their turn unseen and stay away when they find nothing. */}
-      {specs[1] && <Shelf title="Photos" state={photos} sort="mtime" filter={(h) => !COVER.test(h.name)} />}
-      {specs[2] && <Shelf title="Films and shows" state={videos} sort="name" covers={photos.hits} group />}
+      {/* Later shelves wait their turn unseen, arrive only with something in them and stay away when they find nothing. */}
+      {specs[1] && <Shelf title="Photos" state={photos} sort="mtime" filter={(h) => !COVER.test(h.name)} later />}
+      {specs[2] && <Shelf title="Films and shows" state={videos} sort="name" covers={photos.hits} group later />}
       {specs[3] && <Largest state={large} />}
-      {specs[4] && <Shelf title="Documents" state={documents} sort="mtime" />}
+      {specs[4] && <Shelf title="Documents" state={documents} sort="mtime" later />}
     </div>
   );
 });
@@ -68,7 +68,7 @@ const CACHED = { cache: true };
 
 const asThumb = (h: SearchHit): ThumbItem => ({ path: h.path, name: h.name, kind: h.kind, type: h.type, size: h.size, mtime: h.mtime });
 
-function Shelf({ title, state, sort, filter, covers, group, withFolder, empty }: { title: string; state: SearchState & { retry: () => void }; sort: "mtime" | "name"; filter?: (h: SearchHit) => boolean; covers?: SearchHit[]; group?: boolean; withFolder?: boolean; empty?: string }) {
+function Shelf({ title, state, sort, filter, covers, group, withFolder, empty, later }: { title: string; state: SearchState & { retry: () => void }; sort: "mtime" | "name"; filter?: (h: SearchHit) => boolean; covers?: SearchHit[]; group?: boolean; withFolder?: boolean; empty?: string; later?: boolean }) {
   const f = useFiles();
   const fmt = useFormat();
   const [all, setAll] = React.useState(false);
@@ -106,10 +106,12 @@ function Shelf({ title, state, sort, filter, covers, group, withFolder, empty }:
   const siblings = tiles.flatMap((t) => (t.hit ? [t.hit] : []));
   const loading = !state.done && !state.hits.length;
   if (state.done && !tiles.length && !state.error && !empty) return null;
+  // A later shelf showing its title and skeleton, then vanishing when it finds nothing, would blink below the rack.
+  if (later && loading && !state.error) return null;
   const open = (t: Tile) => (t.item.kind === "folder" ? f.go(t.item.path) : t.hit && f.lookHit(t.hit, siblings));
   const reveal = (t: Tile) => f.go(t.item.kind === "folder" ? t.item.path : parentOf(t.item.path), t.item.kind === "folder" ? {} : { select: t.item.name });
   return (
-    <section className={s.shelf} aria-labelledby={id}>
+    <section className={`${s.shelf} ${later ? "appear" : ""}`} aria-labelledby={id}>
       <div className={s.head}>
         <h2 className={s.title} id={id}>
           {title}
@@ -129,7 +131,7 @@ function Shelf({ title, state, sort, filter, covers, group, withFolder, empty }:
       {state.done && !tiles.length && !state.error ? (
         <p className={s.empty}>{empty}</p>
       ) : (
-        <div key={loading ? "loading" : "tiles"} className={`${s.strip} ${loading ? "" : "appear"}`} data-all={all ? "" : undefined} role="list">
+        <div key={loading ? "loading" : "tiles"} className={`${s.strip} ${loading || later ? "" : "appear"}`} data-all={all ? "" : undefined} role="list">
           {loading
             ? Array.from({ length: 8 }, (_, i) => <Skeleton key={i} height={group ? 300 : 172} radius={10} style={{ flex: "none", width: 168 }} />)
             : shown.map((t) => (
@@ -170,9 +172,10 @@ function Largest({ state }: { state: SearchState & { retry: () => void } }) {
   const hits = state.hits.filter((h) => h.size !== null).toSorted((a, b) => (b.size ?? 0) - (a.size ?? 0));
   const total = hits.reduce((a, h) => a + (h.size ?? 0), 0);
   const max = hits[0]?.size ?? 0;
-  if (state.done && !hits.length && !state.error) return null;
+  // Like the later shelves: nothing until it has something to show.
+  if (!hits.length && !state.error) return null;
   return (
-    <section className={s.shelf} aria-label="Taking the most space">
+    <section className={`${s.shelf} appear`} aria-label="Taking the most space">
       <div className={s.head}>
         <h2 className={s.title}>Taking the most space</h2>
         {state.done && hits.length > 0 && (
@@ -185,10 +188,8 @@ function Largest({ state }: { state: SearchState & { retry: () => void } }) {
         <Notice tone="fault" title="This list couldn't load" action={<Button size="sm" onClick={state.retry}>Try again</Button>}>
           {state.error}
         </Notice>
-      ) : !state.done && !hits.length ? (
-        <Skeleton height={180} radius={12} />
       ) : (
-        <ol className={`${s.ledger} appear`}>
+        <ol className={s.ledger}>
           {hits.slice(0, 10).map((h) => (
             <li key={h.path}>
               <button type="button" className={s.ledgerRow} onClick={() => f.go(parentOf(h.path), { select: h.name })} title={`Show ${h.name} in its folder`}>

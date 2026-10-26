@@ -31,6 +31,23 @@ export function useReducedMotion(): boolean {
   return React.useSyncExternalStore(subscribe, read, () => false);
 }
 
+/**
+ * Marks the root once hydration has painted (globals.css holds arrival fades back until then), so
+ * what the server rendered stays still and only what arrives later eases in.
+ */
+export function HydrationMark() {
+  React.useLayoutEffect(() => {
+    // Two frames: whatever hydration itself swapped in has been styled before fades turn on.
+    let id = requestAnimationFrame(() => {
+      id = requestAnimationFrame(() => {
+        document.documentElement.dataset.hydrated = "";
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+  return null;
+}
+
 /** True while the viewport matches `query`; false during SSR and the first client render. */
 export function useMediaQuery(query: string): boolean {
   const sub = React.useCallback(

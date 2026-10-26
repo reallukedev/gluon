@@ -52,6 +52,12 @@ export const isAppItem = (i: WidgetItem, appId?: string) => i.type === "app" && 
 /** Placeholder in default layouts: "every app this person can open, as cards, here". Expanded on the server. */
 export const ALL_APPS = "apps";
 
+/** A session cookie: this browser session has seen Home's entrance, so the server renders Home still. */
+export const HOME_SEEN = "gluon_home_seen";
+
+/** How many entries the Activity widget lists at each size (its request, and the server's first paint, agree). */
+export const activityLimit = (size: Size) => (size === "s" ? 1 : size === "m" ? 2 : size === "t" || size === "w" ? 5 : 9);
+
 /** Items that open a Home page: new pins go in after them, not above the greeting. */
 export const START_TYPES = new Set(["greeting", "search"]);
 

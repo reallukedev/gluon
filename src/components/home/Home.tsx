@@ -16,7 +16,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { Check, DragHandGesture, MoreHoriz, ArrowLeft, ArrowRight, Settings, PinSlash, Pin, OpenNewWindow, Copy, ViewGrid } from "iconoir-react";
-import { SIZES, ALL_APPS, appInsertIndex, appItem, insertIndex, widgetId, type HomeLayout, type Size, type WidgetItem } from "@/lib/home";
+import { SIZES, ALL_APPS, HOME_SEEN, appInsertIndex, appItem, insertIndex, widgetId, type HomeLayout, type Size, type WidgetItem } from "@/lib/home";
 import { api } from "@/lib/client/api";
 import { copyText } from "@/lib/client/clipboard";
 import { usePrefs } from "@/components/PrefsProvider";
@@ -34,33 +34,29 @@ import s from "./home.module.css";
 
 interface Props {
   initial: HomeData;
+  /** The server's word: this browser session hasn't seen Home yet. */
+  entrance: boolean;
 }
 
 /*
- * Widgets rise in once per browser session, not on every visit to Home. The server always renders the entrance
- * (it can't know), hydration keeps it, and the client snapshot turns it off for the rest of the session.
+ * Widgets rise in, and the status coil draws itself, once per browser session rather than on every visit to
+ * Home. A session cookie tells the server, so the first paint already knows and hydration changes nothing.
  */
-const ENTERED = "gluon.home.entered";
-let enterSnapshot: boolean | null = null;
-function clientEnter() {
-  if (enterSnapshot === null) {
-    try {
-      enterSnapshot = !sessionStorage.getItem(ENTERED);
-      sessionStorage.setItem(ENTERED, "1");
-    } catch {
-      enterSnapshot = false;
-    }
-  }
-  return enterSnapshot;
-}
-const noopSubscribe = () => () => {};
-function useEntrance() {
-  const enter = React.useSyncExternalStore(noopSubscribe, clientEnter, () => true);
+let played = false;
+function useEntrance(fromServer: boolean) {
+  // A client navigation back to Home within the session can replay an older server answer: this tab knows better.
+  const [enter, setEnter] = React.useState(() => fromServer && !played);
   React.useEffect(() => {
-    // Once this mount has played it, later mounts (client navigation back to Home) stay still.
-    const t = setTimeout(() => (enterSnapshot = false), 1200);
+    if (!enter) return;
+    document.cookie = `${HOME_SEEN}=1; path=/; samesite=lax`;
+    // Once it has played, widgets pinned later and later mounts (back to Home) stay still; a remount
+    // mid-entrance still finishes it.
+    const t = setTimeout(() => {
+      played = true;
+      setEnter(false);
+    }, 1200);
     return () => clearTimeout(t);
-  }, []);
+  }, [enter]);
   return enter;
 }
 
@@ -130,7 +126,7 @@ const STARTERS: Record<"admin" | "member", { type: string; why: string }[]> = {
   ],
 };
 
-export function Home({ initial }: Props) {
+export function Home({ initial, entrance }: Props) {
   const router = useRouter();
   const params = useSearchParams();
   const { viewer, prefs } = usePrefs();
@@ -162,7 +158,7 @@ export function Home({ initial }: Props) {
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = React.useRef(layout);
   latest.current = layout;
-  const enter = useEntrance();
+  const enter = useEntrance(entrance);
 
   const visible = React.useCallback((i: WidgetItem) => {
     const d = widgetDef(i.type);
@@ -341,8 +337,8 @@ export function Home({ initial }: Props) {
   const heroFix = items.some((i) => i.type === "status" && i.size !== "s");
   const ctx = React.useMemo(() => {
     const types = new Set(typesKey.split(" "));
-    return { openCollection, arranging, pinned: (t: string) => types.has(t), heroFix };
-  }, [openCollection, arranging, typesKey, heroFix]);
+    return { openCollection, arranging, pinned: (t: string) => types.has(t), heroFix, entrance: enter };
+  }, [openCollection, arranging, typesKey, heroFix, enter]);
   const active = activeId ? layout.items.find((i) => i.id === activeId) : null;
   const settingsItem = settingsFor ? layout.items.find((i) => i.id === settingsFor) : null;
   const settingsDef = settingsItem ? widgetDef(settingsItem.type) : null;

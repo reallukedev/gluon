@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { route } from "@/server/api";
-import { listActivity } from "@/server/audit";
-import type { ActivityPage } from "@/lib/people-types";
+import { activityPage } from "@/server/audit";
 
 const activityQuery = z.object({
   before: z.coerce.number().int().positive().optional(),
@@ -18,9 +17,6 @@ const activityQuery = z.object({
 });
 
 /** Who did what, newest first. Page with `before` = the last id you got. */
-export const GET = route({ auth: "admin", query: activityQuery }, ({ query }): ActivityPage => {
-  const items = listActivity({ before: query.before, limit: query.limit + 1, kind: query.kind, userId: query.user, target: query.target, q: query.q || undefined, outcome: query.outcome });
-  const more = items.length > query.limit;
-  const page = items.slice(0, query.limit);
-  return { items: page, next: more ? page[page.length - 1]!.id : null };
-});
+export const GET = route({ auth: "admin", query: activityQuery }, ({ query }) =>
+  activityPage({ before: query.before, limit: query.limit, kind: query.kind, userId: query.user, target: query.target, q: query.q || undefined, outcome: query.outcome }),
+);

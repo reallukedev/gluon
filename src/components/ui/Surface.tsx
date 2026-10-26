@@ -3,8 +3,13 @@ import Link from "next/link";
 import { NavArrowLeft } from "iconoir-react";
 import s from "./surface.module.css";
 
-export function Page({ children, narrow }: { children: React.ReactNode; narrow?: boolean }) {
-  return <div className={`${s.page} ${narrow ? s.pageNarrow : ""}`}>{children}</div>;
+/** `pending` marks a loading.tsx stand-in: it doesn't settle (its skeletons fade in on their own) and Shell waits for the page that replaces it. */
+export function Page({ children, narrow, pending }: { children: React.ReactNode; narrow?: boolean; pending?: boolean }) {
+  return (
+    <div className={`${s.page} ${narrow ? s.pageNarrow : ""}`} data-pending={pending ? "" : undefined}>
+      {children}
+    </div>
+  );
 }
 
 interface PageHeaderProps {

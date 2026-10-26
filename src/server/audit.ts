@@ -2,6 +2,7 @@ import "server-only";
 import { all, now, run } from "./db";
 import { publish } from "./events";
 import type { User } from "./auth/users";
+import type { ActivityPage } from "@/lib/people-types";
 
 export interface ActivityEntry {
   id: number;
@@ -103,6 +104,14 @@ export function listActivity(opts: { before?: number; limit?: number; kind?: "us
     `SELECT * FROM audit_log ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY id DESC LIMIT ${limit}`,
     ...params,
   ).map(toEntry);
+}
+
+/** One page of activity as GET /api/activity answers it: `next` is the id to pass as `before` for the page after. */
+export function activityPage(opts: Parameters<typeof listActivity>[0] & { limit: number }): ActivityPage {
+  const items = listActivity({ ...opts, limit: opts.limit + 1 });
+  const more = items.length > opts.limit;
+  const page = items.slice(0, opts.limit);
+  return { items: page, next: more ? page[page.length - 1]!.id : null };
 }
 
 export function pruneActivity() {

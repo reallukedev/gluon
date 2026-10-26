@@ -4,7 +4,7 @@ import s from "@/components/apps/routeStates.module.css";
 /** The Apps pages while a list loads: title, summary, tabs, toolbar and rows in their places. */
 export function AppsListSkeleton() {
   return (
-    <Page>
+    <Page pending>
       <div role="status" aria-label="Loading apps">
         <Skeleton width={120} height={34} radius={6} />
         <Skeleton width="min(460px, 80%)" height={15} radius={4} style={{ marginTop: 14 }} />
@@ -22,7 +22,7 @@ export function AppsListSkeleton() {
 /** Just the toolbar and rows, for a tab change inside Apps (the title and tabs are already there). */
 export function AppsListBodySkeleton() {
   return (
-    <div role="status" aria-label="Loading" className={s.bodyOnly}>
+    <div role="status" aria-label="Loading" className={s.bodyOnly} data-pending="">
       <Rows />
     </div>
   );

@@ -65,6 +65,57 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+type NavInput = "pointer" | "key" | "in-page";
+
+/**
+ * Sets data-nav on the root until the page itself (not a loading stand-in, nor nothing yet) is in #main, then
+ * `hold` ms more, so a settle plays once on real content and arrivals already on screen can't replay it.
+ * Returns the cleanup.
+ */
+function navWindow(mode: "enter" | "still", hold: number) {
+  const root = document.documentElement;
+  const main = document.getElementById("main");
+  const pending = () => !!main && (!main.firstElementChild || !!main.querySelector("[data-pending]"));
+  root.dataset.nav = mode;
+  let t: ReturnType<typeof setTimeout> | undefined;
+  const release = () => (t = setTimeout(() => delete root.dataset.nav, hold));
+  const mo = new MutationObserver(() => {
+    if (pending()) return;
+    mo.disconnect();
+    release();
+  });
+  if (pending()) mo.observe(main!, { childList: true, subtree: true });
+  else release();
+  return () => {
+    mo.disconnect();
+    clearTimeout(t);
+    delete root.dataset.nav;
+  };
+}
+
+/**
+ * The navigation window (globals.css holds arrival fades back while it's open): "enter" settles a clicked
+ * page in over 200ms, "still" keeps a keyboard jump still. It sits before the page in the tree so its layout
+ * effect runs before the page's own: a page that measures itself on mount would otherwise style its
+ * arrivals (and start their fades) before the window is open.
+ */
+function NavWindow({ pathname, input }: { pathname: string; input: React.RefObject<NavInput> }) {
+  // A first load whose page is still streaming in behind its skeleton arrives still too, once it's here.
+  React.useLayoutEffect(() => {
+    const main = document.getElementById("main");
+    if (main && (!main.firstElementChild || main.querySelector("[data-pending]"))) return navWindow("still", 120);
+  }, []);
+  const lastPath = React.useRef(pathname);
+  React.useLayoutEffect(() => {
+    if (lastPath.current === pathname) return;
+    lastPath.current = pathname;
+    if (input.current === "in-page") return;
+    // Outlasts the 200ms settle, or a skeleton's 120ms wait.
+    return input.current === "pointer" ? navWindow("enter", 260) : navWindow("still", 120);
+  }, [pathname, input]);
+  return null;
+}
+
 export function Shell({ children, memberStatus, memberFiles, initial }: ShellProps) {
   const { prefs, viewer, serverName, setPrefs } = usePrefs();
   const pathname = usePathname();
@@ -114,11 +165,11 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
   // changes (a folder in Files), the first load and moves within a page stay still: a tab, a
   // segmented control or a page's own section list changes the path but keeps the page's frame,
   // and settling the whole page would make that frame flicker.
-  const lastInput = React.useRef<"pointer" | "key">("key");
+  const lastInput = React.useRef<NavInput>("key");
   React.useEffect(() => {
     const pointer = (e: PointerEvent) => {
       const t = e.target as Element | null;
-      lastInput.current = t?.closest?.("[data-palette], [role=tablist], [role=group] > [aria-pressed], main nav") ? "key" : "pointer";
+      lastInput.current = t?.closest?.("[role=tablist], [role=group] > [aria-pressed], main nav") ? "in-page" : t?.closest?.("[data-palette]") ? "key" : "pointer";
     };
     const key = (e: KeyboardEvent) => {
       if (e.key !== "Tab") lastInput.current = "key";
@@ -130,21 +181,6 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
       window.removeEventListener("keydown", key, { capture: true });
     };
   }, []);
-  const lastPath = React.useRef(pathname);
-  React.useLayoutEffect(() => {
-    if (lastPath.current === pathname) return;
-    lastPath.current = pathname;
-    if (lastInput.current !== "pointer") return;
-    const root = document.documentElement;
-    root.dataset.nav = "enter";
-    // Outlasts the 200ms settle, then lets go so nothing already on screen can replay it.
-    const t = setTimeout(() => delete root.dataset.nav, 260);
-    return () => {
-      clearTimeout(t);
-      delete root.dataset.nav;
-    };
-  }, [pathname]);
-
   // Page chrome (e.g. the Status header) can ask for the palette without owning its state.
   React.useEffect(() => {
     const open = () => setPaletteOpen(true);
@@ -387,6 +423,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
         ))}
 
         <main id="main" tabIndex={-1} className={s.content}>
+          <NavWindow pathname={pathname} input={lastInput} />
           {children}
         </main>
       </div>

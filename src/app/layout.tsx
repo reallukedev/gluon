@@ -5,6 +5,7 @@ import { Atkinson_Hyperlegible_Mono, Radio_Canada, Special_Gothic } from "next/f
 import { decodeUiCookie, htmlAttrs, UI_COOKIE } from "@/lib/prefs";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TooltipProvider } from "@/components/ui/Tooltip";
+import { HydrationMark } from "@/lib/client/motion";
 import "./globals.css";
 
 // Radio Canada reads: a humanist grotesque made for a public broadcaster, warm and plain-spoken. Special
@@ -40,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" {...htmlAttrs(bits)} className={`${sans.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
+        <HydrationMark />
         <CSPProvider nonce={nonce}>
           <TooltipProvider>
             <ToastProvider>{children}</ToastProvider>

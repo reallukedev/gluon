@@ -4,6 +4,7 @@ import { all, db, now, one, run } from "../db";
 import { readHostFileOr } from "../host/paths";
 import type { InternetCell, InternetData, InternetOutage } from "@/lib/home-widgets-types";
 import { routerSays } from "../router/monitor";
+import type { User } from "../auth/users";
 
 /**
  * The router's own word on its internet connection, when Gluon reads it (AT&T BGW gateways), and
@@ -235,6 +236,12 @@ function outagesFrom(rows: Row[], lastAt: number | null, ongoing: { up: boolean;
     out.push(cur);
   }
   return out;
+}
+
+/** The internet widget's data as GET /api/widgets/internet answers it: the router's address is for admins only. */
+export function internetFor(user: User) {
+  const d = internetData();
+  return user.role === "admin" ? d : { ...d, router: null };
 }
 
 export function internetData(): InternetWithRouter {
