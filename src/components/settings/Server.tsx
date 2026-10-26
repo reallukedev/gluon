@@ -140,7 +140,7 @@ export function Server() {
 
       <Panel title="Home network">
         <p className={s.hint} style={{ marginBottom: 12 }}>
-          Visitors from these addresses count as at home, for app links and two-step rules. Private ranges, like 192.168.x and Tailscale's 100.64.x, always count.
+          Extra addresses that count as home. Private ranges like 192.168.x and Tailscale's 100.64.x always do.
         </p>
         {data.detectedPrefixes.length + f.homeNetworks.length > 0 && (
           <ul className={s.sortList} role="list">

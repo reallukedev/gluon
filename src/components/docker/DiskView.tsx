@@ -4,11 +4,11 @@ import Link from "next/link";
 import { Refresh } from "iconoir-react";
 import { useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader, Panel, Skeleton } from "@/components/ui/Surface";
+import { Panel, Skeleton } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 import { SegmentBar } from "@/components/ui/SegmentBar";
 import type { CleanupKind, DockerDisk } from "@/lib/docker-types";
-import { AppsSectionTabs } from "./AppsSectionTabs";
+import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { CleanupDialog } from "./CleanupDialog";
 import { LoadError } from "./shared";
 import s from "./docker.module.css";
@@ -115,9 +115,8 @@ export function DiskView() {
   const other = data?.fs ? Math.max(0, data.fs.size - data.fs.free - data.total) : 0;
 
   return (
-    <Page>
-      <PageHeader
-        title="Apps"
+    <>
+      <AppsHead
         summary={summary}
         actions={
           <Button
@@ -132,7 +131,7 @@ export function DiskView() {
           </Button>
         }
       />
-      <AppsSectionTabs current="docker" docker="disk" />
+      <AppsBody>
       {error && !data ? (
         <LoadError error={error} what="Docker's disk use" onRetry={() => void mutate()} retrying={isValidating} />
       ) : (
@@ -266,6 +265,7 @@ export function DiskView() {
           }}
         />
       )}
-    </Page>
+      </AppsBody>
+    </>
   );
 }

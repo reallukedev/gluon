@@ -498,3 +498,10 @@ button.block { cursor: pointer; }
 /* A steady floor so the dialog doesn't jump in height as phases swap. */
 .phaseBody { min-height: 260px; }
 @media (max-width: 640px) { .phaseBody { min-height: 0; } }
+
+/* No drive list (no lsblk): the empty state sits on the ground with the space that is still known. */
+.noDisks { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 24px 48px; align-items: start; }
+.noDisks > :first-child { padding: 8px 0 0; }
+.noDisksSpace { padding-top: 12px; min-width: 0; }
+.noDisksTitle { margin-bottom: 14px; font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; font-stretch: 90%; }
+@media (max-width: 900px) { .noDisks { grid-template-columns: minmax(0, 1fr); } }

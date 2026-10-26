@@ -1,3 +1,9 @@
+/* Page padding without the page's own settle: only the section settles in, the list beside it stays put. */
+.frame { padding: 28px var(--gutter) 64px; max-width: 1480px; margin: 0 auto; width: 100%; }
+@media (max-width: 720px) { .frame { padding-top: 18px; } }
+:global(:root[data-nav="enter"]) .content,
+.content[data-settle] { animation: sectionIn var(--dur-base) var(--ease-out); }
+@keyframes sectionIn { from { opacity: 0; transform: translateY(calc(6px * var(--motion))); } }
 .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; align-items: start; }
 .nav { position: sticky; top: 24px; display: grid; gap: 22px; }
 .navTitle { font-size: var(--text-3xl); font-weight: 540; font-family: var(--font-display); font-stretch: 80%; line-height: 1; letter-spacing: -0.012em; margin-bottom: 4px; }
@@ -37,6 +43,7 @@
   /* List-first on phones: /settings shows the list, /settings/<x> shows the section. */
   .layout:not([data-section]) .content { display: none; }
   .layout[data-section] .nav { display: none; }
+  :global(:root[data-nav="enter"]) .layout:not([data-section]) .nav { animation: sectionIn var(--dur-base) var(--ease-out); }
   .content > header a:first-child { display: inline-flex; }
 }
 
@@ -62,12 +69,15 @@
 @media (hover: hover) and (pointer: fine) { .choice:hover:not([aria-pressed="true"]) { border-color: var(--line-strong); } }
 .mini {
   display: block;
-  height: 74px;
+  aspect-ratio: 120 / 74;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--line);
 }
 .mini svg { display: block; }
+/* The picked theme's picture lifts a touch, the rest sit flat. */
+.mini { transition: transform var(--dur-base) var(--ease-out); }
+.choice[aria-pressed="true"] .mini { transform: translateY(calc(-2px * var(--motion))); }
 .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
 .swatch { display: inline-flex; align-items: center; gap: 12px; padding: 10px 14px 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); font-size: var(--text-sm); font-weight: 560; transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, transform var(--dur-press) var(--ease-out); }
 .swatch:active { transform: scale(calc(1 - 0.03 * var(--motion))); }
@@ -107,7 +117,10 @@
   .appearance { grid-template-columns: 1fr; }
   .previewCol { position: static; order: -1; }
 }
-.choiceText { display: grid; gap: 1px; }
+.choiceText { display: grid; gap: 1px; padding: 0 2px 2px; }
+/* Theme and colour sit on the ground with a heading: they're pictures to pick, not rows of settings. */
+.looks { gap: 32px; }
+.looks > section { margin-top: 0; }
 .choiceText small { font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
 .plate { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--ground); overflow: hidden; }
 .plateHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -203,3 +216,5 @@
 }
 /* Wrapping a SettingRow makes it a first child, which drops its rule; the wrapper draws it instead. */
 .revealRow { border-top: 1px solid var(--line); }
+/* Three small pictures read better side by side than two and an orphan. */
+@media (max-width: 480px) { .looks .choiceGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .looks .choice { padding: 6px; } }

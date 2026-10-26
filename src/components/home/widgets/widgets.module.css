@@ -43,15 +43,17 @@
 @media (hover: hover) and (pointer: fine) { .statusAll:hover { color: var(--ink); text-decoration-color: currentColor; } }
 @media (max-width: 640px) { .statusItem a > span:nth-child(3) { display: none; } }
 
-/* Vitals */
-.vitals { position: relative; height: 100%; display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 12px 16px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); align-content: start; }
-.vital { min-width: 0; display: grid; gap: 2px; }
+/* Vitals: the word first, the exact figure on hover or focus, the last three minutes as a line under it. */
+.vitals { position: relative; height: 100%; display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 14px 20px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); align-content: start; }
+.vital { min-width: 0; display: grid; gap: 4px; }
+/* Phones give a small tile two 64px rows: the two readings pack tight to stay whole. */
+@media (max-width: 720px) {
+  .vitals[data-size="s"] { gap: 6px 20px; padding-bottom: 10px; }
+  .vitals:is([data-size="m"], [data-size="w"]) { --cols: 2 !important; row-gap: 10px; }
+}
 /* Live readings stopped: the last values stay, dimmed, with their age. */
-.vitals[data-offline] .vital { opacity: 0.55; }
+.vitals[data-offline] > [role="group"] { opacity: 0.55; }
 .vitalsAge { position: absolute; right: var(--px, 16px); top: var(--pt, 16px); }
-.vitalValue { font-size: var(--figure, 1.625rem); font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; font-variant-numeric: tabular-nums; }
-.vitalValue small { font-size: var(--text-sm); color: var(--muted); font-stretch: 96%; font-weight: 450; }
-
 
 /* Storage */
 .storageWrap { height: 100%; min-height: 0; display: flex; flex-direction: column; padding-bottom: var(--pb, 14px); }

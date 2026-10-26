@@ -13,6 +13,7 @@ import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { Time } from "@/components/ui/Time";
 import { StateLine } from "@/components/ui/StateLine";
+import { Tooltip } from "@/components/ui/Tooltip";
 import s from "./system.module.css";
 import pw from "./power.module.css";
 
@@ -167,7 +168,7 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
             <h3 id="pw-restart" className={pw.actionTitle}>
               Restart
             </h3>
-            <p className={pw.actionDesc}>Offline for about 2 minutes, then everything starts again.</p>
+            <p className={pw.actionDesc}>Back in about 2 minutes.</p>
           </div>
           <Button icon={<SystemRestart />} variant={data.reboot.required && !blocked ? "attention" : "secondary"} disabled={blocked} onClick={() => now("restart")}>
             Restart…
@@ -251,32 +252,42 @@ function ImpactPanel({ impact }: { impact: PowerImpact | null }) {
           "No apps are running, so a restart only interrupts shared folders and anyone signed in."
         ) : off.length === 0 ? (
           <>
-            After a restart, <b>every app</b> starts again on its own.
+            <b>{impact.apps.length === 1 ? "It comes" : "They all come"} back</b> on their own after a restart.
           </>
         ) : (
           <>
-            After a restart, <b>{fmt.plural(back.length, "app")}</b> {back.length === 1 ? "starts" : "start"} again on {back.length === 1 ? "its" : "their"} own, but{" "}
-            <b>{fmt.plural(off.length, "app")}</b> {off.length === 1 ? "stays" : "stay"} off until someone starts {off.length === 1 ? "it" : "them"} from Apps.
+            <b>{fmt.plural(off.length, "app")}</b> {off.length === 1 ? "stays" : "stay"} off until someone starts {off.length === 1 ? "it" : "them"} from Apps. The rest come back on their own.
           </>
         )}
       </p>
-      <ul className={pw.apps}>
-        {[...off, ...back].map((a) => (
-          <li key={a.id} className={pw.app}>
-            <AppIcon src={a.icon} name={a.name} size={22} />
-            <span className={pw.appName} title={a.name}>
-              {a.name}
-            </span>
-            {a.comesBack === "yes" ? (
-              <StateLine state="running" label={a.startedBy === "umbrel" ? "Comes back with Umbrel" : "Comes back"} />
-            ) : (
+      {off.length > 0 && (
+        <ul className={pw.apps}>
+          {off.map((a) => (
+            <li key={a.id} className={pw.app}>
+              <AppIcon src={a.icon} name={a.name} size={22} />
+              <span className={pw.appName} title={a.name}>
+                {a.name}
+              </span>
               <span className={pw.off} title={a.staysOff.length ? `Stays off: ${a.staysOff.join(", ")}` : undefined}>
                 <StateLine state="stopped" label={a.comesBack === "partly" ? `Partly: ${a.staysOff.slice(0, 2).join(", ")} stay${a.staysOff.length === 1 ? "s" : ""} off` : "Stays off"} />
               </span>
-            )}
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+      {back.length > 0 && (
+        <ul className={pw.backIcons} aria-label={`Come back on their own: ${back.map((a) => a.name).join(", ")}`}>
+          {back.map((a) => (
+            <li key={a.id}>
+              <Tooltip content={a.startedBy === "umbrel" ? `${a.name}, with Umbrel` : a.name}>
+                <span className={pw.backIcon} tabIndex={0}>
+                  <AppIcon src={a.icon} name={a.name} size={30} />
+                </span>
+              </Tooltip>
+            </li>
+          ))}
+        </ul>
+      )}
       {impact.sessions.length > 0 && (
         <p className={pw.foot}>
           {impact.sessions.map((p) => `${p.user}'s ${fmt.plural(p.count, "SSH session")}`).join(" and ")} would be disconnected. <Link href="/system?tab=sign-ins">See who's connected</Link>

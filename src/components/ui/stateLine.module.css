@@ -18,6 +18,8 @@
     border-color var(--dur-base) ease,
     opacity var(--dur-base) ease;
 }
+/* Fine reads green at a glance; the form still carries the state without colour. */
+.line[data-state="running"] { border-left-color: var(--ok); }
 .line[data-state="starting"] { border-left-style: dashed; }
 .line[data-state="unhealthy"] { transform: translateY(-10%) scaleY(0.45); border-left-color: var(--fault); }
 .line[data-state="stopped"] { opacity: 0.28; }

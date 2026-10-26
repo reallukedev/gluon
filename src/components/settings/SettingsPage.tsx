@@ -53,5 +53,5 @@ export async function SettingsPage({ section, searchParams = {} }: { section: st
       reportId: str(searchParams.report, 64) ?? null,
     };
   }
-  return <SettingsView sections={available} section={section} data={data} />;
+  return <SettingsView section={section} data={data} />;
 }

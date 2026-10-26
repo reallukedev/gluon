@@ -1,17 +1,16 @@
 "use client";
 import * as React from "react";
-import { openAppUrl } from "@/lib/client/open-link";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHoriz, OpenNewWindow, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye, Pin, PinSlash, Import, Trash } from "iconoir-react";
+import { MoreHoriz, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye, Pin, PinSlash, Import, Trash } from "iconoir-react";
 import { usePinToHome } from "@/components/home/pinned";
 import type { AppSummary } from "@/server/docker/apps";
 import type { Platform } from "@/server/platform";
-import { api, useApi, ApiError } from "@/lib/client/api";
+import { api, useApi, ApiError, STATUS_KEY, STATUS_REFRESH } from "@/lib/client/api";
 import { useLive } from "@/lib/client/live";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
-import { Page, PageHeader, Empty } from "@/components/ui/Surface";
-import { AppsSectionTabs } from "@/components/docker/AppsSectionTabs";
+import { Empty } from "@/components/ui/Surface";
+import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { NewAppButton } from "@/components/builder/NewAppButton";
 import { StateLine } from "@/components/ui/StateLine";
 import { Segmented } from "@/components/ui/Field";
@@ -21,11 +20,15 @@ import { Menu, type MenuEntry } from "@/components/ui/Menu";
 import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { listJoin } from "@/lib/format";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { shortName, sourceName } from "@/lib/app-names";
 import { AppIcon } from "./AppIcon";
 import { Addresses } from "./Addresses";
 import { CpuMeter, MemMeter, useAppUsage } from "./Meters";
 import { umbrelBusy } from "./umbrelStream";
+import { parts, trouble } from "./plain";
+import type { StatusPayload } from "@/server/status";
+import { findingWord, findingsByApp } from "@/lib/finding-words";
 import { removeCopyConfirm, stopCopyConfirm, uninstallUmbrelConfirm } from "./copies";
 import { moveBlock, uninstallRoute } from "@/lib/app-move-types";
 import { MoveDialog } from "./MoveDialog";
@@ -47,11 +50,27 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const { host } = useLive();
   const { data: apps = initial, mutate } = useApi<AppSummary[]>("/api/apps", { refresh: 8000, fallbackData: initial });
   const usage = useAppUsage(apps);
+  // Same key and cadence as Home and Status: a web check that fails while Docker says "running" is
+  // still a problem here, so every page names the same apps.
+  const { data: status } = useApi<StatusPayload>(STATUS_KEY, { refresh: STATUS_REFRESH });
+  const findingOf = findingsByApp(status?.findings);
+  const troubleOf = (a: AppSummary) => {
+    const f = a.copyOf ? undefined : findingOf.get(a.id);
+    return trouble(a) ?? (f ? findingWord(f) : null);
+  };
+  const needsHand = (a: AppSummary) => isProblem(a) || (!a.copyOf && findingOf.has(a.id));
   const [q, setQ] = React.useState("");
   const term = React.useDeferredValue(q.trim().toLowerCase());
   const [filter, setFilter] = React.useState<Filter>(initialFilter);
   const [sort, setSort] = React.useState<Sort>(initialSort);
   const [busy, setBusy] = React.useState<{ id: string; action: "start" | "stop" | "restart" } | null>(null);
+  // A restart that worked says so for a moment ("Back up"), then the row goes back to its usual word.
+  const [settled, setSettled] = React.useState<{ id: string; word: string } | null>(null);
+  React.useEffect(() => {
+    if (!settled) return;
+    const t = setTimeout(() => setSettled(null), 2600);
+    return () => clearTimeout(t);
+  }, [settled]);
   const [confirm, confirmNode] = useConfirm();
   const [moveTarget, setMoveTarget] = React.useState<AppSummary | null>(null);
   const [moveOpen, setMoveOpen] = React.useState(false);
@@ -76,7 +95,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const byId = new Map(apps.map((a) => [a.id, a]));
   const matches = (a: AppSummary) => {
     if (a.hidden && filter === "all" && !term) return false;
-    if (filter === "problems" && !isProblem(a)) return false;
+    if (filter === "problems" && !needsHand(a)) return false;
     if (filter === "stopped" && a.line !== "stopped") return false;
     if (filter === "public" && !a.routes.some((r) => r.enabled)) return false;
     return !term || a.name.toLowerCase().includes(term) || a.id.toLowerCase().includes(term) || a.containers.some((c) => c.name.includes(term) || c.image.includes(term));
@@ -98,7 +117,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
 
   const primaries = apps.filter((a) => !a.copyOf && !a.hidden);
   const copies = apps.filter((a) => a.copyOf && !a.hidden);
-  const problems = apps.filter(isProblem);
+  const problems = apps.filter(needsHand);
   const stopped = primaries.filter((a) => a.line === "stopped");
   const counts = { problems: problems.length, stopped: apps.filter((a) => a.line === "stopped").length, public: apps.filter((a) => a.routes.some((r) => r.enabled)).length };
   const busyApps = apps.filter((a) => umbrelBusy(a.umbrel?.state));
@@ -113,8 +132,9 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
     try {
       // The row says it all: a dashed "Stopping…" line that settles into the new state.
       await api.post(`/api/apps/${encodeURIComponent(a.id)}/action`, { action });
-      await mutate();
-      say(`${a.name} ${{ start: "started", stop: "stopped", restart: "restarted" }[action]}.`);
+      const fresh = (await mutate())?.find((x) => x.id === a.id);
+      if (action !== "stop" && fresh?.line === "running") setSettled({ id: a.id, word: action === "restart" ? "Back up" : "Running" });
+      say(`${a.name} ${{ start: "started", stop: "stopped", restart: "is back up" }[action]}.`);
     } catch (e) {
       say("");
       toast.error(`Couldn't ${action} ${a.name}`, { description: e instanceof Error ? e.message : undefined });
@@ -178,7 +198,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
     <>
       {problems.length > 0 ? (
         <b>
-          {listJoin(problems.map((a) => a.name))} {problems.length === 1 ? "needs" : "need"} a look.
+          {listJoin(problems.map((a) => a.name))} {problems.length === 1 ? "needs" : "need"} a hand.
         </b>
       ) : stopped.length === 0 ? (
         <b>{primaries.length === 1 ? "1 app, running." : `${primaries.length} apps, all running.`}</b>
@@ -226,9 +246,9 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   );
 
   return (
-    <Page>
-      <PageHeader title="Apps" summary={summary} actions={apps.length > 0 ? <NewAppButton /> : undefined} />
-      <AppsSectionTabs current="apps" />
+    <>
+      <AppsHead summary={summary} actions={apps.length > 0 ? <NewAppButton /> : undefined} />
+      <AppsBody>
       <span className="sr-only" role="status">{said}</span>
 
       {/* The table sizes its columns to this box, not the window, so the sidebar can't push it off the edge. */}
@@ -236,7 +256,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
       <div className={s.toolbar}>
         <label className={s.filter}>
           <Search aria-hidden />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by name, container or image" aria-label="Filter apps" spellCheck={false} />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find an app" aria-label="Filter apps" spellCheck={false} />
         </label>
         <Segmented
           aria-label="Show"
@@ -265,7 +285,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
 
       {rows.length === 0 ? (
         <Empty
-          title={term ? `Nothing matches “${q.trim()}”` : filter === "problems" ? "No problems" : filter === "stopped" ? "Nothing is stopped" : filter === "public" ? "Nothing is public" : "No apps yet"}
+          title={term ? `Nothing matches “${q.trim()}”` : filter === "problems" ? "Nothing needs a hand" : filter === "stopped" ? "Nothing is stopped" : filter === "public" ? "Nothing is public" : "No apps yet"}
           action={
             !term && filter === "all" ? (
               <>
@@ -291,7 +311,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
           {term
             ? "Try the app's name, a container name or its image."
             : filter === "problems"
-              ? "Every app is running and healthy."
+              ? "Every app is running."
               : filter === "stopped"
                 ? "Every app is running."
                 : filter === "public"
@@ -310,7 +330,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
             <span role="columnheader">State</span>
             {sortHead("cpu", "CPU", "end")}
             {sortHead("memory", "Memory", "end")}
-            <span role="columnheader">Addresses</span>
+            <span role="columnheader">Open at</span>
             <span role="columnheader" className="sr-only">
               Actions
             </span>
@@ -321,13 +341,14 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
             const u = usage.get(a.id);
             const open = viewer.zone === "home" ? (a.urls.home ?? a.urls.away) : (a.urls.away ?? a.urls.home);
             const running = a.line !== "stopped";
+            const many = !a.copyOf && a.containers.length > 1;
             const sub = [
               a.copyOf ? `Old copy from ${sourceName(a.source)}` : mixed && sourceName(a.source),
-              !a.copyOf && a.containers.length > 1 && `${a.containers.length} containers`,
               a.self && "this is Gluon",
               a.gluonDev && "Gluon dev instance",
               a.hidden && "hidden",
             ].filter((t): t is string => !!t);
+            const wrong = busy?.id === a.id || busyState || a.moving ? null : troubleOf(a);
             const menu: MenuEntry[] = [
               { label: "Restart", icon: <Refresh />, onSelect: () => void act(a, "restart"), disabled: !running || busyState },
               running
@@ -355,30 +376,52 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                 data-copy={a.copyOf ? "" : undefined}
                 data-nested={copy ? "" : undefined}
                 data-hidden={a.hidden ? "" : undefined}
+                data-broken={wrong ? "" : undefined}
                 onClick={(e) => {
                   if ((e.target as HTMLElement).closest("a,button,[role=menu]")) return;
                   router.push(href);
                 }}
               >
                 <span role="cell" className={s.appCell}>
-                  <AppIcon src={a.icon} name={a.name} size={34} />
+                  <span className={s.icon}>
+                    <AppIcon src={a.icon} name={a.name} size={40} />
+                  </span>
                   <span className={s.appText}>
                     <Link href={href} className={s.appName} title={a.name}>
                       {shortName(a.name, serverName)}
                     </Link>
-                    {sub.length > 0 && <span className={s.appSub}>{sub.join(" · ")}</span>}
+                    {(many || sub.length > 0) && (
+                      <span className={s.appSub}>
+                        {many && (
+                          <Tooltip content={`${a.containers.length} containers: ${a.containers.map((c) => c.service ?? c.name).join(", ")}`}>
+                            <span className={s.parts}>{parts(a.containers.length)}</span>
+                          </Tooltip>
+                        )}
+                        {many && sub.length > 0 && " · "}
+                        {sub.join(" · ")}
+                      </span>
+                    )}
                   </span>
                 </span>
                 <span role="cell" className={s.stateCell}>
-                  {a.moving ? (
-                    <StateLine state="starting" label="Moving to Gluon…" />
-                  ) : busy?.id === a.id ? (
-                    <StateLine state="starting" label={{ start: "Starting…", stop: "Stopping…", restart: "Restarting…" }[busy.action]} />
-                  ) : busyState ? (
-                    <UmbrelProgress app={a} />
-                  ) : (
-                    <StateLine state={a.line} label={a.copyOf ? (running ? "Old copy, still running" : "Old copy, stopped") : a.summary} />
-                  )}
+                  <span className={s.stateLine}>
+                    {a.moving ? (
+                      <StateLine state="starting" label="Moving to Gluon…" />
+                    ) : busy?.id === a.id ? (
+                      <StateLine state="starting" label={{ start: "Starting…", stop: "Stopping…", restart: "Restarting…" }[busy.action]} />
+                    ) : busyState ? (
+                      <UmbrelProgress app={a} />
+                    ) : wrong ? (
+                      <StateLine state="attention" label={wrong} />
+                    ) : (
+                      <StateLine state={a.line} label={a.copyOf ? (running ? "Old copy, still running" : "Old copy, stopped") : settled?.id === a.id && a.line === "running" ? settled.word : a.summary} />
+                    )}
+                    {wrong && running && !a.self && (
+                      <Button size="sm" className={s.fix} icon={<Refresh />} aria-label={`Restart ${a.name}`} onClick={() => void act(a, "restart")}>
+                        Restart
+                      </Button>
+                    )}
+                  </span>
                   {a.umbrel?.latest && !busyState && !a.self && (
                     <span className={s.update} title={`${a.umbrel.version} is installed; ${a.umbrel.latest} is available`}>
                       <StateLine state="attention" size={11} label={`Update to ${a.umbrel.latest}`} />
@@ -405,11 +448,6 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                   )}
                 </span>
                 <span role="cell" className={s.actions}>
-                  {open && !a.copyOf && (
-                    <IconButton label={`Open ${a.name}`} size="sm" onClick={() => openAppUrl(open)}>
-                      <OpenNewWindow />
-                    </IconButton>
-                  )}
                   <Menu
                     trigger={
                       <IconButton label={`${a.name} actions`} size="sm" disabled={busy?.id === a.id || (busyState && a.containers.length === 0)} focusableWhenDisabled>
@@ -453,7 +491,8 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
         />
       )}
       {confirmNode}
-    </Page>
+      </AppsBody>
+    </>
   );
 
 }

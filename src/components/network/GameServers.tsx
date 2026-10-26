@@ -225,7 +225,7 @@ function Minecraft({ st, fwd, onAdd, onEdit, onRemove, onFallback, onHistory }: 
       {r.status === "missing" ? (
         <div className={s.emptyLine}>
           <p>
-            Run <span className="mono">itzg/mc-router</span> with a routes file on this server to give each Java server its own name on port 25565.
+            Give each Java server its own name by running <span className="mono">itzg/mc-router</span> with a routes file, on port 25565.
           </p>
         </div>
       ) : (
@@ -427,7 +427,7 @@ function OtherGames({ st, fwd, onAdd, onEdit, onRemove }: { st: GamesStatus; fwd
       </div>
       {st.ports.length === 0 ? (
         <div className={s.emptyLine}>
-          <p>Bedrock, Valheim and most other games each need a port forwarded. Add one and it shows up under Port forwarding.</p>
+          <p>Bedrock, Valheim and most others need a port forwarded. Add one here.</p>
         </div>
       ) : (
         <ul className={s.list} aria-label="Game ports">

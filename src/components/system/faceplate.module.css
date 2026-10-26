@@ -20,7 +20,7 @@
 .label { margin: 0; font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
 .figure { display: inline-flex; align-items: baseline; gap: 5px; font-size: 1.75rem; font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; white-space: nowrap; }
 .figure small { font-size: var(--text-md); font-weight: 400; font-stretch: 96%; color: var(--muted); }
-.readout { margin: 0; min-height: 20px; font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.readout { margin: 0; min-height: 18px; font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .readout b { font-weight: 620; color: var(--ink); }
 .caption { margin: 0; font-size: var(--text-xs); color: var(--muted); }
 .dim { color: var(--muted); }

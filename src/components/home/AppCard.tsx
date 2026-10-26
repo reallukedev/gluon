@@ -8,7 +8,12 @@ import type { AppConfig, ApiApp } from "./widgets/app";
 import { Vitals, appHints, hostOf, uptimeOf } from "./widgets/app";
 import { useSmartUrl } from "./widgets/core";
 import { SetUp, WidgetState } from "./widgets/kit";
-import { api, ApiError, useApi } from "@/lib/client/api";
+import { useHome } from "./context";
+import type { StatusPayload } from "@/server/status";
+import { findingWord } from "@/lib/finding-words";
+import { trouble } from "@/components/apps/plain";
+import { RemedyButton } from "@/components/status/NeedsYou";
+import { api, ApiError, useApi, STATUS_KEY, STATUS_REFRESH } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { Button } from "@/components/ui/Button";
@@ -36,19 +41,25 @@ const WORD: Partial<Record<Line, string>> = { stopped: "Stopped", unhealthy: "No
 
 function stateWord(app: ApiApp): string | null {
   if (QUIET.includes(app.line)) return null;
-  if (app.line === "unhealthy" || app.line === "attention") return app.summary || WORD[app.line]!;
+  // Same plain words as Apps and Status ("Keeps restarting"), not Docker's summary.
+  if (app.line === "unhealthy") return trouble({ ...app, containers: app.containers ?? [] }) ?? WORD.unhealthy!;
+  if (app.line === "attention") return app.summary || WORD.attention!;
   return WORD[app.line] ?? app.summary;
 }
 
-const ICON: Record<string, number> = { i: 64, c: 40, s: 44, m: 44 };
+const ICON: Record<string, number> = { i: 64, c: 48, s: 44, m: 44 };
+
 
 export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps<AppConfig> & { openSettings?: () => void }) {
   const { data, error } = useApi<ApiApp[]>("/api/apps", { refresh: 20_000 });
   const { viewer, prefs, serverName } = usePrefs();
+  const admin = viewer.role === "admin";
+  // Same key and cadence as the status hero, so this is one request for the whole Home.
+  const { data: status } = useApi<StatusPayload>(admin ? STATUS_KEY : null, { refresh: STATUS_REFRESH });
+  const home = useHome();
   const url = useSmartUrl();
   const [starting, setStarting] = React.useState(false);
   const appId = item.config.appId;
-  const admin = viewer.role === "admin";
   const px = ICON[size] ?? 44;
 
   if (!appId) {
@@ -105,7 +116,11 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
   const href = url(app.urls);
   const target = linkTarget(href, prefs.openLinks === "new");
   const stopped = app.line === "stopped";
-  const word = stateWord(app);
+  const finding = status?.findings.filter((f) => f.subject === app.id).sort((a, b) => (a.severity === "fault" ? -1 : b.severity === "fault" ? 1 : 0))[0];
+  // A finding ("not answering") turns the card into the broken one, even while Docker says running.
+  const word = finding ? findingWord(finding) : stateWord(app);
+  // The hero names the problem and holds the fix; unless it's on Home showing its button, the fix sits on the card.
+  const fix = finding?.remedy && !home.heroFix && !editing ? finding.remedy : null;
   const uptime = !stopped ? uptimeOf(app) : null;
   const homeHost = hostOf(app.urls.home);
   const awayHost = hostOf(app.urls.away);
@@ -128,7 +143,11 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
   }
 
   // Second line: what's wrong if anything, else which copy it is, else (bigger sizes) how long it's been up.
-  const sub = word ?? hint ?? (size === "c" || big ? (uptime ? `Up ${uptime}` : null) : null);
+  const upWord = uptime ? `Up ${uptime}` : null;
+  const sub = word ?? hint ?? upWord;
+  const line: Line = finding ? (finding.severity === "fault" ? "unhealthy" : "attention") : app.line;
+  // Mark and word together: the line for state words and uptime, none for a copy's hint.
+  const marked = !!word || (!hint && !!upWord);
   const label = `Open ${app.name}${hint ? ` (${hint})` : ""}${word ? `. ${word}` : ""}`;
 
   const face = (
@@ -142,7 +161,7 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
         </span>
         {sub && (
           <span className={c.sub}>
-            {word && <StateLine state={app.line} size={size === "i" ? 9 : 10} />}
+            {marked && <StateLine state={line} size={size === "i" ? 9 : 10} />}
             <span className={c.subText}>{sub}</span>
           </span>
         )}
@@ -194,11 +213,26 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
     </div>
   ) : null;
 
-  const state = app.line;
+  const state = line;
+  const tipped = !!finding || app.line === "unhealthy" ? "" : undefined;
+  if (fix && href) {
+    // A link can't hold a button: the face opens the app, the fix sits beside it.
+    return (
+      <div key="ready" className={`${c.card} appear`} data-motion-gentle="" data-size={size} data-state={state} data-tipped={tipped} data-fixable="">
+        <a className={c.face} href={href} target={target} rel="noopener noreferrer" aria-label={label}>
+          {face}
+        </a>
+        <span className={c.fix}>
+          <RemedyButton remedy={fix} findingId={finding!.id} onDone={() => void mutate(STATUS_KEY)} />
+        </span>
+        {body}
+      </div>
+    );
+  }
   // No address: nothing to open, so the card is information, not a link.
   if (!href || editing) {
     return (
-      <div key="ready" className={`${c.card} appear`} data-motion-gentle="" data-size={size} data-state={state} data-static="">
+      <div key="ready" className={`${c.card} appear`} data-motion-gentle="" data-size={size} data-state={state} data-tipped={tipped} data-static="">
         <div className={c.face}>{face}</div>
         {body}
         {!href && !editing && size === "i" && <span className={c.nolink}>No web page</span>}
@@ -206,7 +240,7 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
     );
   }
   return (
-    <a key="ready" className={`${c.card} appear`} data-motion-gentle="" data-size={size} data-state={state} href={href} target={target} rel="noopener noreferrer" aria-label={label} title={hint ? `${app.name} · ${hint}` : app.name}>
+    <a key="ready" className={`${c.card} appear`} data-motion-gentle="" data-size={size} data-state={state} data-tipped={tipped} href={href} target={target} rel="noopener noreferrer" aria-label={label} title={hint ? `${app.name} · ${hint}` : app.name}>
       <span className={c.face}>{face}</span>
       {body}
     </a>

@@ -12,6 +12,7 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { Checkbox, Field, Input } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Notice, Skeleton } from "@/components/ui/Surface";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { StateLine } from "@/components/ui/StateLine";
 import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
@@ -131,7 +132,8 @@ function internetSentence(d: InternetData, dayStart: number, fmt: ReturnType<typ
   const open = d.outages.find((o) => o.end === null);
   if (open) {
     const since = `${spanWords(now - open.start)}, since ${fmt.time(open.start)}`;
-    if (open.cause === "internet" && d.gateway?.broadband === false) return `The internet has been down for ${since}. Your ${d.gateway.model ?? "router"} says its connection to AT&T is down, so it's the line, not this server.`;
+    if (open.cause === "internet" && d.gateway?.broadband === false)
+      return `The internet has been down for ${since}. Your ${d.gateway.model ?? "router"} says its connection to AT&T is down, so it's the line, not this server.`;
     return open.cause === "router"
       ? `Nothing on your home network has answered for ${since}. Check the router is on.`
       : `The internet has been down for ${since}. Your router answers, so the problem is beyond it.`;
@@ -148,7 +150,13 @@ function internetSentence(d: InternetData, dayStart: number, fmt: ReturnType<typ
     today.length === 1
       ? `Your internet dropped once today, for ${dur} at ${fmt.time(longest.start)}.`
       : `Your internet dropped ${today.length} times today, longest ${dur} at ${fmt.time(longest.start)}.`;
-  const router = routerTimes ? (routerTimes === today.length ? (today.length === 1 ? " The router didn't answer either." : " Each time the router didn't answer either.") : ` ${routerTimes} of those, the router didn't answer either.`) : "";
+  const router = routerTimes
+    ? routerTimes === today.length
+      ? today.length === 1
+        ? " The router didn't answer either."
+        : " Each time the router didn't answer either."
+      : ` ${routerTimes} of those, the router didn't answer either.`
+    : "";
   return lead + router;
 }
 
@@ -208,20 +216,20 @@ function InternetWidget({ size }: WidgetProps) {
       </div>
       <div className={h.netFigures} aria-live="off">
         {data.latencyMs !== null ? (
-          <span className={h.figure}>
-            {data.latencyMs < 10 ? data.latencyMs.toFixed(1) : Math.round(data.latencyMs)}
-            <small> ms</small>
-          </span>
+          <Tooltip
+            content={`${data.latencyMs < 10 ? data.latencyMs.toFixed(1) : Math.round(data.latencyMs)} ms round trip${data.baselineMs !== null ? `, usually ${Math.round(data.baselineMs)} ms` : ""}`}
+          >
+            <span className={h.figure} tabIndex={0}>
+              {data.latencyMs < 10 ? data.latencyMs.toFixed(1) : Math.round(data.latencyMs)}
+              <small> ms</small>
+            </span>
+          </Tooltip>
         ) : (
           <span className={h.figure} data-muted="">
             {data.state === "waiting" ? "…" : "No answer"}
           </span>
         )}
-        {!compact && (
-          <span className={h.reading}>
-            {reading ?? (data.baselineMs !== null ? `Usually ${Math.round(data.baselineMs)} ms` : "Round trip to the internet")}
-          </span>
-        )}
+        {!compact && <span className={h.reading}>{reading ?? (data.baselineMs !== null ? `usually ${Math.round(data.baselineMs)} ms` : null)}</span>}
       </div>
       {measured > 0 ? (
         <Strip data={data} height={compact ? 18 : tall ? 40 : 26} axis={!compact} onRead={compact ? undefined : setReading} />
@@ -232,9 +240,7 @@ function InternetWidget({ size }: WidgetProps) {
       {tall && (
         <p className={h.foot}>
           {data.loss24h !== null && data.loss24h > 0.0005 ? `${fmt.percent(data.loss24h * 100, 1)} of checks went unanswered in the last day. ` : ""}
-          {viewer.role === "admin"
-            ? `Checks ${data.targets.join(" and ")}${data.router ? ` and the router (${data.router})` : ""} every 30 seconds.`
-            : "Gluon checks the connection every 30 seconds."}
+          {viewer.role === "admin" ? `Checks ${data.targets.join(" and ")}${data.router ? ` and the router (${data.router})` : ""} every 30 seconds.` : "Gluon checks the connection every 30 seconds."}
         </p>
       )}
     </div>
@@ -394,10 +400,7 @@ function GuestWifiSettings({ config, onChange }: SettingsProps<WifiConfig>) {
         />
       </Field>
       {draft.security !== "nopass" && (
-        <Field
-          label="Password"
-          description={needsPassword ? "Stored encrypted on this server. Everyone who can see Home can see it: that's the point." : "Leave empty to keep the saved password."}
-        >
+        <Field label="Password" description={needsPassword ? "Stored encrypted on this server. Everyone who can see Home can see it: that's the point." : "Leave empty to keep the saved password."}>
           <Input
             type="text"
             value={draft.password ?? ""}
@@ -547,14 +550,7 @@ function PhotoCycle({
     </>
   );
   return (
-    <div
-      className={h.memory}
-      data-size={size}
-      onPointerEnter={() => setHeld(true)}
-      onPointerLeave={() => setHeld(false)}
-      onFocus={() => setHeld(true)}
-      onBlur={() => setHeld(false)}
-    >
+    <div className={h.memory} data-size={size} onPointerEnter={() => setHeld(true)} onPointerLeave={() => setHeld(false)} onFocus={() => setHeld(true)} onBlur={() => setHeld(false)}>
       {href ? (
         <a className={h.photoLink} href={href} target={prefs.openLinks === "new" ? "_blank" : undefined} rel="noopener noreferrer" aria-label={`Open this ${p.year} photo in Immich`}>
           {img}

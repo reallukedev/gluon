@@ -26,6 +26,10 @@
 .app { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 42px; padding: 6px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
 .appName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .off { min-width: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.backIcons { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 4px 18px 18px; list-style: none; }
+.apps + .backIcons { padding-top: 14px; border-top: 1px solid var(--line); }
+.backIcon { display: inline-flex; border-radius: var(--radius-control-sm); transition: transform var(--dur-base) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { .backIcon:hover { transform: translateY(calc(-2px * var(--motion))); } }
 .foot { margin: 0; padding: 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); }
 .foot a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 

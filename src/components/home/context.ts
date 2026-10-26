@@ -9,7 +9,9 @@ export interface HomeContextValue {
   arranging: boolean;
   /** Whether a kind of item is on this Home (the greeting leaves the date to a clock). */
   pinned: (type: string) => boolean;
+  /** The status hero is on Home at a size that shows its fix button, so app cards leave the fix to it. */
+  heroFix: boolean;
 }
 
-export const HomeContext = React.createContext<HomeContextValue>({ openCollection: () => undefined, arranging: false, pinned: () => false });
+export const HomeContext = React.createContext<HomeContextValue>({ openCollection: () => undefined, arranging: false, pinned: () => false, heroFix: false });
 export const useHome = () => React.useContext(HomeContext);

@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
 import { Globe, HomeSimple, Folder, Database, Page as FileIcon, Refresh, Play, Square, Journal, OpenNewWindow } from "iconoir-react";
 import type { AppDetail, ContainerDetail } from "@/server/docker/detail";
 import { useContainerStats, useLive } from "@/lib/client/live";
@@ -384,9 +385,9 @@ export function StackDiagram({ app, actions }: { app: AppDetail; actions: Diagra
                   </>
                 );
                 return n.href ? (
-                  <a key={n.id} href={n.href} className={s.node} data-kind="store" {...hover(n.id)} aria-label={`${n.full}, open in Files`}>
+                  <Link key={n.id} href={n.href} className={s.node} data-kind="store" {...hover(n.id)} aria-label={`${n.full}, open in Files`}>
                     {content}
-                  </a>
+                  </Link>
                 ) : (
                   <div key={n.id} className={s.node} data-kind="store" tabIndex={0} {...hover(n.id)}>
                     {content}

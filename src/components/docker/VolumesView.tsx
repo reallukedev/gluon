@@ -5,7 +5,7 @@ import { MoreHoriz, Trash, NavArrowRight, Folder, Plus, Copy } from "iconoir-rea
 import { api, useApi, ApiError } from "@/lib/client/api";
 import { copyText } from "@/lib/client/clipboard";
 import { useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader, Empty, Skeleton } from "@/components/ui/Surface";
+import { Empty, Skeleton } from "@/components/ui/Surface";
 import { Button, IconButton, LinkButton } from "@/components/ui/Button";
 import { Checkbox, Field, Input, Segmented } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
@@ -16,7 +16,7 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
 import type { DockerVolume, VolumeSizes, VolumesResponse } from "@/lib/docker-types";
-import { AppsSectionTabs } from "./AppsSectionTabs";
+import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { CleanupDialog } from "./CleanupDialog";
 import { FilterInput, LoadError, SortHead, TableSkeleton, UsedBy, appHref, appWords, containerHref, firstError, isReauthCancel, useQueryParam, useSelection, type InitialError } from "./shared";
 import s from "./docker.module.css";
@@ -187,9 +187,8 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
   const chosen = (volumes ?? []).filter((v) => selected.has(v.name));
 
   return (
-    <Page>
-      <PageHeader
-        title="Apps"
+    <>
+      <AppsHead
         summary={summary}
         actions={
           <>
@@ -204,7 +203,7 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
           </>
         }
       />
-      <AppsSectionTabs current="docker" docker="volumes" />
+      <AppsBody>
 
       {error && (
         <div style={{ marginBottom: 16 }}>
@@ -244,7 +243,7 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
         error ? null : <TableSkeleton columns={COLUMNS} check />
       ) : volumes.length === 0 ? (
         <Empty title="No volumes on this server" action={<Button icon={<Plus />} onClick={() => setCreating(true)}>Create volume</Button>}>
-          Volumes are storage Docker manages for containers, kept apart from the container so it survives updates. Apps that use folders on your disks (most CasaOS and Umbrel apps) don&apos;t need them.
+          Storage Docker keeps for containers, so it survives updates. Most apps use folders on your drives instead.
         </Empty>
       ) : shown.length === 0 ? (
         <Empty title={term ? `Nothing matches “${q.trim()}”` : filter === "unused" ? "Every volume is in use" : "No volume is in use"}>
@@ -362,7 +361,8 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
         }}
       />
       {confirmNode}
-    </Page>
+      </AppsBody>
+    </>
   );
 }
 

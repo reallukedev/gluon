@@ -10,7 +10,7 @@ import type { ActivityPage } from "@/lib/people-types";
 import type { DiskView, Inventory } from "@/lib/storage-types";
 import type { StatusPayload } from "@/server/status";
 import type { LineState } from "@/lib/types";
-import { useApi } from "@/lib/client/api";
+import { useApi, STATUS_KEY, STATUS_REFRESH } from "@/lib/client/api";
 import { useLive } from "@/lib/client/live";
 import { useFormat } from "@/components/PrefsProvider";
 import { Skeleton } from "@/components/ui/Surface";
@@ -23,6 +23,7 @@ import { useAppUsage } from "@/components/apps/Meters";
 import { WidgetState, useFit } from "./kit";
 import { activityHref, alertsHref } from "@/lib/settings-links";
 import { Preview } from "../previews";
+import { useHome } from "../context";
 import w from "./watch.module.css";
 
 // ---------------------------------------------------------------- shared bits
@@ -61,6 +62,7 @@ const QUARTER = 15 * 60_000;
 // ---------------------------------------------------------------- uptime
 
 function UptimeWidget({ size }: WidgetProps) {
+  const home = useHome();
   const { data, error, mutate } = useApi<MonitorView[]>("/api/alerts/monitors?range=24h", { refresh: 60_000 });
   const watched = (data ?? []).filter((m) => m.enabled && m.state !== "idle");
   const [listRef, fit] = useFit<HTMLUListElement>(size === "s" ? 0 : watched.length);
@@ -82,7 +84,9 @@ function UptimeWidget({ size }: WidgetProps) {
   }
 
   const down = watched.filter((m) => m.state === "down" || m.state === "failing");
-  const order = (m: MonitorView) => (m.state === "down" ? 0 : m.state === "failing" ? 1 : m.flapping ? 2 : 3);
+  // The status hero already names what's down: here it's one row among the rest, and the headline is about the others.
+  const told = down.length > 0 && down.length < watched.length && home.pinned("status");
+  const order = (m: MonitorView) => (told ? 0 : m.state === "down" ? 0 : m.state === "failing" ? 1 : m.flapping ? 2 : 3);
   const list = [...watched].sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
   const wide = size === "w" || size === "x";
   const max = size === "s" ? 0 : watched.length;
@@ -92,9 +96,13 @@ function UptimeWidget({ size }: WidgetProps) {
   return (
     <div key="ready" className={`${w.body} appear`} data-motion-gentle="">
       <p className={w.headline}>
-        <StateLine state={down.length ? "unhealthy" : "running"} label={false} size={18} />
+        <StateLine state={down.length && !told ? "unhealthy" : "running"} label={false} size={18} />
         <span>
-          {down.length ? (
+          {told ? (
+            <>
+              The other <span className="num">{watched.length - down.length}</span> are answering
+            </>
+          ) : down.length ? (
             <>
               <span className="num">{down.length}</span> of <span className="num">{watched.length}</span> not answering
             </>
@@ -309,7 +317,7 @@ interface BusyConfig {
 function BusyWidget({ item, size }: WidgetProps<BusyConfig>) {
   const fmt = useFormat();
   const by = item.config.by ?? "memory";
-  const { data, error, mutate } = useApi<StatusPayload>("/api/status", { refresh: 30_000 });
+  const { data, error, mutate } = useApi<StatusPayload>(STATUS_KEY, { refresh: STATUS_REFRESH });
   const apps = React.useMemo(() => (data?.apps ?? []).filter((a) => a.line !== "stopped"), [data]);
   const usage = useAppUsage(apps);
   const { host, status } = useLive();

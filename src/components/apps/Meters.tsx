@@ -59,7 +59,7 @@ export function CpuMeter({ series, value, name, fit }: { series: number[] | null
         CPU
       </span>
       <span className={s.spark} aria-hidden>
-        {series && series.length > 1 && <Sparkline points={series} height={16} yMax={Math.max(5, peak * 1.15)} tone={value >= 1 ? "ink" : "muted"} />}
+        {series && series.length > 1 && <Sparkline points={series} height={16} yMax={Math.max(5, peak * 1.15)} tone={value >= 1 && !fit ? "ink" : "muted"} />}
       </span>
       <span className={`${s.value} num`} aria-label={`${name} CPU ${fmt.percent(value, 1)}`}>
         {fmt.percent(value, 1)}

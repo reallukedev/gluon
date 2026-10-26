@@ -65,3 +65,5 @@
 .whatMeta { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .failed { color: var(--fault); display: inline-flex; align-items: center; gap: 4px; }
 .failedLine { display: flex; align-items: center; gap: 6px; margin: auto 0 0; font-size: var(--text-xs); color: var(--fault); }
+.diskFig { border-radius: 4px; cursor: default; }
+.diskFig:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

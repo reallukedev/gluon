@@ -3,11 +3,8 @@ import * as React from "react";
 import Link from "next/link";
 import { Plus, Trash } from "iconoir-react";
 import type { WidgetProps, SettingsProps } from "../types";
-import { useApi } from "@/lib/client/api";
-import { useLive } from "@/lib/client/live";
+import { useApi, STATUS_KEY, STATUS_REFRESH } from "@/lib/client/api";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
-import { StateLine, lineLabel } from "@/components/ui/StateLine";
-import { TimeChart } from "@/components/charts/TimeChart";
 import { UsageBar, Skeleton } from "@/components/ui/Surface";
 import { Field, Input, Checkbox } from "@/components/ui/Field";
 import { Button, IconButton, LinkButton } from "@/components/ui/Button";
@@ -15,6 +12,8 @@ import { Age, SetUp, WidgetState, useDriveNames, useFit } from "./kit";
 import { Spectrum } from "@/components/spectrum/Spectrum";
 import { spectrumGroups } from "./spectrum-groups";
 import type { StatusPayload } from "@/server/status";
+import { Reading } from "@/components/charts/Reading";
+import { useMachineReadings } from "@/components/charts/readings";
 import s from "./widgets.module.css";
 
 // ---------------------------------------------------------------- helpers
@@ -193,113 +192,22 @@ export function ClockSettings({ config, onChange }: SettingsProps<ClockConfig>) 
 
 // ---------------------------------------------------------------- status
 
-export function StatusWidget({ size }: WidgetProps) {
-  const { viewer } = usePrefs();
-  const admin = viewer.role === "admin";
-  const { data, error, mutate } = useApi<StatusPayload>("/api/status", { refresh: 15_000 });
-  const findings = admin && size !== "s" ? (data?.findings ?? []) : [];
-  // Only rows that fit whole are shown; the link below counts the rest, so the headline's number always adds up.
-  const [listRef, fit] = useFit<HTMLUListElement>(findings.length);
-  if (!data) {
-    if (error?.status === 403) {
-      return (
-        <WidgetState title="Status is for admins here">Whoever runs the server hasn&apos;t shared it with the household.</WidgetState>
-      );
-    }
-    if (error) {
-      return (
-        <WidgetState
-          line="unknown"
-          title="Can't check the server"
-          action={
-            <Button size="sm" variant="ghost" onClick={() => void mutate()}>
-              Try again
-            </Button>
-          }
-        >
-          {admin ? error.message : "Gluon didn't answer just now. It tries again on its own."}
-        </WidgetState>
-      );
-    }
-    return (
-      <div className={s.status} aria-busy="true" aria-label="Checking the server">
-        <div className={s.statusHead}>
-          <Skeleton width={2} height={22} radius={0} />
-          <div style={{ flex: 1, display: "grid", gap: 7 }}>
-            <Skeleton width="70%" height={18} />
-            <Skeleton width="45%" height={12} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-  const total = admin ? data.findings.length : 0;
-  // With nothing to list, the room below the verdict shows it: one line per app, in the StateLine grammar.
-  const strip = findings.length === 0 && size !== "s" ? data.apps.filter((a) => admin || a.household) : [];
-  const hidden = total - (size === "s" ? 0 : fit);
-  return (
-    <div key="ready" className={`${s.status} appear`} data-motion-gentle="">
-      <div className={s.statusHead}>
-        <span className={s.statusMark} data-tone={data.verdict.tone} aria-hidden />
-        <div className={s.statusWords}>
-          <p className={s.statusText}>{data.verdict.headline}</p>
-          <p className={s.statusDetail}>
-            {data.verdict.detail}
-            <Age at={data.checkedAt} expectMs={60_000} className={s.statusAge} />
-          </p>
-        </div>
-      </div>
-      {findings.length > 0 && (
-        <ul className={s.statusItems} role="list" ref={listRef}>
-          {findings.map((f, i) => (
-            <li key={f.id} className={s.statusItem} aria-hidden={i >= fit || undefined}>
-              <Link href={`/status#${encodeURIComponent(f.id)}`} tabIndex={i >= fit ? -1 : undefined}>
-                <StateLine state={f.severity === "fault" ? "unhealthy" : f.severity === "attention" ? "attention" : "unknown"} size={11} />
-                <span title={f.title}>{f.title}</span>
-                {f.remedy?.label && <span>{f.remedy.label}</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-      {strip.length > 0 && (
-        <div className={s.statusLines} role="img" aria-label={stripLabel(strip)}>
-          {strip.map((a) => (
-            <span key={a.id} title={`${a.name}: ${lineLabel(a.line).toLowerCase()}`}>
-              <StateLine state={a.line} size={26} />
-            </span>
-          ))}
-        </div>
-      )}
-      {admin && total > 0 && (hidden > 0 || size === "s") && (
-        <Link href="/status" className={s.statusAll}>
-          {hidden === total ? `See ${total === 1 ? "it" : `all ${total}`} on Status` : `${hidden} more on Status`}
-        </Link>
-      )}
-    </div>
-  );
-}
-
-function stripLabel(apps: StatusPayload["apps"]): string {
-  const running = apps.filter((a) => a.line === "running").length;
-  const n = apps.length;
-  return running === n ? `${n === 1 ? "1 app" : `All ${n} apps`} running` : `${running} of ${n} apps running`;
-}
+export { StatusWidget } from "./status-hero";
 
 // ---------------------------------------------------------------- machine
 
 export function VitalsWidget({ size }: WidgetProps) {
-  const { host, status } = useLive();
-  const { viewer } = usePrefs();
-  const fmt = useFormat();
-  const last = host.at(-1);
-  const many = size === "t" || size === "l" || size === "m" || size === "w" || size === "x";
-  const cols = size === "m" || size === "w" ? 4 : 2;
+  const { readings, last, status, span, windowMs } = useMachineReadings();
+  const many = size !== "s";
+  // Wide sizes put four readings in a row; small and tall use two columns.
+  const cols = size === "m" || size === "w" || size === "x" ? 4 : 2;
+  // Chart heights fill what each size has room for; the smallest leave the time axis to the label.
+  const chart = size === "t" || size === "x" ? { h: 56, times: true } : size === "w" ? { h: 36, times: true } : { h: 24, times: false };
   if (!last) {
     if (status === "offline") {
       return (
         <WidgetState line="unknown" title="Waiting for the server">
-          Live readings stopped. They pick up again as soon as Gluon answers.
+          Live readings stopped. They pick up again as soon as it answers.
         </WidgetState>
       );
     }
@@ -307,84 +215,24 @@ export function VitalsWidget({ size }: WidgetProps) {
       <div className={s.vitals} style={{ "--cols": cols } as React.CSSProperties} aria-busy="true" aria-label="Loading live readings">
         {Array.from({ length: many ? 4 : 2 }, (_, i) => (
           <div key={i} className={s.vital}>
-            <Skeleton width={48} height={10} />
-            <Skeleton width={56} height={24} />
-            <Skeleton height={30} />
+            <Skeleton width="60%" height={14} />
+            <Skeleton height={40} />
           </div>
         ))}
       </div>
     );
   }
-  const w = 3 * 60_000;
-  const t = (ts: number) => fmt.time(ts, true);
-  const tile = (label: string, value: React.ReactNode, series: [number, number][], opts: { max?: number; format: (v: number) => string }) => (
-    <div className={s.vital}>
-      <span className="label">{label}</span>
-      <span className={s.vitalValue}>{value}</span>
-      <TimeChart
-        series={[{ key: label, label, points: series, area: true }]}
-        yMax={opts.max}
-        format={opts.format}
-        formatTime={t}
-        windowMs={w}
-        live
-        compact
-        height={30}
-        label={`${label}, last 3 minutes`}
-      />
-    </div>
-  );
+  const list = many ? [readings.cpu, readings.mem, readings.net, readings.temp ?? readings.disk] : [readings.cpu, readings.mem];
   return (
-    <div key="ready" className={`${s.vitals} appear`} data-motion-gentle="" style={{ "--cols": cols } as React.CSSProperties} data-offline={status === "offline" ? "" : undefined}>
+    <div key="ready" className={`${s.vitals} appear`} data-motion-gentle="" data-size={size} style={{ "--cols": cols } as React.CSSProperties} data-offline={status === "offline" ? "" : undefined}>
       {status === "offline" && <Age at={last.t} expectMs={10_000} className={s.vitalsAge} />}
-      {tile(
-        viewer.role === "admin" ? "CPU" : "Processor",
-        <>
-          {Math.round(last.cpu)}
-          <small>%</small>
-        </>,
-        host.map((h) => [h.t, h.cpu]),
-        { max: 100, format: (v) => `${Math.round(v)}%` },
-      )}
-      {tile(
-        "Memory",
-        <>
-          {Math.round((last.mem.used / last.mem.total) * 100)}
-          <small>%</small>
-        </>,
-        host.map((h) => [h.t, h.mem.used]),
-        { max: last.mem.total, format: (v) => fmt.bytes(v) },
-      )}
-      {many &&
-        tile(
-          "Network in",
-          <>
-            {fmt.rate(last.net.rx).split(" ")[0]}
-            <small> {fmt.rate(last.net.rx).split(" ")[1]}</small>
-          </>,
-          host.map((h) => [h.t, h.net.rx]),
-          { format: (v) => fmt.rate(v) },
-        )}
-      {many &&
-        (last.temp !== null
-          ? tile(
-              "Temperature",
-              <>{fmt.temp(last.temp)}</>,
-              host.filter((h) => h.temp !== null).map((h) => [h.t, h.temp!]),
-              { max: 100, format: (v) => fmt.temp(v) },
-            )
-          : tile(
-              "Disk",
-              <>{fmt.rate(last.disk.read + last.disk.write)}</>,
-              host.map((h) => [h.t, h.disk.read + h.disk.write]),
-              { format: (v) => fmt.rate(v) },
-            ))}
+      {list.map((g) => (g ? <Reading key={g.key} reading={g} span={span} windowMs={windowMs} size="sm" chartHeight={chart.h} times={chart.times} /> : null))}
     </div>
   );
 }
 
 export function StorageWidget({ size }: WidgetProps) {
-  const { data, error, mutate } = useApi<StatusPayload>("/api/status", { refresh: 30_000 });
+  const { data, error, mutate } = useApi<StatusPayload>(STATUS_KEY, { refresh: STATUS_REFRESH });
   const driveNames = useDriveNames();
   const fmt = useFormat();
   const rows = (data?.filesystems ?? []).filter((f) => f.size > 512 * 1024 * 1024);
@@ -441,7 +289,8 @@ export function StorageWidget({ size }: WidgetProps) {
                   </span>
                 )}
                 <span>
-                  {fmt.bytes(f.avail)} free{size !== "s" && <span className={s.fsOf}> of {fmt.bytes(f.size)}</span>}
+                  {fmt.bytes(f.avail)} free
+                  {size !== "s" && <span className={s.fsOf}> of {fmt.bytes(f.size)}</span>}
                 </span>
               </div>
               <UsageBar value={f.pct} attention={85} fault={95} label={`${name ?? f.mount}: ${Math.round(f.pct)}% used`} />
@@ -459,9 +308,14 @@ export function StorageWidget({ size }: WidgetProps) {
 }
 
 export function SpectrumWidget() {
-  const { data, error } = useApi<StatusPayload>("/api/status", { refresh: 15_000 });
+  const { data, error } = useApi<StatusPayload>(STATUS_KEY, { refresh: STATUS_REFRESH });
   const fmt = useFormat();
-  if (!data && error) return <WidgetState line="unknown" title="Can't draw the server right now">{error.message}</WidgetState>;
+  if (!data && error)
+    return (
+      <WidgetState line="unknown" title="Can't draw the server right now">
+        {error.message}
+      </WidgetState>
+    );
   if (!data)
     return (
       <div className={s.pad} aria-busy="true" aria-label="Loading">

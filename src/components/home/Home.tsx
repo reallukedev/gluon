@@ -338,10 +338,11 @@ export function Home({ initial }: Props) {
     setCollectionAsked(null);
   }, [CollectionView, collectionAsked]);
   const typesKey = [...new Set(items.map((i) => i.type))].sort().join(" ");
+  const heroFix = items.some((i) => i.type === "status" && i.size !== "s");
   const ctx = React.useMemo(() => {
     const types = new Set(typesKey.split(" "));
-    return { openCollection, arranging, pinned: (t: string) => types.has(t) };
-  }, [openCollection, arranging, typesKey]);
+    return { openCollection, arranging, pinned: (t: string) => types.has(t), heroFix };
+  }, [openCollection, arranging, typesKey, heroFix]);
   const active = activeId ? layout.items.find((i) => i.id === activeId) : null;
   const settingsItem = settingsFor ? layout.items.find((i) => i.id === settingsFor) : null;
   const settingsDef = settingsItem ? widgetDef(settingsItem.type) : null;

@@ -1,5 +1,8 @@
 .title { display: inline-flex; align-items: center; gap: 14px; min-width: 0; }
 .titleText { min-width: 0; overflow-wrap: anywhere; }
+/* A broken app's icon greys and tips over a little; it rights itself once the app is back up. */
+.icon { display: flex; flex: none; transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
+.title[data-broken] .icon { transform: rotate(calc(-6deg * var(--motion))); opacity: 0.85; filter: grayscale(1); }
 .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
 .desc { color: var(--muted); }
 .banner { margin-bottom: 16px; }

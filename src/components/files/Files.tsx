@@ -173,7 +173,9 @@ export function Files({ initialPlaces }: { initialPlaces: Places | null }) {
     return (
       <Page narrow>
         <PageHeader title="Files" summary="Nothing has been shared with you yet." />
-        <Empty title="No shared folders">Folders an admin shares with you show up here.</Empty>
+        <div className={s.emptyGround}>
+          <Empty title="Shared folders land here">Ask whoever runs the server to share one with you.</Empty>
+        </div>
       </Page>
     );
   }

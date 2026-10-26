@@ -16,14 +16,13 @@
 
 /* ---------------------------------------------------------------- overview */
 
-.identityRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 32px; }
-.identityRow > :first-child { flex: 1 1 320px; min-width: 0; }
-.uptime { display: grid; gap: 2px; justify-items: end; text-align: right; }
-.uptimeFigure { font-size: 1.75rem; font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; }
+/* Identity sits on the ground: the name, then how long it has been up. */
+.identity { display: grid; gap: 18px; padding: 4px 0 6px; min-width: 0; }
+.factsWrap { display: grid; gap: 14px; min-width: 0; }
+.uptime { margin: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.factWord { font-family: var(--font-display); font-size: 1.375rem; font-weight: 520; font-stretch: 84%; line-height: 1.15; }
+.factSub { font-size: var(--text-sm); color: var(--muted); }
 .liveMeta { font-variant-numeric: tabular-nums; }
-@media (max-width: 640px) {
-  .uptime { justify-items: start; text-align: left; }
-}
 
 .hostText { display: grid; gap: 4px; min-width: 0; }
 .hostName { max-width: 100%; font-size: var(--text-3xl); font-weight: 540; font-family: var(--font-display); font-stretch: 80%; line-height: 1.1; letter-spacing: -0.012em; }
@@ -58,6 +57,8 @@
 .updHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
 .updSentence { margin: 0; font-size: var(--text-lg); line-height: 1.4; }
 .updSentence b { font-weight: 620; }
+.upToDate { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 1.375rem; font-weight: 540; font-stretch: 84%; }
+.upToDateMark { width: 36px; height: 36px; margin: -6px -2px; color: var(--ok); }
 .updActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .updNote { margin: 12px 0 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
 

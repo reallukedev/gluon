@@ -1,2 +1,4 @@
 /* The Files page frame: the title follows the folder. */
 .title { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* An empty state on the page lines up with the title instead of sitting in an invisible box. */
+.emptyGround > div { padding: 4px 0 0; }

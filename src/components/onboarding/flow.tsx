@@ -40,10 +40,11 @@ export function useMemberPlan(): MemberPlan {
 }
 
 /** The step's title (focused when the step changes, so screen readers hear where they are) and lede. */
-export function StepHead({ title, children }: { title: React.ReactNode; children?: React.ReactNode }) {
+export function StepHead({ title, art, children }: { title: React.ReactNode; art?: React.ReactNode; children?: React.ReactNode }) {
   const { headingRef } = useFlow();
   return (
     <header className={o.head}>
+      {art}
       <h1 ref={headingRef} tabIndex={-1} className={o.title}>
         {title}
       </h1>

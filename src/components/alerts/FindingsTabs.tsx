@@ -139,11 +139,7 @@ export function HistoryTab() {
   }
   const items = data ?? [];
   if (!items.length) {
-    return (
-      <Panel flush>
-        <Empty title="No past problems">Cleared problems land here, with how long each lasted.</Empty>
-      </Panel>
-    );
+    return <Empty title="No past problems">Cleared problems land here, with how long each lasted.</Empty>;
   }
   const days = byDay(items, (f) => f.resolvedAt ?? f.lastSeen, (ts) => fmt.date(ts, { year: true }));
   return (

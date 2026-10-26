@@ -89,3 +89,5 @@
 
 /* Settings */
 .form { display: grid; gap: 16px; }
+.figure[data-word] { border-radius: 4px; cursor: default; text-decoration: underline dotted var(--line-strong); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.figure[data-word]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

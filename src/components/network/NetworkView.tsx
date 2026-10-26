@@ -290,7 +290,12 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     const attn = live.filter((e) => e.health.state === "attention");
     const unsure = live.filter((e) => e.login.tone === "unknown");
     const count = (k: number) => `${k} app${k === 1 ? "" : "s"}`;
-    if (!n && !broken.length) summary = sites.length ? `No apps are on the internet, only ${sites.length === 1 ? "one site" : `${sites.length} sites`} from Sites.` : "Nothing on this server is on the internet.";
+    const at = (
+      <>
+        Your apps can be reached from the internet at <b className="mono">{data?.config.base_domain}</b>.
+      </>
+    );
+    if (!n && !broken.length) summary = sites.length ? `No apps are public, only ${sites.length === 1 ? "one site" : `${sites.length} sites`} from Sites.` : "Nothing is public. Your apps work only at home.";
     else if (broken.length)
       summary = (
         <>
@@ -309,13 +314,19 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
           <b>{attn.length === 1 ? `${attn[0]!.name} needs a look.` : `${attn.length} apps need a look.`}</b> The rest are working.
         </>
       );
-    else if (!status.data) summary = `${count(n)} on the internet. Checking each one…`;
-    else if (unsure.length) summary = `${count(n)} on the internet, all working. Not sure whether ${unsure.map((e) => e.name).join(" and ")} ${unsure.length === 1 ? "has" : "have"} a login.`;
+    else if (!status.data) summary = <>{at} Checking each one…</>;
+    else if (unsure.length) summary = <>{at} {n === 1 ? "It works" : `All ${n} work`}; not sure whether {unsure.map((e) => e.name).join(" and ")} {unsure.length === 1 ? "has" : "have"} a login.</>;
     else {
       const partial = live.filter((e) => e.login.tone === "partial");
-      summary = partial.length
-        ? `${count(n)} on the internet, all working. Each asks for a login, except ${partial.map((e) => e.name).join(" and ")}, which ${partial.length === 1 ? "shows" : "show"} only a few paths.`
-        : `${count(n)} on the internet, all working, and each asks for a login.`;
+      summary = partial.length ? (
+        <>
+          {at} {n === 1 ? "It works" : `All ${n} work`} and ask for a login, except {partial.map((e) => e.name).join(" and ")}, which {partial.length === 1 ? "shows" : "show"} a few paths.
+        </>
+      ) : (
+        <>
+          {at} {n === 1 ? "It works and asks" : `All ${n} work and ask`} for a login.
+        </>
+      );
     }
   }
 

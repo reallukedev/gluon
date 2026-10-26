@@ -1,0 +1,9 @@
+.list { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.row { display: grid; gap: 7px; min-width: 0; }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; min-width: 0; font-size: var(--text-sm); }
+.mount { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .mount:hover { text-decoration: underline; text-underline-offset: 2px; } }
+.val { color: var(--muted); white-space: nowrap; }
+.val b { color: var(--ink-2); font-weight: 560; }
+.val[data-attn] b { color: var(--ink); font-weight: 650; }
+.none { font-size: var(--text-md); color: var(--muted); }

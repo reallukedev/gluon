@@ -24,6 +24,17 @@ interface Props {
   label: string;
   /** Compact: no axis labels (for cards). */
   compact?: boolean;
+  /**
+   * Reading style, for small charts under a headline figure: the scale (top value and 0) at the
+   * right edge, the span ("6 min ago" … "now") underneath, and a dot on the newest value.
+   */
+  edge?: boolean;
+  /** With `edge`: what the left end of the time axis says, e.g. "6 min ago". */
+  span?: string;
+  /** Short scale labels for `edge` (defaults to `format`). */
+  axisFormat?: (v: number) => string;
+  /** With `edge`: label the time axis. Off for the smallest tiles, where the span is in the label. */
+  times?: boolean;
 }
 
 function niceMax(v: number): number {
@@ -46,7 +57,7 @@ function liveEdge(latest: number): number {
  * Live charts step with their samples (the right edge is the newest sample), never by render
  * timing, so streaming data doesn't jitter. Values are never animated.
  */
-export function TimeChart({ series, height = 140, yMax, format, formatTime, windowMs, live, label, compact }: Props) {
+export function TimeChart({ series, height = 140, yMax, format, formatTime, windowMs, live, label, compact, edge, span, axisFormat, times = true }: Props) {
   const wrap = React.useRef<HTMLDivElement>(null);
   const [width, setWidth] = React.useState(0);
   const [hover, setHover] = React.useState<number | null>(null);
@@ -77,8 +88,9 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
   const tMax = frozen?.tMax ?? (live ? liveMax : dataMax || Date.now());
   const tMin = windowMs ? tMax - windowMs : Math.min(dataMin, tMax);
   const vMax = yMax ?? niceMax(vPeak * 1.1);
-  const padR = compact ? 0 : 44;
-  const padB = compact ? 0 : 20;
+  const axisFmt = axisFormat ?? format;
+  const padR = edge ? 8 + Math.max(axisFmt(vMax).length, 1) * 5.6 : compact ? 0 : 44;
+  const padB = edge ? (times ? 14 : 0) : compact ? 0 : 20;
   const plotW = Math.max(10, width - padR);
   const plotH = height - padB;
   const x = (t: number) => ((t - tMin) / Math.max(1, tMax - tMin)) * plotW;
@@ -159,7 +171,29 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
     >
       {width > 0 && (
         <svg width={width} height={height} className={s.svg} aria-hidden>
+          {edge && (
+            <>
+              <line x1={0} x2={plotW} y1={Math.round(y(vMax)) + 0.5} y2={Math.round(y(vMax)) + 0.5} className={s.grid} />
+              <text x={plotW + 6} y={y(vMax) + 3.5} className={s.axis}>
+                {axisFmt(vMax)}
+              </text>
+              <text x={plotW + 6} y={plotH} className={s.axis}>
+                0
+              </text>
+              {times && (
+                <>
+                  <text x={0} y={height - 2} className={s.axis}>
+                    {span ?? formatTime(tMin)}
+                  </text>
+                  <text x={plotW} y={height - 2} className={s.axis} textAnchor="end">
+                    {live ? "now" : formatTime(tMax)}
+                  </text>
+                </>
+              )}
+            </>
+          )}
           {!compact &&
+            !edge &&
             !empty &&
             [0.5, 1].map((f) => (
               <g key={f}>
@@ -180,6 +214,9 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
             </g>
           ))}
           {live && <line x1={plotW - 0.5} x2={plotW - 0.5} y1={0} y2={plotH} className={s.now} />}
+          {edge && hoverT === null && paths[0]?.pts.length ? (
+            <circle cx={x(paths[0].pts.at(-1)![0])} cy={y(paths[0].pts.at(-1)![1])} r={3} className={s.end} data-tone={paths[0].sr.tone ?? "ink"} />
+          ) : null}
           {hoverT !== null && (
             <>
               <line x1={Math.round(x(hoverT)) + 0.5} x2={Math.round(x(hoverT)) + 0.5} y1={0} y2={plotH} className={s.cursor} />
@@ -190,7 +227,7 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
               })}
             </>
           )}
-          {!compact && !empty && (
+          {!compact && !edge && !empty && (
             <>
               <text x={0} y={height - 5} className={s.axis}>
                 {formatTime(tMin)}
@@ -202,7 +239,7 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
           )}
         </svg>
       )}
-      {empty && width > 0 && !compact && (
+      {empty && width > 0 && !compact && !edge && (
         <span className={s.empty} style={{ bottom: padB }}>
           No data yet
         </span>
@@ -232,11 +269,18 @@ export function Sparkline({ points, height = 28, yMax, tone = "muted", label }: 
   const pts = points.length === 1 ? [points[0]!, points[0]!] : points;
   const n = pts.length;
   const max = yMax ?? Math.max(1e-9, ...pts) * 1.1;
-  const d = pts
-    .map((v, i) => `${i === 0 ? "M" : "L"}${((i / Math.max(1, n - 1)) * 100).toFixed(2)},${(height - (Math.min(Math.max(v, 0), max) / max) * (height - 3) - 1.5).toFixed(2)}`)
-    .join("");
+  const d = pts.map((v, i) => `${i === 0 ? "M" : "L"}${((i / Math.max(1, n - 1)) * 100).toFixed(2)},${(height - (Math.min(Math.max(v, 0), max) / max) * (height - 3) - 1.5).toFixed(2)}`).join("");
   return (
-    <svg className={s.spark} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" height={height} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} data-tone={tone}>
+    <svg
+      className={s.spark}
+      viewBox={`0 0 100 ${height}`}
+      preserveAspectRatio="none"
+      height={height}
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      data-tone={tone}
+    >
       {n > 0 && <path d={d} vectorEffect="non-scaling-stroke" />}
       <line x1="100" x2="100" y1="0" y2={height} vectorEffect="non-scaling-stroke" className={s.sparkNow} />
     </svg>

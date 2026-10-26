@@ -69,9 +69,13 @@ a.card:focus-visible .go { color: var(--ink); }
 .card[data-size="i"] .sub { justify-content: center; font-size: var(--text-2xs); max-width: 100%; }
 .nolink { position: absolute; left: 0; right: 0; bottom: 8px; font-size: var(--text-2xs); color: var(--faint); text-align: center; }
 
-/* ---------------------------------------------------------------- Row: one line */
-.card[data-size="c"] { justify-content: center; padding: 0 14px 0 16px; }
-.card[data-size="c"] .go { align-self: center; margin: 0 -4px 0 0; }
+/* ---------------------------------------------------------------- Row: one line, the icon leads */
+.card[data-size="c"] { justify-content: center; padding: 0 12px; }
+.card[data-size="c"] .face { gap: 14px; }
+.card[data-size="c"] .name { font-size: var(--text-base); }
+.card[data-size="c"] .go { align-self: center; margin: 0 -4px 0 0; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { a.card[data-size="c"]:hover .go { opacity: 1; } }
+a.card[data-size="c"]:focus-visible .go { opacity: 1; }
 
 /* ---------------------------------------------------------------- Card and Wide */
 .more { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -98,6 +102,18 @@ a.card:focus-visible .go { color: var(--ink); }
 .card[data-state="stopped"] .name,
 .card[data-state="gone"] .name { color: var(--ink-2); }
 .card[data-state="unhealthy"] .sub { color: var(--fault); }
+/* Broken or needing you: the icon greys and tips over a little, the doubled mark and its word beside it. */
+.card[data-tipped] .icon { filter: grayscale(1); opacity: 0.6; transform: rotate(calc(-6deg * var(--motion, 1))); }
+@media (hover: hover) and (pointer: fine) {
+  a.card[data-tipped]:hover .icon, .card[data-tipped] a.face:hover .icon { transform: rotate(calc(-6deg * var(--motion, 1))) translateY(calc(-2px * var(--motion, 1))); }
+}
+.card[data-tipped] .name { color: var(--ink-2); }
+/* The fix on the card itself, only when the status hero isn't on Home to hold it. */
+.card[data-fixable] a.face { flex: 1; color: inherit; text-decoration: none; border-radius: 8px; outline: none; }
+.card[data-fixable] a.face:focus-visible { box-shadow: 0 0 0 2px var(--ink); }
+.card[data-fixable][data-size="c"] { flex-direction: row; align-items: center; gap: 10px; }
+.card[data-fixable][data-size="i"] { gap: 8px; }
+.fix { flex: none; display: flex; justify-content: center; }
 .card[data-state="attention"] .sub { color: var(--ink); }
 .card[data-state="gone"] .sub, .card[data-state="unknown"] .sub { color: var(--faint); }
 
@@ -111,7 +127,7 @@ a.card:focus-visible .go { color: var(--ink); }
   /* Rows share a phone's width two by two: a smaller icon and no arrow leave the name room. */
   .card[data-size="c"] { padding: 0 10px 0 12px; }
   .card[data-size="c"] .face { gap: 10px; }
-  .card[data-size="c"] .icon > * { width: 32px !important; height: 32px !important; }
+  .card[data-size="c"] .icon > * { width: 40px !important; height: 40px !important; }
   .card[data-size="c"] .go { display: none; }
 }
 

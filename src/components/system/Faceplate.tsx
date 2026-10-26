@@ -7,6 +7,7 @@ import { useLive } from "@/lib/client/live";
 import { useFormat } from "@/components/PrefsProvider";
 import { Skeleton } from "@/components/ui/Surface";
 import { SegmentBar } from "@/components/ui/SegmentBar";
+import { useMachineReadings } from "@/components/charts/readings";
 import f from "./faceplate.module.css";
 
 /**
@@ -115,6 +116,7 @@ function MemoryBar({ overview }: { overview: SystemOverview }) {
   const { data } = useApi<MemoryBreakdown>("/api/system/memory", {
     refresh: 10_000,
   });
+  const live = useMachineReadings().readings.mem;
   const total = data?.total ?? overview.memory.total;
   const used = data?.used ?? overview.memory.used;
   const high = total ? used / total >= 0.9 : false;
@@ -128,7 +130,8 @@ function MemoryBar({ overview }: { overview: SystemOverview }) {
           Memory
         </h3>
         <span className={f.figure}>
-          <span className="num">{fmt.bytes(used)}</span>
+          {/* The live reading, so this matches the Memory figure above and on Home and Status. */}
+          <span className="num">{live ? `${live.value} ${live.unit}` : fmt.bytes(used, 1)}</span>
           <small>of {fmt.bytes(total)}</small>
         </span>
       </header>

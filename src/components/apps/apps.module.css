@@ -32,18 +32,18 @@
 }
 .headRow, .row {
   display: grid;
-  grid-template-columns: minmax(220px, 2fr) minmax(150px, 1.15fr) 124px 124px minmax(210px, 1.9fr) 68px;
+  grid-template-columns: minmax(210px, 1.7fr) minmax(170px, 1.9fr) 124px 124px minmax(190px, 1.4fr) 36px;
   align-items: center;
   gap: 18px;
   padding: 0 14px 0 18px;
 }
 /* 1080px: the CPU trace goes; CPU is a figure. (Columns + gaps + padding ≤ 908px.) */
 @container apps (max-width: 1079px) {
-  .headRow, .row { grid-template-columns: minmax(200px, 2fr) minmax(150px, 1.15fr) 72px 118px minmax(190px, 1.9fr) 64px; gap: 16px; }
+  .headRow, .row { grid-template-columns: minmax(190px, 1.7fr) minmax(160px, 1.8fr) 72px 118px minmax(170px, 1.4fr) 36px; gap: 16px; }
 }
 /* 960px: the memory bar goes too; both are figures. (≤ 698px.) */
 @container apps (max-width: 959px) {
-  .headRow, .row { grid-template-columns: minmax(152px, 2fr) minmax(120px, 1.1fr) 60px 72px minmax(136px, 1.6fr) 64px; gap: 12px; }
+  .headRow, .row { grid-template-columns: minmax(150px, 1.7fr) minmax(130px, 1.6fr) 60px 72px minmax(124px, 1.3fr) 36px; gap: 12px; }
 }
 /* Every head cell shares one style: micro-caps, muted, 0.14em. */
 .headRow {
@@ -102,18 +102,35 @@
   border-bottom-left-radius: 5px;
 }
 .row[data-copy] .appName { color: var(--ink-2); font-weight: 560; }
-.row[data-copy] .appCell > span:first-child { opacity: 0.7; }
+.row[data-copy] .icon { opacity: 0.7; }
 
-.appCell { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 0; }
+/*
+ * The icon carries the row's mood. Broken: it greys and tips over a little, beside the doubled mark and
+ * its fix; when the fix works it rights itself. On a fine pointer it lifts as the row is hovered.
+ */
+.icon { display: flex; flex: none; transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
+.row[data-broken] .icon { transform: rotate(calc(-6deg * var(--motion))); opacity: 0.85; filter: grayscale(1); }
+@media (hover: hover) and (pointer: fine) {
+  .row:hover .icon { transform: translateY(calc(-2px * var(--motion))); }
+  .row[data-broken]:hover .icon { transform: translateY(calc(-2px * var(--motion))) rotate(calc(-6deg * var(--motion))); }
+}
+
+.appCell { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 10px 0; }
 .appText { min-width: 0; display: grid; gap: 1px; }
 .appName { font-size: var(--text-md); font-weight: 620; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) { .appName:hover { text-decoration: underline; text-underline-offset: 0.2em; } }
 .appSub { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* "4 parts": the containers are named in its tooltip. */
+.parts { text-decoration: underline dotted var(--line-strong); text-underline-offset: 0.25em; cursor: default; }
 .stateCell { min-width: 0; display: grid; gap: 4px; justify-items: start; }
+.stateLine { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
+.fix { flex: none; }
 .update { font-size: var(--text-xs); }
 .meterCell { min-width: 0; display: flex; align-items: center; }
 .addrCell { min-width: 0; }
 .actions { display: flex; justify-content: flex-end; gap: 2px; }
+/* The figures are for the curious: present, but a step quieter than the name and state. */
+.meterCell { color: var(--muted); }
 
 .copyNote { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
 .copyText { font-size: var(--text-sm); color: var(--muted); min-width: 0; }
@@ -126,36 +143,26 @@
 .progressTrack > span[data-indeterminate] { right: 65%; animation: sweep 1400ms var(--ease-in-out) infinite; }
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 
-/* Restacked: name and actions, then state, then the figures with the address at the end of their line. */
+/* Restacked: name and actions; then the state (and its fix); where it opens; then the quiet figures. */
 @container apps (max-width: 699px) {
   .headRow { display: none; }
   .row {
     grid-template-columns: auto auto minmax(0, 1fr) auto;
-    grid-template-areas: "app app app actions" "state state state state" "cpu mem addr addr";
+    grid-template-areas: "app app app actions" "state state state state" "addr addr addr addr" "cpu mem . .";
     gap: 8px 16px;
     padding: 12px 12px 14px 16px;
   }
   .appCell { grid-area: app; padding: 0; }
-  .stateCell { grid-area: state; padding-left: 46px; }
-  .row > .meterCell:nth-of-type(3) { grid-area: cpu; padding-left: 46px; }
+  .stateCell { grid-area: state; padding-left: 54px; }
+  .row > .meterCell:nth-of-type(3) { grid-area: cpu; padding-left: 54px; }
   .row > .meterCell:nth-of-type(4) { grid-area: mem; }
   .meterCell > span { justify-content: flex-start; }
-  .addrCell { grid-area: addr; display: flex; justify-content: flex-end; }
-  .addrCell > * { justify-content: flex-end; }
+  .addrCell { grid-area: addr; display: flex; padding-left: 54px; }
   .actions { grid-area: actions; }
   .row[data-nested] .appCell { padding-left: 24px; }
-  .row[data-nested] .stateCell, .row[data-nested] > .meterCell:nth-of-type(3) { padding-left: 70px; }
+  .row[data-nested] .stateCell, .row[data-nested] .addrCell, .row[data-nested] > .meterCell:nth-of-type(3) { padding-left: 78px; }
   .row[data-nested]::before { left: 32px; top: -4px; height: 32px; }
 }
-/* Too narrow to share a line (and always for an old copy's note): the address takes its own. */
-@container apps (max-width: 349px) {
-  .row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "app app actions" "state state state" "cpu mem mem" "addr addr addr"; }
-  .addrCell { justify-content: flex-start; padding-left: 46px; }
-  .addrCell > * { justify-content: flex-start; }
-  .row[data-nested] .addrCell { padding-left: 70px; }
-}
 @container apps (max-width: 699px) {
-  .row[data-copy] { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "app app actions" "state state state" "cpu mem mem" "addr addr addr"; }
-  .row[data-copy] .addrCell { justify-content: flex-start; padding-left: 46px; }
-  .row[data-copy][data-nested] .addrCell { padding-left: 70px; }
+  .row[data-copy] { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "app app actions" "state state state" "addr addr addr" "cpu mem mem"; }
 }

@@ -117,3 +117,5 @@
 .pickRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pickedText { font-size: var(--text-sm); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .busyText { font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+/* The empty state sits on the page, lined up with the title: there's nothing to frame yet. */
+.ground > div { padding: 8px 0 0; }

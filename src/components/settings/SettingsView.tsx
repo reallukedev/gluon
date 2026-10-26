@@ -1,20 +1,16 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
 import dynamic from "next/dynamic";
-import { Bell, Clock, Community, HomeSimple, InfoCircle, Journal, Lock, NavArrowRight, Palette, PlugTypeA, Refresh, Server, SidebarExpand, WarningTriangle } from "iconoir-react";
-import { GROUPS, type SettingsSection } from "./sections";
+import { SECTIONS } from "./sections";
 import type { ActivityPage, PersonView } from "@/lib/people-types";
 import type { AlertsTab, PeopleTab } from "@/lib/settings-links";
-import { useApi } from "@/lib/client/api";
 import { SectionHeaderProvider } from "./SectionHeader";
 import { SEARCH_ENGINES } from "@/lib/prefs";
 import { orderedNav } from "@/lib/nav";
 import { useNavAccess } from "@/components/shell/Shell";
 import { usePrefs } from "@/components/PrefsProvider";
-import { Page, PageHeader, Skeleton } from "@/components/ui/Surface";
+import { PageHeader, Skeleton } from "@/components/ui/Surface";
 import { Appearance, HomePrefs, Formats } from "./personal";
-import s from "./settings.module.css";
 
 const Security = dynamic(() => import("./Security").then((m) => m.Security), { loading: () => <Skeleton height={320} radius={12} /> });
 const Server_ = dynamic(() => import("./Server").then((m) => m.Server), { loading: () => <Skeleton height={320} radius={12} /> });
@@ -55,21 +51,6 @@ const CONTENT: Record<string, React.ComponentType> = {
   integrations: Integrations,
 };
 
-const ICON: Record<string, React.ReactNode> = {
-  appearance: <Palette />,
-  home: <HomeSimple />,
-  navigation: <SidebarExpand />,
-  formats: <Clock />,
-  notifications: <Bell />,
-  security: <Lock />,
-  server: <Server />,
-  integrations: <PlugTypeA />,
-  alerts: <WarningTriangle />,
-  activity: <Journal />,
-  people: <Community />,
-  updates: <Refresh />,
-  about: <InfoCircle />,
-};
 
 /** One sentence of state under each section title, for the sections whose state is the viewer's own. */
 function useSummary(id: string, fallback: string): React.ReactNode {
@@ -101,14 +82,11 @@ function useSummary(id: string, fallback: string): React.ReactNode {
   }
 }
 
-export function SettingsView({ sections, section, data = null }: { sections: SettingsSection[]; section: string | null; data?: SectionData }) {
+export function SettingsView({ section, data = null }: { section: string | null; data?: SectionData }) {
   const active = section ?? "appearance";
-  const current = sections.find((x) => x.id === active)!;
+  const current = SECTIONS.find((x) => x.id === active)!;
   const C = CONTENT[active];
   const summary = useSummary(active, current.summary);
-  // Household problem reports waiting for a reply (the sidebar's account button shows the same count).
-  const { data: shell } = useApi<{ reports: number }>("/api/shell");
-  const reports = shell?.reports ?? 0;
   const back = { href: "/settings", label: "Settings" };
 
   const own =
@@ -120,62 +98,12 @@ export function SettingsView({ sections, section, data = null }: { sections: Set
       <PeopleSettings key={data.person?.id ?? data.tab} tab={data.tab} initialPeople={data.initialPeople} person={data.person} reportId={data.reportId} />
     ) : null;
 
-  return (
-    <Page>
-      <div className={s.layout} data-section={section ? "" : undefined} data-wide={current.wide ? "" : undefined}>
-        <nav className={s.nav} aria-label="Settings">
-          <h1 className={s.navTitle}>Settings</h1>
-          {GROUPS.map((g) => {
-            const items = sections.filter((x) => x.group === g.id);
-            if (!items.length) return null;
-            return (
-              <div key={g.id} className={s.navGroup}>
-                <div className={`label ${s.navLabel}`}>{g.label}</div>
-                {items.map((x) => {
-                  const count = x.id === "people" && reports > 0 ? reports : 0;
-                  const countText = count ? `${count} problem report${count === 1 ? "" : "s"} waiting` : "";
-                  return (
-                    <Link
-                      key={x.id}
-                      href={`/settings/${x.id}`}
-                      className={s.navItem}
-                      aria-current={x.id === active && section ? "page" : undefined}
-                      data-active={x.id === active ? "" : undefined}
-                    >
-                      <span className={s.navIcon} aria-hidden>
-                        {ICON[x.id]}
-                      </span>
-                      <span className={s.navText}>
-                        {x.label}
-                        <small>{x.hint}</small>
-                      </span>
-                      {count > 0 && (
-                        <span className={s.navCount} role="img" aria-label={countText} title={countText}>
-                          <i aria-hidden />
-                          <span aria-hidden className="num">
-                            {count}
-                          </span>
-                        </span>
-                      )}
-                      <NavArrowRight className={s.navChevron} aria-hidden />
-                    </Link>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </nav>
-        <div className={s.content}>
-          {current.ownHeader ? (
-            <SectionHeaderProvider value={{ title: current.label, back }}>{own ?? (C ? <C /> : null)}</SectionHeaderProvider>
-          ) : (
-            <>
-              <PageHeader title={current.label} summary={summary} back={back} />
-              {C ? <C /> : null}
-            </>
-          )}
-        </div>
-      </div>
-    </Page>
+  return current.ownHeader ? (
+    <SectionHeaderProvider value={{ title: current.label, back }}>{own ?? (C ? <C /> : null)}</SectionHeaderProvider>
+  ) : (
+    <>
+      <PageHeader title={current.label} summary={summary} back={back} />
+      {C ? <C /> : null}
+    </>
   );
 }

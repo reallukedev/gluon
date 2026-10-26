@@ -8,6 +8,7 @@ import { useApi } from "@/lib/client/api";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
 import { AffixInput, Field, Input } from "@/components/ui/Field";
 import { Skeleton, UsageBar } from "@/components/ui/Surface";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { StateLine, type LineState } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
 import { Sparkline } from "@/components/charts/TimeChart";
@@ -79,14 +80,16 @@ function SpaceWidget({ size }: WidgetProps) {
   const learning = disks.every((d) => d.trend === "learning");
   const lead = filling[0];
   const words = lead ? fillsIn(lead.daysToFull!)! : null;
-  const line: LineState = lead ? diskLine(lead) : learning ? "starting" : "running";
+  const line: LineState = lead ? diskLine(lead) : disks.some((d) => d.pct >= 95) ? "unhealthy" : "running";
+  const fullest = disks.reduce((a, b) => (b.pct > a.pct ? b : a));
   const hidden = size === "s" ? 0 : disks.length - fit;
   const trendText = (d: SpaceDisk) => {
-    if (d.trend === "learning") return `Learning · ${fmt.bytes(d.avail)} free`;
+    const free = `${fmt.bytes(d.avail)} free`;
+    if (d.trend === "learning") return free;
     const rate = d.perDay !== null ? `${fmt.bytes(Math.abs(d.perDay))} a day` : "";
-    if (d.trend === "filling") return d.daysToFull !== null && fillsIn(d.daysToFull) ? `Full ${fillsIn(d.daysToFull)} · +${rate}` : `Growing slowly · +${rate}`;
-    if (d.trend === "shrinking") return `Shrinking · −${rate}`;
-    return `Steady · ${fmt.bytes(d.avail)} free`;
+    if (d.trend === "filling") return d.daysToFull !== null && fillsIn(d.daysToFull) ? `Full ${fillsIn(d.daysToFull)} · +${rate}` : `${free} · +${rate}`;
+    if (d.trend === "shrinking") return `${free} · −${rate}`;
+    return `${free} · no growth this week`;
   };
   return (
     <div key="ready" className={`${m.body} appear`} data-motion-gentle="">
@@ -97,20 +100,18 @@ function SpaceWidget({ size }: WidgetProps) {
             <>
               <span className={names.has(lead.mount) ? undefined : "mono"}>{nameOf(lead.mount)}</span> fills {words}
             </>
-          ) : learning ? (
-            "Still learning how fast disks fill"
           ) : (
-            "No disk is filling up"
+            <>
+              <span className={names.has(fullest.mount) ? undefined : "mono"}>{nameOf(fullest.mount)}</span> <span className="num">{Math.round(fullest.pct)}%</span> full
+            </>
           )}
         </span>
       </p>
-      {!(learning && size === "m") && (
+      {(lead || size !== "m") && (
         <p className={m.sub}>
           {lead
             ? `At this rate: +${fmt.bytes(lead.perDay!)} a day, ${fmt.bytes(lead.avail)} left.${filling.length > 1 ? ` ${filling.length - 1} more ${filling.length === 2 ? "disk is" : "disks are"} filling.` : ""}`
-            : learning
-              ? "Needs about half a day of history."
-              : "Based on the last week. Nothing will run out at this rate."}
+            : `${fmt.bytes(fullest.used)} of ${fmt.bytes(fullest.size)}. ${learning ? "Fill rates show after half a day." : "Nothing will run out at last week's rate."}`}
         </p>
       )}
       {size !== "s" && (
@@ -121,7 +122,11 @@ function SpaceWidget({ size }: WidgetProps) {
                 <span className={`${m.diskName} ${names.has(d.mount) ? "" : "mono"}`} title={d.mount}>
                   {nameOf(d.mount)}
                 </span>
-                <span className={`${m.diskFig} num`}>{Math.round(d.pct)}%</span>
+                <Tooltip content={`${fmt.bytes(d.used)} of ${fmt.bytes(d.size)}, ${fmt.bytes(d.avail)} free`}>
+                  <span className={`${m.diskFig} num`} tabIndex={0}>
+                    {Math.round(d.pct)}% full
+                  </span>
+                </Tooltip>
               </span>
               <UsageBar value={d.pct} attention={85} fault={95} label={`${nameOf(d.mount)}: ${Math.round(d.pct)}% used`} />
               <span className={m.diskMeta} data-line={diskLine(d)}>
@@ -241,7 +246,10 @@ function PowerWidget({ item, size, openSettings }: WidgetProps<PowerConfig>) {
         </div>
         <div>
           <dt>This month</dt>
-          <dd className="num" title={monthKwh !== null ? `About ${monthKwh.toFixed(1)} kWh at the ${data.avgHours >= 48 ? "last week's" : "average so far"} ${Math.round(data.avgWatts!)} W` : undefined}>
+          <dd
+            className="num"
+            title={monthKwh !== null ? `About ${monthKwh.toFixed(1)} kWh at the ${data.avgHours >= 48 ? "last week's" : "average so far"} ${Math.round(data.avgWatts!)} W` : undefined}
+          >
             {monthKwh === null ? <span className="muted">Not yet</span> : price ? `≈ ${money(monthKwh * price, currency)}` : `≈ ${monthKwh.toFixed(monthKwh < 10 ? 1 : 0)} kWh`}
           </dd>
         </div>
@@ -320,7 +328,7 @@ function ScheduleRow({ it }: { it: ScheduleItem }) {
   const when = it.next;
   return (
     <>
-      <span className={`${m.when} num`}>{when ? (it.approx ? `~${fmt.time(when)}` : fmt.time(when)) : <span className="muted">Not set</span>}</span>
+      <span className={`${m.when} num`}>{when ? it.approx ? `~${fmt.time(when)}` : fmt.time(when) : <span className="muted">Not set</span>}</span>
       <span className={m.what}>
         <span className={m.whatName} title={it.unit ?? it.detail ?? it.name}>
           {it.name}
@@ -423,4 +431,3 @@ registerWidget({
   Component: ScheduleWidget,
   preview: <Preview of="schedule" />,
 });
-

@@ -5,8 +5,8 @@ import { Search } from "iconoir-react";
 import type { AppSummary } from "@/server/docker/apps";
 import { ApiError, streamPost, useApi } from "@/lib/client/api";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
-import { Page, PageHeader, Empty, Notice, Skeleton } from "@/components/ui/Surface";
-import { AppsSectionTabs } from "@/components/docker/AppsSectionTabs";
+import { Empty, Notice, Skeleton } from "@/components/ui/Surface";
+import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { toast } from "@/components/ui/Toast";
@@ -171,9 +171,9 @@ export function StoreView() {
 
   if (!data) {
     return (
-      <Page>
-        <PageHeader title="Apps" summary={error ? "The app store didn't load." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} />
-        <AppsSectionTabs current="store" />
+      <>
+        <AppsHead summary={error ? "The app store didn't load." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} />
+        <AppsBody>
         {error ? (
           <Notice tone="fault" title="Couldn't load the app store" action={<Button size="sm" loading={isLoading} onClick={() => void mutate()}>Try again</Button>}>
             {error.message} Umbrel may be busy or restarting. Try again in a minute.
@@ -181,15 +181,16 @@ export function StoreView() {
         ) : (
           <StoreSkeleton />
         )}
-      </Page>
+        </AppsBody>
+      </>
     );
   }
 
   if (data.platform !== "umbrel") {
     return (
-      <Page>
-        <PageHeader title="Apps" summary={data.platform === "casaos" ? "CasaOS has its own app store; apps installed there show up in All apps." : "There's no app store without Umbrel."} />
-        <AppsSectionTabs current="store" />
+      <>
+        <AppsHead summary={data.platform === "casaos" ? "CasaOS has its own app store. Apps from it show up in All apps." : "No app store on this server yet."} />
+        <AppsBody>
         <Empty
           title="The app store needs Umbrel"
           action={
@@ -198,9 +199,10 @@ export function StoreView() {
             </>
           }
         >
-          If Umbrel runs on this server, pick it under Works with in Server settings.
+          If Umbrel runs here, pick it under Works with in Server settings.
         </Empty>
-      </Page>
+        </AppsBody>
+      </>
     );
   }
 
@@ -224,9 +226,9 @@ export function StoreView() {
   const filtered = !!term || category !== "all" || storeId !== "all" || installedOnly;
 
   return (
-    <Page>
-      <PageHeader title="Apps" summary={summary} />
-      <AppsSectionTabs current="store" />
+    <>
+      <AppsHead summary={summary} />
+      <AppsBody>
 
       {entries.length === 0 ? (
         <Empty title="No apps to show" action={<Button onClick={() => void mutate()}>Try again</Button>}>
@@ -293,7 +295,8 @@ export function StoreView() {
           return a ? { id: a.id, name: a.name } : null;
         }}
       />
-    </Page>
+      </AppsBody>
+    </>
   );
 }
 

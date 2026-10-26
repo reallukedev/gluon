@@ -14,7 +14,7 @@ export interface StatusApp {
   icon: string | null;
   line: AppSummary["line"];
   summary: string;
-  containers: { name: string; service: string | null; line: AppSummary["line"] }[];
+  containers: { name: string; service: string | null; state: string; line: AppSummary["line"] }[];
   urls: AppSummary["urls"];
   household: boolean;
   source: AppSummary["source"];
@@ -40,7 +40,7 @@ const slim = (a: AppSummary): StatusApp => ({
   icon: a.icon,
   line: a.line,
   summary: a.summary,
-  containers: a.containers.map((c) => ({ name: c.name, service: c.service, line: c.line })),
+  containers: a.containers.map((c) => ({ name: c.name, service: c.service, state: c.state, line: c.line })),
   urls: a.urls,
   household: a.household,
   source: a.source,

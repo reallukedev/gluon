@@ -3,17 +3,15 @@ import * as React from "react";
 import Link from "next/link";
 import type { StatusApp } from "@/server/status";
 import type { Finding } from "@/server/findings";
-import { useLive } from "@/lib/client/live";
 import { useFormat } from "@/components/PrefsProvider";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { useAppUsage } from "@/components/apps/Meters";
 import c from "./console.module.css";
 
 /**
- * The server as a mixing desk: one channel strip per app with a live processor meter, a
- * peak-hold tick for the last 30 seconds, and memory underneath; the whole machine is the
- * master strip at the end. Levels use a log scale so a 0.5% app still reads, and a busy one
- * still fits. Every strip is labelled, so it reads without a legend.
+ * The server as a mixing desk, for experts: one channel strip per app with a live processor
+ * meter, a peak-hold tick for the last 30 seconds, and memory underneath. Levels use a log scale
+ * so a 0.5% app still reads, and a busy one still fits. The whole machine is on This machine.
  */
 
 const PEAK_SAMPLES = 6; // container samples arrive every 5 s
@@ -39,7 +37,6 @@ interface Strip {
 
 export function Console({ apps, findings }: { apps: StatusApp[]; findings: Finding[] }) {
   const fmt = useFormat();
-  const { host } = useLive();
   const byId = React.useMemo(() => new Map(apps.map((a) => [a.id, a])), [apps]);
   const shown = React.useMemo(() => apps.filter((a) => a.containers.length && !(a.copyOf && byId.has(a.copyOf.id))), [apps, byId]);
   const usage = useAppUsage(shown);
@@ -65,9 +62,6 @@ export function Console({ apps, findings }: { apps: StatusApp[]; findings: Findi
   });
   const order = (s: Strip) => (s.tone === "fault" ? 0 : s.tone === "attention" ? 1 : s.tone === "running" ? 2 : 3);
   strips.sort((x, y) => order(x) - order(y) || x.name.localeCompare(y.name));
-
-  const last = host.at(-1);
-  const hostPeak = host.length ? Math.max(...host.slice(-15).map((h) => h.cpu)) : null;
 
   return (
     <div className={c.desk}>
@@ -108,30 +102,17 @@ export function Console({ apps, findings }: { apps: StatusApp[]; findings: Findi
               </li>
             ))}
           </ul>
-          <div className={c.master}>
-            <Link href="/system" className={c.link} aria-label={`Whole machine: ${last ? fmt.percent(last.cpu, 0) : "no reading"} of the processor${last ? `, ${fmt.bytes(last.mem.used)} of ${fmt.bytes(last.mem.total, 0)} memory` : ""}`}>
-              <span className={c.masterGlyph} aria-hidden>
-                <i />
-                <i />
-                <i />
-              </span>
-              <Meter value={last?.cpu ?? null} peak={hostPeak} master />
-              <span className={`${c.read} num`}>{last ? fmt.percent(last.cpu, 0) : "…"}</span>
-              <span className={`${c.mem} num`}>{last ? fmt.bytes(last.mem.used, 0) : " "}</span>
-              <span className={c.name}>Whole machine</span>
-            </Link>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function Meter({ value, peak, master }: { value: number | null; peak: number | null; master?: boolean }) {
+function Meter({ value, peak }: { value: number | null; peak: number | null }) {
   const v = value === null ? 0 : level(value);
   const p = peak === null ? null : level(peak);
   return (
-    <span className={c.meter} data-master={master ? "" : undefined} aria-hidden>
+    <span className={c.meter} aria-hidden>
       <span className={c.fill} style={{ transform: `scaleY(${Math.max(v, value === null ? 0 : 0.02)})` }} />
       {p !== null && p > 0.02 && (
         <span className={c.peakRail} style={{ transform: `translateY(${-p * 100}%)` }}>

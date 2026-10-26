@@ -306,7 +306,7 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
             <Empty title={filtered ? "Nothing matches" : "Nothing recorded yet"} action={filtered ? <Button onClick={clearAll}>Show everything</Button> : undefined}>
               {filtered
                 ? `Try fewer filters${personName ? ` or someone other than ${personName}` : ""}.`
-                : "Changes people make, and what the server notices, show up here."}
+                : "What people change, and what the server notices, lands here."}
             </Empty>
           ) : (
             <ol className={`${s.list} appear`} aria-live="polite" aria-relevant="additions">

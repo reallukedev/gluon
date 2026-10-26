@@ -13,6 +13,7 @@ import { Time } from "@/components/ui/Time";
 import { NeedsYou } from "@/components/status/NeedsYou";
 import type { DiskView, Inventory } from "@/lib/storage-types";
 import { DiskRow } from "./DiskBar";
+import { SpaceWords } from "./SpaceWords";
 import { MountsTable, mountedRows, type Row, type VolumeAction } from "./MountsTable";
 import { UsagePanel, type MountChoice } from "./UsagePanel";
 import { CleanupPanel } from "./CleanupPanel";
@@ -44,7 +45,7 @@ export function storageSummary(inv: Inventory, fmt: ReturnType<typeof useFormat>
   if (loose.length) problems.push(loose.length === 1 ? `${loose[0]!.primaryMount} won't come back after a restart.` : `${loose.length} drives won't come back after a restart.`);
   for (const d of wearing) problems.push(`The ${d.title} is showing wear.`);
   const quiet = unused.map((d) => `The ${d.title} isn't being used.`);
-  if (!disks.length) return "No disks found.";
+  if (!disks.length) return "Drive details aren't available on this machine.";
   return (
     <>
       {fmt.plural(disks.length, "disk")}, <span className="num">{fmt.bytes(free)}</span> free.{" "}
@@ -179,9 +180,17 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
         {tab === "disks" &&
           (inv.disks.length === 0 ? (
             // Nothing listed means the listing failed; one message, not a warning plus two empty panels.
-            <Panel flush>
-              <Empty title="Couldn't list the disks">Check that lsblk works on the host, then reload this page.</Empty>
-            </Panel>
+            <div className={s.noDisks}>
+              <Empty title="Drives can't be listed here" action={<Button icon={<Refresh />} onClick={() => void mutate()}>Look again</Button>}>
+                Disk details need <span className="mono">lsblk</span> on the host. Space is still measured.
+              </Empty>
+              <section className={s.noDisksSpace} aria-labelledby="storage-space">
+                <h2 id="storage-space" className={s.noDisksTitle}>
+                  Space
+                </h2>
+                <SpaceWords />
+              </section>
+            </div>
           ) : (
             <div className={s.stack}>
               {inv.warnings.map((w) => (

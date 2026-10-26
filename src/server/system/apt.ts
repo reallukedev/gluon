@@ -219,8 +219,9 @@ async function computePending(): Promise<{
       .then((r) => parseSimulation(r.stdout))
       .catch((e) => {
         // The dry run is enrichment only (origins, new kernels). A broken dependency state makes it
-        // fail; the plain list is still useful.
-        console.error("[gluon] apt simulation failed", (e as Error).message);
+        // fail; the plain list is still useful. No apt at all (ENOENT) is expected off Debian and the
+        // page already says so, so only real failures are logged.
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT" && !/ENOENT/.test((e as Error).message)) console.error("[gluon] apt simulation failed", (e as Error).message);
         return { installs: [], removals: [], keptBack: [] as string[] };
       }),
   ]);

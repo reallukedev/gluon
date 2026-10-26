@@ -108,6 +108,16 @@
 .widget[data-titled] { --pt: 10px; --title-h: 31px; }
 /* Bare items (the greeting, the search bar, a folder or link card) are their own surface: no panel around them. */
 .widget[data-bare] { border-color: transparent; background: transparent; overflow: visible; }
+/*
+ * The status hero sets its own ground: calm sits on the page with no plate; needs-you takes the attention wash,
+ * a broken thing the fault wash. Arranging gives every item its plate back so it can be picked up.
+ */
+.widget[data-type="status"]:has([data-mood="calm"]) { border-color: transparent; background: transparent; }
+.widget[data-type="status"]:has([data-mood="tense"]) { border-color: color-mix(in oklab, var(--attn) 34%, transparent); background: var(--attn-soft); }
+.widget[data-type="status"]:has([data-mood="fault"]) { border-color: color-mix(in oklab, var(--fault) 30%, transparent); background: var(--fault-soft); }
+/* App icons and rows stand on the page like a shelf of apps, not a grid of boxes. */
+.widget[data-type="app"]:is([data-size="i"], [data-size="c"]) { border-color: transparent; background: transparent; overflow: visible; }
+.grid[data-editing] .widget[data-type]:is([data-type="status"], [data-type="app"]) { border-color: var(--line-strong); background: var(--panel); }
 /* The search bar's suggestions float over whatever comes after it. */
 .widget[data-type="search"] { z-index: 5; }
 /* The in-place menu: top-right, shown on hover or keyboard focus, never covering more than itself. */

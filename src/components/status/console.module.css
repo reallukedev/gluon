@@ -1,10 +1,9 @@
 /* The console on Status: channel strips on a meter bridge, a log scale on the left. */
 .desk {
-  --meter-h: 132px;
+  --meter-h: 96px;
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
-  padding: 18px 18px 14px 10px;
-  border-bottom: 1px solid var(--line);
+  padding: 4px 0 2px;
 }
 
 /* The scale sits level with the meters: icon row (24px + 12px gap) above. */
@@ -54,7 +53,6 @@
 
 /* The meter: a sunk slot, an ink column rising from the floor, a peak tick that lingers. */
 .meter { position: relative; width: 8px; height: var(--meter-h); border-radius: 3px; background: var(--sunk); z-index: 1; }
-.meter[data-master] { width: 12px; }
 .fill {
   position: absolute;
   inset: 0;
@@ -63,7 +61,6 @@
   transform-origin: bottom;
   transition: transform calc(450ms * var(--motion)) var(--ease-out);
 }
-.meter[data-master] .fill { background: var(--ink); }
 .peakRail { position: absolute; inset: 0; transition: transform calc(1200ms * var(--motion)) var(--ease-out); }
 .peak { position: absolute; left: -3px; right: -3px; bottom: 0; height: 2px; background: var(--ink); }
 
@@ -94,27 +91,7 @@
 .strip[data-tone="attention"] .mark { width: 6px; background: none; border-inline: 2px solid var(--attn); }
 .strip[data-tone="attention"] .name { color: var(--ink); font-weight: 560; }
 
-/* The master strip: the whole machine, set off by a doubled rule like a console's master bus. */
-.master {
-  position: sticky;
-  right: 0;
-  flex: none;
-  width: 84px;
-  margin-left: auto;
-  padding-left: 8px;
-  background: var(--panel);
-  border-left: 3px double var(--line-strong);
-  z-index: 2;
-}
-.master .name { font-weight: 600; color: var(--ink); }
-.masterGlyph { display: flex; gap: 3px; align-items: flex-end; height: 24px; padding-bottom: 3px; }
-.masterGlyph i { display: block; width: 2px; background: var(--ink); }
-.masterGlyph i:nth-child(1) { height: 14px; }
-.masterGlyph i:nth-child(2) { height: 20px; }
-.masterGlyph i:nth-child(3) { height: 10px; }
-
 @media (max-width: 760px) {
-  .desk { --meter-h: 104px; padding: 16px 12px 12px 4px; grid-template-columns: 26px minmax(0, 1fr); }
+  .desk { --meter-h: 84px; grid-template-columns: 26px minmax(0, 1fr); }
   .strip { width: 60px; }
-  .master { width: 76px; }
 }

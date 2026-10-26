@@ -1,6 +1,7 @@
 "use client";
 // Things that open a Home page or sit on it as one line: the greeting, the search bar, a folder, a link.
 import * as React from "react";
+import Link from "next/link";
 import { Folder } from "iconoir-react";
 import { registerWidget } from "../widgetStore";
 import type { SettingsProps, WidgetProps } from "../types";
@@ -141,7 +142,7 @@ function FolderWidget({ item, size, openSettings }: WidgetProps<FolderConfig>) {
   const fs = exact?.fs;
   const detail = exact?.missing ? "Missing" : fs ? `${fmt.bytes(fs.avail)} free` : (exact?.detail ?? null);
   return (
-    <a className={st.card} data-size={size} href={filesHref(path)} data-off={exact?.missing ? "" : undefined} title={path}>
+    <Link className={st.card} data-size={size} href={filesHref(path)} data-off={exact?.missing ? "" : undefined} title={path}>
       <span className={st.icon} aria-hidden>
         <Folder />
       </span>
@@ -149,7 +150,7 @@ function FolderWidget({ item, size, openSettings }: WidgetProps<FolderConfig>) {
         <b>{label}</b>
         <span className={detail ? undefined : "mono"}>{detail ?? path}</span>
       </span>
-    </a>
+    </Link>
   );
 }
 

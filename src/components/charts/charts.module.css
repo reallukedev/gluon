@@ -68,3 +68,9 @@
 .spark[data-tone="attn"] path { stroke: var(--attn); }
 .spark[data-tone="fault"] path { stroke: var(--fault); }
 .sparkNow { stroke: var(--ink-2); stroke-width: 1; shape-rendering: crispEdges; }
+
+/* Reading charts: the newest value as a ringed dot. */
+.end { fill: var(--ink); stroke: var(--chart-ground, var(--panel)); stroke-width: 2; }
+.end[data-tone="muted"] { fill: var(--faint); }
+.end[data-tone="attn"] { fill: var(--attn); }
+.end[data-tone="fault"] { fill: var(--fault); }

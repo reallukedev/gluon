@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MoreHoriz, Trash, NavArrowRight, Plus, Link as LinkIcon } from "iconoir-react";
 import { api, useApi, ApiError } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader, Empty } from "@/components/ui/Surface";
+import { Empty } from "@/components/ui/Surface";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Field, Input, Segmented, SettingRow, Switch } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
@@ -15,7 +15,7 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
 import type { Attachable, DockerNetwork, NetworkMember, NetworksResponse } from "@/lib/docker-types";
-import { AppsSectionTabs } from "./AppsSectionTabs";
+import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { FilterInput, LoadError, TableSkeleton, UsedBy, appHref, appWords, containerHref, firstError, isReauthCancel, useQueryParam, type InitialError } from "./shared";
 import s from "./docker.module.css";
 
@@ -143,9 +143,8 @@ export function NetworksView({ initial, initialError, initialQuery }: { initial:
   ];
 
   return (
-    <Page>
-      <PageHeader
-        title="Apps"
+    <>
+      <AppsHead
         summary={summary}
         actions={
           <Button icon={<Plus />} onClick={() => setCreating(true)}>
@@ -153,7 +152,7 @@ export function NetworksView({ initial, initialError, initialQuery }: { initial:
           </Button>
         }
       />
-      <AppsSectionTabs current="docker" docker="networks" />
+      <AppsBody>
 
       {error && (
         <div style={{ marginBottom: 16 }}>
@@ -252,7 +251,8 @@ export function NetworksView({ initial, initialError, initialQuery }: { initial:
       <CreateNetworkDialog open={creating} onClose={() => setCreating(false)} onCreated={() => void mutate()} />
       <ConnectDialog network={connectTo} candidates={candidates} onClose={() => setConnectTo(null)} onDone={() => void mutate()} />
       {confirmNode}
-    </Page>
+      </AppsBody>
+    </>
   );
 }
 

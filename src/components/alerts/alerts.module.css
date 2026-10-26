@@ -112,13 +112,15 @@
 .groupTitle > span, .groupLink { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .groupLink { color: var(--ink); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .groupLink:hover { text-decoration: underline; } }
-.laneCell { min-width: 0; display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 0; }
+.laneCell { min-width: 0; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 0; }
 .laneCell > :first-child { margin-top: 2px; }
 .laneText { min-width: 0; display: grid; gap: 1px; }
 .name { font-size: var(--text-md); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .name:hover { text-decoration: underline; } }
 .sub { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stateSub { font-size: var(--text-xs); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stateSub { display: flex; min-width: 0; margin-top: 3px; font-size: var(--text-xs); color: var(--ink-2); overflow: hidden; white-space: nowrap; }
+.stateSub > * { min-width: 0; }
+.stateSub :global(span) { overflow: hidden; text-overflow: ellipsis; }
 .stateSub[data-fault] { color: var(--fault); }
 .traceCell { min-width: 0; padding: 14px 0 12px; }
 .uptime[data-low] { font-weight: 620; }
@@ -256,3 +258,9 @@
 .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px 16px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-control); max-height: 200px; overflow: auto; }
 .pickText { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-md); }
 @media (max-width: 640px) { .channel > .kindIcon { align-self: start; } }
+
+/* A monitor that's down: its app's icon greys and tips, like everywhere else in Gluon. */
+.laneCell[data-icon] > :first-child { transition: transform var(--dur-slow) var(--ease-out), filter var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out); }
+.row[data-problem] .laneCell[data-icon] > :first-child { filter: grayscale(1); opacity: 0.7; transform: rotate(calc(-6deg * var(--motion))); }
+.stateSub[data-fault] { white-space: normal; }
+.stateSub[data-fault] :global(span) { white-space: normal; overflow: visible; }

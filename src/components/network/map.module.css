@@ -147,6 +147,7 @@ button.node:active { transform: scale(calc(1 - 0.015 * var(--motion))); transiti
   .splitV { display: block; }
   .lanes { grid-template-columns: 1fr; }
 }
+@media (max-width: 900px) { .direct .nodeTitle, .proxy .nodeTitle { white-space: normal; } }
 @media (max-width: 380px) {
   .direct .nodeSub, .proxy .nodeSub { white-space: normal; overflow-wrap: anywhere; }
 }

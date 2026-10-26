@@ -6,7 +6,7 @@ import { api, useApi } from "@/lib/client/api";
 import { copyText } from "@/lib/client/clipboard";
 import { listJoin } from "@/lib/format";
 import { useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader, Empty } from "@/components/ui/Surface";
+import { Empty } from "@/components/ui/Surface";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Checkbox, Segmented } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
@@ -17,7 +17,7 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
 import type { DockerImage, ImagesResponse } from "@/lib/docker-types";
-import { AppsSectionTabs } from "./AppsSectionTabs";
+import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { CleanupDialog } from "./CleanupDialog";
 import { PullDialog } from "./PullDialog";
 import { FilterInput, LoadError, firstError, type InitialError, SortHead, TableSkeleton, UsedBy, appHref, appWords, containerHref, isReauthCancel, useQueryParam, useSelection } from "./shared";
@@ -87,7 +87,9 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
   const { selected, setSelected, toggle } = useSelection(selectable);
 
   const unused = (images ?? []).filter((i) => i.use === "unused" || i.use === "leftover");
-  const unusedBytes = unused.filter((i) => !i.guard).reduce((a, i) => a + i.own, 0);
+  // "At least": shared layers can make the sum of each image's own bytes overshoot the measured total.
+  const ownBytes = unused.filter((i) => !i.guard).reduce((a, i) => a + i.own, 0);
+  const unusedBytes = total !== null ? Math.min(ownBytes, total) : ownBytes;
   const shown = (images ?? [])
     .filter((i) => {
       if (filter === "used" && !i.containers.length) return false;
@@ -263,9 +265,8 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
   const chosen = (images ?? []).filter((i) => selected.has(i.id));
 
   return (
-    <Page>
-      <PageHeader
-        title="Apps"
+    <>
+      <AppsHead
         summary={summary}
         actions={
           <>
@@ -280,7 +281,7 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
           </>
         }
       />
-      <AppsSectionTabs current="docker" docker="images" />
+      <AppsBody>
 
       {error && (
         <div style={{ marginBottom: 16 }}>
@@ -320,7 +321,7 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
         error ? null : <TableSkeleton columns={COLUMNS} check />
       ) : images.length === 0 ? (
         <Empty title="No images on this server yet" action={<Button icon={<CloudDownload />} onClick={() => setPull({ ref: null })}>Download image</Button>}>
-          Images are the packaged programs containers run from. Installing an app downloads its images; you can also download one here by name.
+          Installing an app downloads its images. You can also download one by name.
         </Empty>
       ) : shown.length === 0 ? (
         <Empty title={term ? `Nothing matches “${q.trim()}”` : filter === "unused" ? "Every image is in use" : "No image is in use"}>
@@ -426,7 +427,8 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
       <PullDialog open={!!pull} imageRef={pull?.ref ?? null} onClose={() => setPull(null)} onDone={() => void mutate()} />
       <CleanupDialog kind="images" open={cleanup} onClose={() => setCleanup(false)} onDone={() => void mutate()} />
       {confirmNode}
-    </Page>
+      </AppsBody>
+    </>
   );
 }
 

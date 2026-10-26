@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { Actions, PartError, StepHead, hourLabel, useAdminPlan, useFlow } from "../flow";
+import { Bond } from "../Bond";
 import o from "../onboarding.module.css";
 
 interface Line {
@@ -85,8 +86,8 @@ export function Summary() {
 
   return (
     <>
-      <StepHead title={`${plan.serverName} is set up`}>
-        <p>Anything below can be changed later in Settings.</p>
+      <StepHead title={`${plan.serverName} is set up`} art={<Bond from="You" to={plan.serverName} />}>
+        <p>Change any of it later in Settings.</p>
       </StepHead>
 
       {error && !data ? (

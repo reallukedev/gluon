@@ -80,7 +80,7 @@ export function SitesView({ initial }: { initial?: SitesList }) {
           ))}
         </Panel>
       ) : sites && !sites.length ? (
-        <Panel>
+        <div className={s.ground}>
           <Empty
             title="Put a web page on the internet"
             action={
@@ -94,9 +94,9 @@ export function SitesView({ initial }: { initial?: SitesList }) {
               </>
             }
           >
-            Start from a simple page or upload your own. It gets an address like <span className="mono">blog.{base}</span>.
+            Start simple or upload your own. It gets an address like <span className="mono">blog.{base}</span>.
           </Empty>
-        </Panel>
+        </div>
       ) : sites ? (
         <Panel flush className="appear">
           <div role="table" aria-label="Sites">

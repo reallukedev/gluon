@@ -53,7 +53,7 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
     <div className={m.wrap}>
       <figure className={m.map} aria-label="How visitors reach your apps">
         <div className={m.zones} aria-hidden>
-          <span className={m.zoneCf}>Cloudflare DNS</span>
+          <span className={m.zoneCf}>Cloudflare</span>
           <span className={m.zoneHome}>Your home</span>
         </div>
         <div className={m.grid} data-checking={checking ? "" : undefined}>
@@ -71,7 +71,7 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
             area={m.direct}
             icon={<Cloud />}
             title="Direct"
-            sub={`name.${b}`}
+            detail={`DNS · name.${b}`}
             st={model.direct}
             count={model.directCount}
             selected={open === "dns"}
@@ -83,7 +83,7 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
             area={m.proxy}
             icon={<CloudSync />}
             title="Through Cloudflare"
-            sub={`${b}/…`}
+            detail={`Proxy · ${b}/…`}
             st={model.proxy}
             count={model.proxyCount}
             selected={open === "dns"}
@@ -98,8 +98,7 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
             area={m.router}
             icon={<HomeSimpleDoor />}
             title="Your router"
-            sub={model.router.ip ?? "address unknown"}
-            subMono={!!model.router.ip}
+            detail={model.router.ip ? `Public IP · ${model.router.ip}` : "Public IP unknown"}
             st={model.router}
             selected={open === "router"}
             controls={detailsId}
@@ -111,7 +110,7 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
             area={m.caddy}
             icon={<Server />}
             title="Web server"
-            sub={`Caddy on ${model.serverName}`}
+            detail={model.caddy.certs ? `Caddy · ${model.caddy.certs} certificate${model.caddy.certs === 1 ? "" : "s"}` : `Caddy on ${model.serverName}`}
             st={model.caddy}
             selected={open === "caddy"}
             controls={detailsId}
@@ -122,8 +121,8 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
           <Hop
             area={m.apps}
             icon={<AppWindow />}
-            title="Apps"
-            sub={model.apps.state === null && !model.apps.count ? "" : `${model.apps.count} on the internet`}
+            title="Your apps"
+            detail={model.apps.state === null && !model.apps.count ? "" : `${model.apps.count} on the internet`}
             st={model.apps}
             onClick={onApps}
             label="Apps on the internet: go to the list"
@@ -133,13 +132,13 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
           <p>
             <Cloud className={m.laneKey} aria-hidden />
             <span>
-              <b>Direct</b> <span className="mono">name.{b}</span>: straight to your home, no size limits, and visitors see your internet address.
+              <b>Direct</b> <span className="mono">name.{b}</span>: no size limits, but visitors can see your internet address.
             </span>
           </p>
           <p>
             <CloudSync className={m.laneKey} aria-hidden />
             <span>
-              <b>Through Cloudflare</b> <span className="mono">{b}/…</span>: hides your address, but uploads stop at 100 MB and video streaming breaks its rules.
+              <b>Through Cloudflare</b> <span className="mono">{b}/…</span>: hides your address. Uploads stop at 100 MB and video isn't allowed.
             </span>
           </p>
         </figcaption>
@@ -164,8 +163,7 @@ function Hop({
   area,
   icon,
   title,
-  sub,
-  subMono,
+  detail,
   st,
   count,
   selected,
@@ -176,8 +174,8 @@ function Hop({
   area: string;
   icon: React.ReactNode;
   title: string;
-  sub: string;
-  subMono?: boolean;
+  /** The technical name and figure, under the plain words. */
+  detail: string;
   st: HopState;
   count?: number;
   selected?: boolean;
@@ -208,8 +206,8 @@ function Hop({
             </span>
           )}
         </span>
-        {sub && <span className={`${m.nodeSub} ${subMono ? "mono" : ""}`}>{sub}</span>}
         <span className={m.nodeState}>{st.state ? <StateLine state={st.state as LineState} label={st.label} /> : <Skeleton width={96} height={12} />}</span>
+        {detail && <span className={m.nodeSub} title={detail}>{detail}</span>}
       </button>
     </div>
   );

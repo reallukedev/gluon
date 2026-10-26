@@ -22,6 +22,9 @@
  * They come after the phone rules above and win: the trace goes first, then the bar; under 700px
  * the rows restack and each meter names itself.
  */
+/* In the Apps table the figures sit a step back from the name and state. */
+.meter[data-fit] .value { color: var(--muted); }
+.meter[data-fit] .bar > span { background: var(--muted); }
 @container (max-width: 1079px) {
   .meter[data-fit] .spark { display: none; }
   .meter[data-fit] .bar { max-width: 48px; }

@@ -8,7 +8,9 @@ import { OpenNewWindow, Refresh, Play, Square, MoreHoriz, CloudDownload, Folder,
 import { usePinToHome } from "@/components/home/pinned";
 import type { AppDetail } from "@/server/docker/detail";
 import type { AppSummary } from "@/server/docker/apps";
-import { api, useApi, streamPost, ApiError } from "@/lib/client/api";
+import { api, useApi, streamPost, ApiError, STATUS_KEY, STATUS_REFRESH } from "@/lib/client/api";
+import type { StatusPayload } from "@/server/status";
+import { findingWord, findingsByApp } from "@/lib/finding-words";
 import { useContainerStats } from "@/lib/client/live";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Panel, Notice, Skeleton } from "@/components/ui/Surface";
@@ -32,6 +34,7 @@ import { StackDiagram } from "./StackDiagram";
 import { OperationProgress } from "./OperationProgress";
 import { removeCopyConfirm, stopCopyConfirm } from "./copies";
 import { reduceUmbrelStream, umbrelBusy } from "./umbrelStream";
+import { trouble } from "./plain";
 import { MoveDialog } from "./MoveDialog";
 import { useMoveWatch } from "./useMoveWatch";
 import { UninstallDialog } from "./UninstallDialog";
@@ -57,6 +60,7 @@ type Tab = "overview" | "chat" | "voice" | "logs" | "compose" | "settings";
 export function AppDetailView({ initial, tab: asked, container, members }: { initial: AppDetail; tab: Tab; container: string | null; members: { id: string; name: string }[] }) {
   const router = useRouter();
   const { viewer } = usePrefs();
+  const { data: status, mutate: mutateStatus } = useApi<StatusPayload>(STATUS_KEY, { refresh: STATUS_REFRESH });
   const { data: app = initial, mutate } = useApi<AppDetail>(`/api/apps/${encodeURIComponent(initial.id)}`, { refresh: 8000, fallbackData: initial });
   const movedFrom = app.gluon?.movedFrom ?? null;
   const { data: allApps } = useApi<AppSummary[]>(app.copyOf || movedFrom ? "/api/apps" : null, { refresh: 30_000 });
@@ -74,6 +78,13 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
     setUninstallOpen(true);
   };
   const [busy, setBusy] = React.useState<string | null>(null);
+  // A restart that worked says "Back up" for a moment before the usual word returns.
+  const [settled, setSettled] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!settled) return;
+    const t = setTimeout(() => setSettled(null), 2600);
+    return () => clearTimeout(t);
+  }, [settled]);
   const [stream, setStream] = React.useState<StreamState>(emptyStream);
   const [streamOpen, setStreamOpen] = React.useState(false);
   const [running, setRunning] = React.useState(false);
@@ -94,8 +105,9 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
     try {
       // The state under the title shows it happening and settles when it's done.
       await api.post(`${apiBase}/action`, { action });
-      await mutate();
-      say(`${app.name} ${{ start: "started", stop: "stopped", restart: "restarted" }[action]}.`);
+      const fresh = await mutate();
+      if (action !== "stop" && fresh?.line === "running") setSettled(action === "restart" ? "Back up" : "Running");
+      say(`${app.name} ${{ start: "started", stop: "stopped", restart: "is back up" }[action]}.`);
     } catch (e) {
       say("");
       toast.error(`Couldn't ${action} ${app.name}`, { description: e instanceof Error ? e.message : undefined });
@@ -110,6 +122,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
       await api.post(`${apiBase}/action`, { container: name, action });
       toast.success(`${action === "restart" ? "Restarted" : action === "stop" ? "Stopped" : "Started"} ${name}`);
       void mutate();
+      void mutateStatus();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "That didn't work.");
     } finally {
@@ -144,6 +157,9 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
   }
 
   const stopped = app.line === "stopped";
+  const finding = app.copyOf ? undefined : findingsByApp(status?.findings).get(app.id);
+  // Same words as the Apps list: a failed web check is a problem even while Docker says running.
+  const wrong = busy ? null : (trouble(app) ?? (finding ? findingWord(finding) : null));
   const umbrel = app.umbrel;
   const umbrelWorking = umbrelBusy(umbrel?.state);
   const canUpdate = !app.self && !umbrelWorking && !app.copyOf && (!!app.configFile || !!umbrel);
@@ -206,7 +222,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
   const moreItems: MenuEntry[] = [
     ...(narrow && !app.copyOf
       ? ([
-          { label: "Restart", icon: <Refresh />, disabled: stopped || umbrelWorking || !!busy, onSelect: () => void act("restart") },
+          ...(wrong || stopped ? [] : [{ label: "Restart", icon: <Refresh />, disabled: umbrelWorking || !!busy, onSelect: () => void act("restart") }]),
           ...(open ? [{ label: pinned ? "Unpin from Home" : "Pin to Home", icon: pinned ? <PinSlash /> : <Pin />, onSelect: () => void pinHome.toggle(app) }] : []),
           "separator",
         ] as MenuEntry[])
@@ -256,8 +272,10 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
       <PageHeader
         back={{ href: "/apps", label: "Apps" }}
         title={
-          <span className={s.title}>
-            <AppIcon src={app.icon} name={app.name} size={40} />
+          <span className={s.title} data-broken={wrong ? "" : undefined}>
+            <span className={s.icon}>
+              <AppIcon src={app.icon} name={app.name} size={40} />
+            </span>
             <span className={s.titleText}>{app.name}</span>
           </span>
         }
@@ -265,8 +283,10 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
           <span className={s.summary}>
             {busy === "start" || busy === "stop" || busy === "restart" ? (
               <StateLine state="starting" label={{ start: "Starting…", stop: "Stopping…", restart: "Restarting…" }[busy]} />
+            ) : wrong ? (
+              <StateLine state="attention" label={wrong} />
             ) : (
-              <StateLine state={app.line} label={app.copyOf ? (stopped ? "Old copy, stopped" : "Old copy, still running") : app.summary} />
+              <StateLine state={app.line} label={app.copyOf ? (stopped ? "Old copy, stopped" : "Old copy, still running") : settled && app.line === "running" ? settled : app.summary} />
             )}
             {app.description && app.description.trim().toLowerCase() !== app.name.trim().toLowerCase() && <span className={s.desc}>{app.description}</span>}
           </span>
@@ -279,12 +299,12 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
               </IconButton>
             )}
             {open && !app.copyOf && (
-              <Button icon={<OpenNewWindow />} onClick={() => openAppUrl(open)}>
+              <Button variant={!stopped && !wrong ? "primary" : "secondary"} icon={<OpenNewWindow />} onClick={() => openAppUrl(open)}>
                 {open.startsWith("mumble:") ? "Open in Mumble" : "Open"}
               </Button>
             )}
-            {!app.copyOf && !narrow && (
-              <Button icon={<Refresh />} loading={busy === "restart"} disabled={stopped || umbrelWorking} onClick={() => void act("restart")}>
+            {!app.copyOf && !stopped && (!narrow || wrong) && (
+              <Button variant={wrong && !app.self ? "primary" : "secondary"} icon={<Refresh />} loading={busy === "restart"} disabled={umbrelWorking} onClick={() => void act("restart")}>
                 Restart
               </Button>
             )}
@@ -397,8 +417,8 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
           ...(isChatKind(kind) ? [{ value: "chat" as const, label: "Chat server" }] : []),
           ...(kind === "mumble" ? [{ value: "voice" as const, label: "Voice server" }] : []),
           { value: "logs", label: "Logs" },
-          ...(app.configFile ? [{ value: "compose" as const, label: "Compose file" }] : []),
           { value: "settings", label: "Settings" },
+          ...(app.configFile ? [{ value: "compose" as const, label: "Compose file" }] : []),
         ]}
         aria-label="App sections"
       />
@@ -525,11 +545,47 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
 
   return (
     <div className={s.grid}>
-      <Panel title="How it's put together" meta={<span className={s.panelHint}>Click a container for its actions</span>} className={s.span2}>
-        {app.details.length === 0 ? (
-          <p className={s.padless}>{umbrelBusy(app.umbrel?.state) ? "Umbrel is still setting it up. Its containers show here once they exist." : "No containers right now."}</p>
+      <Panel title="Who can reach it">
+        <dl className={s.kv}>
+          <dt>From anywhere</dt>
+          <dd>
+            {publicRoutes.length ? (
+              <>
+                Yes, at {publicRoutes.map((r) => r.url.replace(/^https?:\/\//, "")).join(" and ")}.{" "}
+                {app.hasLogin === "yes" ? "It asks for its own login." : app.hasLogin === "no" ? <b>Anyone who finds it can use it; it has no login.</b> : <span className={s.faint}>
+                    Not known if it has a login. <Link href={`${base}?tab=settings`}>Set it</Link>
+                  </span>}
+              </>
+            ) : (
+              <span className={s.faint}>
+                No. <Link href={`/network?publish=${encodeURIComponent(app.id)}`}>Publish it</Link> to reach it away from home.
+              </span>
+            )}
+          </dd>
+          <dt>At home</dt>
+          <dd>{app.urls.home ? <a href={app.urls.home} target={isWebUrl(app.urls.home) ? "_blank" : undefined} rel="noopener noreferrer" className="mono">{app.urls.home.replace(/^https?:\/\//, "")}</a> : <span className={s.faint}>No web page</span>}</dd>
+          <dt>Household</dt>
+          <dd>
+            {app.household ? "Everyone sees it on their home page." : app.access.length ? `${fmt.plural(app.access.length, "person", "people")} can see it.` : <span className={s.faint}>Only admins see it.</span>}{" "}
+            <Link href={`${base}?tab=settings`}>Change</Link>
+          </dd>
+        </dl>
+      </Panel>
+
+      <Panel title="Recent events" flush>
+        {app.events.length === 0 ? (
+          <p className={s.pad}>No starts, stops or crashes since Gluon started watching.</p>
         ) : (
-          <StackDiagram app={app} actions={{ onContainer, busy, logsHref: (c) => `${base}?tab=logs&container=${encodeURIComponent(c)}` }} />
+          <ul className={s.events} role="list">
+            {app.events.slice(0, 12).map((e, i) => (
+              <li key={i} data-bad={e.action === "oom" || e.action.includes("unhealthy") ? "" : undefined}>
+                <Time ts={e.t} kind="dateTime" className={`${s.faint} num`} />
+                <span>
+                  <span className="mono">{e.name}</span> {describeEvent(e.action, e.exitCode)}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </Panel>
 
@@ -575,47 +631,11 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
         </div>
       </Panel>
 
-      <Panel title="Who can reach it">
-        <dl className={s.kv}>
-          <dt>The internet</dt>
-          <dd>
-            {publicRoutes.length ? (
-              <>
-                Yes, at {publicRoutes.map((r) => r.url.replace(/^https?:\/\//, "")).join(" and ")}.{" "}
-                {app.hasLogin === "yes" ? "It asks for its own login." : app.hasLogin === "no" ? <b>Anyone who finds it can use it; it has no login.</b> : <span className={s.faint}>
-                    Not known if it has a login. <Link href={`${base}?tab=settings`}>Set it</Link>
-                  </span>}
-              </>
-            ) : (
-              <span className={s.faint}>
-                No. <Link href={`/network?publish=${encodeURIComponent(app.id)}`}>Publish it</Link> to reach it away from home.
-              </span>
-            )}
-          </dd>
-          <dt>Your home network</dt>
-          <dd>{app.urls.home ? <a href={app.urls.home} target={isWebUrl(app.urls.home) ? "_blank" : undefined} rel="noopener noreferrer" className="mono">{app.urls.home.replace(/^https?:\/\//, "")}</a> : <span className={s.faint}>No web page</span>}</dd>
-          <dt>Household</dt>
-          <dd>
-            {app.household ? "Everyone sees it on their home page." : app.access.length ? `${fmt.plural(app.access.length, "person", "people")} can see it.` : <span className={s.faint}>Only admins see it.</span>}{" "}
-            <Link href={`${base}?tab=settings`}>Change</Link>
-          </dd>
-        </dl>
-      </Panel>
-
-      <Panel title="Recent events" flush>
-        {app.events.length === 0 ? (
-          <p className={s.pad}>No starts, stops or crashes since Gluon started watching.</p>
+      <Panel title="How it's put together" meta={<span className={s.panelHint}>Click a container for its actions</span>} className={s.span2}>
+        {app.details.length === 0 ? (
+          <p className={s.padless}>{umbrelBusy(app.umbrel?.state) ? "Umbrel is still setting it up. Its containers show here once they exist." : "No containers right now."}</p>
         ) : (
-          <ul className={s.events} role="list">
-            {app.events.slice(0, 12).map((e, i) => (
-              <li key={i} data-bad={e.action === "oom" || e.action.includes("unhealthy") ? "" : undefined}>
-                <Time ts={e.t} kind="dateTime" className={`${s.faint} num`} />
-                <span>
-                  <span className="mono">{e.name}</span> {describeEvent(e.action, e.exitCode)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <StackDiagram app={app} actions={{ onContainer, busy, logsHref: (c) => `${base}?tab=logs&container=${encodeURIComponent(c)}` }} />
         )}
       </Panel>
 

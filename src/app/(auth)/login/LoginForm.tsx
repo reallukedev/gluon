@@ -221,7 +221,7 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
   const awayRule = problem?.code === "mfa_required_away";
   return (
     <form className={s.form} onSubmit={submitPassword} noValidate>
-      <h2>Sign in</h2>
+      <h2>Sign in to {serverName}</h2>
       <ZoneLine zone={zone} serverName={serverName}>
         {zone === "away" && adminsNeedCode ? <>Admins also need a code from their authenticator app.</> : null}
       </ZoneLine>

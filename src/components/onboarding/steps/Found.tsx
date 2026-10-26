@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import { listJoin } from "@/lib/format";
-import { Actions, PartError, StepHead, useAdminPlan, useFlow } from "../flow";
+import { Actions, PartError, StepHead, firstName, useAdminPlan, useFlow } from "../flow";
+import { usePrefs } from "@/components/PrefsProvider";
+import { Bond } from "../Bond";
 import o from "../onboarding.module.css";
 
 const URL = "/api/onboarding/inventory?part=";
@@ -21,6 +23,7 @@ const ONCE = { revalidateOnFocus: false, revalidateOnReconnect: false } as const
 export function Found() {
   const plan = useAdminPlan();
   const { next } = useFlow();
+  const { viewer } = usePrefs();
   const apps = useApi<InventoryApps>(`${URL}apps`, ONCE);
   const drives = useApi<InventoryDrives>(`${URL}drives`, ONCE);
   const addresses = useApi<InventoryAddresses>(`${URL}addresses`, ONCE);
@@ -28,8 +31,8 @@ export function Found() {
 
   return (
     <>
-      <StepHead title={<>What&apos;s on {plan.serverName}</>}>
-        <p>A first look. Nothing on the server has been changed.</p>
+      <StepHead title={<>Hi {firstName(viewer.displayName, viewer.username)}, meet {plan.serverName}</>} art={<Bond from="You" to={plan.serverName} draw />}>
+        <p>A first look. Nothing on it has changed.</p>
       </StepHead>
 
       <div className={o.readings}>

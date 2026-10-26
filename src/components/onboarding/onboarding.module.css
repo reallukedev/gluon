@@ -401,3 +401,19 @@ ul[aria-busy] > .pick + .pick { border-top: 1px solid var(--line); }
 .plain { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; max-width: 60ch; }
 .plain li { position: relative; padding-left: 18px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; text-wrap: pretty; }
 .plain li::before { content: ""; position: absolute; left: 2px; top: 0.35em; height: 0.9em; border-left: 2px solid var(--line-strong); }
+
+/* ---------------------------------------------------------------- the bond (first and last steps) */
+/* "You", the coil, the server's name: one line that reads like a sentence. The words sit on the dots' line. */
+.bond { display: flex; align-items: flex-end; gap: 8px; min-width: 0; margin-bottom: 8px; color: var(--ink-2); }
+.bondCoil { display: block; flex: none; width: 64px; height: auto; overflow: visible; }
+.bondEnd { min-width: 0; padding-bottom: 1px; font-size: var(--text-sm); font-weight: 560; line-height: 1; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bond path { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.bond circle { transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="reduce"]) .bond[data-draw] path { animation: bondDraw 900ms var(--ease-out) 160ms both; }
+  :root:not([data-motion="reduce"]) .bond[data-draw] circle:last-of-type { animation: bondDot var(--dur-base) var(--ease-out) 900ms both; }
+  :root:not([data-motion="reduce"]) .bond[data-draw] .bondEnd:last-child { animation: bondWord var(--dur-slow) var(--ease-out) 900ms both; }
+}
+@keyframes bondDraw { from { stroke-dashoffset: 1; } }
+@keyframes bondDot { from { opacity: 0; transform: scale(0.4); } }
+@keyframes bondWord { from { opacity: 0; } }

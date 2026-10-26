@@ -84,3 +84,14 @@
   .live { margin-left: 0; }
   .filter { max-width: none; }
 }
+
+/* Less to read: "only this" and "Details" wait until the row is pointed at or focused. Touch keeps them. */
+@media (hover: hover) and (pointer: fine) {
+  .row .only { opacity: 0; transition: opacity var(--dur-fast) ease; }
+  .row .inlineDisclosure > button { opacity: 0; transition: opacity var(--dur-fast) ease; }
+  .row:hover .only { opacity: 1; }
+  .row:focus-within .only { opacity: 1; }
+  .row:hover .inlineDisclosure > button { opacity: 1; }
+  .row:focus-within .inlineDisclosure > button { opacity: 1; }
+  .row .inlineDisclosure > button[data-panel-open] { opacity: 1; }
+}

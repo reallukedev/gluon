@@ -1,0 +1,59 @@
+/*
+ * The mood coil. Colour carries the mood second; the form carries it first: two open loops (calm) or three
+ * tight ones (tense). Switching mood crossfades the two forms while the leaving one squeezes or stretches
+ * toward the other, so the coil reads as winding up or letting go.
+ */
+.coil {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  color: var(--ok);
+  transition: color var(--dur-slow) ease;
+}
+.coil[data-mood="tense"] { color: var(--attn); }
+.coil[data-mood="fault"] { color: var(--fault); }
+.coil[data-mood="quiet"] { color: var(--faint); }
+
+.coil path {
+  stroke: currentColor;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.dot { fill: currentColor; }
+
+.calm, .tense {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform calc(var(--dur-slow) * 1.6 * var(--motion, 1)) var(--ease-out);
+}
+.tense { opacity: 0; transform: scaleX(calc(1 + 0.12 * var(--motion, 1))); }
+.coil:is([data-mood="tense"], [data-mood="fault"]) .calm { opacity: 0; transform: scaleX(calc(1 - 0.1 * var(--motion, 1))); }
+.coil:is([data-mood="tense"], [data-mood="fault"]) .tense { opacity: 1; transform: none; }
+
+/* Calm breathes: the loops rise and settle every few seconds, slow enough to sit in the corner of the eye. */
+.breathe {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.coil[data-mood="calm"] .breathe { animation: coil-breathe 6.4s ease-in-out infinite; }
+@keyframes coil-breathe {
+  50% { transform: scale(calc(1 + 0.015 * var(--motion, 1)), calc(1 - 0.07 * var(--motion, 1))); }
+}
+
+/* Once per session: the line sketches itself from one end to the other, then the ends land. */
+.coil[data-draw] path { animation: coil-draw 1100ms var(--ease-out) both; }
+.coil[data-draw][data-mood="calm"] .breathe { animation: coil-draw 1100ms var(--ease-out) both, coil-breathe 6.4s ease-in-out 1100ms infinite; }
+.coil[data-draw] .dot { animation: coil-dot var(--dur-slow) var(--ease-out) both; transform-box: fill-box; transform-origin: center; }
+.coil[data-draw] .dot:last-of-type { animation-delay: 950ms; }
+@keyframes coil-draw {
+  from { stroke-dashoffset: 1; }
+}
+@keyframes coil-dot {
+  from { opacity: 0; transform: scale(0.6); }
+}

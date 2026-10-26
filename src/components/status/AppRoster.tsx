@@ -4,18 +4,21 @@ import Link from "next/link";
 import { OpenNewWindow } from "iconoir-react";
 import type { StatusApp } from "@/server/status";
 import type { Finding } from "@/server/findings";
+import { findingWord } from "@/lib/finding-words";
+import { trouble } from "@/components/apps/plain";
 import type { LineState } from "@/lib/types";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
 import { instanceHints, sourceName } from "@/lib/app-names";
 import { StateLine } from "@/components/ui/StateLine";
 import { Disclosure } from "@/components/ui/Disclosure";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { AppIcon } from "@/components/apps/AppIcon";
 import r from "./roster.module.css";
 
 /**
- * Every app on the server in plain words: what state it's in and a way in. What each one uses is
- * the console's job, right above. Apps that aren't right come first; stopped apps and old copies
- * left by another installer fold away, since nobody needs to read them to know things are fine.
+ * Every app on the server: icon, name, state in a word, a way in. Apps that aren't right come first
+ * with a link to their fix in Needs you; stopped apps and old copies left by another installer fold
+ * away. How each app is put together (Compose, parts) is in the name's tooltip, one step deeper.
  */
 export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Finding[] }) {
   const { viewer, prefs } = usePrefs();
@@ -42,7 +45,7 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
     <RosterRow
       key={a.id}
       app={a}
-      hint={opts.copy ? `Old copy from ${sourceName(a.source)}` : hints.get(a.id) ?? null}
+      hint={opts.copy ? `Old copy from ${sourceName(a.source)}` : (hints.get(a.id) ?? null)}
       finding={findingFor.get(a.id) ?? null}
       openHref={openHref(a.urls, viewer.zone)}
       newTab={prefs.openLinks === "new"}
@@ -55,38 +58,14 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
 
   return (
     <div className={r.roster}>
-      {trouble.length > 0 && (
-        <section aria-label="Apps that need a look">
-          <h3 className={`label ${r.group}`}>
-            Not right <span className="num">{trouble.length}</span>
-          </h3>
-          <ul className={r.list} role="list">
-            {trouble.map((a) => row(a))}
-          </ul>
-        </section>
-      )}
-      <section aria-label="Running apps">
-        {trouble.length > 0 && (
-          <h3 className={`label ${r.group}`}>
-            Running <span className="num">{running.length}</span>
-          </h3>
-        )}
-        {running.length ? (
-          <ul className={r.list} role="list">
-            {running.map((a) => row(a))}
-          </ul>
-        ) : (
-          <p className={r.none}>Nothing else is running.</p>
-        )}
-      </section>
+      <ul className={r.list} role="list" aria-label="Apps">
+        {trouble.map((a) => row(a))}
+        {running.map((a) => row(a))}
+      </ul>
       {(stopped.length > 0 || copies.length > 0) && (
         <div className={r.folds}>
           {stopped.length > 0 && (
-            <Disclosure
-              variant="panel"
-              summary={`${fmt.plural(stopped.length, "stopped app")}`}
-              meta={<span className={r.foldMeta}>{listNames(stopped)}</span>}
-            >
+            <Disclosure variant="panel" summary={fmt.plural(stopped.length, "stopped app")} meta={<span className={r.foldMeta}>{listNames(stopped)}</span>}>
               <ul className={r.list} role="list">
                 {stopped.map((a) => row(a))}
               </ul>
@@ -98,7 +77,7 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
               summary={copies.length === 1 ? "1 old copy from another installer" : `${copies.length} old copies from other installers`}
               meta={<span className={r.foldMeta}>{listNames(copies)}</span>}
             >
-              <p className={r.foldNote}>Left behind by a reinstall. The copy in use is above; open an old one to remove it.</p>
+              <p className={r.foldNote}>Left behind by a reinstall. Open one to remove it.</p>
               <ul className={r.list} role="list">
                 {copies.map((a) => row(a, { copy: true }))}
               </ul>
@@ -110,74 +89,62 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
   );
 }
 
-function RosterRow({
-  app: a,
-  hint,
-  finding,
-  openHref: href,
-  newTab,
-}: {
-  app: StatusApp;
-  hint: string | null;
-  finding: Finding | null;
-  openHref: string | null;
-  newTab: boolean;
-}) {
+function RosterRow({ app: a, hint, finding, openHref: href, newTab }: { app: StatusApp; hint: string | null; finding: Finding | null; openHref: string | null; newTab: boolean }) {
   const parts = a.containers.length;
-  const where = [hint ?? sourceName(a.source), parts > 1 ? `${parts} parts` : null].filter(Boolean).join(" · ");
+  const how = [sourceName(a.source), parts > 1 ? `${parts} parts` : null].filter(Boolean).join(" · ");
   const state = stateOf(a, finding);
+  const broken = state.line === "unhealthy" || state.line === "attention";
   return (
-    <li className={r.row} data-state={state.line}>
-      <Link href={`/apps/${encodeURIComponent(a.id)}`} className={r.main}>
-        <AppIcon src={a.icon} name={a.name} size={32} />
-        <span className={r.name}>
-          <span className={r.title} title={a.name}>
-            {a.name}
+    <li className={r.row} data-state={state.line} data-broken={broken ? "" : undefined}>
+      <Tooltip content={how}>
+        <Link href={`/apps/${encodeURIComponent(a.id)}`} className={r.main} aria-label={`${a.name}${hint ? `, ${hint}` : ""}. ${how}`}>
+          <span className={r.icon}>
+            <AppIcon src={a.icon} name={a.name} size={36} />
           </span>
-          <span className={r.where}>{where}</span>
-        </span>
-      </Link>
-      <span className={r.state}>
-        <StateLine state={state.line} label={false} size={14} />
-        <span className={r.stateText}>
-          <span className={r.stateWord}>{state.word}</span>
-          {state.why && (
-            <span className={r.why} title={state.why}>
-              {state.why}
-            </span>
-          )}
-        </span>
+          <span className={r.name}>
+            <span className={r.title}>{a.name}</span>
+            {hint && <span className={r.hint}>{hint}</span>}
+          </span>
+        </Link>
+      </Tooltip>
+      <span className={r.state} title={a.summary && a.summary !== state.word ? a.summary : undefined}>
+        <StateLine state={state.line} label={state.word} size={14} />
       </span>
       <span className={r.open}>
-        {href && a.line !== "stopped" && (
-          <a href={href} className={r.openLink} target={newTab ? "_blank" : undefined} rel="noopener noreferrer" aria-label={`Open ${a.name}`}>
-            Open
-            <OpenNewWindow aria-hidden width={14} height={14} />
+        {finding ? (
+          <a href={`#${finding.id}`} className={r.openLink} title={finding.title}>
+            See fix
           </a>
+        ) : (
+          href &&
+          a.line !== "stopped" && (
+            <a href={href} className={r.openLink} target={newTab ? "_blank" : undefined} rel="noopener noreferrer" aria-label={`Open ${a.name}`}>
+              Open
+              <OpenNewWindow aria-hidden width={14} height={14} />
+            </a>
+          )
         )}
       </span>
     </li>
   );
 }
 
-/** The state in words: one short word, and why when it isn't simply fine. */
-function stateOf(a: StatusApp, finding: Finding | null): { line: LineState; word: string; why: string | null } {
-  if (finding) {
-    return { line: finding.severity === "fault" ? "unhealthy" : "attention", word: finding.severity === "fault" ? "Broken" : "Needs you", why: finding.title.replace(/\.$/, "") };
-  }
+/** The state in one short word. Why it isn't fine lives in Needs you, right above. */
+function stateOf(a: StatusApp, finding: Finding | null): { line: LineState; word: string } {
+  if (finding) return { line: finding.severity === "fault" ? "unhealthy" : "attention", word: findingWord(finding) };
   switch (a.line) {
     case "running":
-      return { line: "running", word: "Running", why: null };
+      return { line: "running", word: "Running" };
     case "starting":
-      return { line: "starting", word: "Starting", why: a.summary !== "Starting" ? a.summary : null };
+      return { line: "starting", word: "Starting" };
     case "unhealthy":
-      return { line: "unhealthy", word: "Not right", why: a.summary };
+      return { line: "unhealthy", word: trouble(a) ?? "Not working" };
     case "stopped":
-      return { line: "stopped", word: "Stopped", why: null };
+      return { line: "stopped", word: "Stopped" };
     case "paused":
-      return { line: "paused", word: "Paused", why: null };
+      return { line: "paused", word: "Paused" };
     default:
-      return { line: a.line, word: a.summary || "Unknown", why: null };
+      return { line: a.line, word: a.summary || "Unknown" };
   }
 }
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Surface";
 import { Actions, PartError, StepHead, firstName, useFlow, useMemberPlan } from "../flow";
 import { APPS_URL, openable, type MemberApp } from "./memberApps";
+import { Bond } from "../Bond";
 import o from "../onboarding.module.css";
 
 /**
@@ -23,7 +24,7 @@ export function Hello() {
 
   return (
     <>
-      <StepHead title={`Welcome, ${firstName(viewer.displayName, viewer.username)}`}>
+      <StepHead title={`Welcome, ${firstName(viewer.displayName, viewer.username)}`} art={<Bond from="You" to={plan.serverName} draw />}>
         <p>
           {plan.invitedBy ? `${plan.invitedBy} invited you to ${plan.serverName}, the server at home. ` : `This is ${plan.serverName}, the server at home. `}
           Its apps open from here, on any device.

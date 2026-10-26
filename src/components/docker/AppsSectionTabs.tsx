@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { Platform } from "@/server/platform";
 import { Tabs } from "@/components/ui/Tabs";
 import { Segmented } from "@/components/ui/Field";
@@ -26,19 +26,31 @@ export function AppsPlatform({ value, children }: { value: Platform; children: R
 
 const LAST_DOCKER = "gluon:apps-docker";
 
+/** Which tab a path belongs to, and for Docker which of its four pages. */
+export function sectionOf(pathname: string): { current: AppsSection; docker?: DockerPart } {
+  const part = pathname.replace(/\/+$/, "").split("/")[2];
+  if (part === "store" || part === "custom") return { current: part };
+  const d = DOCKER.find((x) => x.value === part);
+  return d ? { current: "docker", docker: d.value } : { current: "apps" };
+}
+
 /**
- * Sits under the page header on every Apps page: All apps, App store (with Umbrel), Custom, Docker.
+ * Sits under the Apps title on every Apps tab: All apps, App store (with Umbrel), Custom, Docker. It lives
+ * in the section's layout and follows the path, so it stays mounted while the tab below changes.
  * The Docker tab reopens the Docker page you used last in this session.
  */
-export function AppsSectionTabs({ current, docker }: { current: AppsSection; docker?: DockerPart }) {
+export function AppsSectionTabs() {
   const router = useRouter();
+  const { current, docker } = sectionOf(usePathname());
   const platform = React.useContext(PlatformContext);
   const [lastDocker, setLastDocker] = React.useState<DockerPart>(docker ?? "images");
 
   React.useEffect(() => {
     try {
-      if (docker) sessionStorage.setItem(LAST_DOCKER, docker);
-      else {
+      if (docker) {
+        sessionStorage.setItem(LAST_DOCKER, docker);
+        setLastDocker(docker);
+      } else {
         const saved = sessionStorage.getItem(LAST_DOCKER);
         if (saved && DOCKER.some((d) => d.value === saved)) setLastDocker(saved as DockerPart);
       }

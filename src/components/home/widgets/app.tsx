@@ -28,7 +28,7 @@ export interface AppConfig {
 /** What /api/apps returns: admins get containers (for live stats); members get the trimmed view. */
 export type ApiApp = HomeApp & {
   source?: string;
-  containers?: { name: string; state: string; status: string }[];
+  containers?: { name: string; state: string; status: string; line: HomeApp["line"] }[];
 };
 
 const HOST = /^https?:\/\/([^/]+)/i;

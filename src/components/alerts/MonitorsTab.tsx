@@ -12,6 +12,7 @@ import { Button, IconButton } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Field";
 import { Menu } from "@/components/ui/Menu";
 import { StateLine } from "@/components/ui/StateLine";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { AppIcon } from "@/components/apps/AppIcon";
@@ -237,9 +238,11 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
             <span role="columnheader" className={s.num}>
               Uptime
             </span>
-            <span role="columnheader" className={s.num}>
-              Response
-            </span>
+            <Tooltip content="How fast 95% of checks answered in the last day">
+              <span role="columnheader" className={s.num} tabIndex={0}>
+                Response
+              </span>
+            </Tooltip>
             <span role="columnheader" className="sr-only">
               Actions
             </span>
@@ -264,6 +267,7 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
                 <MonitorRow
                   key={m.id}
                   solo={g.monitors.length === 1 && g.key !== "__own" ? g.title : null}
+                  app={g.monitors.length === 1 && g.app ? g.app : null}
                   m={m}
                   range={range}
                   busy={busy === m.id}
@@ -279,7 +283,6 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
           ))}
           <div className={s.tableFoot}>
             <TraceLegend />
-            <span className={s.muted}>Response: how fast 95% of checks answered in the last day.</span>
           </div>
         </div>
       )}
@@ -317,6 +320,7 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
 function MonitorRow({
   m,
   solo,
+  app,
   range,
   busy,
   onOpen,
@@ -329,6 +333,8 @@ function MonitorRow({
   m: MonitorView;
   /** Only monitor for its app: the row carries the app's name and says where it checks from. */
   solo: string | null;
+  /** The app this row stands for, when it's the only monitor in its group: its icon leads the row. */
+  app: { icon: string | null; name: string } | null;
   range: Range;
   busy: boolean;
   onOpen: () => void;
@@ -362,8 +368,8 @@ function MonitorRow({
         onOpen();
       }}
     >
-      <span role="cell" className={s.laneCell}>
-        <StateLine state={st.line} label={false} size={16} />
+      <span role="cell" className={s.laneCell} data-icon={app ? "" : undefined}>
+        {app ? <AppIcon src={app.icon} name={app.name} size={28} /> : <span aria-hidden />}
         <span className={s.laneText}>
           <button type="button" className={s.name} onClick={onOpen} title={`${m.name}: ${st.label}`}>
             {title}
@@ -373,7 +379,7 @@ function MonitorRow({
             <span className="mono">{vantage.addr}</span>
           </span>
           <span className={s.stateSub} data-fault={m.state === "down" || m.state === "failing" ? "" : undefined} title={note}>
-            {note}
+            <StateLine state={st.line} label={note} size={12} />
           </span>
         </span>
       </span>

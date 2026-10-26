@@ -79,7 +79,7 @@ export function ReportsTab({ focus }: { focus: string | null }) {
             </div>
           ) : items.length === 0 ? (
             <Empty title={view === "new" ? "No new reports" : view === "seen" ? "Nothing you're working on" : view === "fixed" ? "Nothing fixed yet" : "No reports yet"}>
-              {view === "all" || all.length === 0 ? "When someone taps “Something's not working” on their Status page, it lands here and you're alerted." : null}
+              {view === "all" || all.length === 0 ? "When someone reports a problem from Status, it lands here and you're told." : null}
             </Empty>
           ) : (
             <ul className={`${s.reports} appear`} role="list">

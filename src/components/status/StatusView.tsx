@@ -8,14 +8,19 @@ import type { ChannelView } from "@/lib/alerts-types";
 import { activityHref, alertsHref } from "@/lib/settings-links";
 import { useApi } from "@/lib/client/api";
 import { prefersReducedMotion } from "@/lib/client/motion";
-import { usePrefs, useFormat } from "@/components/PrefsProvider";
+import { usePrefs } from "@/components/PrefsProvider";
 import { Notice, Page, PageHeader, Panel } from "@/components/ui/Surface";
 import { LinkButton } from "@/components/ui/Button";
 import { QuietFindings } from "@/components/alerts/FindingsTabs";
 import { CHANNELS_URL, FINDINGS_URL } from "@/components/alerts/shared";
 import { StateLine } from "@/components/ui/StateLine";
+import { Disclosure } from "@/components/ui/Disclosure";
+import { GluonMark } from "@/components/brand/GluonMark";
+import { BellOff } from "iconoir-react";
+import { upFor } from "@/lib/words";
 import { NeedsYou } from "./NeedsYou";
-import { MachineVitals, StorageBars } from "./Machine";
+import { MachineVitals } from "./Machine";
+import { SpaceWords } from "@/components/storage/SpaceWords";
 import { AppRoster } from "./AppRoster";
 import { Console } from "./Console";
 import { AppIcon } from "@/components/apps/AppIcon";
@@ -51,14 +56,7 @@ function AdminStatus({ initial, allFindings }: { initial: StatusPayload; allFind
 
   return (
     <Page>
-      <PageHeader
-        title="Status"
-        summary={
-          <>
-            <b>{data.verdict.headline}</b> {data.verdict.detail}
-          </>
-        }
-      />
+      <PageHeader title="Status" summary={<Verdict data={data} />} />
       <div className={s.body}>
         {error && (
           <Notice tone="fault" title="Couldn't refresh">
@@ -71,8 +69,32 @@ function AdminStatus({ initial, allFindings }: { initial: StatusPayload; allFind
   );
 }
 
+/**
+ * The one-glance answer. With a single app needing a hand it names the app; otherwise it's the
+ * server's own verdict. "Nothing needs you" is left to the all-clear below, so it's said once.
+ */
+function Verdict({ data }: { data: StatusPayload }) {
+  const { verdict, findings, apps, appsUnavailable } = data;
+  if (!appsUnavailable && findings.length === 1) {
+    const app = apps.find((a) => a.id === findings[0]!.subject);
+    if (app) {
+      const othersFine = apps.every((a) => a.id === app.id || a.line === "running" || a.line === "stopped" || (a.copyOf && apps.some((x) => x.id === a.copyOf!.id)));
+      return (
+        <>
+          <b>{app.name} needs a hand.</b> {othersFine ? "Everything else is running." : verdict.detail}
+        </>
+      );
+    }
+  }
+  if (!appsUnavailable && !findings.length) return <b>{verdict.headline}</b>;
+  return (
+    <>
+      <b>{verdict.headline}</b> {verdict.detail}
+    </>
+  );
+}
+
 function Overview({ data, allFindings, refresh }: { data: StatusPayload; allFindings: Finding[] | undefined; refresh: () => void }) {
-  const fmt = useFormat();
   const { data: all } = useApi<Finding[]>(FINDINGS_URL, { refresh: 15_000, fallbackData: allFindings });
   const { data: channels } = useApi<ChannelView[]>(CHANNELS_URL, { refresh: 60_000 });
   const unreachable = !!channels && !channels.some((c) => c.enabled);
@@ -83,19 +105,10 @@ function Overview({ data, allFindings, refresh }: { data: StatusPayload; allFind
   const isNew = useArrivals(data.recent.map((e) => String(e.id)));
   const colsRef = React.useRef<HTMLDivElement>(null);
   useGlide(colsRef, needsShown);
+  const [liveOpen, setLiveOpen] = useRemembered("gluon.status.liveUse");
 
   return (
     <>
-      {unreachable && (
-        <Notice
-          title="No alerts set up, so problems only show up on this page"
-          action={
-            <LinkButton href={alertsHref("notifications")} size="sm">
-              Set up alerts
-            </LinkButton>
-          }
-        />
-      )}
       {data.appsUnavailable && (
         <Notice
           tone="fault"
@@ -111,50 +124,126 @@ function Overview({ data, allFindings, refresh }: { data: StatusPayload; allFind
       )}
       <div className={s.cols} ref={colsRef}>
         <div className={s.main}>
-          {needsShown && (
+          {needsShown ? (
             <div className={s.needsWrap} data-closing={needsCount === 0 ? "" : undefined} data-motion-gentle="">
               <Panel title="Needs you" flush>
                 <NeedsYou findings={data.findings} onChange={refresh} checkedAt={data.checkedAt} foot={null} empty={null} />
               </Panel>
             </div>
+          ) : (
+            !data.appsUnavailable && <AllClear checkedAt={data.checkedAt} />
+          )}
+          {unreachable && (
+            <p className={s.alertsLine}>
+              <BellOff aria-hidden width={16} height={16} />
+              <span>Problems only show up here until alerts are set up.</span>
+              <Link href={alertsHref("notifications")}>Set up alerts</Link>
+            </p>
           )}
           {all && <QuietFindings findings={all} onChange={refresh} />}
-          {data.recent.length > 0 && (
-            <Panel title="Recently" meta={
-                <span>
-                  <Link href={alertsHref("history")}>Past problems</Link> · <Link href={activityHref()}>All activity</Link>
-                </span>
-              } className={s.recentPanel} flush>
-              <ul className={s.recent} role="list">
-                {foldRepeats(data.recent).slice(0, 8).map(({ entry: e, times }) => (
+        </div>
+        <section className={s.machine} aria-labelledby="status-machine">
+          <div className={s.head}>
+            <h2 id="status-machine" className={s.headTitle}>
+              This machine
+            </h2>
+            {data.uptime !== null && (
+              <Link href="/system" className={s.headMeta}>
+                {upFor(data.uptime)}
+              </Link>
+            )}
+          </div>
+          <MachineVitals />
+        </section>
+      </div>
+
+      <Panel title="Apps" meta={<AppsMeta apps={data.apps} />} className={s.appsPanel} flush>
+        <AppRoster apps={data.apps} findings={data.findings} />
+        {data.apps.some((a) => a.containers.length) && (
+          <Disclosure variant="panel" summary="Live use by app" open={liveOpen} onOpenChange={setLiveOpen}>
+            {/* Mounted only while open: it re-renders with every live sample. */}
+            {liveOpen && <Console apps={data.apps} findings={data.findings} />}
+          </Disclosure>
+        )}
+      </Panel>
+
+      <div className={s.lower}>
+        <section aria-labelledby="status-storage">
+          <div className={s.head}>
+            <h2 id="status-storage" className={s.headTitle}>
+              Storage
+            </h2>
+            <Link href="/storage" className={s.headMeta}>
+              Details
+            </Link>
+          </div>
+          <SpaceWords fallback={data.filesystems} attention={attentionMounts} />
+        </section>
+        {data.recent.length > 0 && (
+          <section aria-labelledby="status-recent">
+            <div className={s.head}>
+              <h2 id="status-recent" className={s.headTitle}>
+                Recently
+              </h2>
+              <span className={s.headMeta}>
+                <Link href={alertsHref("history")}>Past problems</Link>
+                <Link href={activityHref()}>All activity</Link>
+              </span>
+            </div>
+            <ul className={s.recent} role="list">
+              {foldRepeats(data.recent)
+                .slice(0, 6)
+                .map(({ entry: e, times }) => (
                   <li key={e.id} className={s.recentRow} data-outcome={e.outcome} data-arrived={isNew(String(e.id)) ? "" : undefined} data-motion-gentle="">
-                    <Time ts={e.at} kind="dateTime" className={`${s.recentTime} num`} />
                     <span className={s.recentText}>
                       {e.kind === "user" && e.username ? <b>{e.username} </b> : null}
                       {e.kind === "user" ? e.summary.charAt(0).toLowerCase() + e.summary.slice(1) : e.summary}
                       {times > 1 && <span className={`${s.recentTimes} num`}> · {times} times</span>}
                     </span>
+                    <Time ts={e.at} className={`${s.recentTime} num`} />
                   </li>
                 ))}
-              </ul>
-            </Panel>
-          )}
-        </div>
-        <div className={s.side}>
-          <Panel title="This machine" meta={data.uptime !== null ? <span>up {fmt.duration(data.uptime, 2)}</span> : undefined} className={s.machinePanel}>
-            <MachineVitals />
-          </Panel>
-          <Panel title="Storage" meta={<Link href="/storage">Details</Link>} className={s.storagePanel}>
-            <StorageBars filesystems={data.filesystems} attentionMounts={attentionMounts} />
-          </Panel>
-        </div>
-        <Panel title="Apps" meta={<AppsMeta apps={data.apps} />} className={s.appsPanel} flush>
-          <Console apps={data.apps} findings={data.findings} />
-          <AppRoster apps={data.apps} findings={data.findings} />
-        </Panel>
+            </ul>
+          </section>
+        )}
       </div>
     </>
   );
+}
+
+/** Nothing needs you: the coil, held at both ends, and when Gluon last looked. */
+function AllClear({ checkedAt }: { checkedAt: number }) {
+  return (
+    <div className={s.allClear} data-motion-gentle="">
+      <GluonMark className={s.allClearMark} />
+      <div>
+        <p className={s.allClearTitle}>Nothing needs you</p>
+        <p className={s.allClearMeta}>
+          Checked <Time ts={checkedAt} kind="time" />
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** An open/closed choice this browser remembers. Starts closed; falls back to closed without storage. */
+function useRemembered(key: string): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      if (localStorage.getItem(key) === "1") setOpen(true);
+    } catch {}
+  }, [key]);
+  const set = React.useCallback(
+    (o: boolean) => {
+      setOpen(o);
+      try {
+        localStorage.setItem(key, o ? "1" : "0");
+      } catch {}
+    },
+    [key],
+  );
+  return [open, set];
 }
 
 /** "11 running · 2 stopped", counting apps (not their containers), old copies left out. */
@@ -198,11 +287,13 @@ function MemberStatus({ data }: { data: StatusPayload }) {
         <Panel flush>
           <ul className={s.memberApps} role="list">
             {data.apps.map((a) => (
-              <li key={a.id} className={s.memberApp}>
-                <AppIcon src={a.icon} name={a.name} size={36} />
+              <li key={a.id} className={s.memberApp} data-broken={a.line === "unhealthy" || a.line === "stopped" ? "" : undefined}>
+                <span className={s.memberIcon}>
+                  <AppIcon src={a.icon} name={a.name} size={44} />
+                </span>
                 <div className={s.memberAppText}>
                   <span className={s.memberAppName}>{a.name}</span>
-                  <StateLine state={a.line} label={a.line === "running" ? "Working" : a.line === "starting" ? "Starting up" : "Not working"} />
+                  <StateLine state={a.line === "stopped" ? "unhealthy" : a.line} label={a.line === "running" ? "Working" : a.line === "starting" ? "Starting up" : "Not working"} />
                 </div>
                 {a.line === "running" && (a.urls.home || a.urls.away) && <OpenLink urls={a.urls} />}
               </li>
@@ -212,7 +303,10 @@ function MemberStatus({ data }: { data: StatusPayload }) {
       )}
       <MyReports />
       <p className={s.memberFoot}>
-        Checked at <Time ts={data.checkedAt} kind="time" />
+        <GluonMark className={s.memberFootMark} />
+        <span>
+          Checked at <Time ts={data.checkedAt} kind="time" />
+        </span>
       </p>
     </Page>
   );

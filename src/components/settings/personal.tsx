@@ -3,11 +3,12 @@ import * as React from "react";
 import { SEARCH_ENGINES, type Prefs } from "@/lib/prefs";
 import { formatBytes, formatDate, formatRate, formatTemp, formatTime } from "@/lib/format";
 import { usePrefs } from "@/components/PrefsProvider";
-import { Panel, UsageBar } from "@/components/ui/Surface";
+import { Panel, Section, UsageBar } from "@/components/ui/Surface";
 import { Field, Input, Switch, SettingRow, Segmented } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { StateLine } from "@/components/ui/StateLine";
+import { MARK_20 } from "@/components/brand/mark";
 import { toast } from "@/components/ui/Toast";
 import s from "./settings.module.css";
 
@@ -30,6 +31,12 @@ const ATTENTION: { value: Prefs["attention"]; label: string; light: string; dark
   { value: "magenta", label: "Magenta", light: "#c23d8a", dark: "#f07abf" },
   { value: "cyan", label: "Cyan", light: "#1788a3", dark: "#5cc8e0" },
 ];
+
+const THEMES = [
+  { value: "system", label: "Match my device", hint: "" },
+  { value: "light", label: "Light", hint: "Bone and ink" },
+  { value: "dark", label: "Dark", hint: "Graphite, lamp-lit" },
+] as const;
 
 function useMedia(query: string) {
   const [on, setOn] = React.useState(false);
@@ -54,8 +61,11 @@ function MiniPlate({ p }: { p: (typeof PLATES)["light"] }) {
     <g>
       <rect width="120" height="74" fill={p.ground} />
       <path d="M31.5 0V74" stroke={p.line} />
-      <circle cx="8" cy="10" r="1.6" fill={p.ink} />
-      <path d="M9.6 10q2.2-4 3.2-1.2 1 2.8 3.2-.2 2.2-3 3.2-.2" stroke={p.ink} strokeWidth="1" fill="none" strokeLinecap="round" />
+      <g transform="translate(3 2) scale(0.62)">
+        <path d={MARK_20.coil} stroke={p.ink} strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={MARK_20.x0} cy={MARK_20.y} r="2" fill={p.ink} />
+        <circle cx={MARK_20.x1} cy={MARK_20.y} r="2" fill={p.ink} />
+      </g>
       <rect x="5" y="20" width="22" height="6" rx="2" fill={p.panel} stroke={p.line} strokeWidth="0.6" />
       <path d="M7 32h14M7 39h17M7 46h11" stroke={p.faint} strokeWidth="1.4" strokeLinecap="round" />
       <path d="M39 12h34" stroke={p.ink} strokeWidth="3.2" strokeLinecap="round" />
@@ -101,27 +111,24 @@ export function Appearance() {
   const dark = prefs.theme === "dark" || (prefs.theme === "system" && sysDark);
   return (
     <div className={s.appearance}>
-      <div className={s.stack}>
-        <Panel title="Theme">
+      <div className={`${s.stack} ${s.looks}`}>
+        <Section title="Theme">
           <div className={s.choiceGrid} role="group" aria-label="Theme">
-            {(["system", "light", "dark"] as const).map((m) => (
-              <button key={m} type="button" className={s.choice} aria-pressed={prefs.theme === m} onClick={() => void set({ theme: m })}>
-                <span className={s.mini} data-mode={m} aria-hidden>
-                  <MiniApp mode={m} />
+            {THEMES.map((m) => (
+              <button key={m.value} type="button" className={s.choice} aria-pressed={prefs.theme === m.value} onClick={() => void set({ theme: m.value })}>
+                <span className={s.mini} data-mode={m.value} aria-hidden>
+                  <MiniApp mode={m.value} />
                 </span>
                 <span className={s.choiceText}>
-                  {m === "system" ? "Match my device" : m === "light" ? "Light" : "Dark"}
-                  {m === "system" && <small suppressHydrationWarning>{sysDark ? "Dark right now" : "Light right now"}</small>}
+                  {m.label}
+                  <small suppressHydrationWarning={m.value === "system"}>{m.value === "system" ? (sysDark ? "Dark right now" : "Light right now") : m.hint}</small>
                 </span>
               </button>
             ))}
           </div>
-        </Panel>
+        </Section>
 
-        <Panel title="Colour for “needs you”">
-          <p className={s.hint} style={{ marginBottom: 14 }}>
-            Marks what you have to act on. Pick the one you see best.
-          </p>
+        <Section title="Colour for “needs you”" meta="Pick the one you see best">
           <div className={s.swatches} role="group" aria-label="Colour for things that need you">
             {ATTENTION.map((a) => (
               <button key={a.value} type="button" className={s.swatch} aria-pressed={prefs.attention === a.value} onClick={() => void set({ attention: a.value })}>
@@ -133,10 +140,10 @@ export function Appearance() {
               </button>
             ))}
           </div>
-        </Panel>
+        </Section>
 
         <Panel title="Reading">
-          <SettingRow label="Text size" description="Scales everything, not just text.">
+          <SettingRow label="Text size" description="Scales everything on the page.">
             <Segmented
               aria-label="Text size"
               value={prefs.textSize}

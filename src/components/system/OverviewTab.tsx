@@ -13,6 +13,7 @@ import { useConfirm } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import { Time } from "@/components/ui/Time";
 import { TimezonePicker } from "./TimezonePicker";
+import { upFor } from "@/lib/words";
 import s from "./system.module.css";
 
 export function OverviewTab({ initial }: { initial?: SystemOverview }) {
@@ -39,22 +40,14 @@ export function OverviewTab({ initial }: { initial?: SystemOverview }) {
   return (
     <div className={s.stack}>
       <RestartNotice overview={data} restart={restart.data} onRestarted={() => void restart.mutate()} />
-      <Panel id="identity" className={s.identity}>
-        <div className={s.identityRow}>
-          <HostnameRow
-            hostname={data.hostname}
-            onRenamed={() => void mutate()}
-            sub={[osShort, hw || null, data.virtualization && data.virtualization !== "none" ? `virtual machine (${data.virtualization})` : null].filter(Boolean).join(" · ")}
-          />
-          <div className={s.uptime}>
-            <span className="label">Up for</span>
-            <span className={`${s.uptimeFigure} num`}>{fmt.duration(data.uptimeSeconds)}</span>
-            <span className={s.sub}>
-              Since <Time ts={data.bootedAt} kind="dateTime" />
-            </span>
-          </div>
-        </div>
-      </Panel>
+      <section id="identity" className={s.identity} aria-label="This machine">
+        <HostnameRow
+          hostname={data.hostname}
+          onRenamed={() => void mutate()}
+          sub={[osShort, hw || null, data.virtualization && data.virtualization !== "none" ? `virtual machine (${data.virtualization})` : null].filter(Boolean).join(" · ")}
+        />
+        <Facts overview={data} />
+      </section>
       <Panel title="Right now" meta={<LiveMeta />} flush>
         <Faceplate overview={data} />
       </Panel>
@@ -64,6 +57,20 @@ export function OverviewTab({ initial }: { initial?: SystemOverview }) {
         </Panel>
         <TimePanel overview={data} onChanged={() => void mutate()} />
       </div>
+    </div>
+  );
+}
+
+/** How long it's been up. The live figures are the faceplate's, right below. */
+function Facts({ overview: o }: { overview: SystemOverview }) {
+  return (
+    <div className={s.factsWrap}>
+      <p className={s.uptime}>
+        <span className={s.factWord}>{upFor(o.uptimeSeconds)}</span>
+        <span className={s.factSub}>
+          since <Time ts={o.bootedAt} kind="dateTime" />
+        </span>
+      </p>
     </div>
   );
 }
@@ -337,15 +344,17 @@ function RestartNotice({ overview, restart, onRestarted }: { overview: SystemOve
 function OverviewSkeleton() {
   return (
     <div className={s.stack} aria-busy>
-      <Panel className={s.identity}>
-        <div className={s.identityRow}>
-          <div className={s.skelRows} style={{ flex: 1 }}>
-            <Skeleton height={30} width={180} />
-            <Skeleton height={14} width="40%" />
-          </div>
-          <Skeleton height={44} width={120} />
+      <div className={s.identity}>
+        <div className={s.skelRows}>
+          <Skeleton height={30} width={180} />
+          <Skeleton height={14} width="40%" />
         </div>
-      </Panel>
+        <div className={s.facts}>
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} height={40} width={140} />
+          ))}
+        </div>
+      </div>
       <Panel title="Right now">
         <Skeleton height={150} radius={8} />
       </Panel>

@@ -76,6 +76,10 @@ export const api = {
 
 const fetcher = (url: string) => api.get<unknown>(url);
 
+/** Everything that reads /api/status outside the Status page polls at one pace, so SWR makes one request. */
+export const STATUS_KEY = "/api/status";
+export const STATUS_REFRESH = 15_000;
+
 /** Polling GET with SWR. `refresh` in ms; pauses automatically when the tab is hidden. */
 const noSubscribe = () => () => {};
 

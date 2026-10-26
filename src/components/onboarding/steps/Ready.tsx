@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Surface";
 import { Actions, StepHead, useFlow, useMemberPlan } from "../flow";
 import { APPS_URL, HOME_URL, appsOnHome, type MemberApp } from "./memberApps";
+import { Bond } from "../Bond";
 import o from "../onboarding.module.css";
 
 /** Household member, last: what their Home now holds (read back from the server) and what to do if something breaks. */
@@ -19,7 +20,7 @@ export function Ready() {
 
   return (
     <>
-      <StepHead title={n === null ? "Your Home page" : n > 0 ? `Your Home has ${n === 1 ? "1 app" : `${n} apps`}` : "Your Home is ready"}>
+      <StepHead art={<Bond from="You" to={plan.serverName} />} title={n === null ? "Your Home page" : n > 0 ? `Your Home has ${n === 1 ? "1 app" : `${n} apps`}` : "Your Home is ready"}>
         {n === null && !home.error && !apps.error ? (
           <Skeleton width="70%" height={14} />
         ) : (

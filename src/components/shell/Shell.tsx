@@ -111,11 +111,14 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
   React.useEffect(() => setDrawerOpen(false), [pathname]);
 
   // A new page settles in when a click took you there. Keyboard jumps, palette picks, query-only
-  // changes (a folder in Files, a tab) and the first load stay still.
+  // changes (a folder in Files), the first load and moves within a page stay still: a tab, a
+  // segmented control or a page's own section list changes the path but keeps the page's frame,
+  // and settling the whole page would make that frame flicker.
   const lastInput = React.useRef<"pointer" | "key">("key");
   React.useEffect(() => {
     const pointer = (e: PointerEvent) => {
-      lastInput.current = (e.target as Element | null)?.closest?.("[data-palette]") ? "key" : "pointer";
+      const t = e.target as Element | null;
+      lastInput.current = t?.closest?.("[data-palette], [role=tablist], [role=group] > [aria-pressed], main nav") ? "key" : "pointer";
     };
     const key = (e: KeyboardEvent) => {
       if (e.key !== "Tab") lastInput.current = "key";

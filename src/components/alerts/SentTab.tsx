@@ -113,6 +113,11 @@ export function SentTab({ compact }: { compact?: boolean }) {
           )}
         </div>
       )}
+      {!error && data && items.length === 0 ? (
+        <Empty title={show === "failed" ? "Nothing failed" : show === "pending" ? "Nothing is waiting" : "Nothing sent yet"}>
+          {show === "all" ? "Each alert sent, and whether it got through." : "Try another filter."}
+        </Empty>
+      ) : (
       <Panel title={compact ? "Recently sent" : undefined} flush>
         {error && !data ? (
           <div className={s.pad}>
@@ -197,6 +202,7 @@ export function SentTab({ compact }: { compact?: boolean }) {
           </ul>
         )}
       </Panel>
+      )}
     </>
   );
 }

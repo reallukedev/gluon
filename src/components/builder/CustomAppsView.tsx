@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { MoreHoriz, Box3dPoint, Page as PageIcon, Github, Terminal } from "iconoir-react";
 import { api, useApi } from "@/lib/client/api";
 import type { CustomAppListItem, CustomAppsResponse, StoreStatus } from "@/lib/builder-types";
-import { Page, PageHeader, Empty, Notice, Skeleton, Panel } from "@/components/ui/Surface";
-import { AppsSectionTabs } from "@/components/docker/AppsSectionTabs";
+import { Empty, Notice, Skeleton, Panel } from "@/components/ui/Surface";
+import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { Button, IconButton, LinkButton } from "@/components/ui/Button";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
 import { useConfirm } from "@/components/ui/Dialog";
@@ -31,9 +31,9 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
 
   if (!data) {
     return (
-      <Page>
-        <PageHeader title="Apps" summary={error ? "Couldn't load the apps you made." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} actions={<NewAppButton variant="primary" />} />
-        <AppsSectionTabs current="custom" />
+      <>
+        <AppsHead summary={error ? "Couldn't load the apps you made." : <Skeleton width="min(420px, 90%)" height={15} style={{ marginTop: 4 }} />} actions={<NewAppButton variant="primary" />} />
+        <AppsBody>
         {error ? (
           <Notice tone="fault" action={<Button size="sm" loading={isLoading} onClick={() => void mutate()}>Try again</Button>}>
             {error.message}
@@ -57,7 +57,8 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
             ))}
           </div>
         )}
-      </Page>
+        </AppsBody>
+      </>
     );
   }
 
@@ -70,7 +71,7 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
     apps.length === 0
       ? umbrel
         ? "Apps you make here install in Umbrel like any other."
-        : <>Apps you make here run with Docker Compose from <span className="mono">{store?.composeRoot}</span>.</>
+        : <>Apps you make here run from <span className="mono">{store?.composeRoot}</span>.</>
       : [
           published.length === 1
             ? `You've published 1 app${runningCount ? `, running ${where}` : ", not running right now"}.`
@@ -96,36 +97,34 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
     });
 
   return (
-    <Page>
-      <PageHeader title="Apps" summary={summary} actions={<NewAppButton variant="primary" />} />
-      <AppsSectionTabs current="custom" />
+    <>
+      <AppsHead summary={summary} actions={<NewAppButton variant="primary" />} />
+      <AppsBody>
 
       <StoreNotice store={store} hasApps={apps.length > 0} hasPublished={published.some((a) => a.target === "umbrel")} onSetUp={() => setStoreOpen(true)} />
 
       {apps.length === 0 ? (
-        <Panel>
-          <Empty
-            title="Nothing made yet"
-            action={
-              <>
-                <LinkButton href="/apps/new?from=image" icon={<Box3dPoint />}>
-                  Image
-                </LinkButton>
-                <LinkButton href="/apps/new?from=run" icon={<Terminal />}>
-                  docker run
-                </LinkButton>
-                <LinkButton href="/apps/new?from=compose" icon={<PageIcon />}>
-                  Compose file
-                </LinkButton>
-                <LinkButton href="/apps/new?from=github" icon={<Github />}>
-                  GitHub
-                </LinkButton>
-              </>
-            }
-          >
-            Pick what to start from.
-          </Empty>
-        </Panel>
+        <Empty
+          title="Nothing made yet"
+          action={
+            <>
+              <LinkButton href="/apps/new?from=image" icon={<Box3dPoint />}>
+                Image
+              </LinkButton>
+              <LinkButton href="/apps/new?from=run" icon={<Terminal />}>
+                docker run
+              </LinkButton>
+              <LinkButton href="/apps/new?from=compose" icon={<PageIcon />}>
+                Compose file
+              </LinkButton>
+              <LinkButton href="/apps/new?from=github" icon={<Github />}>
+                GitHub
+              </LinkButton>
+            </>
+          }
+        >
+          Pick what to start from.
+        </Empty>
       ) : (
         <div className={s.table} role="table" aria-label="Custom apps">
           <div className={s.headRow} role="row">
@@ -159,7 +158,8 @@ export function CustomAppsView({ initial }: { initial: CustomAppsResponse | null
         }}
       />
       {confirmNode}
-    </Page>
+      </AppsBody>
+    </>
   );
 }
 

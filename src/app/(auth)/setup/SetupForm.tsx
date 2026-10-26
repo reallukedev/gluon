@@ -121,8 +121,8 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
 
   return (
     <form className={s.form} onSubmit={submit} noValidate data-wide="">
-      <h2>Set up Gluon</h2>
-      <p className={s.lede}>Prove you can reach the server, then make your admin account.</p>
+      <h2>Let&apos;s set up {serverName}</h2>
+      <p className={s.lede}>First the code from its log, so we know it&apos;s yours. Then your account.</p>
 
       <div className={s.codeGroup}>
         <Field label="Setup code" error={err("code")}>

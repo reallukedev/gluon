@@ -7,6 +7,7 @@ import { api, useApi, useStream, streamPost, ApiError } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Panel, Notice, Skeleton, Empty } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
+import { GluonMark } from "@/components/brand/GluonMark";
 import { Checkbox } from "@/components/ui/Field";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { useConfirm } from "@/components/ui/Dialog";
@@ -330,7 +331,10 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
         <div className={s.updHead}>
           <p className={s.updSentence}>
             {data.counts.total === 0 ? (
-              "Everything is up to date."
+              <span className={s.upToDate}>
+                <GluonMark className={s.upToDateMark} />
+                Up to date
+              </span>
             ) : (
               <>
                 <b className="num">{fmt.plural(data.counts.total, "update")}</b>
@@ -352,18 +356,7 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
           </div>
         </div>
         {data.counts.total > 0 && <Impact pkgs={all.length ? all : data.packages} />}
-        {data.counts.total === 0 && (
-          <p className={s.updNote}>
-            Gluon checks every day
-            {data.lastRefresh.lastSuccessAt ? (
-              <>
-                {" "}
-                and last found the lists fresh <Time ts={data.lastRefresh.lastSuccessAt} />
-              </>
-            ) : null}
-            . Security fixes that wait more than three days show up in Needs you.
-          </p>
-        )}
+        {data.counts.total === 0 && <p className={s.updNote}>Checked daily. Security fixes left waiting over three days show up in Needs you.</p>}
         {data.removals.length > 0 && <p className={s.updNote}>Installing everything also removes {data.removals.join(", ")}.</p>}
       </Panel>
 

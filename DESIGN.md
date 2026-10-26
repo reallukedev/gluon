@@ -351,6 +351,22 @@ Rules are 1px. State marks are 2px strokes. Keycaps get a 2px bottom border as t
 ### Named Rules
 **The No Pills Rule.** Nothing that carries information is a pill. Counts are plain tabular figures (12px, 600, muted); a needs-you count gets the doubled sodium mark in front of it, a fault count a short red mark.
 
+## Personality
+
+Gluon is calm and a little playful, and never cute. The personality lives in a few places, all of them doing a job:
+- **The mood coil** (`brand/MoodCoil`): the Home status hero draws the gluon coil. When all is well it is two open loops in `--ok` that breathe slowly; when something needs you it tightens into three loops in sodium (or fault). It draws itself once per session and holds still under reduced motion.
+- **The status hero** says the problem as a person would ("Proxy needs a hand."), gives the why in one sentence and puts the fix beside it as the one filled button on the page. All clear reads warm ("All 9 apps are happy.").
+- **App icons carry the colour.** They lead lists and launchers, without a box around each one. A broken app's icon goes grey and tips 6° (scaled by `--motion`) next to the doubled sodium mark and its fix. With a fine pointer, icons lift 2px on hover.
+- **Success settles.** A fix that worked says so ("Back up") for a moment, and the doubled mark settles into one.
+- **Every page names the same problem with the same word** (`lib/finding-words`): a web check that fails while Docker says running is "Not answering" on Home, Status and Apps alike.
+
+- **Readings are real numbers you can read** (`charts/Reading`, one source in `charts/readings`): the figure leads (13%, 11.4 GB, 20 ms), one context line in numbers sits under it ("of 34 GB · 23 GB free", "usually 21 ms"), and a live graph sits under that with its top value and 0 on the right edge and "6 min ago … now" below. No adjectives in place of numbers ("Relaxed", "Plenty free"): the context line is what makes a figure understandable.
+
+### Named Rules
+**The Plain Front, Deep Back Rule.** Plain words lead and expert terms sit one step deeper (a detail line, a tooltip, a fold), never behind a global mode. Compose, containers, ports, images and load stay in the product; they just aren't the first thing a beginner reads.
+
+**The Less Box Rule.** A section that is a list or a few figures sits on the ground under its heading. Panels are for things that are one object (a form, a chart with controls, a table).
+
 ## Brand mark and art
 
 The mark is the curly line a Feynman diagram draws for a gluon, the particle that holds the others together, joining two points: a two-loop trochoid (x = c·t − a·sin t, y = −a·cos t) that starts and ends at a trough, with a filled dot at each end. Geometry lives in `src/components/brand/mark.ts`; `GluonMark` draws it in currentColor at glyph size. The app icon puts the coil in sodium on a graphite tile with parchment dots (the one place sodium is a brand colour rather than a signal).
@@ -399,7 +415,7 @@ Inline notices and toasts lead with a 2px mark in a 6px column: an ink line for 
 
 ### StateLine (signature)
 The state glyph used everywhere a thing has a state: a 2px vertical line, 14px by default, with an optional label in 13px 560 ink-2.
-- **Running:** solid ink.
+- **Running:** solid, in calm green (`--ok`). Fine should read at a glance; the form still carries the state without colour.
 - **Starting:** dashed ink.
 - **Unhealthy:** short red, 45% of the height, sitting on the baseline.
 - **Stopped:** faint (28% opacity).
@@ -428,7 +444,7 @@ Shared building blocks live in `components/ui`: `SegmentBar`, `FlowSteps`, `Disc
 Time charts draw a 1.5px ink line with a 7% area, dashed hairline grid, tabular axis labels at 10.5px, and a 1px ink-2 "now" line at the right edge; sparklines draw at 1.25px in faint or ink-2. Usage bars are 6px sunk tracks with an ink-2 fill that turns sodium past its threshold and fault when full, plus a 1px threshold tick.
 
 ### Named Rules
-**The StateLine Grammar Rule.** Solid is running, dashed is starting, short red is unhealthy, faint is stopped, doubled sodium is needs you. Do not invent new state marks; use StateLine or the same geometry.
+**The StateLine Grammar Rule.** Solid green is running, dashed is starting, short red is unhealthy, faint is stopped, doubled sodium is needs you. Do not invent new state marks; use StateLine or the same geometry.
 
 **The Bar Fill Exception Rule.** `width` is not a transition property, with one deliberate exception: small, absolutely positioned bars (usage, upload and job progress fills, and the 2px tab indicator), which sit out of flow and cannot shift anything around them.
 
@@ -442,7 +458,7 @@ Copy follows `docs/COPY.md`: one sentence of state, each fact once per screen, v
 
 ### Do:
 - **Do** open every page with its title and one plain sentence of state, then cause, then remedy.
-- **Do** show state with StateLine: solid running, dashed starting, short red unhealthy, faint stopped, doubled sodium needs you.
+- **Do** show state with StateLine: solid green running, dashed starting, short red unhealthy, faint stopped, doubled sodium needs you.
 - **Do** keep sodium for "needs you" only, and make the remedy beside it an outlined (secondary) button that names its action.
 - **Do** pair every use of fault red with a glyph or words.
 - **Do** write counts as plain tabular figures, with the doubled sodium mark in front when they need the person.

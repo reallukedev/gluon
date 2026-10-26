@@ -65,7 +65,7 @@ export function AnnouncementsTab() {
           </div>
         ) : active.length === 0 ? (
           <Empty title="Nothing announced" action={<Button icon={<Megaphone />} onClick={() => edit(null)}>Write an announcement</Button>}>
-            A banner across everyone's pages, like “Power cut tonight from 10.” Tie one to an app to show it only to people who use that app.
+            A banner on everyone's pages, like “Power cut tonight from 10.”
           </Empty>
         ) : (
           <AnnList items={active} onEdit={edit} onRemove={takeDown} />

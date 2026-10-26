@@ -128,7 +128,7 @@ export function AccessMap({ memberId }: { memberId?: string }) {
     return (
       <Panel flush>
         <Empty title="No household members yet">
-          Everyone here is an admin, and admins open every app and folder. Invite someone as a household member to choose what they can open.
+          Admins open everything. Invite a household member to choose what they can open.
         </Empty>
       </Panel>
     );
