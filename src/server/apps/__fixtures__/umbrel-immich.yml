@@ -1,0 +1,96 @@
+version: '3.7'
+x-environment:
+  NODE_ENV: production
+  DB_HOSTNAME: immich_postgres_1
+  DB_USERNAME: immich
+  DB_PASSWORD: REDACTED
+  DB_DATABASE_NAME: immich
+  REDIS_HOSTNAME: immich_redis_1
+  LOG_LEVEL: log
+  JWT_SECRET: ${APP_SEED}
+  DISABLE_REVERSE_GEOCODING: 'false'
+  REVERSE_GEOCODING_PRECISION: '3'
+  PUBLIC_LOGIN_PAGE_MESSAGE: ''
+  IMMICH_MACHINE_LEARNING_URL: http://immich_machine-learning_1:3003
+services:
+  app_proxy:
+    environment:
+      APP_HOST: immich_server_1
+      APP_PORT: 2283
+      PROXY_AUTH_ADD: 'false'
+    container_name: immich_app_proxy_1
+  server:
+    image: >-
+      ghcr.io/immich-app/immich-server:v3.2.4@sha256:d317916b28090c33eb36b308464ea391f8b7df1d850fcfea227a39ec879718c2
+    volumes:
+      - ${APP_DATA_DIR}/data/upload:/data
+    environment:
+      NODE_ENV: production
+      DB_HOSTNAME: immich_postgres_1
+      DB_USERNAME: immich
+      DB_PASSWORD: REDACTED
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: immich_redis_1
+      LOG_LEVEL: log
+      JWT_SECRET: ${APP_SEED}
+      DISABLE_REVERSE_GEOCODING: 'false'
+      REVERSE_GEOCODING_PRECISION: '3'
+      PUBLIC_LOGIN_PAGE_MESSAGE: ''
+      IMMICH_MACHINE_LEARNING_URL: http://immich_machine-learning_1:3003
+    depends_on:
+      - redis
+      - postgres
+    restart: on-failure
+    container_name: immich_server_1
+  machine-learning:
+    image: >-
+      ghcr.io/immich-app/immich-machine-learning:v3.2.4@sha256:e16c2f166a8174901959fdf85e2e4c7bd1ebc4b37e0b6655de97c41408a260c4
+    volumes:
+      - ${APP_DATA_DIR}/data/model-cache:/cache
+    environment:
+      NODE_ENV: production
+      DB_HOSTNAME: immich_postgres_1
+      DB_USERNAME: immich
+      DB_PASSWORD: REDACTED
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: immich_redis_1
+      LOG_LEVEL: log
+      JWT_SECRET: ${APP_SEED}
+      DISABLE_REVERSE_GEOCODING: 'false'
+      REVERSE_GEOCODING_PRECISION: '3'
+      PUBLIC_LOGIN_PAGE_MESSAGE: ''
+      IMMICH_MACHINE_LEARNING_URL: http://immich_machine-learning_1:3003
+    restart: on-failure
+    container_name: immich_machine-learning_1
+  redis:
+    image: >-
+      valkey/valkey:8-bookworm@sha256:fea8b3e67b15729d4bb70589eb03367bab9ad1ee89c876f54327fc7c6e618571
+    user: '1000:1000'
+    restart: on-failure
+    volumes:
+      - ${APP_DATA_DIR}/data/redis:/data
+    container_name: immich_redis_1
+  postgres:
+    image: >-
+      ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:41eacbe83eca995561fe43814fd4891e16e39632806253848efaf04d3c8a8b84
+    environment:
+      NODE_ENV: production
+      DB_HOSTNAME: immich_postgres_1
+      DB_USERNAME: immich
+      DB_PASSWORD: REDACTED
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: immich_redis_1
+      LOG_LEVEL: log
+      JWT_SECRET: ${APP_SEED}
+      DISABLE_REVERSE_GEOCODING: 'false'
+      REVERSE_GEOCODING_PRECISION: '3'
+      PUBLIC_LOGIN_PAGE_MESSAGE: ''
+      IMMICH_MACHINE_LEARNING_URL: http://immich_machine-learning_1:3003
+      POSTGRES_PASSWORD: REDACTED
+      POSTGRES_USER: immich
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    restart: on-failure
+    container_name: immich_postgres_1

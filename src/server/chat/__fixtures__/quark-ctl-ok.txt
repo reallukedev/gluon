@@ -1,0 +1,2 @@
+quark: connecting to /var/lib/quark/admin.sock
+{"ok":true,"value":{"server":"quark","version":"0.1.0","startedAt":1760000000000,"configFile":"/etc/quark/quark.toml","dataDir":"/var/lib/quark"}}

@@ -1,0 +1,2 @@
+/* Shared Home widget bits (kit.tsx). */
+.age { font-size: var(--text-2xs); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }

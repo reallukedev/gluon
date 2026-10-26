@@ -1,0 +1,146 @@
+/*
+ * Dialogs. Modals are not anchored to a trigger, so they scale from their centre:
+ * 0.96 + fade in over 250ms on --ease-out, out in 150ms. On phones they are bottom sheets that
+ * rise on --ease-drawer (400ms) and leave the way they came. Reduced motion keeps the fade and
+ * drops the travel (var(--motion) = 0).
+ */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--backdrop);
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.backdrop[data-starting-style],
+.backdrop[data-ending-style] { opacity: 0; }
+.backdrop[data-ending-style] { transition-duration: var(--dur-fast); }
+
+.viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 51;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.popup {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-dialog);
+  outline: 0;
+  transform-origin: center;
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
+}
+.popup[data-starting-style],
+.popup[data-ending-style] { opacity: 0; transform: scale(calc(1 - 0.04 * var(--motion))); }
+.popup[data-ending-style] { transition-duration: var(--dur-fast); }
+.wide { width: min(760px, 100%); }
+.xwide { width: min(1080px, 100%); }
+
+.head { padding: 20px 22px 0; display: flex; align-items: flex-start; gap: 16px; }
+.headText { flex: 1; min-width: 0; }
+.title { font-size: var(--text-lg); font-weight: 600; line-height: 1.3; font-family: var(--font-display); font-stretch: 92%; text-wrap: balance; overflow-wrap: anywhere; }
+.description { margin-top: 6px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; text-wrap: pretty; }
+.close { margin: -6px -8px 0 0; }
+.body { padding: 18px 22px; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--line);
+}
+.footStart { margin-right: auto; font-size: var(--text-sm); color: var(--muted); }
+.noBorder { border-top: 0; padding-top: 4px; }
+
+/* Destructive confirmation */
+.consequences { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.consequences li { display: grid; grid-template-columns: 14px 1fr; gap: 10px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.45; }
+.consequences li::before { content: ""; width: 6px; height: 6px; margin-top: 7px; border-radius: 1px; background: var(--ink-2); }
+.typeLabel { display: block; margin-top: 16px; font-size: var(--text-sm); color: var(--ink-2); }
+.consequences + .typeLabel { margin-top: 18px; }
+.body > .typeLabel:first-child { margin-top: 0; }
+.typeLabel code { color: var(--ink); background: var(--sunk); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.typeInput { margin-top: 8px; font-family: var(--font-mono); font-stretch: var(--mono-stretch); }
+.error { margin-top: 14px; display: flex; gap: 8px; align-items: baseline; color: var(--fault); font-size: var(--text-sm); line-height: 1.45; }
+.error::before { content: ""; flex: none; width: 5px; height: 5px; transform: translateY(-2px) rotate(45deg); background: var(--fault); }
+.body > .error:first-child { margin-top: 0; }
+
+/* Hold to confirm (kept for screens that still style their own hold button) */
+.hold { position: relative; }
+.holdFill {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, #000 18%, transparent);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 200ms var(--ease-out);
+  pointer-events: none;
+}
+.hold[data-holding] .holdFill { clip-path: inset(0 0 0 0); transition: clip-path var(--hold-ms, 1400ms) linear; }
+
+/* The grab handle a phone sheet shows at its top edge. */
+.grabber { display: none; }
+
+/* Bottom sheet on phones */
+@media (max-width: 640px) {
+  .viewport { place-items: end stretch; padding: 0; overflow: hidden; }
+  .popup {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: 16px 16px 0 0;
+    border-bottom: 0;
+    transition: transform var(--dur-drawer) var(--ease-drawer), opacity var(--dur-drawer) var(--ease-drawer);
+  }
+  .popup[data-starting-style],
+  .popup[data-ending-style] {
+    /* Travel off the bottom edge; under reduced motion stay put and fade instead. */
+    opacity: calc(1 - (1 - var(--motion)));
+    transform: translateY(calc(100% * var(--motion)));
+  }
+  .popup[data-ending-style] { transition-duration: var(--dur-slow); transition-timing-function: var(--ease-out); }
+  .head { padding: 14px 18px 0; }
+  .body { padding: 16px 18px; }
+  .foot { padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); }
+  .foot > * { flex: 1; }
+  .footStart { display: none; }
+  .noBorder { padding-top: 4px; }
+  .grabber {
+    display: block;
+    flex: none;
+    width: 36px;
+    height: 4px;
+    margin: 8px auto -2px;
+    border-radius: 2px;
+    background: var(--line-strong);
+  }
+}
+
+/* Sheets you can swipe: the popup follows the finger, the backdrop fades with the swipe. */
+.sheet {
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+}
+.sheet[data-swiping] { transition-duration: 0ms; user-select: none; -webkit-user-select: none; }
+.sheet.sheet[data-starting-style],
+.sheet.sheet[data-ending-style] {
+  /* 0.9999 so Base UI can see the exit finish; 0 under reduced motion (fade only). */
+  opacity: calc(0.9999 - (0.9999 * (1 - var(--motion))));
+  transform: translateY(calc(100% * var(--motion)));
+}
+.sheet.sheet[data-ending-style] {
+  transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dur-drawer));
+  transition-timing-function: var(--ease-drawer);
+}
+.sheetBackdrop { opacity: calc(1 - var(--drawer-swipe-progress, 0)); transition-duration: var(--dur-drawer); transition-timing-function: var(--ease-drawer); }
+.sheetBackdrop[data-swiping] { transition-duration: 0ms; }
+.sheetBackdrop[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dur-drawer)); }

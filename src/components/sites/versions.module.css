@@ -1,0 +1,71 @@
+/* The version line: live on the left, the kept versions as ticks on a rail, the draft at the end. */
+.strip {
+  display: grid;
+  grid-template-columns: auto minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 52px;
+  margin-bottom: 14px;
+  padding: 6px 16px 6px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+}
+.live { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: var(--text-sm); }
+/* The state word never gives up its room; a long address shortens instead. */
+.live > :first-child { flex: none; }
+.url, .urlOff { min-width: 0; font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.8rem; color: var(--ink-2); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.urlOff { color: var(--muted); }
+@media (hover: hover) and (pointer: fine) { .url:hover { color: var(--ink); text-decoration: underline; } }
+.url:focus-visible { text-decoration: underline; }
+
+.rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The hairline the ticks sit on. */
+.rail::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line-strong); }
+/* Ticks are placed along the rail short of its end, which belongs to the draft. */
+.stop { position: absolute; top: 0; display: flex; }
+.tick {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+.tick:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
+/* Earlier versions are short faint ticks; the live one stands full height in ink. */
+.tickMark { display: block; width: 2px; height: 22px; background: var(--faint); transform: scaleY(0.55); transition: transform calc(var(--dur-fast) * var(--motion)) var(--ease-out), background-color var(--dur-fast) ease; }
+.tick[data-live] .tickMark { background: var(--ink); transform: none; }
+@media (hover: hover) and (pointer: fine) { .tick:hover .tickMark { background: var(--ink-2); } .tick[data-live]:hover .tickMark { background: var(--ink); } }
+.tick[data-popup-open] .tickMark { background: var(--ink); }
+/* The draft sits after the last version: dashed while it has changes, faint when it matches. */
+.draftStop { right: 0; left: auto; transform: none; height: 36px; align-items: center; padding: 0 0 0 6px; background: var(--panel); }
+.draftMark { display: block; width: 0; height: 16px; border-left: 2px dashed var(--line-strong); }
+.draftMark[data-changes] { border-left-color: var(--ink-2); }
+
+.draft { display: flex; align-items: baseline; gap: 8px; font-size: var(--text-sm); white-space: nowrap; }
+.draftLabel { font-weight: 600; color: var(--ink); }
+.draftText { color: var(--muted); }
+
+.facts { display: grid; gap: 2px; font-size: var(--text-sm); color: var(--ink-2); }
+.popActions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+/* Phones: the live address on its own line, the rail under it; the page's summary already says whether the draft has changes. */
+@media (max-width: 720px) {
+  .strip { grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 10px 14px 2px; }
+  .draft { display: none; }
+}

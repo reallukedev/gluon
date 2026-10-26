@@ -1,0 +1,66 @@
+/* Live instruments for the Diagnostics tabs: the processor faceplate, the memory strip, the reach strip
+   (connections) and the request strip (requests). Hairlines on a rail; hover isolates, click filters. */
+
+.plate { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); min-width: 0; }
+.plateCell { padding: 14px 18px 12px; min-width: 0; display: grid; gap: 10px; align-content: start; }
+.plateCell + .plateCell { border-left: 1px solid var(--line); }
+@media (max-width: 900px) { .plate { grid-template-columns: 1fr; } .plateCell + .plateCell { border-left: 0; border-top: 1px solid var(--line); } }
+.plateHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.plateLabel { font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.figure { font-size: 1.6rem; font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1; font-variant-numeric: tabular-nums; }
+.figure small { font-size: var(--text-sm); font-weight: 400; font-stretch: 96%; color: var(--muted); margin-left: 4px; }
+.plateFoot { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.plateFoot strong { color: var(--ink); font-weight: 620; }
+.plateFoot [data-bad] strong { color: var(--fault); }
+
+/* Cores: one hairline per thread rising from a rail; its height is how busy it is. */
+.cores { position: relative; display: flex; align-items: flex-end; gap: 0; height: 64px; border-bottom: 1px solid var(--line-strong); }
+.cores::before { content: ""; position: absolute; left: 0; right: 0; top: 0; border-top: 1px dotted var(--line-strong); }
+.cores::after { content: "100%"; position: absolute; right: 0; top: 3px; font-size: var(--text-2xs); color: var(--faint); font-variant-numeric: tabular-nums; }
+.core { position: relative; flex: 1 1 0; height: 100%; display: flex; justify-content: center; align-items: flex-end; min-width: 8px; }
+.coreLine { position: absolute; bottom: 0; width: 2px; height: 100%; background: var(--ink); transform-origin: bottom; transition: transform var(--dur-slow) var(--ease-out); }
+.core[data-hot] .coreLine { background: var(--attn); }
+.coreNum { position: absolute; bottom: -18px; font-size: 10px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.coresWrap { padding-bottom: 18px; }
+
+/* A proportional strip split into segments, each a hairline-bordered cell. */
+.strip { display: flex; height: 14px; border-radius: 3px; overflow: hidden; background: var(--sunk); min-width: 0; }
+.seg { position: relative; height: 100%; min-width: 3px; background: var(--ink-2); border-right: 1px solid var(--panel); transition: opacity var(--dur-base) var(--ease-out); }
+.seg:last-child { border-right: 0; }
+.seg[data-tone="1"] { background: var(--ink); }
+.seg[data-tone="2"] { background: var(--ink-2); }
+.seg[data-tone="3"] { background: var(--muted); }
+.seg[data-tone="4"] { background: var(--faint); }
+.seg[data-tone="rest"] { background: repeating-linear-gradient(to right, var(--line-strong) 0 1px, transparent 1px 4px); }
+.strip[data-isolate] .seg:not([data-active]) { opacity: 0.3; }
+button.seg { cursor: pointer; }
+button.seg:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.readout { min-height: 20px; display: flex; gap: 10px; align-items: baseline; font-size: var(--text-sm); color: var(--ink-2); min-width: 0; }
+.readout > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; color: var(--ink); }
+.readout > span:last-child { margin-left: auto; flex: none; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+/* Reach strip (connections): where the other end is, split by direction. */
+.reach { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; }
+.reachCell { display: grid; gap: 8px; padding: 14px 16px 12px; text-align: left; border-left: 1px solid var(--line); min-width: 0; transition: background-color var(--dur-fast) ease; }
+.reachCell:first-child { border-left: 0; }
+.reachCell[aria-pressed="true"] { background: var(--panel-2); box-shadow: inset 0 -2px 0 var(--ink); }
+@media (hover: hover) and (pointer: fine) { .reachCell:hover { background: var(--panel-2); } }
+.reachTop { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.reachBar { display: flex; height: 6px; gap: 2px; }
+.reachIn { background: var(--ink); border-radius: 1px; }
+.reachOut { background: repeating-linear-gradient(to right, var(--ink-2) 0 3px, transparent 3px 5px); border-radius: 1px; }
+.reachSub { font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .reach { grid-template-columns: repeat(2, minmax(0, 1fr)); } .reachCell:nth-child(3) { border-left: 0; } .reachCell:nth-child(n + 3) { border-top: 1px solid var(--line); } }
+
+/* Request strip: the last hour, one hairline per minute; red below the rail where requests failed. */
+.minutes { position: relative; display: flex; align-items: flex-end; height: 56px; border-bottom: 1px solid var(--line-strong); }
+.minute { position: relative; flex: 1 1 0; height: 100%; display: flex; justify-content: center; align-items: flex-end; min-width: 4px; }
+.minuteLine { width: 2px; background: var(--ink-2); min-height: 1px; }
+.minute[data-empty] .minuteLine { background: var(--line-strong); height: 1px !important; }
+.minuteFail { position: absolute; bottom: -7px; width: 2px; height: 6px; background: var(--fault); }
+.minutes[data-isolate] .minute:not([data-active]) { opacity: 0.3; }
+.minuteAxis { display: flex; justify-content: space-between; margin-top: 10px; font-size: 10.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.classes { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--text-xs); color: var(--muted); }
+.classBtn { display: inline-flex; align-items: center; gap: 7px; min-height: 26px; padding: 0 6px; margin: 0 -6px; border-radius: 5px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.classBtn[aria-pressed="true"] { background: var(--sunk); color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .classBtn:hover { color: var(--ink); } }

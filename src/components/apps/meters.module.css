@@ -1,0 +1,45 @@
+.meter { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; min-width: 0; }
+.value { flex: none; min-width: 7ch; text-align: right; font-size: var(--text-sm); color: var(--ink-2); }
+.none { display: block; width: 100%; text-align: right; color: var(--muted); font-size: var(--text-xs); line-height: 1.25; }
+.spark { flex: 1 1 auto; max-width: 56px; min-width: 32px; height: 16px; display: block; }
+/* A 3px sunk track with an ink-2 fill; the fill scales from the left (a small absolutely placed bar). */
+.bar { position: relative; flex: 1 1 auto; max-width: 56px; min-width: 32px; height: 3px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
+.bar > span { position: absolute; inset: 0; background: var(--ink-2); transform-origin: left; transition: transform var(--dur-slow) var(--ease-out); }
+.name { display: none; }
+/* Phones: the column heads are gone, so each meter names itself; the CPU trace makes way. */
+@media (max-width: 980px) {
+  .meter { justify-content: flex-start; gap: 8px; }
+  .name { display: inline; font-size: var(--text-xs); color: var(--muted); }
+  .spark { display: none; }
+  .bar { max-width: 44px; min-width: 28px; }
+  .value { min-width: 0; }
+  .none { display: none; }
+}
+
+/*
+ * `fit` meters (the Apps table) follow the width of the box around the table, not the window (see
+ * the "apps" container in apps.module.css; the query is unnamed so it works across CSS modules).
+ * They come after the phone rules above and win: the trace goes first, then the bar; under 700px
+ * the rows restack and each meter names itself.
+ */
+@container (max-width: 1079px) {
+  .meter[data-fit] .spark { display: none; }
+  .meter[data-fit] .bar { max-width: 48px; }
+}
+@container (max-width: 959px) {
+  .meter[data-fit] .bar { display: none; }
+  .meter[data-fit] .value { min-width: 0; }
+}
+@container (min-width: 700px) {
+  .meter[data-fit] { justify-content: flex-end; gap: 10px; }
+  .meter[data-fit] .name { display: none; }
+  .none[data-fit] { display: block; }
+}
+@container (max-width: 699px) {
+  .meter[data-fit] { justify-content: flex-start; gap: 8px; }
+  .meter[data-fit] .name { display: inline; font-size: var(--text-xs); color: var(--muted); }
+  .meter[data-fit] .spark { display: none; }
+  .meter[data-fit] .bar { display: block; max-width: 44px; min-width: 28px; }
+  .meter[data-fit] .value { min-width: 0; }
+  .none[data-fit] { display: none; }
+}

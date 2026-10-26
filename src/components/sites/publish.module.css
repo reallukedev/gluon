@@ -1,0 +1,18 @@
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; min-width: 0; }
+.address { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.avail { display: flex; align-items: baseline; gap: 8px; margin-top: -4px; font-size: var(--text-sm); font-weight: 560; color: var(--ink-2); line-height: 1.4; text-wrap: pretty; }
+.avail > :first-child { flex: none; transform: translateY(2px); }
+.where {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 8px 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--panel-2);
+}
+.whereLabel { font-size: var(--text-sm); font-weight: 600; color: var(--ink); }
+.whereUrl { min-width: 0; font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.8rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recap { font-size: var(--text-sm); color: var(--muted); line-height: 1.5; text-wrap: pretty; }

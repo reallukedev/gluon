@@ -1,0 +1,4 @@
+/* The Apps section's tabs sit under the page header, like every other page's tabs. */
+.section { margin-bottom: 20px; min-width: 0; }
+/* Docker's four pages: a segmented switch under the tabs. */
+.docker { margin-top: 16px; min-width: 0; }

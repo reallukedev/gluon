@@ -1,0 +1,128 @@
+/* Network → Router: what the home router says, in the Instrument Plate grammar. */
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.col { display: grid; gap: 20px; min-width: 0; }
+.wide { margin-top: 20px; }
+.stack { display: grid; gap: 14px; }
+.notices { display: grid; gap: 10px; margin-bottom: 20px; }
+@media (max-width: 1080px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.muted { color: var(--muted); }
+/* Label beside value while there's room; label above value on a narrow phone. */
+.dlWrap { container-type: inline-size; }
+@container (max-width: 380px) {
+  .dlWrap dl { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+  .dlWrap dd:not(:last-child) { margin-bottom: 10px; }
+}
+.faint { color: var(--faint); }
+.meta { font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+.lead { margin: 0; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; max-width: 68ch; text-wrap: pretty; }
+.addr { display: grid; gap: 2px; min-width: 0; }
+.addr > span { overflow-wrap: anywhere; }
+.inline { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+/* A value with a copy button beside it: the button may not make its row taller than its neighbours. */
+.withCopy { display: inline-flex; align-items: center; gap: 6px; margin-block: -6px; }
+
+/* ---------------------------------------------------------------- Internet */
+
+.state { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+.stateWords { margin: 0; font-size: var(--text-lg); font-weight: 600; font-family: var(--font-display); font-stretch: 90%; color: var(--ink); }
+.stateSub { font-size: var(--text-sm); color: var(--muted); }
+
+.history { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.history li { display: grid; grid-template-columns: minmax(96px, max-content) minmax(0, 1fr); gap: 4px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: var(--text-sm); align-items: baseline; }
+.history li:last-child { border-bottom: 0; padding-bottom: 0; }
+.history time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.subhead { margin: 4px 0 -4px; font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); }
+
+/* ---------------------------------------------------------------- Traffic */
+
+.figures { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 28px; margin-bottom: 12px; }
+.figure { display: grid; gap: 3px; min-width: 0; }
+.figureHead { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { display: inline-block; width: 14px; height: 2px; background: var(--ink); }
+.swatch[data-tone="muted"] { background: var(--muted); }
+.figure strong { font-size: 1.75rem; font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.figure[data-out] strong { color: var(--ink-2); }
+.figure small { font-size: var(--text-sm); color: var(--muted); font-family: var(--font-sans); font-stretch: 96%; font-weight: 400; }
+.figuresNote { margin-left: auto; padding-bottom: 4px; font-size: var(--text-xs); color: var(--muted); }
+
+/* ---------------------------------------------------------------- Lists (Wi-Fi, firewall) */
+
+.rows { margin: 0; padding: 0; list-style: none; }
+.rows > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; min-height: var(--row); padding: 10px 18px; border-top: 1px solid var(--line); }
+.rows > li:first-child { border-top: 0; }
+.rowMain { display: grid; gap: 2px; min-width: 0; }
+.rowName { font-size: var(--text-md); font-weight: 620; color: var(--ink); overflow-wrap: anywhere; }
+.rowSub { font-size: var(--text-xs); color: var(--muted); line-height: 1.4; }
+.note { margin: 0; padding: 12px 18px 14px; border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--ink-2); line-height: 1.5; text-wrap: pretty; }
+
+/* ---------------------------------------------------------------- Devices */
+
+.devices { container: devices / inline-size; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.search { flex: 1 1 220px; min-width: 0; max-width: 360px; }
+.toolbarEnd { margin-left: auto; font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.list { margin: 0; padding: 0; list-style: none; }
+.device { border-top: 1px solid var(--line); content-visibility: auto; contain-intrinsic-size: auto 60px; }
+.device:first-child { border-top: 0; }
+.deviceRow {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 14px minmax(160px, 1.4fr) minmax(150px, 1.2fr) minmax(120px, 0.8fr) minmax(88px, auto);
+  align-items: center;
+  gap: 4px 14px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .deviceRow:hover { background: var(--panel-2); }
+}
+.deviceRow:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; border-radius: var(--radius-small); }
+.cell { display: grid; gap: 2px; min-width: 0; }
+.devName { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: var(--text-md); font-weight: 620; color: var(--ink); }
+.devName > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.device[data-offline] .devName { color: var(--ink-2); font-weight: 560; }
+.tag { flex: none; font-size: var(--text-2xs); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-family: var(--font-display); font-stretch: 85%; color: var(--ink-2); }
+.devSub { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conn { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--text-sm); color: var(--ink-2); }
+.conn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ip { font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seen { justify-self: end; font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.details { padding: 2px 18px 16px calc(18px + 14px + 14px); }
+.details dl { font-size: var(--text-sm); }
+
+.bars { flex: none; display: block; }
+.bars rect { fill: var(--line-strong); }
+.bars rect[data-on] { fill: var(--ink-2); }
+
+.more { display: flex; justify-content: center; padding: 12px 18px 14px; border-top: 1px solid var(--line); }
+.nothing { padding: 28px 18px; text-align: center; font-size: var(--text-sm); color: var(--muted); }
+
+@container devices (max-width: 720px) {
+  .deviceRow { grid-template-columns: 14px minmax(0, 1fr) auto; grid-template-areas: "line name seen" "line conn conn" "line ip ip"; row-gap: 3px; }
+  .deviceRow > :nth-child(1) { grid-area: line; align-self: start; margin-top: 4px; }
+  .deviceRow > :nth-child(2) { grid-area: name; }
+  .deviceRow > :nth-child(3) { grid-area: conn; }
+  .deviceRow > :nth-child(4) { grid-area: ip; }
+  .deviceRow > :nth-child(5) { grid-area: seen; align-self: start; }
+  .details { padding-left: 46px; }
+}
+@media (max-width: 720px) {
+  .toolbar { padding: 12px 16px; }
+  .search { max-width: none; flex-basis: 100%; }
+  .toolbarEnd { margin-left: 0; }
+  .deviceRow { padding: 10px 16px; }
+}
+
+/* ---------------------------------------------------------------- Restart */
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }

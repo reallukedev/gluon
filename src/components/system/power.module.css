@@ -1,0 +1,43 @@
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 1000px) { .actions { grid-template-columns: 1fr; } }
+.action {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 18px 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+}
+.actionIcon { width: 26px; height: 26px; color: var(--ink-2); stroke-width: 1.3; }
+.actionText { display: grid; gap: 3px; min-width: 0; }
+.actionTitle { margin: 0; font-size: var(--text-lg); font-weight: 600; font-family: var(--font-display); font-stretch: 90%; }
+.actionDesc { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
+@media (max-width: 640px) {
+  .action { grid-template-columns: auto minmax(0, 1fr); padding: 16px; }
+  .action > button { grid-column: 1 / -1; justify-self: stretch; }
+}
+
+.lead { margin: 0; padding: 14px 18px 10px; font-size: var(--text-md); line-height: 1.5; color: var(--ink-2); }
+.lead b { font-weight: 620; color: var(--ink); }
+.note { margin: 0; font-size: var(--text-sm); color: var(--muted); }
+.apps { list-style: none; margin: 0; padding: 0 0 4px; max-height: 360px; overflow: auto; }
+.app { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 42px; padding: 6px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
+.appName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.off { min-width: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.foot { margin: 0; padding: 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); }
+.foot a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------------------------------------------------------------- the next 24 hours */
+
+.ruler { display: grid; gap: 4px; width: min(100%, 420px); }
+.rulerTrack { position: relative; height: 18px; border-bottom: 1px solid var(--line-strong); }
+.rulerTick { position: absolute; bottom: 0; width: 1px; height: 4px; background: var(--line-strong); }
+.rulerMark { position: absolute; bottom: 0; width: 1px; height: 10px; background: var(--muted); }
+.rulerSpan { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--ink-2); transform-origin: left; transition: transform var(--dur-base) var(--ease-out); }
+.rulerAt { position: absolute; bottom: -1px; width: 2px; height: 18px; margin-left: -1px; background: var(--ink); }
+.rulerLabels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); }
+.rulerText { margin: 2px 0 0; font-size: var(--text-sm); color: var(--ink-2); }
+.rulerText b { font-weight: 620; color: var(--ink); }
+.rulerPlaceholder { height: 64px; }

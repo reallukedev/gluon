@@ -1,0 +1,122 @@
+/* Network → Game servers. */
+.pad { padding: 14px 18px; }
+.skeleton { display: grid; gap: 12px; }
+.lead { margin: 0; padding: 14px 18px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; max-width: 80ch; }
+
+.meta { display: inline-flex; align-items: center; gap: 4px; }
+.checked { font-size: var(--text-sm); color: var(--muted); margin-right: 6px; white-space: nowrap; }
+@media (max-width: 520px) { .checked { display: none; } }
+
+.section { container: games / inline-size; border-top: 1px solid var(--line); }
+/* Straight under the panel head when there is no lead line: its hairline is enough. */
+.section:first-child { border-top: 0; }
+.subhead { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 50px; padding: 8px 12px 8px 18px; }
+.subTitle { margin: 0; font-size: var(--text-md); font-weight: 620; color: var(--ink); line-height: 1.3; }
+.subMeta { font-size: var(--text-sm); color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subAction { margin-left: auto; }
+
+.list { margin: 0; padding: 0; list-style: none; }
+.item { border-top: 1px solid var(--line); }
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1.35fr) 40px;
+  grid-template-areas: "addr server ping act";
+  align-items: center;
+  gap: 6px 16px;
+  min-height: 60px;
+  padding: 10px 12px 10px 18px;
+}
+.portRow {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 0.95fr) 40px;
+  grid-template-areas: none;
+}
+.row > .addr { grid-area: addr; }
+.row > .server { grid-area: server; }
+.row > .ping { grid-area: ping; }
+.row > .act { grid-area: act; }
+.row.portRow > * { grid-area: auto; }
+
+.addr, .stack { display: grid; gap: 3px; min-width: 0; }
+.addrLine { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.host { font-size: var(--text-md); color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name { font-size: var(--text-md); font-weight: 620; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub { font-size: var(--text-xs); color: var(--muted); line-height: 1.4; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Lines under a StateLine start where its label does. */
+.indent { padding-left: 10px; }
+.ports { font-size: var(--text-sm); color: var(--ink-2); white-space: nowrap; }
+
+.server { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.server > .stack { flex: 1; }
+.icon { flex: none; }
+/* The server's own icon from its status; servers without one keep the space so names line up. */
+.icon { width: 20px; height: 20px; border-radius: var(--radius-hairline); image-rendering: pixelated; }
+
+.act { display: flex; justify-content: flex-end; min-width: 0; }
+
+.fix {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  margin: -2px 12px 12px 18px;
+  padding: 9px 12px;
+  border-radius: var(--radius-control);
+  background: var(--panel-2);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  line-height: 1.45;
+}
+.fix[data-tone="attention"] { background: var(--attn-soft); }
+.fixMark { position: relative; width: 2px; min-height: 16px; background: var(--line-strong); }
+.fix[data-tone="attention"] .fixMark { background: var(--attn); }
+.fix[data-tone="attention"] .fixMark::after { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: var(--attn); }
+
+.forward { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; min-height: 48px; padding: 10px 12px 10px 18px; border-top: 1px solid var(--line); }
+.forwardWhat { font-size: var(--text-sm); color: var(--muted); display: inline-flex; gap: 8px; align-items: baseline; }
+.forwardWhat .mono { color: var(--ink-2); }
+.fwd { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+.fwdLink { position: relative; font-size: var(--text-sm); color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; border-radius: 3px; }
+/* A taller tap area than the text. */
+.fwdLink::before { content: ""; position: absolute; inset: -12px -4px; }
+.fwdLink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .fwdLink:hover { color: var(--ink); text-decoration-color: currentColor; }
+}
+
+.emptyWrap { border-top: 1px solid var(--line); }
+.emptyWrap > div { padding: 24px 18px 28px; }
+.emptyLine { padding: 14px 18px 16px; border-top: 1px solid var(--line); }
+.emptyLine p { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 80ch; }
+.none { padding: 14px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); }
+.filter { padding: 0 12px 12px 18px; max-width: 420px; }
+
+.noticeText { margin: 0; }
+.excerpt { margin: 10px 0 0; padding: 10px 12px; border-radius: var(--radius-control); background: var(--panel); border: 1px solid var(--line); font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-xs); line-height: 1.55; color: var(--ink-2); max-height: 200px; overflow: auto; white-space: pre; }
+
+/* Dialogs */
+.form { display: grid; gap: 16px; }
+.formPair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 480px) { .formPair { grid-template-columns: 1fr; } }
+.formError { font-size: var(--text-sm); color: var(--fault); line-height: 1.4; }
+.history { list-style: none; margin: 0; padding: 0; display: grid; }
+.historyRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.historyRow:first-child { border-top: 0; padding-top: 0; }
+.historyText { display: grid; gap: 3px; min-width: 0; }
+.historyWhat { font-size: var(--text-md); color: var(--ink); line-height: 1.4; }
+
+@container games (max-width: 700px) {
+  .row, .portRow {
+    grid-template-columns: minmax(0, 1fr) 40px;
+    grid-template-areas: "addr act" "server act" "ping act";
+    align-items: start;
+    gap: 8px 12px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .portRow { grid-template-areas: none; }
+  .row.portRow > .act { grid-column: 2; grid-row: 1 / span 4; }
+  .row.portRow > :not(.act) { grid-column: 1; }
+  .row > .act { align-self: center; }
+  span.icon { display: none; }
+  .subMeta { display: none; }
+}

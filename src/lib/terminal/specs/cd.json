@@ -1,0 +1,1 @@
+{"name":["cd"],"description":"Change the shell working directory","args":[{"suggestions":[{"name":"-","description":"Switch to the last used folder"},{"name":"~","description":"Switch to the home directory"}]}]}

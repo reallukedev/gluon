@@ -1,0 +1,38 @@
+.dim { color: var(--muted); }
+
+/* ---------------------------------------------------------------- what installing does */
+
+.impact { display: grid; margin-top: 16px; border-top: 1px solid var(--line); }
+.impactRow { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 0; }
+.impactRow + .impactRow { border-top: 1px solid var(--line); }
+.impactRow:last-child { padding-bottom: 0; }
+.impactIcon { display: grid; place-items: center; height: 20px; color: var(--ink-2); }
+.impactIcon svg { width: 18px; height: 18px; }
+.impactText { display: grid; gap: 2px; min-width: 0; font-size: var(--text-sm); line-height: 1.45; }
+.impactTitle { font-size: var(--text-md); font-weight: 600; }
+/* one hairline per package: how much of the batch this is */
+.impactTicks { display: flex; gap: 3px; align-items: flex-end; height: 20px; padding-top: 2px; }
+.impactTicks i { display: block; width: 2px; height: 14px; background: var(--ink-2); }
+.impactRow[data-kind="quiet"] .impactTicks i { background: var(--line-strong); }
+@media (max-width: 640px) {
+  .impactRow { grid-template-columns: 20px minmax(0, 1fr); }
+  .impactTicks { grid-column: 2; height: 14px; }
+}
+
+/* ---------------------------------------------------------------- install progress */
+
+.progress { display: grid; gap: 14px; min-width: 0; }
+.progressHead { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.progressText { display: grid; gap: 1px; font-size: var(--text-sm); }
+.progressTitle { font-size: var(--text-base); font-weight: 600; }
+
+.tracks { list-style: none; margin: 0; padding: 0; display: grid; max-height: min(40dvh, 360px); overflow: auto; border-block: 1px solid var(--line); }
+.track { display: grid; grid-template-columns: 12px minmax(0, 1fr) minmax(120px, 38%); gap: 12px; align-items: center; min-height: 34px; padding: 0 2px; }
+.track + .track { border-top: 1px solid var(--line); }
+.trackName { font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.steps i { display: block; height: 2px; background: var(--line-strong); transform-origin: left; }
+.steps i[data-on] { background: var(--ink); animation: fill var(--dur-slow) var(--ease-out) both; }
+@keyframes fill { from { transform: scaleX(0); } }
+.stepLegend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: -8px 0 0 auto; width: calc(38% + 2px); min-width: 122px; font-size: var(--text-2xs); color: var(--muted); }
+.output { margin-top: 8px; }

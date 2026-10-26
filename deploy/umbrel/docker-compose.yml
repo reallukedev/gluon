@@ -1,0 +1,39 @@
+# Gluon as an Umbrel app in a community app store. deploy/publish-umbrel.sh fills in the __NAMES__.
+#
+# deploy/publish-umbrel.sh builds Gluon on the server as <store>-gluon:<version>. Umbrel's updates
+# copy only docker-compose.yml and *.template files, and pull every service's `image:` from a
+# registry, so the app builds from Dockerfile.template instead: Umbrel renders it on install and
+# update into a one-line `FROM <store>-gluon:<version>`, which builds instantly from the local image.
+# (.dockerignore keeps data/ out of the build context.)
+#
+# Gluon manages the host itself (Docker, disks, mounts, systemd, network), so like Home Assistant
+# it runs on the host network with the host's namespaces, and has no Umbrel app_proxy: Gluon has
+# its own sign-in, and it needs the visitor's real address to tell "at home" from "away".
+# Volumes use the short "host:container" form: Umbrel's compose patcher only understands strings.
+
+services:
+  gluon:
+    build: ${APP_DATA_DIR}
+    container_name: gluon
+    restart: on-failure
+    stop_grace_period: 20s
+    privileged: true
+    pid: host
+    network_mode: host
+    cgroup: host
+    environment:
+      PORT: "8130"
+      GLUON_DATA: /data
+      TZ: __TZ__
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${APP_DATA_DIR}/data:/data
+      # Caddy's admin socket and config for Network → Public addresses.
+      - /var/lib/docker/volumes/proxy_caddy_admin/_data:/run/caddy
+      - __CADDY_DIR__:/proxy-caddy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8130/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s

@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  server:
+    image: >-
+      homeassistant/home-assistant:2026.9.4@sha256:3e6710a7ab2a61311d9d899b719f6c3657791c63e8f4942cec4ebc42401d6b76
+    network_mode: host
+    privileged: true
+    volumes:
+      - ${APP_DATA_DIR}/data:/config
+      - ${UMBREL_ROOT}/home/Downloads:/media
+      - /dev:/dev
+      - /run/dbus:/run/dbus:ro
+    container_name: home-assistant_server_1

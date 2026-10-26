@@ -1,0 +1,514 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" >
+    <head>
+        <title>Status</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+        <meta http-equiv="Content-Style-Type" content="text/css" />
+        <meta http-equiv="Content-Script-Type" content="type" />
+        <link rel="icon" type="image/ico" href="/favicon.ico" />
+        <link rel="stylesheet" type="text/css" href="/baseINID.css" />
+        <link rel="stylesheet" type="text/css" href="/INID.css" />
+<script type="text/css"><!--
+<style id="antiClickjack" type="text/css">body{display:none;}</style>
+//-->
+</script>
+    <script language="javascript" type="text/javascript"><!--
+  adImages=new Array('/images/Block1.gif','/images/Block3.gif','/images/Block5.gif','/images/Block7.gif','/images/Block9.gif','/images/Block11.gif','/images/Block14.gif')
+  thisAd=0
+  imgCt=adImages.length
+if (self == top) {
+    var antiClickjack = document.getElementById("antiClickjack");
+    antiClickjack.parentNode.removeChild(antiClickjack);
+} else {
+    top.location = self.location;
+}
+function rotate(){
+    if (document.images) {
+        thisAd++
+            if (thisAd==imgCt){
+                thisAd=0
+            }
+        document.adBanner.src=adImages[thisAd]
+            setTimeout('rotate()',200)
+    }
+}
+function reloadPage()
+{
+    if (document.forms[0].hidden.value == "update_refresh") {
+      rotate()
+    }
+    else if (document.forms[0].hidden.value == "freshen") {
+      setTimeout("self.location.reload(true)", 10000)
+      rotate()
+    }
+}
+
+
+//-->
+</script>
+    </head>
+           <body>
+  <div id="wrapper">
+    <div id="whole-page">
+      <div id="main-content">
+        <div id="header">
+          <div id="tab-container">
+            <div id="logo-div">
+	      <img id="main-logo" src="/images/att_logo.png" alt="" style="height:42px;" />
+            </div>
+            <div style="clear: both;"></div>
+<div id="skip"><a href="#content-sub">Skip to Main Content</a></div>
+            <div id="top-navigation">
+              <div id="top-navigation-buttons">
+<a class="topnav topnavselected" href="/cgi-bin/home.ha"><span>Device</span></a>
+<a class="topnav" href="/cgi-bin/broadbandstatistics.ha"><span>Broadband</span></a>
+<a class="topnav" href="/cgi-bin/lanstatistics.ha"><span>
+Home Network
+</span></a>
+
+<a class="topnav" href="/cgi-bin/voice.ha"><span>Voice</span></a>
+<a class="topnav" href="/cgi-bin/firewall.ha"><span>Firewall</span></a>
+<a class="topnav" href="/cgi-bin/diag.ha"><span>Diagnostics</span></a>
+              <div style="clear: both;"></div>
+            </div>
+          </div>
+          <div id="secondary-nav">
+            <div id="secondary-nav-buttons">
+<a class="secondary-link sec-selected" href="/cgi-bin/home.ha">Status</a>
+<a class="secondary-link" href="/cgi-bin/devices.ha">Device List</a>
+<a class="secondary-link" href="/cgi-bin/sysinfo.ha">System Information</a>
+<a class="secondary-link" href="/cgi-bin/routerpasswd.ha">Access Code</a>
+<a class="secondary-link" href="/cgi-bin/remoteaccess.ha">Remote Access</a>
+<a class="secondary-link" href="/cgi-bin/restart.ha">Restart Device</a>
+                  </div></div></div>
+                <div style="clear: both;"></div>
+              </div>
+        <div style="clear: both;"></div>
+      <div id="mid-section">
+          <div id="content-padding"><!-- CONTENT -->
+            <div id="content"
+ style="width:938px;"
+><div id="content-sub">
+                <div class="first-section-header">
+                            <div class="status-section">
+                                <div class="button-header-container">
+                                    <h1 class="button-header">Status</h1>
+                                    <form method="post" action="/cgi-bin/sysinfo.ha">
+<input type="hidden" name="nonce" value="0a78009591722cc84825ca95ee7ffa52428047ed12c9076044ebfe8665f9657f" />
+                                    <input type="submit" name="Sysinfo" class="cssbtn" value="More Info" />
+                                    </form>
+                                                                        <div style="clear: both;"></div>
+                                </div>
+                                                                <!-- broadband -->
+                                <div class="status-div">
+                                    <h2>Broadband</h2>
+                                    <img class="status-img" src="/images/status_broadband.png" alt="Broadband" title="Broadband" />
+                                    <form method="post" action="/cgi-bin/crestart.ha?1">
+<input type="hidden" name="nonce" value="626e1e3b6935c66a2c8ab9c84fc3dd552253090c6e91f59499bccbc7b8ffc5c2" />
+                                    <div class="status-line">
+                                        <div class="status-label">Broadband Connection</div>
+                                        <div class="status-value state-good">Up
+                                    </div>
+                                                                        <div class="status-button">
+                                        <input type="submit" name="Broadband" class="cssbtn" value="Restart" />
+                                    </div>
+                                                                    </div>
+                                </form>
+                                <div style="clear: both;"></div>
+                            </div><!-- status-div -->
+                                                        <!-- wi-fi -->
+                            <div class="status-div">
+                                <h2>Wi-Fi</h2>
+                                <img class="status-img" src="/images/status_wifi.png" alt="Wi-Fi" title="Wi-Fi" />
+                                <table class="status-table" summary="Wi-Fi for each configurable SSID on each Radio">
+                                    <tr>
+                                        <th valign="top" scope="row" class="head">
+                                            2.4 GHz Frequency Status</th>
+                                        <td class="value">
+                                            <span class="state-good">Enabled
+                                            </span></td>
+                                        <td class="button">
+                                            <form method="post" action="/cgi-bin/wrestart.ha?1">
+<input type="hidden" name="nonce" value="0f5f924500a4d703b9a480306e2faa6cba900295e5a1144b3c772a3a66db2a84" />
+                                            <!-- This is to avoid error : User should not request this page directly -->
+                                            <form method="post" action="/cgi-bin/wrestart.ha">
+<input type="hidden" name="nonce" value="6970041381069bfeb059842158d5b779445816bb6eb90a5f342dba43ad7f1369" />
+                                            <input type="submit" name="WRestart1" class="cssbtn" value="Restart" />
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" class="label">Network Name (SSID)</th>
+                                        <td class="value">
+                                            <div class="wraptext">
+                                                 <pre>Maple IoT</pre>
+                                            </div>
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" class="label">Type</th>
+                                        <td class="value">Home</td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Status</th>
+                                        <td class="value">
+                                            Enabled
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Password</th>
+                                        <td class="value">
+                                            <div class="wraptext">
+                                                                                                <a href="/cgi-bin/wconfig_unified.ha">Click here for details</a>
+                                            </div>
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Authentication Type</th>
+                                        <td class="value">
+                                            WPA-2
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                                                        <tr>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" class="label">Network Name (SSID)</th>
+                                        <td colspan="2" class="value2">
+                                            <div class="wraptext">
+                                               <pre>ATTq7Zk2Wd_Guest</pre>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" class="label">Type</th>
+                                        <td class="value">Guest</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" class="label">Status</th>
+                                        <td class="value">
+                                            Disabled
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Password</th>
+                                        <td class="value">
+                                            <div class="wraptext">
+                                                                                                <a href="/cgi-bin/wconfig_unified.ha">Click here for details</a>
+                                            </div>
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Authentication Type</th>
+                                        <td class="value">
+                                            Disabled
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                                                        <tr>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <th valign="top" scope="row" class="head">
+                                            5 GHz Frequency Status</th>
+                                        <td class="value">
+                                            <span class="state-good">Enabled
+                                            </span></td>
+                                        <td class="button">
+                                            <form method="post" action="/cgi-bin/wrestart.ha?2">
+<input type="hidden" name="nonce" value="0a99cdf5244ff16a73f4da6273a8e3d2728f433aa3feaf387262b8532e972e15" />
+                                            <!-- This is to avoid error : User should not request this page directly -->
+                                            <form method="post" action="/cgi-bin/wrestart.ha">
+<input type="hidden" name="nonce" value="5df4e9601f82ce317dbbd8aee799f3b4a36a2ad522ca71e5e3f71f1115f58f37" />
+                                            <input type="submit" name="WRestart2" class="cssbtn" value="Restart" />
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Network Name (SSID)</th>
+                                        <td class="value">
+                                            <div class="wraptext">
+                                                <pre>Maple Home</pre>
+                                            </div>
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" class="label">Type</th>
+                                        <td class="value">Home</td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Status</th>
+                                        <td class="value">
+                                            Enabled
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                                                                <th scope="row" class="label">Password</th>
+                                        <td class="value">
+                                            <div class="wraptext">
+                                                                                                <a href="/cgi-bin/wconfig_unified.ha">Click here for details</a>
+                                            </div>
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row" class="label">Authentication Type</th>
+                                        <td class="value">
+                                            WPA-2
+                                        </td>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <td>&nbsp;</td>
+                                    </tr>
+                                                                    </table>
+                                <div style="clear: both;"></div>
+                            </div><!-- status-div -->
+                                                    <!-- voice -->
+                        <div class="status-div">
+                            <h2>VoIP</h2>
+                            <!-- voice line 1 -->
+                            <img class="status-img" src="/images/status_voice.png" alt="Voice" title="Voice" />
+                            <form method="post" action="/cgi-bin/vrestart.ha?1">
+<input type="hidden" name="nonce" value="e4f85dc8b6539ca709dd518a6fa0bca4b20bac8f2e77641d62a0d5b6f2b50685" />
+                            <!-- This is to avoid error : User should not request this page directly -->
+                            <form method="post" action="/cgi-bin/vrestart.ha">
+<input type="hidden" name="nonce" value="5c5c3db578dd5aba852e772432a4de3559acc2cf905b5b54a0a6d639891d9bcc" />
+                            <div class="status-line">
+                                                                <div class="status-label">Line 1 <span class="phonenumber">
+                                        Not Subscribed</span></div>
+                                                                    <div class="status-value state-bad"><img src="/images/error.png" alt="WARNING" />
+                                        Down                                        </div>
+                                        <div class="status-button">
+                                            <input type="submit" name="VRestart1" class="cssbtn" value="Restart" />
+                                        </div>
+                                    </div>
+                                    </form>
+                                    <div style="clear: both;"></div>
+                                    <!-- voice line 2 -->
+                                    <img class="status-img" src="/images/spacer.gif" height="1" alt="Voice" title="Voice" />
+                                    <form method="post" action="/cgi-bin/vrestart.ha?2">
+<input type="hidden" name="nonce" value="f52e32a034671f16b2400de68df3a3f44d3832f53e2b33274e5336cdd7285d04" />
+                                    <!-- This is to avoid error : User should not request this page directly -->
+                                    <form method="post" action="/cgi-bin/vrestart.ha">
+<input type="hidden" name="nonce" value="581f7d45f3a8f4770f1fd63f33224e8ef5938fbe3cb308fc949a0710ad70f630" />
+                                    <div class="status-line">
+                                        <div class="status-label">Line 2 <span class="phonenumber">
+                                                Not Subscribed</span></div>
+                                                                                    <div class="status-value state-bad"><img src="/images/error.png" alt="WARNING" />
+                                                Down                                                </div>
+                                                <div class="status-button">
+                                                    <input type="submit" name="VRestart2" class="cssbtn" value="Restart" />
+                                                </div>
+                                            </div>
+                                            </form>
+                                            <div style="clear: both;"></div>
+                                        </div><!-- status-div -->
+                                                                            </div> <!-- status-section -->
+                                                                        <div class="task-section">
+                                        <h1>Common Tasks</h1>
+                                        <div class="task-list" style="min-height:256px
+;">
+                                                                                        <a href="https://myhomenetwork.att.com/#/login">Smart Home Manager - Control your home network from one easy-to-use app <span class="chevron">&#0187;</span></a><br />
+                                            <a href="http://www.att.com/esupport/">Go to AT&amp;T online support for troubleshooting and repair <span class="chevron">&#0187;</span></a><br />
+                                                                                        <a href="/cgi-bin/wconfig_unified.ha">Modify your Wi-Fi security or settings <span class="chevron">&#0187;</span></a><br />
+                                                                                        <a href="/cgi-bin/restart.ha">Restart your device <span class="chevron">&#0187;</span></a><br />
+                                                                                        <a href="devices.ha">Find a computer on your
+                                                home
+ network <span class="chevron">&#0187;</span></a><br />
+                                                                                        <a href="/cgi-bin/apphosting.ha">Adjust firewall settings
+                                                 for gaming and applications
+<span class="chevron">&#0187;</span></a><br />
+                                                                                    </div>
+                                    </div>
+                                    <div style="clear: both;"></div>
+                                    <!-- end of home -->
+                                    <div class="button-header-container">
+                                        <div class="button-header">
+                                            Home Network Devices</div>
+                                        <form method="post" action="/cgi-bin/devices.ha">
+<input type="hidden" name="nonce" value="62951c0825b486dbd7cf924808bca847d803a29cb3c08e1dd52aec89911ba6d5" />
+                                        <input type="submit" name="Devices" class="cssbtn" value="More Info" />
+                                        </form>
+                                    </div>
+
+                                    <table class="table100" summary="LAN Host Discovery Table">
+                                        <tr>
+                                            <th scope="col" width="33%">Device IP Address / Name</th>
+                                            <th scope="col" width="8%">Status</th>
+                                            <th scope="col" width="12%">Connection</th>
+                                                                                            <th scope="col" width="30%">Frequency, Type, Name</th>
+                                                                                        <th scope="col" width="17%">Mesh Client</th>
+                                        </tr>
+                                        <tr><td scope="row" class="col2">OtterMBP</td><td class="col2">off</td><td class="col2">Ethernet</td><td class="col2">&nbsp;</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknown5eccdd547419</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Kitchen-Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">43TCLRokuTV</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Taylors-Air-2</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Robin-s-S25</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknown14b31f76a75f</td><td class="col2">off</td><td class="col2">Ethernet</td><td class="col2">&nbsp;</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknown928f4f7c1a57</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">3d9c1d20-1f68-425e-bf16-e7dfcc60e0cb</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Robin-s-S25</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPad</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Owners-iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamies-Mini</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">43SharpRokuTV</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Robin-s-S25</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Owners-iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Owners-iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">laptop1</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Alex-s-S23</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknown56edec32959a</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Kitchen-Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Kitchen-Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">18d5a574-d7a1-4d23-9712-5731b92b3cf9</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Owners-iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Nintendo Co.,Ltd</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknowne6110583b2ce</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">b442a8c9-9838-4be1-9a0e-a5d2b89deb46</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Nintendo Switch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">DESKTOP-AB12CDE</td><td class="col2">off</td><td class="col2">Ethernet</td><td class="col2">&nbsp;</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknownae7fa4060acc</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Android</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">bazzite</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Kitchen-Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">espressif</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Owners-iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Morgans-Air</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Caseys-MBP</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">bazzite</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Owners-iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknown7e615eacc24a</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-1-bar.png" alt="Wi-Fi 1 bar" /></td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Nintendo Switch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">PS4-A1B2C3</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">sam-latitudee5470</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Kitchen-Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">1fcf210a-e116-4132-82fa-dc5e78e38e4d</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknownda0cbc12a32f</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Kitchen-Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknownfa2bb2df7b54</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Nintendo Switch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Microsoft Corporation</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">XBOX</td><td class="col2">off</td><td class="col2">Ethernet</td><td class="col2">&nbsp;</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">MyQ-9F8</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Yoga-11e</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknown7a8c9d7f89a9</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">unknown96c10326ad35</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Kitchen-Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Nintendo Switch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">DD-WRT Router</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Watch</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">2.4 GHz, Home, Maple IoT</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Mac</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">MacBook-Air</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Cpad10</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">pop-os</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">MacBookPro</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Jamie-Rivera</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">Owners-iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2">5 GHz, Home, Maple Home</td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.103 / iPhone</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.104 / KP125</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.105 / KP125M</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.109 / XBOX</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.129 / Sam-PC</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.139 / DESKTOP-FG34HIJ</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.149 / iPhone</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.150 / PS5-D4E5F6</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.162 / iPad</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.164 / EP25</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.167 / JamieTV</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.185 / DESKTOP-AB12CDE</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.205 / drews-MBP</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.206 / drews-MacBook-Pro</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.220 / unknown8c2373ec3ad4</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.230 / homeserver</td><td class="col2">on</td><td class="col2">Ethernet</td><td class="col2"><pre class="column">&nbsp;</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.232 / Robin-s-S25</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.233 / Mac</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.234 / MacBook-Air</td><td class="col2">off</td><td class="col2">Wi-Fi</td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.241 / Kitchen-Mac</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.247 / 38fdb471-5aee-4bb0-8f3c-e0cf74665e1c</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.248 / MacBookPro</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.249 / KP125M</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.250 / Owners-iPhone</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.252 / KP125M</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.75 / Watch</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-2-bar.png" alt="Wi-Fi 2 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.79 / 50SharpRokuTV</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.82 / Jamies-Bedroom</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.83 / Tstat-0A0B0C</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.85 / EP25</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.87 / EP25</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.90 / KP125</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.91 / Mac</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.93 / Meross_Smart_Ambient_Light</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.94 / Levoit-purifier</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">2.4 GHz, Home, Maple IoT</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.96 / thinkpad</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+<tr><td scope="row" class="col2">192.168.1.97 / iPhone</td><td class="col2">on</td><td class="col2">Wi-Fi&nbsp;&nbsp;&nbsp;<img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" /></td><td class="col2"><pre class="column">5 GHz, Home, Maple Home</pre></td><td class="col2">No</td></tr>
+                                    </table>
+                                                                    </div>
+                                                </div>
+              </div>
+            </div>
+ <!-- isWANUP -->
+            <div style="clear: both;"></div>
+          </div>
+        </div>
+        <div style="clear: both;"></div>
+      </div>
+      <div id="footer">
+      <div><br>
+   <span class="inner">&copy; 2016-2025 AT&T Intellectual Property. All rights reserved. AT&T and Globe logo are registered trademarks of AT&T Intellectual Property.</span>
+   <span class="sitemap"><a href="/cgi-bin/sitemap.ha">Site Map</a></span></br></div>
+   <div><span class="inner">&copy; 2016 ARRIS Enterprises LLC. All rights reserved. ARRIS is a registered trademark of ARRIS Enterprises LLC.</span></div>
+   </div>
+      </div>
+</body>
+</html>

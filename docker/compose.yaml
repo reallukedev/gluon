@@ -1,0 +1,42 @@
+# Gluon with Docker Compose. From the repository root:
+#   docker compose -f docker/compose.yaml up -d --build
+# Then open http://<this server>:8130; the first visit asks for a one-time setup code, printed in
+# `docker logs gluon`. Settings → Updates can update this install from GitHub on its own.
+#
+# Gluon manages the host itself (Docker, disks, mounts, systemd, network), so it runs privileged on
+# the host network with the host's PID and cgroup namespaces, and needs the Docker socket.
+name: gluon
+
+services:
+  gluon:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: gluon:local
+    container_name: gluon
+    restart: unless-stopped
+    stop_grace_period: 20s
+    privileged: true
+    pid: host
+    network_mode: host
+    cgroup: host
+    environment:
+      PORT: "8130"
+      GLUON_DATA: /data
+      # TZ: Europe/London
+      # For Network → public addresses, mount your Caddy stack (see README):
+      # GLUON_CADDY_DIR: /proxy-caddy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - gluon-data:/data
+      # - /path/to/caddy/config:/proxy-caddy
+      # - caddy_admin_socket_volume:/run/caddy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8130/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  gluon-data:

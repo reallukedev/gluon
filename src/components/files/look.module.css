@@ -1,0 +1,77 @@
+/* Shared pieces of the Files prototypes: previews, facts, the size rule, thumbnails, rename. */
+
+/* ------------------------------------------------------------ preview body */
+.fallback {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 220px;
+  padding: 28px 20px;
+  text-align: center;
+}
+.fallbackGlyph { width: 36px; height: 36px; color: var(--faint); stroke-width: 1.25; }
+.fallbackTitle { margin: 6px 0 0; font-weight: 600; color: var(--ink); text-wrap: balance; }
+.fallbackText { margin: 0; max-width: 44ch; color: var(--muted); font-size: var(--text-sm); text-wrap: pretty; }
+.fallbackActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+
+.media { display: block; width: 100%; max-height: min(68dvh, 640px); border-radius: 8px; background: var(--sunk); }
+.audio { display: grid; justify-items: center; gap: 18px; padding: 36px 16px; }
+.audio audio { width: min(100%, 420px); }
+.frame { display: block; width: 100%; height: min(70dvh, 720px); border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+
+.imageStage { position: relative; display: grid; place-items: center; margin: 0; width: 100%; height: 100%; min-height: 0; }
+.image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.imageStage[data-fit="cover"] .image { width: 100%; height: 100%; object-fit: cover; }
+.imageSize { position: absolute; right: 8px; bottom: 8px; padding: 2px 6px; border-radius: 5px; background: var(--panel); color: var(--muted); font-size: var(--text-2xs); box-shadow: 0 0 0 1px var(--line); }
+
+.text { display: grid; gap: 6px; min-width: 0; }
+.read { overflow: auto; padding: 4px 2px 12px; }
+.textNote { margin: 0; color: var(--muted); font-size: var(--text-xs); }
+
+/* ------------------------------------------------------------ facts */
+.facts { display: grid; gap: 12px; min-width: 0; }
+.factList { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 16px; margin: 0; font-size: var(--text-sm); }
+.factList dt { color: var(--muted); }
+.factList dd { margin: 0; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
+.factPath { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px 7px 10px; border-radius: 8px; background: var(--sunk); font-size: var(--text-xs); color: var(--ink-2); }
+.factPath > .mono, .factPath > :global(.mono) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ------------------------------------------------------------ size rule */
+.rule { position: relative; display: block; height: 2px; min-width: 0; }
+.rule > span { position: absolute; inset: 0 auto 0 0; background: var(--line-strong); border-radius: 1px; }
+.rule[data-empty] { opacity: 0; }
+
+/* ------------------------------------------------------------ thumbnails */
+.thumb { position: relative; display: grid; place-items: center; overflow: hidden; width: 100%; height: 100%; background: var(--sunk); color: var(--muted); }
+.thumb[data-kind="folder"] { background: transparent; }
+.thumbImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
+.thumbImg[data-loaded] { opacity: 1; }
+.thumbFolder { width: 58%; max-width: 92px; color: var(--ink-2); }
+.thumbKind { display: grid; justify-items: center; gap: 6px; }
+.thumbGlyph { width: 26px; height: 26px; stroke-width: 1.25; color: var(--faint); }
+.thumbExt { font-family: var(--font-display); font-stretch: 85%; font-size: var(--text-2xs); font-weight: 600; letter-spacing: 0.12em; color: var(--muted); }
+
+/* ------------------------------------------------------------ rename */
+.rename {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--ink-2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent);
+  outline: none;
+}

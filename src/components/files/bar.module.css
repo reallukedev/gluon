@@ -1,0 +1,132 @@
+/* The command bar: one line on every Files screen, its quick filters and its results. */
+
+.wrap {
+  position: relative;
+  z-index: 6;
+  display: grid;
+  gap: 8px;
+  margin: -6px 0 16px;
+  padding: 6px 0 0;
+  background: var(--ground);
+}
+@media (min-width: 901px) {
+  .wrap { position: sticky; top: 0; padding-bottom: 6px; }
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 46px;
+  padding: 0 6px 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.line:focus-within { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+.scope {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  max-width: 34%;
+  height: 32px;
+  padding: 0 9px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--sunk);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.scopeBtn { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+.scopeBtn svg { width: 13px; height: 13px; color: var(--muted); }
+.icon { flex: none; width: 17px; height: 17px; color: var(--muted); }
+.input { flex: 1; min-width: 4ch; height: 100%; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: var(--text-base); text-overflow: ellipsis; outline: none; }
+.input::placeholder { color: var(--muted); }
+.kbd, .hints kbd { padding: 0 5px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: var(--radius-small); font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--muted); }
+.kbd { flex: none; margin-right: 6px; }
+.hints { margin: 0; font-size: var(--text-xs); color: var(--faint); }
+@media (hover: none), (max-width: 720px) { .hints, .kbd { display: none; } }
+
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: var(--control-sm);
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, transform var(--dur-press) var(--ease-out);
+}
+.chip svg { width: 13px; height: 13px; }
+.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--inverse); }
+.chip:active { transform: scale(0.97); }
+
+/* ------------------------------------------------------------ results: a panel anchored under the bar */
+.panel {
+  position: absolute;
+  top: calc(6px + 46px + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  max-height: min(60vh, 640px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow-pop);
+  outline: none;
+  scrollbar-width: thin;
+}
+.understood { padding: 0 10px; }
+.understood { margin: 0; font-size: var(--text-sm); color: var(--muted); }
+.section { display: grid; gap: 2px; }
+.sectionHead { display: flex; align-items: baseline; gap: 10px; padding: 0 10px 6px; }
+.sectionMeta { font-size: var(--text-xs); color: var(--muted); }
+.none { margin: 0; padding: 8px 10px; color: var(--muted); font-size: var(--text-sm); }
+.option { position: relative; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 6px 10px; border-radius: var(--radius-control); cursor: pointer; }
+.option[data-active] { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.option[data-danger] .optText { color: var(--fault); }
+.optFace { flex: none; display: grid; place-items: center; width: 32px; height: 32px; overflow: hidden; border-radius: 6px; background: var(--sunk); color: var(--muted); }
+.optFace[data-glyph] svg { width: 17px; height: 17px; }
+.optIcon { flex: none; display: grid; place-items: center; width: 22px; color: var(--muted); }
+.optIcon svg { width: 17px; height: 17px; }
+.option[data-danger] .optIcon { color: var(--fault); }
+.optText { flex: 1; min-width: 0; display: grid; gap: 1px; font-size: var(--text-md); color: var(--ink); }
+.optSub { font-size: var(--text-xs); color: var(--muted); }
+.optMeta { flex: none; display: flex; gap: 10px; margin-left: auto; font-size: var(--text-xs); color: var(--muted); }
+.optArrow { flex: none; width: 15px; height: 15px; color: var(--faint); }
+.mark { background: color-mix(in oklab, var(--ink) 14%, transparent); color: inherit; border-radius: 2px; }
+.look { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; opacity: 0; }
+.look svg { width: 16px; height: 16px; }
+.option[data-active] .look, .look:focus-visible { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .chip:not([aria-pressed="true"]):hover { background: var(--panel-2); color: var(--ink); }
+  .look:hover { background: var(--sunk); color: var(--ink); }
+}
+@media (hover: none) { .look { opacity: 1; } }
+@media (pointer: coarse) { .look { width: 40px; height: 40px; } .option { min-height: 48px; } }
+
+@media (max-width: 720px) {
+  .line { height: 50px; }
+  .panel { top: calc(6px + 50px + 6px); max-height: 60vh; }
+  .input { font-size: 16px; }
+  .scope { max-width: 30%; }
+  .quick { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px 2px; scrollbar-width: none; }
+  .chip { flex: none; height: 34px; }
+  .option { min-height: 52px; }
+}

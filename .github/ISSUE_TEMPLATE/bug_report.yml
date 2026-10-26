@@ -1,0 +1,31 @@
+name: Something's wrong
+description: Gluon shows the wrong thing, breaks, or can't do what it says it can.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what Gluon did instead. Screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Gluon version
+      description: Settings → About.
+      placeholder: 1.4.0
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Server
+      description: OS and how Gluon is installed (Compose, Umbrel, CasaOS…).
+      placeholder: Ubuntu 24.04, Docker Compose
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Anything relevant from `docker logs gluon`. Remove addresses, domains and names you'd rather keep private.
+      render: text

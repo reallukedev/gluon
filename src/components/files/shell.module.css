@@ -1,0 +1,2 @@
+/* The Files page frame: the title follows the folder. */
+.title { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

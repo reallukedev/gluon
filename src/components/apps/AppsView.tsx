@@ -1,0 +1,493 @@
+"use client";
+import * as React from "react";
+import { openAppUrl } from "@/lib/client/open-link";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { MoreHoriz, OpenNewWindow, Refresh, Play, Square, Search, Journal, Plus, EyeClosed, Eye, Pin, PinSlash, Import, Trash } from "iconoir-react";
+import { usePinToHome } from "@/components/home/pinned";
+import type { AppSummary } from "@/server/docker/apps";
+import type { Platform } from "@/server/platform";
+import { api, useApi, ApiError } from "@/lib/client/api";
+import { useLive } from "@/lib/client/live";
+import { useFormat, usePrefs } from "@/components/PrefsProvider";
+import { Page, PageHeader, Empty } from "@/components/ui/Surface";
+import { AppsSectionTabs } from "@/components/docker/AppsSectionTabs";
+import { NewAppButton } from "@/components/builder/NewAppButton";
+import { StateLine } from "@/components/ui/StateLine";
+import { Segmented } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
+import { Button, IconButton, LinkButton } from "@/components/ui/Button";
+import { Menu, type MenuEntry } from "@/components/ui/Menu";
+import { useConfirm } from "@/components/ui/Dialog";
+import { toast } from "@/components/ui/Toast";
+import { listJoin } from "@/lib/format";
+import { shortName, sourceName } from "@/lib/app-names";
+import { AppIcon } from "./AppIcon";
+import { Addresses } from "./Addresses";
+import { CpuMeter, MemMeter, useAppUsage } from "./Meters";
+import { umbrelBusy } from "./umbrelStream";
+import { removeCopyConfirm, stopCopyConfirm, uninstallUmbrelConfirm } from "./copies";
+import { moveBlock, uninstallRoute } from "@/lib/app-move-types";
+import { MoveDialog } from "./MoveDialog";
+import { useMoveWatch } from "./useMoveWatch";
+import { UninstallDialog } from "./UninstallDialog";
+import s from "./apps.module.css";
+
+type Filter = "all" | "problems" | "public" | "stopped";
+type Sort = "name" | "cpu" | "memory";
+
+/** Apps a person should look at: broken or stuck starting, but not ones Umbrel is busy installing or updating. */
+const isProblem = (a: AppSummary) => !a.copyOf && (a.line === "unhealthy" || a.line === "starting") && !umbrelBusy(a.umbrel?.state);
+
+export function AppsView({ initial, initialSort, initialFilter, platform }: { initial: AppSummary[]; initialSort: Sort; initialFilter: Filter; platform: Platform }) {
+  const router = useRouter();
+  const pinHome = usePinToHome();
+  const fmt = useFormat();
+  const { viewer, serverName } = usePrefs();
+  const { host } = useLive();
+  const { data: apps = initial, mutate } = useApi<AppSummary[]>("/api/apps", { refresh: 8000, fallbackData: initial });
+  const usage = useAppUsage(apps);
+  const [q, setQ] = React.useState("");
+  const term = React.useDeferredValue(q.trim().toLowerCase());
+  const [filter, setFilter] = React.useState<Filter>(initialFilter);
+  const [sort, setSort] = React.useState<Sort>(initialSort);
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const [confirm, confirmNode] = useConfirm();
+  const [moveTarget, setMoveTarget] = React.useState<AppSummary | null>(null);
+  const [moveOpen, setMoveOpen] = React.useState(false);
+  const [removeTarget, setRemoveTarget] = React.useState<{ app: AppSummary; title?: string } | null>(null);
+  const [removeOpen, setRemoveOpen] = React.useState(false);
+  useMoveWatch(
+    apps.filter((a) => a.moving).map((a) => a.id),
+    moveOpen ? (moveTarget?.id ?? null) : null,
+    () => void mutate(),
+  );
+  const askMove = (a: AppSummary) => {
+    setMoveTarget(a);
+    setMoveOpen(true);
+  };
+  const askRemove = (a: AppSummary, title?: string) => {
+    setRemoveTarget({ app: a, title });
+    setRemoveOpen(true);
+  };
+  const memTotal = host.at(-1)?.mem.total ?? null;
+  const memScale = Math.max(0, ...[...usage.values()].map((u) => u.mem));
+
+  const byId = new Map(apps.map((a) => [a.id, a]));
+  const matches = (a: AppSummary) => {
+    if (a.hidden && filter === "all" && !term) return false;
+    if (filter === "problems" && !isProblem(a)) return false;
+    if (filter === "stopped" && a.line !== "stopped") return false;
+    if (filter === "public" && !a.routes.some((r) => r.enabled)) return false;
+    return !term || a.name.toLowerCase().includes(term) || a.id.toLowerCase().includes(term) || a.containers.some((c) => c.name.includes(term) || c.image.includes(term));
+  };
+  const cmp = (x: AppSummary, y: AppSummary) => {
+    if (sort === "cpu") return (usage.get(y.id)?.cpu ?? -1) - (usage.get(x.id)?.cpu ?? -1) || x.name.localeCompare(y.name);
+    if (sort === "memory") return (usage.get(y.id)?.mem ?? -1) - (usage.get(x.id)?.mem ?? -1) || x.name.localeCompare(y.name);
+    return x.name.localeCompare(y.name);
+  };
+  // Old copies ride directly under the app they copy, whatever the sort.
+  const copiesOf = new Map<string, AppSummary[]>();
+  for (const a of apps) if (a.copyOf && byId.has(a.copyOf.id)) copiesOf.set(a.copyOf.id, [...(copiesOf.get(a.copyOf.id) ?? []), a]);
+  const rows: { a: AppSummary; copy: boolean }[] = [];
+  for (const a of apps.filter((x) => !(x.copyOf && byId.has(x.copyOf.id))).sort(cmp)) {
+    const kids = (copiesOf.get(a.id) ?? []).filter(matches);
+    if (matches(a)) rows.push({ a, copy: false });
+    for (const k of kids) rows.push({ a: k, copy: matches(a) });
+  }
+
+  const primaries = apps.filter((a) => !a.copyOf && !a.hidden);
+  const copies = apps.filter((a) => a.copyOf && !a.hidden);
+  const problems = apps.filter(isProblem);
+  const stopped = primaries.filter((a) => a.line === "stopped");
+  const counts = { problems: problems.length, stopped: apps.filter((a) => a.line === "stopped").length, public: apps.filter((a) => a.routes.some((r) => r.enabled)).length };
+  const busyApps = apps.filter((a) => umbrelBusy(a.umbrel?.state));
+
+  async function act(a: AppSummary, action: "start" | "stop" | "restart") {
+    setBusy(a.id);
+    const t = toast.loading(`${action === "restart" ? "Restarting" : action === "stop" ? "Stopping" : "Starting"} ${a.name}…`);
+    try {
+      const r = await api.post<{ message: string }>(`/api/apps/${encodeURIComponent(a.id)}/action`, { action });
+      toast.update(t, "success", { title: r.message });
+      void mutate();
+    } catch (e) {
+      toast.update(t, "error", { title: `Couldn't ${action} ${a.name}`, description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function setHidden(a: AppSummary, hidden: boolean) {
+    try {
+      await api.patch(`/api/apps/${encodeURIComponent(a.id)}/prefs`, { hidden });
+      toast.info(hidden ? `${a.name} is hidden from Apps and Status` : `${a.name} shows in lists again`, {
+        action: { label: "Undo", onClick: () => void api.patch(`/api/apps/${encodeURIComponent(a.id)}/prefs`, { hidden: !hidden }).then(() => mutate()) },
+      });
+      void mutate();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "That didn't work.");
+    }
+  }
+
+  function removeCopy(a: AppSummary) {
+    const of = a.copyOf ? byId.get(a.copyOf.id) : undefined;
+    confirm(
+      removeCopyConfirm(a, of, async () => {
+        try {
+          await api.post(`/api/apps/${encodeURIComponent(a.id)}/action`, { action: "down" });
+        } catch (e) {
+          if (e instanceof ApiError && e.code === "reauth_cancelled") return;
+          throw e;
+        }
+        toast.success(`Removed the old ${a.name}`, { description: `${of?.name ?? a.copyOf?.name} is untouched. Its folders are still on disk.` });
+        void mutate();
+      }),
+    );
+  }
+
+  function uninstallUmbrel(a: AppSummary) {
+    const of = a.copyOf ? byId.get(a.copyOf.id) : undefined;
+    confirm(
+      uninstallUmbrelConfirm(a, of, async () => {
+        try {
+          await api.post(`/api/apps/${encodeURIComponent(a.id)}/action`, { action: "uninstall" });
+        } catch (e) {
+          if (e instanceof ApiError && e.code === "reauth_cancelled") return;
+          throw e;
+        }
+        toast.success(a.copyOf ? `Uninstalling the old ${a.name}` : `Uninstalling ${a.name}`, { description: "Umbrel is removing it. It leaves Apps when it's done." });
+        void mutate();
+      }),
+    );
+  }
+
+  const busyNote =
+    busyApps.length === 1
+      ? ` ${busyApps[0]!.name} is ${{ installing: "being installed", updating: "updating", uninstalling: "being uninstalled" }[busyApps[0]!.umbrel!.state as "installing" | "updating" | "uninstalling"]}.`
+      : busyApps.length > 1
+        ? ` Umbrel is working on ${busyApps.length} apps.`
+        : "";
+  const copyNote = copies.length ? ` ${listJoin([...new Set(copies.map((c) => c.copyOf!.name))])} ${copies.length === 1 ? "also has an old copy" : "each have an old copy"} from another installer.` : "";
+  const summary = (
+    <>
+      {problems.length > 0 ? (
+        <b>
+          {listJoin(problems.map((a) => a.name))} {problems.length === 1 ? "needs" : "need"} a look.
+        </b>
+      ) : stopped.length === 0 ? (
+        <b>{primaries.length === 1 ? "1 app, running." : `${primaries.length} apps, all running.`}</b>
+      ) : (
+        <b>
+          {primaries.length - stopped.length} of {primaries.length} apps running.
+        </b>
+      )}
+      {counts.public ? ` ${fmt.plural(counts.public, "app")} can be reached from the internet.` : ""}
+      {copyNote}
+      {busyNote}
+    </>
+  );
+
+  /** Moving and uninstalling, for the apps Gluon can do that for. */
+  function appMenuTail(a: AppSummary): MenuEntry[] {
+    const out: MenuEntry[] = [];
+    if (!a.self && a.source !== "gluon" && !a.copyOf) {
+      const why = moveBlock(a);
+      if (a.moving) out.push({ label: "Show the move…", description: "It's moving to Gluon now", icon: <Import />, onSelect: () => askMove(a) });
+      else out.push({ label: "Move to Gluon…", description: why ?? "Gluon runs it from its own folder", icon: <Import />, disabled: !!why, onSelect: () => askMove(a) });
+    }
+    const un = uninstallRoute(a);
+    if (un.via === "builder") out.push({ label: "Remove in the builder", icon: <Trash />, href: `/apps/custom/${encodeURIComponent(a.gluon!.builderId!)}` });
+    else if (!a.self) {
+      const title = a.copyOf ? `Remove the old ${a.name}?` : undefined;
+      out.push({
+        label: "Uninstall…",
+        description: a.moving ? "It's moving to Gluon now" : (un.block ?? (un.via === "umbrel" ? "Umbrel removes it and its data" : "Keep or delete its data")),
+        icon: <Trash />,
+        danger: true,
+        disabled: !!un.block || !!a.moving,
+        onSelect: () => (un.via === "umbrel" ? uninstallUmbrel(a) : askRemove(a, title)),
+      });
+    }
+    return out.length ? ["separator", ...out] : [];
+  }
+
+  const sortHead = (key: Sort, label: string, align?: "end") => (
+    <span role="columnheader" aria-sort={sort === key ? (key === "name" ? "ascending" : "descending") : "none"} className={align ? s.headEnd : undefined}>
+      <button type="button" className={s.sortButton} data-on={sort === key ? "" : undefined} onClick={() => setSort(key)}>
+        {label}
+      </button>
+    </span>
+  );
+
+  return (
+    <Page>
+      <PageHeader title="Apps" summary={summary} />
+      <AppsSectionTabs current="apps" />
+
+      {/* The table sizes its columns to this box, not the window, so the sidebar can't push it off the edge. */}
+      <div className={s.list}>
+      <div className={s.toolbar}>
+        <label className={s.filter}>
+          <Search aria-hidden />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by name, container or image" aria-label="Filter apps" spellCheck={false} />
+        </label>
+        <Segmented
+          aria-label="Show"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "all", label: "All" },
+            { value: "problems", label: counts.problems ? `Problems ${counts.problems}` : "Problems" },
+            { value: "public", label: "Public" },
+            { value: "stopped", label: "Stopped" },
+          ]}
+        />
+        <span className={s.sortSelect}>
+          <Select
+            aria-label="Sort by"
+            value={sort}
+            onChange={setSort}
+            options={[
+              { value: "name", label: "Sort by name" },
+              { value: "cpu", label: "Sort by CPU" },
+              { value: "memory", label: "Sort by memory" },
+            ]}
+          />
+        </span>
+      </div>
+
+      {rows.length === 0 ? (
+        <Empty
+          title={term ? `Nothing matches “${q.trim()}”` : filter === "problems" ? "No problems" : filter === "stopped" ? "Nothing is stopped" : filter === "public" ? "Nothing is public" : "No apps yet"}
+          action={
+            !term && filter === "all" ? (
+              <>
+                {platform === "umbrel" && (
+                  <LinkButton href="/apps/store" variant="primary" icon={<Plus />}>
+                    Open the app store
+                  </LinkButton>
+                )}
+                <NewAppButton variant={platform === "umbrel" ? "secondary" : "primary"} />
+              </>
+            ) : (
+              <Button
+                onClick={() => {
+                  setQ("");
+                  setFilter("all");
+                }}
+              >
+                Show all apps
+              </Button>
+            )
+          }
+        >
+          {term
+            ? "Try the app's name, a container name or its image."
+            : filter === "problems"
+              ? "Every app is running and healthy."
+              : filter === "stopped"
+                ? "Every app is running."
+                : filter === "public"
+                  ? "No app is reachable from the internet. Publish one from Network → Public addresses."
+                  : platform === "umbrel"
+                    ? "Nothing is running on this server yet. Get an app from the app store, or start a Compose stack."
+                    : "Nothing is running on this server yet. Install one from CasaOS or start a Compose stack."}
+        </Empty>
+      ) : (
+        <div className={s.table} role="table" aria-label="Apps" aria-rowcount={rows.length + 1}>
+          <div className={s.headRow} role="row">
+            {sortHead("name", "App")}
+            <span role="columnheader">State</span>
+            {sortHead("cpu", "CPU", "end")}
+            {sortHead("memory", "Memory", "end")}
+            <span role="columnheader">Addresses</span>
+            <span role="columnheader" className="sr-only">
+              Actions
+            </span>
+          </div>
+          {rows.map(({ a, copy }) => {
+            const href = `/apps/${encodeURIComponent(a.id)}`;
+            const busyState = umbrelBusy(a.umbrel?.state);
+            const u = usage.get(a.id);
+            const open = viewer.zone === "home" ? (a.urls.home ?? a.urls.away) : (a.urls.away ?? a.urls.home);
+            const running = a.line !== "stopped";
+            const menu: MenuEntry[] = [
+              { label: "Restart", icon: <Refresh />, onSelect: () => void act(a, "restart"), disabled: !running || busyState },
+              running
+                ? { label: "Stop", icon: <Square />, onSelect: () => void act(a, "stop"), disabled: a.self || busyState }
+                : { label: "Start", icon: <Play />, onSelect: () => void act(a, "start"), disabled: busyState },
+              "separator",
+              { label: "Logs", icon: <Journal />, onSelect: () => router.push(`${href}?tab=logs`) },
+              ...(open || a.urls.home || a.urls.away
+                ? [
+                    pinHome.isPinned(a.id)
+                      ? { label: "Unpin from Home", icon: <PinSlash />, onSelect: () => void pinHome.toggle(a) }
+                      : { label: "Pin to Home", icon: <Pin />, description: "Keep it on your Home page", onSelect: () => void pinHome.toggle(a) },
+                  ]
+                : []),
+              a.hidden
+                ? { label: "Show in lists", icon: <Eye />, onSelect: () => void setHidden(a, false) }
+                : { label: "Hide from lists", icon: <EyeClosed />, description: "It keeps running", onSelect: () => void setHidden(a, true) },
+              ...appMenuTail(a),
+            ];
+            return (
+              <div
+                key={a.id}
+                role="row"
+                className={s.row}
+                data-copy={a.copyOf ? "" : undefined}
+                data-nested={copy ? "" : undefined}
+                data-hidden={a.hidden ? "" : undefined}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest("a,button,[role=menu]")) return;
+                  router.push(href);
+                }}
+              >
+                <span role="cell" className={s.appCell}>
+                  <AppIcon src={a.icon} name={a.name} size={34} />
+                  <span className={s.appText}>
+                    <Link href={href} className={s.appName} title={a.name}>
+                      {shortName(a.name, serverName)}
+                    </Link>
+                    <span className={s.appSub}>
+                      {a.copyOf ? (
+                        <>Old copy from {sourceName(a.source)}</>
+                      ) : (
+                        <>
+                          {sourceName(a.source)}
+                          {a.containers.length > 1 && ` · ${a.containers.length} containers`}
+                        </>
+                      )}
+                      {a.self && " · this is Gluon"}
+                      {a.gluonDev && " · Gluon dev instance"}
+                      {a.hidden && " · hidden"}
+                    </span>
+                  </span>
+                </span>
+                <span role="cell" className={s.stateCell}>
+                  {a.moving ? (
+                    <StateLine state="starting" label="Moving to Gluon…" />
+                  ) : busyState ? (
+                    <UmbrelProgress app={a} />
+                  ) : (
+                    <StateLine state={a.line} label={a.copyOf ? (running ? "Old copy, still running" : "Old copy, stopped") : a.summary} />
+                  )}
+                  {a.umbrel?.latest && !busyState && !a.self && (
+                    <span className={s.update} title={`${a.umbrel.version} is installed; ${a.umbrel.latest} is available`}>
+                      <StateLine state="attention" size={11} label={`Update to ${a.umbrel.latest}`} />
+                    </span>
+                  )}
+                </span>
+                <span role="cell" className={s.meterCell}>
+                  <CpuMeter series={u?.cpuSeries ?? null} value={u?.cpu ?? null} name={a.name} fit />
+                </span>
+                <span role="cell" className={s.meterCell}>
+                  <MemMeter value={u?.mem ?? null} scale={memScale} total={memTotal} name={a.name} fit />
+                </span>
+                <span role="cell" className={s.addrCell}>
+                  {a.copyOf ? (
+                    <CopyNote
+                      app={a}
+                      of={byId.get(a.copyOf.id)}
+                      onRemove={() => (a.configFile ? removeCopy(a) : a.umbrel ? uninstallUmbrel(a) : askRemove(a, `Remove the old ${a.name}?`))}
+                      onStop={() => confirm(stopCopyConfirm(a, byId.get(a.copyOf!.id), () => act(a, "stop")))}
+                      onHide={() => void setHidden(a, true)}
+                    />
+                  ) : (
+                    <Addresses app={a} empty={busyState && a.containers.length === 0 ? "Not ready yet" : "No web page"} />
+                  )}
+                </span>
+                <span role="cell" className={s.actions}>
+                  {open && !a.copyOf && (
+                    <IconButton label={`Open ${a.name}`} size="sm" onClick={() => openAppUrl(open)}>
+                      <OpenNewWindow />
+                    </IconButton>
+                  )}
+                  <Menu
+                    trigger={
+                      <IconButton label={`${a.name} actions`} size="sm" loading={busy === a.id} disabled={busyState && a.containers.length === 0}>
+                        <MoreHoriz />
+                      </IconButton>
+                    }
+                    items={menu}
+                  />
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      </div>
+      {moveTarget && (
+        <MoveDialog
+          key={moveTarget.id}
+          app={moveTarget}
+          open={moveOpen}
+          onOpenChange={setMoveOpen}
+          onFinished={() => void mutate()}
+          onRemoveOld={() => {
+            const a = byId.get(moveTarget.id) ?? moveTarget;
+            if (a.umbrel) uninstallUmbrel(a);
+            else if (a.configFile) removeCopy(a);
+            else askRemove(a, `Remove the old ${a.name}?`);
+          }}
+        />
+      )}
+      {removeTarget && (
+        <UninstallDialog
+          app={removeTarget.app}
+          title={removeTarget.title}
+          open={removeOpen}
+          onOpenChange={setRemoveOpen}
+          onDone={(message) => {
+            toast.success(message);
+            void mutate();
+          }}
+        />
+      )}
+      {confirmNode}
+    </Page>
+  );
+
+}
+
+/** Umbrel installing / updating / removing, with its real percentage when Umbrel gives one. */
+function UmbrelProgress({ app }: { app: AppSummary }) {
+  const u = app.umbrel!;
+  const verb = { installing: "Installing", updating: "Updating", uninstalling: "Removing" }[u.state as "installing" | "updating" | "uninstalling"];
+  return (
+    <span className={s.progress}>
+      <StateLine state="starting" label={u.progress ? `${verb} · ${u.progress}%` : `${verb}…`} />
+      <span className={s.progressTrack} role="progressbar" aria-label={`${verb} ${app.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={u.progress || undefined}>
+        <span style={{ transform: `scaleX(${(u.progress || 0) / 100})` }} data-indeterminate={u.progress ? undefined : ""} />
+      </span>
+    </span>
+  );
+}
+
+/** What an old copy is, and the one thing to do about it. */
+function CopyNote({ app, of, onRemove, onStop, onHide }: { app: AppSummary; of: AppSummary | undefined; onRemove: () => void; onStop: () => void; onHide: () => void }) {
+  const running = app.line !== "stopped";
+  const name = of?.name ?? app.copyOf!.name;
+  const canRemove = !app.self && (!!app.configFile || !!app.umbrel || app.containers.length > 0);
+  return (
+    <span className={s.copyNote}>
+      <span className={s.copyText}>
+        {of?.line !== "stopped" ? `${name} from ${sourceName(app.copyOf!.source)} is the one in use.` : `${name} from ${sourceName(app.copyOf!.source)} replaces it.`}
+      </span>
+      {canRemove ? (
+        <Button size="sm" variant="ghost" onClick={onRemove}>
+          {app.umbrel ? "Uninstall…" : running ? "Stop and remove…" : "Remove…"}
+        </Button>
+      ) : running ? (
+        <Button size="sm" variant="ghost" onClick={onStop}>
+          Stop it
+        </Button>
+      ) : (
+        <Button size="sm" variant="ghost" onClick={onHide}>
+          Hide it
+        </Button>
+      )}
+    </span>
+  );
+}

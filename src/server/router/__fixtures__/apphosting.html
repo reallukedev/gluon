@@ -1,0 +1,134 @@
+<!-- Reconstructed, not saved from a router: this page needs the access code. Content from public captures of BGW320-500 fw 6.35.x (vpushkar/bgwcli REFERENCE, scottrfrancis/bgw-sentinel, edgan/att-fiber-gateway-info, rjwalters/att-gateway-py). Labels around the buttons are guesses; field and button names are not. Chrome copied from the real sysinfo.ha. -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" >
+    <head>
+        <title>NAT/Gaming</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+        <meta http-equiv="Content-Style-Type" content="text/css" />
+        <meta http-equiv="Content-Script-Type" content="type" />
+        <link rel="icon" type="image/ico" href="/favicon.ico" />
+        <link rel="stylesheet" type="text/css" href="/baseINID.css" />
+        <link rel="stylesheet" type="text/css" href="/INID.css" />
+<script type="text/css"><!--
+<style id="antiClickjack" type="text/css">body{display:none;}</style>
+//-->
+</script>
+    <script language="javascript" type="text/javascript"><!--
+  adImages=new Array('/images/Block1.gif','/images/Block3.gif','/images/Block5.gif','/images/Block7.gif','/images/Block9.gif','/images/Block11.gif','/images/Block14.gif')
+  thisAd=0
+  imgCt=adImages.length
+if (self == top) {
+    var antiClickjack = document.getElementById("antiClickjack");
+    antiClickjack.parentNode.removeChild(antiClickjack);
+} else {
+    top.location = self.location;
+}
+function rotate(){
+    if (document.images) {
+        thisAd++
+            if (thisAd==imgCt){
+                thisAd=0
+            }
+        document.adBanner.src=adImages[thisAd]
+            setTimeout('rotate()',200)
+    }
+}
+function reloadPage()
+{
+    if (document.forms[0].hidden.value == "update_refresh") {
+      rotate()
+    }
+    else if (document.forms[0].hidden.value == "freshen") {
+      setTimeout("self.location.reload(true)", 10000)
+      rotate()
+    }
+}
+
+
+//-->
+</script>
+    </head>
+           <body>
+  <div id="wrapper">
+    <div id="whole-page">
+      <div id="main-content">
+        <div id="header">
+          <div id="tab-container">
+            <div id="logo-div">
+	      <img id="main-logo" src="/images/att_logo.png" alt="" style="height:42px;" />
+            </div>
+            <div style="clear: both;"></div>
+<div id="skip"><a href="#content-sub">Skip to Main Content</a></div>
+            <div id="top-navigation">
+              <div id="top-navigation-buttons">
+<a class="topnav topnavselected" href="/cgi-bin/home.ha"><span>Device</span></a>
+<a class="topnav" href="/cgi-bin/broadbandstatistics.ha"><span>Broadband</span></a>
+<a class="topnav" href="/cgi-bin/lanstatistics.ha"><span>
+Home Network
+</span></a>
+
+<a class="topnav" href="/cgi-bin/voice.ha"><span>Voice</span></a>
+<a class="topnav" href="/cgi-bin/firewall.ha"><span>Firewall</span></a>
+<a class="topnav" href="/cgi-bin/diag.ha"><span>Diagnostics</span></a>
+              <div style="clear: both;"></div>
+            </div>
+          </div>
+          <div id="secondary-nav">
+            <div id="secondary-nav-buttons">
+<a class="secondary-link" href="/cgi-bin/home.ha">Status</a>
+<a class="secondary-link" href="/cgi-bin/devices.ha">Device List</a>
+<a class="secondary-link sec-selected" href="/cgi-bin/sysinfo.ha">System Information</a>
+<a class="secondary-link" href="/cgi-bin/routerpasswd.ha">Access Code</a>
+<a class="secondary-link" href="/cgi-bin/remoteaccess.ha">Remote Access</a>
+<a class="secondary-link" href="/cgi-bin/restart.ha">Restart Device</a>
+                  </div></div></div>
+                <div style="clear: both;"></div>
+              </div>
+        <div style="clear: both;"></div>
+      <div id="mid-section">
+          <div id="content-padding"><!-- CONTENT -->
+            <div id="content"
+><div id="content-sub">
+                <div class="first-section-header">
+                 <h1>NAT/Gaming</h1>
+                 </div>
+         <form method="post" action="/cgi-bin/apphosting.ha">
+<input type="hidden" name="nonce" value="7eb531ce9bf52f4e6dea7bb01eee8cec887d5b22757a58ea580e52ec312d1ff5" />
+                 <div class="section-content">
+                 <table align="center" class="table100" summary="Entry for a hosted application">
+                 <tr><th scope="row"><label for="service">Service</label></th><td><select id="service" name="service"><option value="">-- Select --</option><option value="HTTP Server">HTTP Server</option><option value="*Mumble">*Mumble</option></select></td></tr>
+                 <tr><th scope="row"><label for="device">Needed by Device</label></th><td><select id="device" name="device"><option value="">-- Select --</option><option value="14:b3:1f:76:a7:5f">homeserver</option><option value="a2:30:92:c6:77:57">Kitchen-Mac</option><option value="7e:61:0d:a4:d4:4c">Watch</option><option value="52:1f:aa:e0:39:12">Watch</option></select></td></tr>
+                 </table>
+                 <input type="submit" name="Add" class="cssbtn" value="Add" />
+                 <h2>Hosted Applications</h2><div class="scroller">
+                 <table class="grid table100" align="center" summary="Table of current hosted applications">
+<tr><th scope="col">Service</th><th scope="col">Needed by Device</th><th scope="col">&nbsp;</th></tr>
+<tr><td>HTTPS Server</td><td>homeserver</td><td><input type="submit" name="Remove_1" class="cssbtn smallbtn" value="Remove" /></td></tr>
+<tr><td>*XMPP Server</td><td>homeserver</td><td><input type="submit" name="Remove_2" class="cssbtn smallbtn" value="Remove" /></td></tr>
+<tr><td>*XMPP Client</td><td>192.168.1.40</td><td><input type="submit" name="Remove_3" class="cssbtn smallbtn" value="Remove" /></td></tr>
+</table></div>
+                 </div>
+         </form>
+                </div>
+              </div>
+            </div>
+ <!-- isWANUP -->
+            <div id="help">
+              <div id="help-sub">
+              <h2>Help</h2><br />
+              </div> <!-- help-sub -->
+            </div> <!-- help -->
+            <div style="clear: both;"></div>
+          </div>
+        </div>
+        <div style="clear: both;"></div>
+      </div>
+      <div id="footer">
+      <div><br>
+   <span class="inner">&copy; 2016-2025 AT&T Intellectual Property. All rights reserved. AT&T and Globe logo are registered trademarks of AT&T Intellectual Property.</span>
+   <span class="sitemap"><a href="/cgi-bin/sitemap.ha">Site Map</a></span></br></div>
+   <div><span class="inner">&copy; 2016 ARRIS Enterprises LLC. All rights reserved. ARRIS is a registered trademark of ARRIS Enterprises LLC.</span></div>
+   </div>
+      </div>
+</body>
+</html>

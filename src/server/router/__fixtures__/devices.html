@@ -1,0 +1,4513 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" >
+    <head>
+        <title>Device List</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+        <meta http-equiv="Content-Style-Type" content="text/css" />
+        <meta http-equiv="Content-Script-Type" content="type" />
+        <link rel="icon" type="image/ico" href="/favicon.ico" />
+        <link rel="stylesheet" type="text/css" href="/baseINID.css" />
+        <link rel="stylesheet" type="text/css" href="/INID.css" />
+<script type="text/css"><!--
+<style id="antiClickjack" type="text/css">body{display:none;}</style>
+//-->
+</script>
+    <script language="javascript" type="text/javascript"><!--
+  adImages=new Array('/images/Block1.gif','/images/Block3.gif','/images/Block5.gif','/images/Block7.gif','/images/Block9.gif','/images/Block11.gif','/images/Block14.gif')
+  thisAd=0
+  imgCt=adImages.length
+if (self == top) {
+    var antiClickjack = document.getElementById("antiClickjack");
+    antiClickjack.parentNode.removeChild(antiClickjack);
+} else {
+    top.location = self.location;
+}
+function rotate(){
+    if (document.images) {
+        thisAd++
+            if (thisAd==imgCt){
+                thisAd=0
+            }
+        document.adBanner.src=adImages[thisAd]
+            setTimeout('rotate()',200)
+    }
+}
+function reloadPage()
+{
+    if (document.forms[0].hidden.value == "update_refresh") {
+      rotate()
+    }
+    else if (document.forms[0].hidden.value == "freshen") {
+      setTimeout("self.location.reload(true)", 10000)
+      rotate()
+    }
+}
+
+
+//-->
+</script>
+    </head>
+           <body>
+  <div id="wrapper">
+    <div id="whole-page">
+      <div id="main-content">
+        <div id="header">
+          <div id="tab-container">
+            <div id="logo-div">
+	      <img id="main-logo" src="/images/att_logo.png" alt="" style="height:42px;" />
+            </div>
+            <div style="clear: both;"></div>
+<div id="skip"><a href="#content-sub">Skip to Main Content</a></div>
+            <div id="top-navigation">
+              <div id="top-navigation-buttons">
+<a class="topnav topnavselected" href="/cgi-bin/home.ha"><span>Device</span></a>
+<a class="topnav" href="/cgi-bin/broadbandstatistics.ha"><span>Broadband</span></a>
+<a class="topnav" href="/cgi-bin/lanstatistics.ha"><span>
+Home Network
+</span></a>
+
+<a class="topnav" href="/cgi-bin/voice.ha"><span>Voice</span></a>
+<a class="topnav" href="/cgi-bin/firewall.ha"><span>Firewall</span></a>
+<a class="topnav" href="/cgi-bin/diag.ha"><span>Diagnostics</span></a>
+              <div style="clear: both;"></div>
+            </div>
+          </div>
+          <div id="secondary-nav">
+            <div id="secondary-nav-buttons">
+<a class="secondary-link" href="/cgi-bin/home.ha">Status</a>
+<a class="secondary-link sec-selected" href="/cgi-bin/devices.ha">Device List</a>
+<a class="secondary-link" href="/cgi-bin/sysinfo.ha">System Information</a>
+<a class="secondary-link" href="/cgi-bin/routerpasswd.ha">Access Code</a>
+<a class="secondary-link" href="/cgi-bin/remoteaccess.ha">Remote Access</a>
+<a class="secondary-link" href="/cgi-bin/restart.ha">Restart Device</a>
+                  </div></div></div>
+                <div style="clear: both;"></div>
+              </div>
+        <div style="clear: both;"></div>
+      <div id="mid-section">
+          <div id="content-padding"><!-- CONTENT -->
+            <div id="content"
+><div id="content-sub">
+                <div class="first-section-header">
+                 <h1>Device List</h1>
+                 </div>
+                   <form method="post" action="/cgi-bin/devices.ha">
+<input type="hidden" name="nonce" value="0a78009591722cc84825ca95ee7ffa52428047ed12c9076044ebfe8665f9657f" />
+                 <div class="section-content">
+                 <h2>Home Network Devices&nbsp;&nbsp;</h2>
+                 <input type="submit" name="Clear" class="cssbtn largebtn" value="Clear and Rescan for Devices"  />
+                 <table class="table100" summary="This table displays info for each LAN-side device">
+<tr><th scope="row">MAC Address</th><td class="col2">
+88:ab:42:f7:32:53
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+OtterMBP
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 18 00:01:43 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Ethernet LAN-2
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+<td class="col2">Mbps	duplex
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+20:db:52:e3:62:e0
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.129
+ / Sam-PC
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:20 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::3e
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:b860:151b:ce6a:7f53
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:4f4d:7b0a:e9ab:356b
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5e:cc:dd:54:74:19
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknown5eccdd547419
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Fri Aug 28 22:04:44 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+e6:bb:40:95:4d:d0
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep 23 17:29:42 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+7e:85:3c:04:29:a9
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 13:19:33 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+1a:c3:7b:43:af:39
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 18 10:16:09 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c4:7d:3a:ef:2a:e0
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+43TCLRokuTV
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep 29 10:51:40 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+94:3a:25:d1:74:52
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Taylors-Air-2
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Oct 17 03:45:38 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+52:fb:e3:2f:28:2f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Robin-s-S25
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Oct  1 17:31:03 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+f0:8e:bd:f0:1e:69
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep 23 13:14:14 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+14:b3:1f:76:a7:5f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknown14b31f76a75f
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep  6 23:32:40 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+pending
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Ethernet LAN-1
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+<td class="col2">1000Mbps	fullduplex
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+16:11:c7:dd:6e:e7
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep 29 10:51:40 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+92:8f:4f:7c:1a:57
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknown928f4f7c1a57
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  9 03:03:16 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+1e:2a:52:f8:56:7b
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+3d9c1d20-1f68-425e-bf16-e7dfcc60e0cb
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Oct 20 16:32:05 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+da:2f:6e:53:63:81
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Sep 17 14:03:39 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+1a:8f:2a:8c:f1:a0
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Robin-s-S25
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Sep 24 23:44:29 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+7c:92:2d:b8:84:6d
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.167
+ / JamieTV
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:c703:850a:9603:ee33
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:4d7e:6b9c:82e4:f726
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::1e30:8ff:fe01:e346
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+fa:4b:83:7d:97:a2
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Aug 31 07:12:11 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+2c:da:90:40:14:02
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPad
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 26 03:26:01 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5a:cb:71:23:d4:cf
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 12:36:46 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c6:bf:3b:72:01:26
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 13 16:15:56 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+26:dc:78:88:ac:20
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.232
+ / Robin-s-S25
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Oct 24 17:54:29 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+10:a4:dd:44:b7:2d
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamies-Mini
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 27 21:21:37 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+d8:80:01:d5:01:61
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.109
+ / XBOX
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 03:28:00 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+f2:43:14:ee:52:9f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 20 16:15:01 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+78:50:86:5c:0d:78
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+43SharpRokuTV
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 19 15:24:08 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+b2:39:56:75:d4:60
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Oct  7 13:54:28 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+06:e2:9f:53:16:51
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.248
+ / MacBookPro
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:16 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:700e:7ba2:56a5:30ae
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::a
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:eac3:ccca:fef6:2721
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:1494:8287:21ce:baf7
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:5739:7647:ab29:677d
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:d117:baa5:4976:83fb
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:28ce:34d0:ffee:caa3
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::18a0:564b:efe7:96bf
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+0a:83:a0:b9:45:6c
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Robin-s-S25
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 26 22:23:53 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+02:fb:0e:b2:01:f4
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Oct 22 14:59:53 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ea:a2:24:c7:05:ed
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Oct  7 19:04:21 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+9a:ea:5e:60:cc:ab
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 13:19:17 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+08:a2:40:7b:aa:6e
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+laptop1
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct  4 11:53:36 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+6e:66:03:2e:73:3b
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Oct 21 13:44:57 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+08:ad:2f:4f:cc:35
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Aug 29 01:26:15 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+a6:a7:87:fa:8a:0a
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Alex-s-S23
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  2 18:42:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+56:ed:ec:32:95:9a
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknown56edec32959a
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  9 03:00:00 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+8e:90:eb:d2:ab:6b
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep 29 14:15:20 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+d2:c7:5e:e0:ba:18
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 12 16:25:15 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+9c:96:86:4c:39:48
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.150
+ / PS5-D4E5F6
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:11 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::41
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::5e96:66ff:fefd:4ca3
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+8c:23:73:ec:3a:d4
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.220
+ / unknown8c2373ec3ad4
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:10 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::1c
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:b8e7:6e1a:c015:53dc
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::5ee7:53ff:feef:b486
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+78:02:09:3c:b0:61
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.83
+ / Tstat-0A0B0C
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:07 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+f2:f1:aa:ae:7b:a4
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+18d5a574-d7a1-4d23-9712-5731b92b3cf9
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct  4 21:46:43 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+8a:7c:6c:2b:42:24
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep 29 10:53:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ae:ee:2d:ac:cc:02
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 12 16:25:15 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+0c:23:6b:c7:cb:a7
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Nintendo Co.,Ltd
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 12 16:25:15 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+e6:11:05:83:b2:ce
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknowne6110583b2ce
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  9 12:22:47 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+b2:a3:0f:ea:74:5f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  9 17:48:59 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+be:4b:86:1d:bf:b4
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+b442a8c9-9838-4be1-9a0e-a5d2b89deb46
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 19 07:36:25 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+72:90:fc:6f:f2:c0
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Oct 24 11:00:56 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+e2:c0:d9:d9:59:ed
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.247
+ / 38fdb471-5aee-4bb0-8f3c-e0cf74665e1c
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:32 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::1d
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:60e4:8fd2:f179:bc82
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:e91f:2974:3443:851e
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::14aa:a396:74d1:4a6
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+54:8e:c1:5f:77:8c
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.90
+ / KP125
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:31:28 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+a4:ac:c0:06:90:b5
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.104
+ / KP125
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:07 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+9a:2b:9b:7b:3b:4c
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 19 01:06:49 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+d8:d4:ee:ac:2f:aa
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Nintendo Switch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  2 18:41:55 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+0c:9a:ae:18:70:d5
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.96
+ / thinkpad
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:09 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:8764:49fa:94ba:cad9
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::21
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:8372:5ffb:16da:7d18
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+8a:16:5d:6b:e5:35
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.233
+ / Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:09 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:22d2:d46f:9041:47ba
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+d8:16:f6:6d:e3:6a
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+DESKTOP-AB12CDE
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 26 18:32:36 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Ethernet LAN-1
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+<td class="col2">1000Mbps	fullduplex
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+1a:1b:f6:5e:01:ca
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep 16 16:18:22 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ae:7f:a4:06:0a:cc
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknownae7fa4060acc
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 13:06:19 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5e:10:04:5c:a7:6f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  9 02:48:10 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+80:2b:3d:19:53:10
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Android
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 27 00:45:03 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+b2:6f:54:7b:bb:49
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Fri Oct 16 19:43:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+a2:30:92:c6:77:57
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.241
+ / Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:34 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:5fe7:a26e:60f3:1bf7
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::10
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:4581:6dca:a8d:3253
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::10b8:4023:4c63:b2b9
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c6:81:b8:54:ce:62
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+bazzite
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Oct  8 17:08:20 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+f8:37:52:ea:08:62
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.139
+ / DESKTOP-FG34HIJ
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:e925:2d4c:5dea:7448
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::c
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:cce1:67c0:1ad7:182
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:f43a:1b9a:8fff:be69
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+bc:cf:3b:2d:2c:5f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 26 16:18:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c4:f2:e8:a8:3a:e3
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+espressif
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Fri Oct 16 10:42:34 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+2a:6d:55:dd:0d:84
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Aug 29 00:27:09 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+52:cf:30:e0:ba:c4
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 13:10:31 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+98:84:80:b3:48:eb
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Morgans-Air
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 12 16:25:15 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+b6:f3:ce:7d:eb:2d
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 18 18:25:19 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+54:41:8a:c7:53:d3
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Caseys-MBP
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Sep 24 11:17:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+82:ff:d4:0a:30:e3
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+bazzite
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 19 17:27:02 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+8c:ab:c1:f4:61:00
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.82
+ / Jamies-Bedroom
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:18 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::18
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:b859:691d:e3b1:38c5
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:a4be:1975:dae6:14df
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:7d99:5990:164d:3045
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:bcab:9d3d:b123:ea1
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:6e99:bf76:f335:1935
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:90dd:4c67:73f2:e4d
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::ce4:21db:92ca:f6bb
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+60:96:e7:c6:f6:c2
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.164
+ / EP25
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:08 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+d0:69:53:49:ae:01
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.87
+ / EP25
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:07 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+08:ba:67:71:41:1e
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.85
+ / EP25
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:31:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+56:e7:50:38:1e:c3
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.103
+ / iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 11:53:54 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+22:5b:e1:2d:c1:41
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  9 23:42:20 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5e:fe:da:50:73:85
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.162
+ / iPad
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:11 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-3-bar.png" alt="Wi-Fi 3 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::13
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:579f:d908:8406:f10c
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:6761:782:52e3:51d2
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::1490:c201:5d08:d4ab
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+7e:61:5e:ac:c2:4a
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknown7e615eacc24a
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Oct 22 20:07:47 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+pending
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-1-bar.png" alt="Wi-Fi 1 bar" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+30:fc:09:63:38:1b
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Nintendo Switch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Oct 10 15:12:59 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5a:d3:ce:d6:a9:a7
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.97
+ / iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:34 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::26
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:22ec:aa45:2eea:c704
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:b3cf:8d2b:3245:6c9a
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::ceb:1733:c36:f994
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+3e:7b:35:6e:18:76
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 13:19:33 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+8a:4f:bf:b0:dc:b5
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.234
+ / MacBook-Air
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 11:53:44 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+f2:39:9a:be:4e:d1
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 20 17:37:07 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+10:eb:66:ae:b1:92
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+PS4-A1B2C3
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 18 22:50:56 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+cc:d4:61:23:0e:53
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.205
+ / drews-MBP
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 13:42:32 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+92:05:62:02:bb:17
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep 30 09:02:14 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+3e:02:8f:4c:11:4d
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Sep  3 23:00:42 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+a2:35:3a:4f:1d:04
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Fri Sep  4 00:28:26 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ac:35:57:5b:1e:02
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+sam-latitudee5470
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  2 13:16:40 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+e2:d0:2e:db:63:8a
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Oct 13 11:24:23 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+d6:e4:48:f0:f4:78
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.149
+ / iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:34 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::1a
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:5e09:fb21:a1b3:941a
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:6484:b19:703e:5d57
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::831:924a:c367:7a6a
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+60:b6:df:2c:32:aa
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.252
+ / KP125M
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:4f0b:7d24:60f8:4bbd
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::be07:1dff:fe2b:ce3a
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ec:af:df:fd:f9:20
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.185
+ / DESKTOP-AB12CDE
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 11:28:55 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+2e:7d:c5:a2:fc:a9
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+1fcf210a-e116-4132-82fa-dc5e78e38e4d
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 13 01:56:47 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c6:f6:33:72:37:ea
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 20 21:43:34 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c2:0a:be:44:ad:3a
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 20:45:57 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+e2:d1:a7:74:a8:d8
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Sep 10 23:25:25 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+22:a7:9c:0a:2e:07
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Sep 14 00:03:33 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+1e:94:bb:e2:7b:8f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Oct 21 12:57:41 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+e4:03:be:b3:35:09
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.93
+ / Meross_Smart_Ambient_Light
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:3350:b96f:9410:e78f
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::c6e7:aeff:fe1e:f81f
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+da:0c:bc:12:a3:2f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknownda0cbc12a32f
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 19 17:49:10 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ae:83:04:4c:ea:6b
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Sep 28 13:06:28 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+2e:e5:a0:2d:cf:22
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Oct 24 11:47:45 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+fa:2b:b2:df:7b:54
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknownfa2bb2df7b54
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 19 16:50:40 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ea:25:97:27:e5:4f
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 13:18:07 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+3e:32:4c:07:4d:05
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Sep 24 19:09:50 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+b4:93:8f:9d:77:cc
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Nintendo Switch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 18 07:17:15 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+a8:17:db:03:42:55
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Microsoft Corporation
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep 30 12:29:06 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+34:4c:fd:7d:e9:37
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+XBOX
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Oct 12 16:25:15 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Ethernet LAN-3
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+<td class="col2">Mbps	duplex
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+38:04:1d:17:7b:00
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+MyQ-9F8
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Oct  1 20:27:21 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+44:02:b6:97:85:95
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.94
+ / Levoit-purifier
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:31:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+fe:1a:35:67:79:58
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Oct 20 00:27:11 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c6:12:91:49:94:50
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.75
+ / Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:18 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-2-bar.png" alt="Wi-Fi 2 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:5d39:d0e:f883:d679
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::10e1:8544:116:c3a1
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+ec:4c:00:10:a3:01
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Yoga-11e
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep 27 14:51:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+9e:ff:75:82:d5:36
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Sep 24 23:49:31 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+7a:8c:9d:7f:89:a9
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknown7a8c9d7f89a9
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 13:08:11 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+96:c1:03:26:ad:35
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+unknown96c10326ad35
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  1 21:07:56 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+pending
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+4a:da:7a:62:64:08
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Kitchen-Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep  9 11:06:30 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+36:96:f0:62:70:09
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 26 09:16:37 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+98:76:9a:9a:9e:3b
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.249
+ / KP125M
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:b68:296e:7125:5490
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::de62:79ff:fea3:a073
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+20:26:91:1c:79:21
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.105
+ / KP125M
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:13 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:8444:c4ca:4302:4754
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::de62:79ff:fea3:a978
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+98:1a:a3:9d:59:58
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Nintendo Switch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Oct 10 11:55:48 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5a:d9:4e:43:c0:51
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep 29 12:19:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+1e:9e:a6:16:76:fe
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Oct 20 23:34:02 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+7a:3c:81:0b:d9:d4
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Oct 24 10:59:30 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+60:90:4d:73:c2:9b
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+DD-WRT Router
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Oct  1 04:48:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+da:8f:08:39:41:ad
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Thu Oct 15 04:29:27 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+be:b0:95:4e:62:b1
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Watch
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Fri Oct  2 01:29:59 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />2.4 GHz<br />Type: Home<br />Name: Maple IoT
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5e:b8:74:cf:4d:cb
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 20:46:11 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+e8:d7:0d:96:84:34
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+MacBook-Air
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 18 19:13:14 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+0e:63:69:91:e4:ac
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 26 16:30:25 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+a6:19:c1:3b:17:d9
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Cpad10
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sat Sep 12 18:36:48 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+bc:ca:9e:3e:bf:23
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+pop-os
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  1 23:38:12 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+d2:96:48:ac:c5:72
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+MacBookPro
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Mon Sep 21 19:25:48 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+5c:fb:f6:2b:e0:92
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.79
+ / 50SharpRokuTV
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:10 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-5-bar.png" alt="Wi-Fi 5 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:9865:30bf:77c1:f82f
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:3e9d:b7ac:6561:c8cf
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::faa2:d6ff:fe2d:35e7
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+b2:7e:b2:f5:61:ee
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Jamie-Rivera
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Sep  6 11:25:57 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+8e:bb:1b:fe:8a:8f
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.91
+ / Mac
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:27:22 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+aa:24:0d:9a:24:70
+</td></tr>
+<tr><th scope="row">IPv4 Address / Name</th><td class="col2">
+192.168.1.250
+ / Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 25 15:32:33 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+on
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi <img src="/images/signal-strength-4-bar.png" alt="Wi-Fi 4 bars" />&nbsp; <br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:5b85:8e15:3392:c00
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10::16
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+2001:db8:4b1:5a10:87b7:f300:13a3:8f55
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+3600s
+</td></tr>
+<tr><th scope="row">IPv6 Address</th><td class="col2">
+fe80::14ae:b152:b60d:60e1
+</td></tr>
+<tr><th scope="row">Type</th><td class="col2">
+slaac
+</td></tr>
+<tr><th scope="row">Valid Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><th scope="row">Preferred Lifetime</th><td class="col2">
+forever
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+42:ca:27:69:d6:db
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Sun Oct 18 18:25:21 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+b6:c5:b6:9b:6b:57
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Tue Sep  8 20:46:11 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-1<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+<tr><th scope="row">MAC Address</th><td class="col2">
+c2:7f:fc:a2:e2:a6
+</td></tr>
+<tr><th scope="row">Name</th><td class="col2">
+Owners-iPhone
+</td></tr>
+<tr><th scope="row">Last Activity</th><td class="col2">
+Wed Sep 23 14:50:28 2026
+</td></tr>
+<tr><th scope="row">Status</th><td class="col2">
+off
+</td></tr>
+<tr><th scope="row">Allocation</th><td class="col2">
+dhcp
+</td></tr>
+<tr><th scope="row">Connection Type</th>
+<td class="col2"><pre class="column">Wi-Fi<br />5 GHz Radio-2<br />Type: Home<br />Name: Maple Home
+</pre></td></tr>
+<tr><th scope="row">Connection Speed</th>
+</td></tr>
+<tr><th scope="row">Mesh Client</th><td class="col2">
+No
+</td></tr>
+<tr><td colspan="2"><hr class="reshr" noshade="noshade" /></td></tr>
+</table>
+</div>
+</form>
+                </div>
+              </div>
+            </div>
+ <!-- isWANUP -->
+            <div id="help">
+              <div id="help-sub">
+              <h2>Help</h2><br />
+<p>The device list page shows all items of the LAN Host Discovery table. Use the &quot;Clear and Rescan for Devices&quot; button to reset the devices table and do a fresh search for connected LAN devices.</p>
+<p>
+Allocation types include static and dhcp. When the allocation type of a device has not yet been determined, it is marked pending.
+Devices that are powered off will continue to appear in the table, but be shown as &quot;off&quot; for a period of more than a day.</p>
+<p>The Last Activity display will be blank if the WAN is down or the device cannot reach a time server.</p>
+              </div> <!-- help-sub -->
+            </div> <!-- help -->
+            <div style="clear: both;"></div>
+          </div>
+        </div>
+        <div style="clear: both;"></div>
+      </div>
+      <div id="footer">
+      <div><br>
+   <span class="inner">&copy; 2016-2025 AT&T Intellectual Property. All rights reserved. AT&T and Globe logo are registered trademarks of AT&T Intellectual Property.</span>
+   <span class="sitemap"><a href="/cgi-bin/sitemap.ha">Site Map</a></span></br></div>
+   <div><span class="inner">&copy; 2016 ARRIS Enterprises LLC. All rights reserved. ARRIS is a registered trademark of ARRIS Enterprises LLC.</span></div>
+   </div>
+      </div>
+</body>
+</html>

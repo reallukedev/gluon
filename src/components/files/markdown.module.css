@@ -1,0 +1,32 @@
+/* A README read in place: the body face at a comfortable measure, code in mono on sunk. */
+.md {
+  max-width: 72ch;
+  padding: 4px 2px 12px;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.md > :first-child { margin-top: 0; }
+.md h2, .md h3, .md h4, .md h5 { margin: 1.4em 0 0.5em; font-family: var(--font-display); line-height: 1.2; }
+.md h2 { font-size: var(--text-xl); font-weight: 560; font-stretch: 84%; }
+.md h3 { font-size: var(--text-lg); font-weight: 600; font-stretch: 90%; }
+.md h4, .md h5 { font-size: var(--text-base); font-weight: 620; font-stretch: 94%; }
+.md p, .md ul, .md ol, .md blockquote, .md .pre, .md .tableWrap { margin: 0 0 0.9em; }
+.md ul, .md ol { padding-left: 1.4em; }
+.md li { margin: 0.2em 0; }
+.md li > ul, .md li > ol, .md li > p { margin: 0.2em 0; }
+.md li[data-task] { list-style: none; margin-left: -1.4em; display: block; }
+.md li[data-task] input { margin: 0 8px 0 0; vertical-align: -1px; accent-color: var(--ink); }
+.md a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 0.2em; }
+.md code { padding: 1px 5px; border-radius: 4px; background: var(--sunk); font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.86em; }
+.md strong { font-weight: 640; }
+.md hr { margin: 1.6em 0; border: 0; border-top: 1px solid var(--line); }
+.md blockquote { padding: 2px 0 2px 14px; border-left: 1px solid var(--line-strong); color: var(--ink-2); }
+.md blockquote > :last-child { margin-bottom: 0; }
+.pre { overflow-x: auto; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunk); line-height: 1.5; }
+.pre code { padding: 0; background: none; font-size: 0.84em; white-space: pre; }
+.tableWrap { overflow-x: auto; }
+.md table { border-collapse: collapse; font-size: var(--text-md); font-variant-numeric: tabular-nums; }
+.md th, .md td { padding: 6px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.md th { font-weight: 620; border-bottom-color: var(--line-strong); }

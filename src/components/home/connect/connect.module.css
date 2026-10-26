@@ -1,0 +1,59 @@
+/* The compact "connect this app" step (catalog, widgets, Settings → Connected apps). */
+
+.form { display: grid; gap: 16px; }
+
+.identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.identityText { display: grid; gap: 3px; min-width: 0; }
+.appName { display: flex; align-items: baseline; gap: 8px; font-size: var(--text-md); font-weight: 620; min-width: 0; }
+.inApp { font-size: var(--text-xs); font-weight: 450; color: var(--muted); }
+.where { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--text-xs); color: var(--ink-2); }
+.where .mono { color: var(--muted); min-width: 0; }
+
+.textButton {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  border-radius: 3px;
+}
+@media (hover: hover) and (pointer: fine) { .textButton:hover { color: var(--ink); text-decoration-color: currentColor; } }
+
+.note { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.5; }
+
+.fields { display: grid; gap: 14px; }
+.help { font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
+.switchMode {
+  justify-self: start;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  border-radius: 3px;
+}
+@media (hover: hover) and (pointer: fine) { .switchMode:hover { color: var(--ink); text-decoration-color: currentColor; } }
+
+.howto { font-size: var(--text-sm); color: var(--ink-2); }
+.howto summary { cursor: pointer; width: fit-content; color: var(--ink-2); border-radius: 3px; }
+.howto p { margin-top: 6px; line-height: 1.5; color: var(--ink-2); }
+
+.share {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: 1.45;
+  cursor: pointer;
+}
+.share b { display: block; color: var(--ink); font-weight: 600; }
+
+.actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+@media (max-width: 640px) {
+  .actions { display: grid; grid-template-columns: 1fr 1fr; }
+}

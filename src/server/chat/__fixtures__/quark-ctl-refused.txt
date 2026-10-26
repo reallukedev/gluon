@@ -1,0 +1,1 @@
+{"ok":false,"code":"exists","error":"There's already an account called sam@chat.example.com."}
