@@ -3,8 +3,12 @@ import net from "node:net";
 import path from "node:path";
 import tls from "node:tls";
 import crypto from "node:crypto";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { judgeSrv, probeXmpp } from "./xmpp-probe";
+
+// The fake servers listen on loopback; on a machine with a Docker bridge (CI runners) Gluon would
+// otherwise reach "this machine" through the bridge gateway instead.
+vi.mock("./probes", async (orig) => ({ ...(await orig<typeof import("./probes")>()), localBackendHost: (host: string) => host }));
 
 const certs = path.join(__dirname, "../../../test/fixtures/certs");
 const key = fs.readFileSync(path.join(certs, "long.key"));
