@@ -1,9 +1,9 @@
 "use client";
 import * as React from "react";
-import { MoreHoriz, OpenNewWindow, Refresh, RefreshDouble, Trash, KeyBack, Globe } from "iconoir-react";
+import { MoreHoriz, OpenNewWindow, Refresh, Trash, KeyBack, Globe } from "iconoir-react";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { AppIcon } from "@/components/apps/AppIcon";
-import { Button, IconButton, LinkButton } from "@/components/ui/Button";
+import { Button, IconButton } from "@/components/ui/Button";
 import { Dialog, useConfirm } from "@/components/ui/Dialog";
 import { Field, Input, SettingRow, Switch } from "@/components/ui/Field";
 import { Menu } from "@/components/ui/Menu";
@@ -22,19 +22,16 @@ const TOKENS_URL = "https://dash.cloudflare.com/profile/api-tokens";
 export function cloudflareSummary(cf: CloudflareStatus | undefined): string | null {
   if (!cf?.connected || !cf.zone) return null;
   const s = cf.sync;
-  const down = !!cf.tunnel && (!cf.tunnel.container?.running || cf.tunnel.status === "down");
-  if (down || s.problems.length || s.names.some((n) => n.state === "conflict" || n.state === "error")) return `Cloudflare needs a look.`;
-  if (cf.tunnel) return `Cloudflare carries ${cf.zone.name} through a tunnel.`;
+  if (s.problems.length || s.names.some((n) => n.state === "conflict" || n.state === "error")) return "Cloudflare needs a look.";
   return `Cloudflare keeps ${cf.zone.name} pointed here.`;
 }
 
 export function useCloudflare(enabled = true) {
-  // While the tunnel is starting, look again sooner.
+  // While a check is running, look again sooner.
   const [fast, setFast] = React.useState(false);
-  const res = useApi<CloudflareStatus>(enabled ? "/api/cloudflare" : null, { refresh: fast ? 5_000 : 60_000 });
-  const t = res.data?.tunnel;
-  const settling = !!t && (t.status !== "healthy" || !t.container?.running);
-  React.useEffect(() => setFast(settling || !!res.data?.sync.running), [settling, res.data?.sync.running]);
+  const res = useApi<CloudflareStatus>(enabled ? "/api/cloudflare" : null, { refresh: fast ? 3_000 : 60_000 });
+  const running = !!res.data?.sync.running;
+  React.useEffect(() => setFast(running), [running]);
   return res;
 }
 
@@ -49,7 +46,7 @@ export function CloudflarePanel() {
     if (m) setOpened((o) => ({ mode: m, n: o.n + 1 }));
     setConnectingState(m);
   };
-  const [busy, setBusy] = React.useState<null | "sync" | "tunnel" | "restart" | "ipv6" | string>(null);
+  const [busy, setBusy] = React.useState<null | string>(null);
   const [confirm, confirmNode] = useConfirm();
 
   const run = async (what: string, fn: () => Promise<CloudflareStatus>, done?: (s: CloudflareStatus) => string | null) => {
@@ -112,7 +109,7 @@ export function CloudflarePanel() {
         <div className={c.head}>
           <AppIcon src={CLOUDFLARE_ICON} name="Cloudflare" size={32} />
           <div className={c.headText}>
-            <span className={c.line}>DNS records, dynamic DNS and a tunnel, all from one API token.</span>
+            <span className={c.line}>DNS records for every public address, kept on this network&rsquo;s address, from one API token.</span>
           </div>
           <div className={c.headActions}>
             <Button variant="primary" size="sm" onClick={() => setConnecting("new")}>
@@ -130,8 +127,7 @@ export function CloudflarePanel() {
   const conflicts = sync.names.filter((n) => n.state === "conflict");
   const errors = sync.names.filter((n) => n.state === "error");
   const live = sync.names.filter((n) => n.want.length > 0);
-  const tunnel = data.tunnel;
-  const straight = live.filter((n) => n.want.some((w) => w.type === "A"));
+  const direct = live.filter((n) => n.want.some((w) => !w.proxied) && n.name !== zone.name);
   const tokenProblem = sync.problems.some((p) => /token/i.test(p));
 
   const summary: { state: LineState; text: string } = !data.network
@@ -144,47 +140,17 @@ export function CloudflarePanel() {
           ? { state: "unhealthy", text: `Cloudflare refused ${errors.length === 1 ? `the change to ${errors[0]!.name}` : `${errors.length} changes`}.` }
           : conflicts.length
             ? { state: "attention", text: `${conflicts.length === 1 ? `${conflicts[0]!.name} has records` : `${conflicts.length} names have records`} Gluon didn't make.` }
-            : tunnel
-              ? { state: "running", text: `Visitors come in through the tunnel${straight.length ? `, except ${straight.length === 1 ? straight[0]!.name : `${straight.length} names`}, which ${straight.length === 1 ? "goes" : "go"} straight to ${sync.ipv4 ?? "this network"}` : ""}.` }
-              : { state: "running", text: `${live.length === 1 ? "1 name points" : `${live.length} names point`} at ${sync.ipv4 ?? "this network"}.` };
+            : { state: "running", text: `${live.length === 1 ? "1 name points" : `${live.length} names point`} at ${sync.ipv4 ?? "this network"}${data.proxied ? `, ${direct.length ? `all but ${direct.length === 1 ? direct[0]!.name : `${direct.length}`} through Cloudflare` : "all through Cloudflare"}` : ""}.` };
 
-  const tunnelLine: { state: LineState; text: string } | null = !tunnel
-    ? null
-    : !tunnel.container
-      ? { state: "unhealthy", text: "cloudflared isn't on this server any more." }
-      : !tunnel.container.running
-        ? { state: "unhealthy", text: tunnel.container.state === "restarting" ? "cloudflared keeps restarting." : tunnel.container.state === "created" ? "cloudflared hasn't started." : "cloudflared stopped." }
-        : tunnel.status === "healthy"
-          ? { state: "running", text: `Connected to Cloudflare${tunnel.connections > 1 ? ` in ${tunnel.connections} places` : ""}.` }
-          : tunnel.status === "degraded"
-            ? { state: "attention", text: "Connected, but some of its links to Cloudflare are down." }
-            : { state: "starting", text: "Connecting to Cloudflare…" };
-
-  function toggleTunnel(on: boolean) {
-    if (on) {
-      confirm({
-        title: "Turn on the tunnel?",
-        consequences: [
-          `Web addresses in ${zone.name} reach this server through Cloudflare. Nothing needs forwarding on the router for them.`,
-          "Uploads over 100 MB fail and video streaming isn't allowed. Mark an address Direct on the Network page to keep it off the tunnel.",
-          "Chat and voice addresses still go straight to this network.",
-        ],
-        confirmLabel: "Turn on tunnel",
-        onConfirm: () => run("tunnel", () => api.post<CloudflareStatus>("/api/cloudflare/tunnel", { action: "enable" }), () => "The tunnel is on"),
-      });
-    } else {
-      confirm({
-        title: "Turn off the tunnel?",
-        consequences: [
-          `DNS points at ${sync.ipv4 ?? "this network's address"} again, so port 443 has to be forwarded to this server.`,
-          "Caddy gets its own certificates again, which can take a minute.",
-          "The tunnel is removed from Cloudflare.",
-        ],
-        confirmLabel: "Turn off tunnel",
-        variant: "danger",
-        onConfirm: () => run("tunnel", () => api.del<CloudflareStatus>("/api/cloudflare/tunnel"), () => "The tunnel is off"),
-      });
-    }
+  function toggleProxy(on: boolean) {
+    const go = () => run("proxied", () => api.patch<CloudflareStatus>("/api/cloudflare", { proxied: on }), () => (on ? "Web addresses go through Cloudflare" : "Web addresses go straight here"));
+    if (on) return void go();
+    confirm({
+      title: "Stop proxying through Cloudflare?",
+      consequences: [`Names under ${zone.name} point straight at ${sync.ipv4 ?? "this network's address"}, so anyone can see it.`, `${zone.name} itself stays proxied.`],
+      confirmLabel: "Stop proxying",
+      onConfirm: go,
+    });
   }
 
   function disconnect() {
@@ -215,9 +181,9 @@ export function CloudflarePanel() {
           }
           items={[
             { label: "Replace token", icon: <KeyBack />, onSelect: () => setConnecting("token") },
-            { label: "Use another domain", icon: <Globe />, disabled: !!tunnel, description: tunnel ? "Turn the tunnel off first" : undefined, onSelect: () => setConnecting("zone") },
+            { label: "Use another domain", icon: <Globe />, onSelect: () => setConnecting("zone") },
             "separator",
-            { label: "Disconnect", icon: <Trash />, danger: true, disabled: !!tunnel, description: tunnel ? "Turn the tunnel off first" : undefined, onSelect: disconnect },
+            { label: "Disconnect", icon: <Trash />, danger: true, onSelect: disconnect },
           ]}
         />
       }
@@ -267,27 +233,9 @@ export function CloudflarePanel() {
 
       {data.network && (
         <div className={c.block}>
-          <SettingRow
-            label="Cloudflare Tunnel"
-            description={tunnel ? undefined : "Reach this server without forwarding ports on the router. Uploads stop at 100 MB and video streaming isn't allowed."}
-          >
-            <Switch checked={!!tunnel || busy === "tunnel"} disabled={busy === "tunnel"} onChange={toggleTunnel} aria-label="Cloudflare Tunnel" />
+          <SettingRow label="Proxy through Cloudflare" description="Hides your home's address. Uploads stop at 100 MB and video streaming isn't allowed, so mark addresses like Jellyfin Direct on the Network page. Chat and voice always go direct.">
+            <Switch checked={data.proxied} disabled={busy === "proxied"} onChange={toggleProxy} aria-label="Proxy through Cloudflare" />
           </SettingRow>
-          {busy === "tunnel" && !tunnel ? (
-            <p className={`${c.tunnelLine} appear`} data-motion-gentle="">
-              <StateLine state="starting" size={11} /> Making the tunnel and starting cloudflared…
-            </p>
-          ) : tunnelLine ? (
-            <div className={`${c.tunnelLine} appear`} data-motion-gentle="">
-              <StateLine state={tunnelLine.state} size={11} />
-              <span>{tunnelLine.text}</span>
-              {tunnel && (!tunnel.container?.running || tunnel.status === "down" || tunnel.status === "inactive") && (
-                <Button size="sm" icon={<RefreshDouble />} loading={busy === "restart"} onClick={() => run("restart", () => api.post<CloudflareStatus>("/api/cloudflare/tunnel", { action: "restart" }), () => "Restarted cloudflared")}>
-                  Restart cloudflared
-                </Button>
-              )}
-            </div>
-          ) : null}
         </div>
       )}
 
@@ -334,7 +282,7 @@ function NameRow({ n, busy, onAdopt }: { n: ManagedName; busy: boolean; onAdopt:
   const removing = n.want.length === 0;
   const text =
     n.state === "conflict"
-      ? `Has ${describe(n.have)}. Gluon would set ${describe(n.want).toLowerCase() === "tunnel" ? "the tunnel" : describe(n.want)}.`
+      ? `Has ${describe(n.have)}. Gluon would set ${describe(n.want)}.`
       : n.state === "error"
         ? (n.message ?? "Cloudflare refused the change.")
         : removing
@@ -367,7 +315,7 @@ function NameRow({ n, busy, onAdopt }: { n: ManagedName; busy: boolean; onAdopt:
 const PERMISSIONS: [string, string, string, boolean][] = [
   ["Zone", "DNS", "Edit", true],
   ["Zone", "Zone", "Read", true],
-  ["Account", "Cloudflare Tunnel", "Edit", false],
+  ["Zone", "Zone Settings", "Read", false],
 ];
 
 function ConnectDialog({ open, mode, current, onClose, onConnected }: { open: boolean; mode: "new" | "token" | "zone"; current: CloudflareStatus; onClose: () => void; onConnected: (s: CloudflareStatus) => void }) {
@@ -491,7 +439,7 @@ function ConnectDialog({ open, mode, current, onClose, onConnected }: { open: bo
                     <span>{scope}</span>
                     <span>{what}</span>
                     <span>{level}</span>
-                    <span className={c.permNote}>{required ? "" : "for the tunnel"}</span>
+                    <span className={c.permNote}>{required ? "" : "to check SSL mode"}</span>
                   </li>
                 ))}
               </ul>
@@ -537,12 +485,6 @@ function ConnectDialog({ open, mode, current, onClose, onConnected }: { open: bo
               <li className={c.check} data-motion-gentle="" style={{ "--i": 1 } as React.CSSProperties}>
                 <StateLine state={check.dnsEdit ? "running" : "unhealthy"} size={11} />
                 <span>{check.dnsEdit ? "Can change DNS" : "Can't change DNS. Add Zone · DNS · Edit to the token."}</span>
-              </li>
-            )}
-            {needsToken && check.tunnels !== null && (
-              <li className={c.check} data-motion-gentle="" style={{ "--i": 2 } as React.CSSProperties}>
-                <StateLine state={check.tunnels ? "running" : "stopped"} size={11} />
-                <span>{check.tunnels ? "Can run a tunnel" : "No tunnel. Add Account · Cloudflare Tunnel · Edit to use one."}</span>
               </li>
             )}
           </ul>

@@ -13,7 +13,7 @@ const connectBody = z.object({
 
 export const POST = route({ auth: "admin", recent: true, body: connectBody, burst: { limit: 10, windowMs: 60_000 } }, ({ user, body, ip, zone }) => connect(user, { ip, zone }, body));
 
-export const PATCH = route({ auth: "admin", body: z.object({ ipv6: z.boolean().optional() }) }, ({ user, body, ip, zone }) => setOptions(user, { ip, zone }, body));
+export const PATCH = route({ auth: "admin", body: z.object({ ipv6: z.boolean().optional(), proxied: z.boolean().optional() }) }, ({ user, body, ip, zone }) => setOptions(user, { ip, zone }, body));
 
 export const DELETE = route({ auth: "admin", recent: true }, async ({ user, ip, zone }) => {
   await disconnect(user, { ip, zone });

@@ -41,8 +41,8 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
   it asks for a login, drawn as a map from the visitor to the app. Manages
   [Caddy](https://caddyserver.com) routes and certificates.
 - **Cloudflare.** With one API token, Gluon writes the DNS records for every public address, keeps
-  them pointed at your internet address as it changes, and can run a Cloudflare Tunnel so nothing
-  needs forwarding on the router.
+  them pointed at your internet address as it changes, and sends web addresses through Cloudflare's
+  proxy.
 - **Chat and voice.** Sets up and runs a Prosody (XMPP) chat server and a Mumble voice server, or
   takes over the ones you have: accounts, invite links, group chats, file sharing, phone
   notifications, and voice and video calls between homes through a coturn relay.
@@ -97,18 +97,20 @@ admin socket. Mount the config folder at `/proxy-caddy` and the admin socket's v
 ### Cloudflare (optional)
 
 Settings → Integrations → Cloudflare takes an API token with **Zone · DNS · Edit** and **Zone · Zone ·
-Read** for your domain, plus **Account · Cloudflare Tunnel · Edit** if you want the tunnel. From then on:
+Read** for your domain (add **Zone · Zone Settings · Read** and Gluon also warns when the SSL mode would
+break proxied addresses). From then on:
 
 - DNS records for public addresses are added, changed and removed as you publish apps. Gluon marks
   the records it makes ("Managed by Gluon") and leaves every other record alone unless you hand a
   name over with "Let Gluon manage".
 - Those records follow your internet address (checked every 5 minutes), so a separate dynamic DNS
   container isn't needed.
-- With the tunnel on, Gluon creates a Cloudflare Tunnel and runs `cloudflared` as a container named
-  `gluon-cloudflared`. Web addresses then reach Caddy through it and nothing needs forwarding on the
-  router. Uploads through Cloudflare stop at 100 MB and video streaming isn't allowed, so any address
-  can be marked Direct to keep its own record pointing straight at your network. Chat and voice
-  always go direct.
+- Web addresses go through Cloudflare's proxy, which hides your home's address. Uploads through it
+  stop at 100 MB and video streaming isn't allowed, so any address can be marked Direct to keep a
+  plain record pointing straight at your network. Chat and voice always go direct, and so do names
+  more than one level under the domain, which Cloudflare's free certificate doesn't cover. Your
+  router still forwards ports 80 and 443 to this server, and Cloudflare's SSL mode should be
+  Full (strict).
 
 ### Reaching it from outside
 

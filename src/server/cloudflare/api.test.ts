@@ -42,13 +42,18 @@ describe("Cloudflare client", () => {
   });
 
   it("reports missing DNS edit rights as false rather than failing the whole check", async () => {
-    const { f } = fake([() => ({ status: 403, body: { success: false, errors: [{ code: 10000, message: "Authentication error" }], result: null } })]);
+    const { f } = fake([() => ok([]), () => ({ status: 403, body: { success: false, errors: [{ code: 10000, message: "Authentication error" }], result: null } })]);
     await expect(new Cloudflare("tok", f).canEditDns("z1", "example.com")).resolves.toBe(false);
   });
 
-  it("asks for a tunnel's token separately when the create answer doesn't carry it", async () => {
-    const { f, calls } = fake([() => ok({ id: "t1", name: "gluon-home" }), () => ok("secret-token")]);
-    await expect(new Cloudflare("tok", f).createTunnel("acc", "gluon-home")).resolves.toEqual({ id: "t1", name: "gluon-home", token: "secret-token" });
-    expect(calls[1]!.url).toMatch(/\/accounts\/acc\/cfd_tunnel\/t1\/token$/);
+  it("clears a check record an interrupted check left behind before trying again", async () => {
+    const { f, calls } = fake([() => ok([{ id: "old" }]), () => ok(null), () => ok({ id: "new" }), () => ok(null)]);
+    await expect(new Cloudflare("tok", f).canEditDns("z1", "example.com")).resolves.toBe(true);
+    expect(calls.map((c) => `${c.init.method} ${c.url.replace(/^.*\/zones\/z1/, "")}`)).toEqual([
+      "GET /dns_records?type=TXT&name=_gluon-check.example.com",
+      "DELETE /dns_records/old",
+      "POST /dns_records",
+      "DELETE /dns_records/new",
+    ]);
   });
 });

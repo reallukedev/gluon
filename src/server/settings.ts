@@ -53,8 +53,9 @@ const schemas = {
       zone: z.object({ id: z.string(), name: z.string(), accountId: z.string(), accountName: z.string() }),
       connectedAt: z.number(),
       ipv6: z.boolean().default(false),
+      /** Web addresses go through Cloudflare's proxy, unless marked direct. */
+      proxied: z.boolean().default(true),
       adopted: z.array(z.string().max(253)).max(500).default([]),
-      tunnel: z.object({ id: z.string(), name: z.string(), token: z.string(), createdAt: z.number() }).nullable().default(null),
     })
     .nullable()
     .default(null),

@@ -1,9 +1,9 @@
 import "server-only";
 import { AppError } from "../errors";
 import type { CloudflareZoneT, DnsRecordT } from "@/lib/cloudflare-types";
-import type { ExistingRecord, IngressRule } from "./plan";
+import type { ExistingRecord } from "./plan";
 
-/** A small client for the parts of Cloudflare's API Gluon uses: zones, DNS records and tunnels. */
+/** A small client for the parts of Cloudflare's API Gluon uses: zones, DNS records and SSL settings. */
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -102,8 +102,12 @@ export class Cloudflare {
 
   /** Edit rights, tried for real: a TXT record made and removed again. */
   async canEditDns(zoneId: string, zone: string): Promise<boolean> {
+    const name = `_gluon-check.${zone}`;
     try {
-      const r = await this.call<{ id: string }>("POST", `/zones/${zoneId}/dns_records`, { type: "TXT", name: `_gluon-check.${zone}`, content: "\"gluon\"", ttl: 60, comment: "Gluon checking its token; removed right away" });
+      // One left behind by an interrupted check would make the create fail as a duplicate.
+      const left = await this.call<{ id: string }[]>("GET", `/zones/${zoneId}/dns_records?type=TXT&name=${encodeURIComponent(name)}`).catch(() => null);
+      for (const r of left?.result ?? []) await this.deleteRecord(zoneId, r.id).catch(() => undefined);
+      const r = await this.call<{ id: string }>("POST", `/zones/${zoneId}/dns_records`, { type: "TXT", name, content: "\"gluon\"", ttl: 60, comment: "Gluon checking its token; removed right away" });
       await this.deleteRecord(zoneId, r.result.id).catch(() => undefined);
       return true;
     } catch (e) {
@@ -112,39 +116,12 @@ export class Cloudflare {
     }
   }
 
-  async canListTunnels(accountId: string): Promise<boolean> {
+  /** The zone's SSL mode (off, flexible, full, strict), or null when the token can't read it. */
+  async sslMode(zoneId: string): Promise<string | null> {
     try {
-      await this.call("GET", `/accounts/${accountId}/cfd_tunnel?is_deleted=false&per_page=1`);
-      return true;
-    } catch (e) {
-      if (e instanceof CloudflareError && (e.cfStatus === 403 || e.cfStatus === 401)) return false;
-      throw e;
+      return (await this.call<{ value: string }>("GET", `/zones/${zoneId}/settings/ssl`)).result.value;
+    } catch {
+      return null;
     }
-  }
-
-  async createTunnel(accountId: string, name: string): Promise<{ id: string; name: string; token: string }> {
-    const r = await this.call<{ id: string; name: string; token?: string }>("POST", `/accounts/${accountId}/cfd_tunnel`, { name, config_src: "cloudflare" });
-    const token = r.result.token ?? (await this.call<string>("GET", `/accounts/${accountId}/cfd_tunnel/${r.result.id}/token`)).result;
-    return { id: r.result.id, name: r.result.name, token };
-  }
-
-  async tunnel(accountId: string, id: string): Promise<{ status: "healthy" | "degraded" | "down" | "inactive" | null; connections: number; deleted: boolean }> {
-    const r = await this.call<{ status?: string; connections?: unknown[]; deleted_at?: string | null }>("GET", `/accounts/${accountId}/cfd_tunnel/${id}`);
-    const st = r.result.status;
-    return {
-      status: st === "healthy" || st === "degraded" || st === "down" || st === "inactive" ? st : null,
-      connections: r.result.connections?.length ?? 0,
-      deleted: !!r.result.deleted_at,
-    };
-  }
-
-  async setIngress(accountId: string, id: string, rules: IngressRule[]): Promise<void> {
-    await this.call("PUT", `/accounts/${accountId}/cfd_tunnel/${id}/configurations`, { config: { ingress: rules } });
-  }
-
-  async deleteTunnel(accountId: string, id: string): Promise<void> {
-    // Connections that haven't timed out yet block the delete; clear them first.
-    await this.call("DELETE", `/accounts/${accountId}/cfd_tunnel/${id}/connections`).catch(() => undefined);
-    await this.call("DELETE", `/accounts/${accountId}/cfd_tunnel/${id}`);
   }
 }

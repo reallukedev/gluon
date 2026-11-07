@@ -2,7 +2,7 @@ import "server-only";
 import { openSignUp } from "../chat/backend";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { tryReadConfig, caddyRunning, isRedirect, httpsMode, servedPlain, XMPP_C2S_PORT, XMPP_S2S_PORT, type RoutesConfig, type SubdomainRoute } from "../caddy/routes";
+import { tryReadConfig, caddyRunning, isRedirect, httpsMode, XMPP_C2S_PORT, XMPP_S2S_PORT, type RoutesConfig, type SubdomainRoute } from "../caddy/routes";
 import { listApps, type AppSummary } from "../docker/apps";
 import { AppError } from "../errors";
 import { getSetting } from "../settings";
@@ -293,8 +293,7 @@ async function build(force = false): Promise<NetworkStatus> {
         const toMumble = !voice && !sub?.xmpp && !isRedirect(r) && !!backendCfg && isLocalBackend(backendCfg.host) && mumble.has(backendCfg.port);
         // Plain HTTP and no-web-side names have no certificate in Caddy to look at.
         const web = https !== "none";
-        // Through the tunnel Caddy holds no certificate for the name; Cloudflare does.
-        const plain = servedPlain(cfg, r);
+        const plain = https === "http";
         const [dns, tlsRaw, http, backend, xmpp, vc] = await Promise.all([
           dnsFor(hostName),
           web && !plain ? tlsFor(hostName) : Promise.resolve(null),
