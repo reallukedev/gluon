@@ -42,18 +42,6 @@ export interface TokenCheck {
   suggested: string | null;
   /** Edit rights, tried for real (a TXT record made and removed). null: not tried (no zone yet). */
   dnsEdit: boolean | null;
-  /** Can list the account's tunnels. */
-  tunnels: boolean | null;
-}
-
-export interface TunnelStateT {
-  id: string;
-  name: string;
-  /** Cloudflare's view: healthy, degraded, down or inactive. null when it couldn't be read. */
-  status: "healthy" | "degraded" | "down" | "inactive" | null;
-  connections: number;
-  /** The cloudflared container on this server. */
-  container: { name: string; running: boolean; state: string | null } | null;
 }
 
 export interface CloudflareStatus {
@@ -66,9 +54,8 @@ export interface CloudflareStatus {
   tokenHint: string | null;
   connectedAt: number | null;
   ipv6: boolean;
-  tunnel: TunnelStateT | null;
-  /** Addresses that skip the tunnel and go straight to this network. */
-  directHosts: string[];
+  /** Web addresses go through Cloudflare's proxy (orange cloud), unless marked Direct. */
+  proxied: boolean;
   sync: {
     at: number | null;
     running: boolean;
@@ -82,4 +69,14 @@ export interface CloudflareStatus {
   };
   /** The older cloudflare-ddns updater is still running next to Gluon. */
   ddnsContainer: string | null;
+}
+
+/**
+ * Cloudflare's free edge certificate covers the zone itself and one level under it
+ * (example.com, *.example.com). A proxied name deeper than that gets a TLS error at the edge.
+ */
+export function edgeCovered(host: string, zone: string): boolean {
+  const h = host.toLowerCase().replace(/\.$/, "");
+  const z = zone.toLowerCase().replace(/\.$/, "");
+  return h === z || (h.endsWith(`.${z}`) && !h.slice(0, -z.length - 1).includes("."));
 }

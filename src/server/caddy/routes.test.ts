@@ -259,41 +259,23 @@ describe("a site from Sites", () => {
   });
 });
 
-describe("through a Cloudflare Tunnel", () => {
+describe("addresses marked direct (skipping Cloudflare's proxy)", () => {
   const web = (id: string, host: string, extra: Record<string, unknown> = {}) => ({ id, type: "subdomain", name: id, enabled: true, host, backend: { host: "host.docker.internal", port: 8096, tls: false }, ...extra });
-  const tunnelled = { ...base, tunnel: { zone: "example.test" } };
 
-  test("web names in the zone are served as plain HTTP, while chat, direct names and other zones keep HTTPS", () => {
-    const cfg = cleanConfig(
-      {
-        routes: [
-          web("tv", "tv.example.test"),
-          web("big", "big.example.test", { direct: true }),
-          web("away", "photos.elsewhere.test"),
-          chat({ s2s_port: 5269, http_port: null, cert_sync: null }),
-        ],
-      },
-      tunnelled,
-    );
-    const text = renderCaddyfile(cfg);
-    expect(text).toContain("\nhttp://example.test {\n");
-    expect(text).toContain("\nhttp://tv.example.test {\n");
-    expect(block(text, "big.example.test")).toContain("reverse_proxy host.docker.internal:8096");
-    expect(text).toContain("\nphotos.elsewhere.test {\n");
-    expect(text).toContain("\nchat.example.test {\n");
-    // Visitors still use https: Cloudflare ends it.
-    expect(routeUrl(cfg, cfg.routes[0]!)).toBe("https://tv.example.test");
+  test("keep the flag on web names and serve them as before", () => {
+    const cfg = cleanConfig({ routes: [web("tv", "tv.example.test", { direct: true })] }, base);
+    expect((cfg.routes[0] as { direct?: boolean }).direct).toBe(true);
+    expect(block(renderCaddyfile(cfg), "tv.example.test")).toContain("reverse_proxy host.docker.internal:8096");
   });
 
-  test("trusts loopback only while the tunnel is on, and a save from the Network page can't switch it", () => {
-    expect(renderCaddyfile(cleanConfig({ routes: [] }, tunnelled))).toContain("trusted_proxies static 127.0.0.1/32 ::1/128 173.245.48.0/20");
-    expect(renderCaddyfile(cleanConfig({ routes: [] }, base))).toContain("trusted_proxies static 173.245.48.0/20");
-    const sneaky = cleanConfig({ routes: [], tunnel: { zone: "evil.test" } } as never, base);
-    expect(sneaky.tunnel).toBeUndefined();
-  });
-
-  test("chat and voice can't be marked direct, since they never ride the tunnel", () => {
-    const cfg = cleanConfig({ routes: [chat({ s2s_port: null, http_port: null, cert_sync: null }, { direct: true })] }, tunnelled);
+  test("chat and voice can't be marked direct, since they're never proxied anyway", () => {
+    const cfg = cleanConfig({ routes: [chat({ s2s_port: null, http_port: null, cert_sync: null }, { direct: true })] }, base);
     expect((cfg.routes[0] as { direct?: boolean }).direct).toBeUndefined();
+  });
+
+  test("a stray tunnel setting from a client is dropped, and the Caddyfile is the one Gluon always wrote", () => {
+    const cfg = cleanConfig({ routes: [], tunnel: { zone: "example.test" } } as never, base);
+    expect((cfg as { tunnel?: unknown }).tunnel).toBeUndefined();
+    expect(renderCaddyfile(cfg)).toContain("trusted_proxies static 173.245.48.0/20");
   });
 });

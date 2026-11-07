@@ -34,7 +34,7 @@ export interface SubdomainRouteT extends RouteBase {
   https?: HttpsSettingsT;
   /** A site from Sites: Caddy serves this published version's files itself; `backend` is then Caddy's own port. */
   site?: SiteRefT;
-  /** With a Cloudflare Tunnel on: this address skips it and keeps its own record straight at this network. */
+  /** With Cloudflare connected: skips its proxy, with a DNS record straight at this network. */
   direct?: boolean;
 }
 
@@ -103,8 +103,6 @@ export interface RoutesConfigT {
   base_domain: string;
   fallback: { name: string; app?: string | null; backend: BackendT };
   routes: RouteT[];
-  /** A Cloudflare Tunnel carries web addresses in this zone (set from Settings → Integrations). */
-  tunnel?: { zone: string };
   updated?: string;
 }
 

@@ -3,7 +3,7 @@ import { route } from "@/server/api";
 import { checkSavedToken, checkToken } from "@/server/cloudflare/service";
 
 /**
- * What a token can do: its domains, and whether it can edit DNS and see tunnels. Saves nothing.
+ * What a token can do: its domains, and whether it can edit DNS. Saves nothing.
  * `saved` checks the token Gluon already has (moving to another domain).
  */
 const body = z.union([

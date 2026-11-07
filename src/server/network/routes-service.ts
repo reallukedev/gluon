@@ -208,23 +208,3 @@ export async function saveSiteRoutes(user: User, where: Where, change: (routes: 
   }
 }
 
-/**
- * Turn the Cloudflare Tunnel on for web addresses in `zone`, or off with null. Only Settings →
- * Integrations calls this; the Network page's saves keep whatever is set.
- */
-export function setTunnel(user: User, where: Where, tunnel: { zone: string } | null): Promise<RoutesConfig> {
-  return serial(async () => {
-    await caddySide();
-    const current = currentConfig();
-    const next: RoutesConfig = { ...current };
-    if (tunnel) next.tunnel = tunnel;
-    else delete next.tunnel;
-    const saved = await applyConfig(next, tunnel ? `Cloudflare Tunnel turned on by ${user.username} in Gluon` : `Cloudflare Tunnel turned off by ${user.username} in Gluon`);
-    audit(user, { action: "network.routes.save", summary: tunnel ? `Sent web addresses in ${tunnel.zone} through the Cloudflare Tunnel` : "Stopped sending web addresses through the Cloudflare Tunnel", target: saved.base_domain }, where);
-    invalidateApps();
-    invalidateStatus();
-    invalidateExposure();
-    publish("network.routes", { rev: configRev(saved) });
-    return saved;
-  });
-}
