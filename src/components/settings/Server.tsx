@@ -227,8 +227,8 @@ export function Server() {
         <SettingRow label="Stay signed in away from home for" description="Shorter suits phones and laptops. At most the home limit.">
           <DaysInput value={f.awaySessionDays} onChange={(v) => set("awaySessionDays", v)} label="Days away" />
         </SettingRow>
-        <SettingRow label="Household can see Status" description="A simple “is it working?” page for their apps. No disks, logs or settings.">
-          <Switch checked={f.householdCanSeeStatus} onChange={(v) => set("householdCanSeeStatus", v)} aria-label="Household can see Status" />
+        <SettingRow label="Household can see server health" description="The “is everything working?” widget on their Home. No disks, logs or settings.">
+          <Switch checked={f.householdCanSeeStatus} onChange={(v) => set("householdCanSeeStatus", v)} aria-label="Household can see server health" />
         </SettingRow>
       </Panel>
 

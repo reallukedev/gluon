@@ -27,8 +27,8 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
 
 ## What it does
 
-- **Status and alerts.** One sentence says whether everything is fine; anything that needs you comes
-  with its cause and a one-click fix. Uptime monitors, drive health, certificates, crash loops, and
+- **Health and alerts.** One sentence on Home says whether everything is fine; anything that needs
+  you comes with its cause and a one-click fix. Uptime monitors, drive health, certificates, crash loops, and
   notifications through ntfy, Pushover, email or webhooks.
 - **Apps.** Every Docker container and Compose stack, including ones Umbrel or CasaOS installed:
   live CPU and memory, logs, safe compose editing, and a diagram of how each app is put together.
@@ -55,7 +55,7 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
   their own, with the last few versions kept for rolling back.
 - **System.** OS updates, services, power, who's signed in over SSH, temperatures and memory by app.
 - **Diagnostics.** A checkup that runs 60+ checks in seconds, targeted checks for "an app won't open"
-  or "the internet is slow", and live traffic, connections, requests, processes and logs.
+  or "the internet is slow", and live use by app, traffic, connections, requests, processes and logs.
 - **Home and household.** A start page for everyone in the house, with widgets for Jellyfin, Immich,
   Navidrome, Homebridge, Crafty Controller and more. Accounts with roles, invites with a QR code, a
   grid of who can open what, and an activity log of every change.
@@ -66,10 +66,10 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
 | --- | --- |
 | ![The Apps list: nine apps with state, CPU and memory sparklines and their addresses](docs/screenshots/apps.png) | ![Immich's page: a diagram from its address through four containers to the folders that hold its data](docs/screenshots/app.png) |
 | **Apps.** Every container and Compose stack, with live CPU and memory. | **How an app is put together**, from its address to its containers and data. |
-| ![The Status page in dark mode: one problem with a Restart button, and live machine charts](docs/screenshots/status-dark.png) | ![Diagnostics: a full checkup and targeted checks such as "An app won't open"](docs/screenshots/diagnostics.png) |
-| **Status**, in dark mode. Each problem comes with its fix. | **Diagnostics.** A full checkup, or a check for one specific problem. |
-| ![First-run setup listing what Gluon found on the server](docs/screenshots/setup.png) | <img src="docs/screenshots/phone.png" width="260" alt="Home on a phone: app tiles in a three-column grid"> |
-| **First run** shows what Gluon found before it changes anything. | **On a phone**, everything works the same. |
+| ![Diagnostics: a full checkup and targeted checks such as "An app won't open"](docs/screenshots/diagnostics.png) | ![First-run setup listing what Gluon found on the server](docs/screenshots/setup.png) |
+| **Diagnostics.** A full checkup, or a check for one specific problem. | **First run** shows what Gluon found before it changes anything. |
+| <img src="docs/screenshots/phone.png" width="260" alt="Home on a phone: app tiles in a three-column grid"> | |
+| **On a phone**, everything works the same. | |
 
 Light and dark follow your device. The screenshots come from a demo server with made-up data.
 

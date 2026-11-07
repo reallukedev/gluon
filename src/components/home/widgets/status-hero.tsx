@@ -177,7 +177,7 @@ export function StatusWidget({ size }: WidgetProps) {
   );
 
   if (!data && error) {
-    if (error.status === 403) return <WidgetState title="Status is for admins here">Whoever runs the server hasn&apos;t shared it with the household.</WidgetState>;
+    if (error.status === 403) return <WidgetState title="Server health is for admins here">Whoever runs the server hasn&apos;t shared it with the household.</WidgetState>;
     return (
       <WidgetState
         line="unknown"
@@ -195,6 +195,8 @@ export function StatusWidget({ size }: WidgetProps) {
 
   const say = data ? sayFor(data, admin, serverName, reopened ? null : settled) : null;
   const lead = say?.lead;
+  // The full list is the Needs you widget; link to it only when it's on this Home.
+  const list = home.pinned("problems");
   const leadName = lead?.subject ? (data!.apps.find((a) => a.id === lead.subject)?.name ?? null) : null;
   // One tree for loading and ready, so the coil mounts once and sketches itself in once.
   return (
@@ -218,13 +220,15 @@ export function StatusWidget({ size }: WidgetProps) {
           {admin && lead && size !== "s" && (
             <div className={h.act}>
               {lead.remedy && <Fix remedy={lead.remedy} finding={lead} onFixed={() => fixed(lead.id, leadName ? shortName(leadName, serverName) : null)} />}
-              <Link href={`/status#${encodeURIComponent(lead.id)}`} className={h.more}>
-                {say.more ? (say.more === 1 ? "See both" : `See all ${say.more + 1}`) : "What happened?"}
-              </Link>
+              {list && (
+                <Link href={`/#${encodeURIComponent(lead.id)}`} className={h.more}>
+                  {say.more ? (say.more === 1 ? "See both" : `See all ${say.more + 1}`) : "What happened?"}
+                </Link>
+              )}
             </div>
           )}
-          {admin && lead && size === "s" && (
-            <Link href="/status" className={h.more}>
+          {admin && lead && size === "s" && list && (
+            <Link href={`/#${encodeURIComponent(lead.id)}`} className={h.more}>
               What happened?
             </Link>
           )}

@@ -18,7 +18,8 @@ export const prefsSchema = z.object({
   temperature: z.enum(["c", "f"]).default("c"),
   rates: z.enum(["bytes", "bits"]).default("bytes"),
 
-  startPage: z.enum(["home", "status", "apps", "files"]).default("home"),
+  /** "status" (a page that was removed) and anything else unknown read as Home. */
+  startPage: z.enum(["home", "apps", "files"]).catch("home").default("home"),
   searchEngine: z.enum(["duckduckgo", "google", "kagi", "brave", "startpage", "bing", "custom"]).default("duckduckgo"),
   searchCustomUrl: z.string().max(400).default(""),
   openLinks: z.enum(["new", "same"]).default("new"),

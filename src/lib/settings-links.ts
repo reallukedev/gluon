@@ -33,13 +33,13 @@ export function peopleHref(params: { tab?: PeopleTab | null; person?: string | n
   return build("/settings/people", { tab: tab === "people" ? null : tab, ...rest });
 }
 
-/** Status, optionally at one problem (its id is the list item's anchor). */
-export function statusHref(findingId?: string): string {
-  return build("/status", {}, findingId);
+/** One problem in Home's Needs you widget (its id is the list item's anchor). */
+export function problemHref(findingId?: string): string {
+  return build("/", {}, findingId);
 }
 
-/** Old Alerts tabs → where they live now ("open" problems are Status itself). */
-export function fromOldAlertsTab(tab: string | undefined): AlertsTab | "status" {
+/** Old Alerts tabs → where they live now ("open" problems are on Home). */
+export function fromOldAlertsTab(tab: string | undefined): AlertsTab | "home" {
   switch (tab) {
     case "monitors":
       return "watching";
@@ -49,6 +49,6 @@ export function fromOldAlertsTab(tab: string | undefined): AlertsTab | "status" 
     case "history":
       return "history";
     default:
-      return "status";
+      return "home";
   }
 }

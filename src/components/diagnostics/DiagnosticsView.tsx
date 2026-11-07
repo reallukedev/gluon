@@ -14,12 +14,14 @@ import { RequestsTab } from "./RequestsTab";
 import { ProcessesTab } from "./ProcessesTab";
 import { LogsTab } from "./LogsTab";
 import { ToolsTab } from "./ToolsTab";
+import { AppsTab } from "./AppsTab";
 import s from "./diagnostics.module.css";
 
-export type DiagTab = "checkup" | "traffic" | "connections" | "requests" | "processes" | "logs" | "tools";
+export type DiagTab = "checkup" | "apps" | "traffic" | "connections" | "requests" | "processes" | "logs" | "tools";
 
 const TAB_ITEMS: { value: DiagTab; label: string }[] = [
   { value: "checkup", label: "Checkup" },
+  { value: "apps", label: "Apps" },
   { value: "traffic", label: "Traffic" },
   { value: "connections", label: "Connections" },
   { value: "requests", label: "Requests" },
@@ -65,6 +67,7 @@ export function DiagnosticsView({ tab, logSource, logUnit, checkup, runId, start
       <Tabs value={tab} hrefFor={(v) => (v === "checkup" ? "/diagnostics" : `/diagnostics?tab=${v}`)} items={TAB_ITEMS} aria-label="Diagnostics sections" />
       <div className={s.tabBody}>
         {tab === "checkup" && <CheckupTab initial={checkup} runId={runId} start={start} />}
+        {tab === "apps" && <AppsTab />}
         {tab === "traffic" && <TrafficTab />}
         {tab === "connections" && <ConnectionsTab />}
         {tab === "requests" && <RequestsTab />}

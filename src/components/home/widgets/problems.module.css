@@ -1,0 +1,2 @@
+/* The problems widget (problems.tsx): the list scrolls inside the widget rather than growing it. */
+.body { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
