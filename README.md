@@ -57,6 +57,9 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
 - **System.** OS updates, services, power, who's signed in over SSH, temperatures and memory by app.
 - **Diagnostics.** A checkup that runs 60+ checks in seconds, targeted checks for "an app won't open"
   or "the internet is slow", and live use by app, traffic, connections, requests, processes and logs.
+  A security checkup covers the firewall, IPv6, UPnP port openings on the router, SSH settings, keys
+  and encryption, server accounts and sudo, file permissions, kernel protections, AppArmor or SELinux,
+  automatic updates and OS support, container privileges and Gluon's own accounts.
 - **Home and household.** A start page for everyone in the house, with widgets for Jellyfin, Immich,
   Navidrome, Homebridge, Crafty Controller and more. Accounts with roles, invites with a QR code, a
   grid of who can open what, and an activity log of every change.

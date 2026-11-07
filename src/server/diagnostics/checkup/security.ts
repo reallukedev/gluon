@@ -9,6 +9,7 @@ import type { ExposureReport } from "@/lib/network-types";
 import { activityHref } from "@/lib/settings-links";
 import { fail, go, kv, ok, skip, warn, type CheckCtx, type CheckSpec, type Outcome } from "./core";
 import { mfaRequired } from "../../auth/policy";
+import * as h from "./hardening";
 
 /** Security: sshd settings, what's reachable, and admins without two-step sign-in. */
 
@@ -28,7 +29,7 @@ export async function sshdConfig(): Promise<SshdConfig | null> {
   try {
     ({ stdout } = await host("sshd", ["-T"], { timeoutMs: 8000 }));
   } catch (e) {
-    if (e instanceof CommandError && (e.code === 127 || /not found|No such file/i.test(e.stderr))) return null;
+    if (e instanceof CommandError && (e.code === 127 || /not found|No such file|ENOENT/i.test(e.stderr + e.message))) return null;
     if (e instanceof CommandError && e.stdout) stdout = e.stdout;
     else throw e;
   }
@@ -170,13 +171,23 @@ export function gluonLoginsOutcome(): Outcome {
   return ok(`${plural(total, "failed sign-in")} to Gluon in the last day, ${outsideN ? `${outsideN} from outside` : "all from your network"}`, { evidence });
 }
 
+/** The full checkup's Security row: the checks that catch the worst problems. The security checkup goes further. */
 export function securityChecks(): CheckSpec[] {
   const g = "security";
   return [
+    { id: "security.internet-login", group: g, label: "Logins on public apps", timeoutMs: 45_000, run: async (ctx) => internetLoginOutcome(await exposure(ctx)) },
+    { id: "security.firewall", group: g, label: "Firewall", run: h.firewallOutcome },
+    { id: "security.lan", group: g, label: "Open ports", timeoutMs: 45_000, run: async (ctx) => lanOutcome(await exposure(ctx)) },
+    { id: "security.risky-services", group: g, label: "Unsafe services", run: h.riskyServicesOutcome },
+    { id: "security.docker-api", group: g, label: "Docker's API", run: h.dockerApiOutcome },
     { id: "security.ssh-password", group: g, label: "SSH passwords", run: sshPasswordOutcome },
     { id: "security.ssh-root", group: g, label: "SSH root sign-in", run: sshRootOutcome },
-    { id: "security.internet-login", group: g, label: "Logins on public apps", timeoutMs: 45_000, run: async (ctx) => internetLoginOutcome(await exposure(ctx)) },
-    { id: "security.lan", group: g, label: "Open ports", timeoutMs: 45_000, run: async (ctx) => lanOutcome(await exposure(ctx)) },
+    { id: "security.ssh-settings", group: g, label: "SSH settings", run: h.sshSettingsOutcome },
+    { id: "security.host-accounts", group: g, label: "Server accounts", run: h.hostAccountsOutcome },
+    { id: "security.file-perms", group: g, label: "System files", timeoutMs: 30_000, run: h.filePermsOutcome },
+    { id: "security.auto-updates", group: g, label: "Automatic updates", run: h.autoUpdatesOutcome },
+    { id: "security.os-support", group: g, label: "System support", run: h.osSupportOutcome },
+    { id: "security.privileged", group: g, label: "Privileged apps", run: h.privilegedOutcome },
     { id: "security.admin-mfa", group: g, label: "Two-step sign-in", run: async () => adminMfaOutcome() },
   ];
 }

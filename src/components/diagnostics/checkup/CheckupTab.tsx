@@ -93,7 +93,7 @@ export function CheckupTab({ initial, runId, start }: { initial: CheckupState | 
       ) : view ? (
         <RunPanel key={view.meta.id} view={view} streaming={live.streaming && live.view?.meta.id === view.meta.id} isLive={live.view?.meta.id === view.meta.id} onRun={run} onBackToLatest={runId ? () => router.replace("/diagnostics", { scroll: false }) : null} />
       ) : (
-        <AtRest busy={live.streaming} onRun={() => run("full", null)} />
+        <AtRest rows={REST_ROWS} title="Check the whole server" cta="Run a full checkup" busy={live.streaming} onRun={() => run("full", null)} />
       )}
 
       <div className={s.cols}>
@@ -104,12 +104,14 @@ export function CheckupTab({ initial, runId, start }: { initial: CheckupState | 
   );
 }
 
-function AtRest({ busy, onRun }: { busy: boolean; onRun: () => void }) {
+/** Before anything has run: the rows the checkup will fill, and the button that starts it. */
+export function AtRest({ rows, title, cta, busy, onRun }: { rows: string[]; title: string; cta: string; busy: boolean; onRun: () => void }) {
+  const id = React.useId();
   return (
-    <section className={s.run} aria-labelledby="checkup-rest">
+    <section className={s.run} aria-labelledby={id}>
       <div className={s.rest}>
         <div className={s.restRows} aria-hidden>
-          {REST_ROWS.map((r) => (
+          {rows.map((r) => (
             <div key={r} className={s.restRow}>
               <span className={s.sweepLabel}>{r}</span>
               <span className={s.restRail} />
@@ -117,10 +119,10 @@ function AtRest({ busy, onRun }: { busy: boolean; onRun: () => void }) {
           ))}
         </div>
         <div className={s.restText}>
-          <h3 id="checkup-rest">Check the whole server</h3>
+          <h3 id={id}>{title}</h3>
           <p>About a minute. Changes nothing.</p>
           <Button variant="primary" onClick={onRun} disabled={busy}>
-            Run a full checkup
+            {cta}
           </Button>
         </div>
       </div>
@@ -136,10 +138,10 @@ const KIND_TITLE: Record<CheckupKind, string> = {
   server: "Checking why the server is slow",
   space: "Checking space",
   drive: "Checking the drive",
-  safety: "Checking how safe the server is",
+  safety: "Checking the server's security",
 };
 
-function Starting({ kind, onStop }: { kind: CheckupKind; onStop: () => void }) {
+export function Starting({ kind, onStop }: { kind: CheckupKind; onStop: () => void }) {
   return (
     <section className={s.run} aria-busy="true" aria-label={KIND_TITLE[kind]}>
       <div className={s.runHead}>
@@ -167,7 +169,11 @@ function verdictState(v: RunView, streaming: boolean): TickState {
   return c.fail ? "fail" : c.warn ? "warn" : "ok";
 }
 
-function RunPanel({ view, streaming, isLive, onRun, onBackToLatest }: { view: RunView; streaming: boolean; isLive: boolean; onRun: (kind: CheckupKind, target: string | null) => void; onBackToLatest: (() => void) | null }) {
+/**
+ * One run: its instrument, verdict, what changed and what it found. `home` is the kind this view is
+ * about; a run of that kind offers to run again, anything else also offers the full checkup.
+ */
+export function RunPanel({ view, streaming, isLive, onRun, onBackToLatest, home = "full" }: { view: RunView; streaming: boolean; isLive: boolean; onRun: (kind: CheckupKind, target: string | null) => void; onBackToLatest: (() => void) | null; home?: CheckupKind }) {
   const fmt = useFormat();
   const results = React.useMemo(() => new Map(view.results.map((r) => [r.id, r])), [view.results]);
   const running = React.useMemo(() => new Set(view.running), [view.running]);
@@ -229,6 +235,7 @@ function RunPanel({ view, streaming, isLive, onRun, onBackToLatest }: { view: Ru
   }
 
   const again = meta.kind === "full" ? "Run it again" : "Check again";
+  const atHome = meta.kind === home;
   const problemsCount = counts.fail + counts.warn;
   const diff = summary?.diff;
 
@@ -258,13 +265,13 @@ function RunPanel({ view, streaming, isLive, onRun, onBackToLatest }: { view: Ru
               </Button>
             ) : (
               <>
-                {meta.kind !== "full" && (
+                {!atHome && meta.kind !== "full" && (
                   <Button size="sm" onClick={() => onRun(meta.kind, meta.target)}>
                     {again}
                   </Button>
                 )}
-                <Button size="sm" variant="primary" onClick={() => onRun("full", null)}>
-                  {meta.kind === "full" ? again : "Run a full checkup"}
+                <Button size="sm" variant="primary" onClick={() => (atHome ? onRun(meta.kind, meta.target) : onRun("full", null))}>
+                  {atHome || meta.kind === "full" ? again : "Run a full checkup"}
                 </Button>
               </>
             )}
