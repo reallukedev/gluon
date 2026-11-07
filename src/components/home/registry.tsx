@@ -28,6 +28,7 @@ import "./widgets/household";
 import "./widgets/machine";
 import "./widgets/machine-logins";
 import "./widgets/server-watch";
+import "./widgets/problems";
 
 const def = <C,>(d: WidgetDef<C>) => d as unknown as WidgetDef;
 

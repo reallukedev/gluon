@@ -1,0 +1,49 @@
+/* Needs you (NeedsYou.tsx): open problems, worst first, each with its fix. */
+.needs { margin: 0; padding: 0; list-style: none; }
+.need {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 80px;
+}
+.need:first-child { border-top: 0; }
+.need:target { background: var(--attn-soft); }
+/* Travel scales with --motion: reduced motion keeps the fades and drops the glide. */
+.need, .needsFoot { transition: transform calc(var(--dur-slow) * var(--motion)) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
+.need[data-arrived] { @starting-style { opacity: 0; transform: translateY(calc(-6px * var(--motion))); } }
+.needMark { position: relative; width: 2px; height: 34px; margin-top: 2px; background: var(--attn); transform-origin: top; transition: background-color var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out); }
+.needMark::after {
+  content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: var(--attn);
+  transform-origin: bottom;
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
+}
+/* Fixed: the doubled line settles into one ink line, then the item slides out. */
+.need[data-resolved] .needMark { background: var(--ink); }
+.need[data-resolved] .needMark::after { display: block; transform: scaleY(0); opacity: 0; }
+.need[data-leaving] { opacity: 0; transform: translateX(calc(12px * var(--motion))); pointer-events: none; transition-duration: 220ms; }
+.need[data-resolved][data-leaving] { transition-delay: var(--dur-slow); }
+.need[data-severity="fault"] .needMark { transform: scaleY(0.42); background: var(--fault); }
+.need[data-severity="fault"] .needMark::after { display: none; }
+/* A fixed fault's short red line grows into a full running line. */
+.need[data-severity="fault"][data-resolved] .needMark { transform: none; background: var(--ink); }
+.needText { min-width: 0; }
+.needTitle { font-size: var(--text-base); font-weight: 620; line-height: 1.3; }
+.needCause { margin-top: 4px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; max-width: 62ch; }
+.needMeta { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--text-xs); color: var(--muted); }
+.needActions { display: flex; align-items: center; gap: 4px; align-self: center; }
+.needsFoot { padding: 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); }
+.needsFoot a { color: var(--ink-2); }
+@media (max-width: 640px) {
+  .need { grid-template-columns: 14px minmax(0, 1fr); }
+  .needActions { grid-column: 2; justify-self: start; }
+}
+
+/* Fixed with its remedy: the doubled line settles into one while Gluon confirms on its next check. */
+.need[data-settled] .needMark { background: var(--ink); }
+.need[data-settled] .needMark::after { transform: scaleY(0); opacity: 0; }
+.need[data-severity="fault"][data-settled] .needMark { transform: none; background: var(--ink); }
+.need[data-settled] .needTitle { color: var(--ink-2); }
+.needSettled { color: var(--ink-2); }
+.needMeta :global(.truncate) { max-width: 32ch; }

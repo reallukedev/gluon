@@ -1,5 +1,5 @@
 import "server-only";
-import { ADMIN_DEFAULT, ALL_APPS, HOUSEHOLD_DEFAULT, appItem, layoutSchema, withStart, type HomeLayout, type WidgetItem } from "@/lib/home";
+import { ADMIN_DEFAULT, ALL_APPS, HOUSEHOLD_DEFAULT, appItem, layoutSchema, withProblems, withStart, type HomeLayout, type WidgetItem } from "@/lib/home";
 import { now, one, run } from "./db";
 import { badRequest } from "./errors";
 import { getPrefs } from "./prefs";
@@ -86,7 +86,7 @@ async function withAppCards(layout: HomeLayout, userId: string, role: Role, pers
 
 export async function homeFor(userId: string, role: Role): Promise<{ layout: HomeLayout; personal: boolean }> {
   const mine = read(userId);
-  if (mine) return { layout: await withAppCards(mine, userId, role, true), personal: true };
+  if (mine) return { layout: await withAppCards(role === "admin" ? withProblems(mine) : mine, userId, role, true), personal: true };
   const base = role === "admin" ? ADMIN_DEFAULT : householdDefault();
   return { layout: await withAppCards(base, userId, role, false), personal: false };
 }

@@ -5,7 +5,7 @@ import type { CheckupKind } from "@/lib/diagnostics-types";
 
 export const metadata = { title: "Diagnostics" };
 
-const TABS: DiagTab[] = ["checkup", "traffic", "connections", "requests", "processes", "logs", "tools"];
+const TABS: DiagTab[] = ["checkup", "apps", "traffic", "connections", "requests", "processes", "logs", "tools"];
 const KINDS: CheckupKind[] = ["full", "app", "address", "internet", "server", "space", "drive", "safety"];
 const str = (v: unknown) => (typeof v === "string" && v.length <= 200 ? v : null);
 

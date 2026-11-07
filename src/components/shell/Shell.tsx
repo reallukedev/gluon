@@ -33,13 +33,12 @@ interface ShellData {
 
 export interface ShellProps {
   children: React.ReactNode;
-  memberStatus: boolean;
   memberFiles: boolean;
   initial: ShellData;
 }
 
 /** Which pages a household member may open beyond their own (admins: all). Settings reads it to list the right pages. */
-const NavAccess = React.createContext<{ memberStatus: boolean; memberFiles: boolean }>({ memberStatus: true, memberFiles: true });
+const NavAccess = React.createContext<{ memberFiles: boolean }>({ memberFiles: true });
 export const useNavAccess = () => React.useContext(NavAccess);
 
 const noop = () => () => {};
@@ -116,7 +115,7 @@ function NavWindow({ pathname, input }: { pathname: string; input: React.RefObje
   return null;
 }
 
-export function Shell({ children, memberStatus, memberFiles, initial }: ShellProps) {
+export function Shell({ children, memberFiles, initial }: ShellProps) {
   const { prefs, viewer, serverName, setPrefs } = usePrefs();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -145,7 +144,7 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
   };
   const announcements = data.announcements.filter((a) => !dismissed.includes(a.id));
 
-  const access = React.useMemo(() => ({ memberStatus, memberFiles }), [memberStatus, memberFiles]);
+  const access = React.useMemo(() => ({ memberFiles }), [memberFiles]);
   const nav = orderedNav(viewer.role, prefs.sidebarOrder, prefs.sidebarHidden, access);
   const collapsed = prefs.sidebarCollapsed;
   // "g" then a letter jumps to any page this person can open, shown in the sidebar or not.
@@ -228,10 +227,10 @@ export function Shell({ children, memberStatus, memberFiles, initial }: ShellPro
     };
   }, [prefs.shortcuts, router, chords]);
 
-  /** The one problems count lives on Status. (Household problem reports show on the account button: they're in Settings → People.) */
+  /** The one problems count lives on Home, where the Needs you widget lists them. (Household problem reports show on the account button: they're in Settings → People.) */
   const badgeFor = (id: string): { node: React.ReactNode; text: string } | null => {
     if (viewer.role !== "admin") return null;
-    if (id === "status") {
+    if (id === "home") {
       const n = data.fault + data.attention;
       if (!n) return null;
       const text = data.fault ? `${n} need${n === 1 ? "s" : ""} you, ${data.fault} broken` : `${n} need${n === 1 ? "s" : ""} you`;

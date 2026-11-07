@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { MonitorDetail as Detail } from "@/lib/alerts-types";
-import { statusHref } from "@/lib/settings-links";
+import { problemHref } from "@/lib/settings-links";
 import { useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Dialog } from "@/components/ui/Dialog";
@@ -52,7 +52,7 @@ export function MonitorDetailDialog({ id, open, onOpenChange, footer }: { id: st
                 {d.last.latencyMs !== null ? ` in ${ms(d.last.latencyMs)}` : ""}
               </span>
             )}
-            {d.findingId && <Link href={statusHref(d.findingId)}>See the problem on Status</Link>}
+            {d.findingId && <Link href={problemHref(d.findingId)}>See the problem on Home</Link>}
           </div>
           {d.last && !d.last.ok && d.last.error && (
             <Notice tone="fault" title="The last check failed">
