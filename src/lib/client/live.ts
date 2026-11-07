@@ -27,22 +27,31 @@ function emit(next: Partial<LiveState>) {
   for (const l of listeners) l();
 }
 
+function parse<T>(e: Event): T | null {
+  try {
+    return JSON.parse((e as MessageEvent).data) as T;
+  } catch {
+    return null;
+  }
+}
+
 function open() {
   if (es || typeof window === "undefined" || document.hidden) return;
   emit({ status: "connecting" });
   es = new EventSource("/api/metrics/live");
   es.addEventListener("snapshot", (e) => {
-    const d = JSON.parse((e as MessageEvent).data) as { host: HostSample[]; containers: LiveState["containers"] };
+    const d = parse<{ host: HostSample[]; containers: LiveState["containers"] }>(e);
+    if (!d) return;
     retry = 0;
     emit({ host: d.host, containers: d.containers, status: "live" });
   });
   es.addEventListener("host", (e) => {
-    const h = JSON.parse((e as MessageEvent).data) as HostSample;
-    emit({ host: [...state.host.slice(-(HOST_KEEP - 1)), h], status: "live" });
+    const h = parse<HostSample>(e);
+    if (h) emit({ host: [...state.host.slice(-(HOST_KEEP - 1)), h], status: "live" });
   });
   es.addEventListener("containers", (e) => {
-    const c = JSON.parse((e as MessageEvent).data) as LiveState["containers"][number];
-    emit({ containers: [...state.containers.slice(-(CTR_KEEP - 1)), c] });
+    const c = parse<LiveState["containers"][number]>(e);
+    if (c) emit({ containers: [...state.containers.slice(-(CTR_KEEP - 1)), c] });
   });
   es.onerror = () => {
     close();
@@ -97,7 +106,8 @@ export function useLive(): LiveState {
 
 /** Latest container sample by name. */
 export function useContainerStats(): Map<string, ContainerSample> {
-  const { containers } = useLive();
-  const last = containers.at(-1);
+  const { containers, status } = useLive();
+  // A frozen sample from before the stream dropped isn't a reading.
+  const last = status === "live" ? containers.at(-1) : undefined;
   return React.useMemo(() => new Map((last?.list ?? []).map((c) => [c.name, c])), [last]);
 }

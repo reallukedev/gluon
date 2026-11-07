@@ -450,8 +450,8 @@ export function explainAptError(out: string): string {
   const line = out
     .split("\n")
     .map((l) => l.trim())
-    .find((l) => /^(E|Err):/.test(l) || /^W: (Failed|Some index)/.test(l));
-  return line ? line.replace(/^(E|W|Err):\s*/, "").slice(0, 240) : "apt couldn't refresh the package lists.";
+    .find((l) => /^(?:E:|Err:\d*\s)/.test(l) || /^W: (Failed|Some index)/.test(l));
+  return line ? line.replace(/^(?:E:|W:|Err:\d*)\s*/, "").slice(0, 240) : "apt couldn't refresh the package lists.";
 }
 
 /** Run `apt-get update` (one at a time), record it, and re-list waiting updates. */
@@ -480,7 +480,7 @@ export async function refreshLists(
       const r = await host("apt-get", ["update", "-q", "-o", "APT::Color=0", "-o", "APT::Update::Error-Mode=any"], { timeoutMs: 10 * 60_000 });
       output = `${r.stdout}\n${r.stderr}`;
       exitCode = 0;
-      ok = !/^(E|Err):|^W: (Failed to fetch|Some index files failed)/m.test(output);
+      ok = !/^(?:E:|Err:\d*\s)|^W: (?:Failed to fetch|Some index files failed)/m.test(output);
     } catch (e) {
       if (e instanceof CommandError) {
         output = `${e.stdout}\n${e.stderr}`;

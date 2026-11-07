@@ -7,7 +7,7 @@ import { configRev } from "../caddy/routes";
 import { currentConfig, saveRoutes } from "../network/routes-service";
 import { withAppLock } from "../apps/lock";
 import { componentChange } from "./settings";
-import { reloadProsody, restartProsody, writeSettings } from "./prosody";
+import { reloadProsody, rereadConfig, restartProsody, settingsBackup, writeSettings } from "./prosody";
 import { setQuarkSettings, type QuarkTarget } from "./quark";
 import { toQuarkSettings } from "./quark-map";
 import { chatSnapshot, chatTarget, type ChatTarget } from "./backend";
@@ -85,7 +85,20 @@ export async function applySettings(
     if (needs.length && !restart) {
       throw new AppError("needs_restart", `Saving this restarts the chat server, for ${needs.join(" and ")}.`, 409, { online, changes: needs });
     }
+    const restore = settingsBackup(snap);
     writeSettings(snap, h, next);
+    // Prosody reads the new files before anything else happens: if it can't, the old ones go back,
+    // so a restart (now or later) never meets a config that stops it starting.
+    let reloaded: Awaited<ReturnType<typeof reloadProsody>> | null = null;
+    try {
+      if (needs.length) await rereadConfig(t);
+      else reloaded = await reloadProsody(t);
+    } catch (e) {
+      restore();
+      await rereadConfig(t).catch(() => undefined);
+      const why = e instanceof Error ? e.message.replace(/\.$/, "") : "it didn't say why";
+      throw new AppError("settings_rejected", `Prosody couldn't use the new settings (${why}), so Gluon put the previous ones back. Try again, or check Prosody's log.`, 502);
+    }
     const notes: string[] = [];
     if (next.web || next.files.on) {
       const why = await ensureWebSide(user, where, t, host);
@@ -95,9 +108,8 @@ export async function applySettings(
     if (needs.length) {
       await restartProsody(t);
       restarted = true;
-    } else {
-      const r = await reloadProsody(t);
-      if (r.failed.length) notes.push(`Prosody couldn't turn on ${r.failed.map((f) => f.split(":")[0]).join(", ")}. Its log says why; restarting it may help.`);
+    } else if (reloaded?.failed.length) {
+      notes.push(`Prosody couldn't turn on ${reloaded.failed.map((f) => f.split(":")[0]).join(", ")}. Its log says why; restarting it may help.`);
     }
     // What Prosody now says, not what Gluon wrote: the person's own config can still win.
     const after = await chatSnapshot(appId)

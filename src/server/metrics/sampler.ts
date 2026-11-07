@@ -144,7 +144,7 @@ export function sampleHost(): HostSample {
     for (const d of disks) {
       const p = s.prevDisk.data.find((x) => x.device === d.device);
       if (!p || dt <= 0) continue;
-      const v = { read: Math.max(0, (d.readBytes - p.readBytes) / dt), write: Math.max(0, (d.writeBytes - p.writeBytes) / dt), busy: Math.min(100, ((d.ioMs - p.ioMs) / (dt * 1000)) * 100) };
+      const v = { read: Math.max(0, (d.readBytes - p.readBytes) / dt), write: Math.max(0, (d.writeBytes - p.writeBytes) / dt), busy: Math.max(0, Math.min(100, ((d.ioMs - p.ioMs) / (dt * 1000)) * 100)) };
       devices[d.device] = v;
       read += v.read;
       write += v.write;
@@ -298,10 +298,10 @@ export function history(keys: string[], rangeMs: number): Record<string, [number
   for (const k of keys) {
     let rows = q.all(k, since) as { ts: number; value: number }[];
     if (useHours) {
-      // Recent hours not rolled up yet: fold in minute data.
+      // Recent hours not rolled up yet: fold in minute data, starting after the last full hour.
       const minute = db()
         .prepare("SELECT (ts / 3600000) * 3600000 AS ts, AVG(value) AS value FROM metrics WHERE key = ? AND ts >= ? GROUP BY ts / 3600000 ORDER BY ts")
-        .all(k, Math.max(since, (rows.at(-1)?.ts ?? since) + 1)) as { ts: number; value: number }[];
+        .all(k, Math.max(since, rows.length ? rows.at(-1)!.ts + 3_600_000 : since)) as { ts: number; value: number }[];
       rows = [...rows, ...minute];
     }
     out[k] = rows.map((r) => [r.ts, r.value]);

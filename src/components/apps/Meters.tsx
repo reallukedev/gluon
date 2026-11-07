@@ -16,9 +16,11 @@ const SERIES = 40;
 
 /** Live CPU and memory per app, summed over its containers, with a short CPU history. */
 export function useAppUsage(apps: { id: string; containers: { name: string }[] }[]): Map<string, AppUsage> {
-  const { containers } = useLive();
+  const { containers, status } = useLive();
   return React.useMemo(() => {
     const out = new Map<string, AppUsage>();
+    // With the stream down the last sample is old: show no reading rather than a frozen one.
+    if (status !== "live") return out;
     const recent = containers.slice(-SERIES).map((c) => new Map(c.list.map((x) => [x.name, x])));
     const last = recent.at(-1);
     if (!last) return out;
@@ -37,7 +39,7 @@ export function useAppUsage(apps: { id: string; containers: { name: string }[] }
       out.set(a.id, { cpu, mem, cpuSeries });
     }
     return out;
-  }, [apps, containers]);
+  }, [apps, containers, status]);
 }
 
 /**

@@ -40,8 +40,8 @@ export function StatusView({ initial, allFindings, alertsUnreachable }: { initia
 }
 
 function MemberView({ initial }: { initial: StatusPayload }) {
-  const { data = initial } = useApi<StatusPayload>("/api/status", { refresh: 10_000, fallbackData: initial });
-  return <MemberStatus data={data} />;
+  const { data = initial, error } = useApi<StatusPayload>("/api/status", { refresh: 10_000, fallbackData: initial });
+  return <MemberStatus data={data} stale={!!error} />;
 }
 
 function AdminStatus({ initial, allFindings, alertsUnreachable }: { initial: StatusPayload; allFindings?: Finding[]; alertsUnreachable?: boolean }) {
@@ -158,8 +158,8 @@ function Overview({ data, allFindings, alertsUnreachable, refresh }: { data: Sta
         </section>
       </div>
 
-      <Panel title="Apps" meta={<AppsMeta apps={data.apps} />} className={s.appsPanel} flush>
-        <AppRoster apps={data.apps} findings={data.findings} />
+      <Panel title="Apps" meta={data.appsUnavailable ? <Link href="/apps">Manage</Link> : <AppsMeta apps={data.apps} />} className={s.appsPanel} flush>
+        <AppRoster apps={data.apps} findings={data.findings} unavailable={data.appsUnavailable} />
         {data.apps.some((a) => a.containers.length) && (
           <Disclosure variant="panel" summary="Live use by app" open={liveOpen} onOpenChange={setLiveOpen}>
             {/* Mounted only while open: it re-renders with every live sample. */}
@@ -273,10 +273,15 @@ function AppsMeta({ apps }: { apps: StatusApp[] }) {
   );
 }
 
-function MemberStatus({ data }: { data: StatusPayload }) {
+function MemberStatus({ data, stale }: { data: StatusPayload; stale: boolean }) {
   return (
     <Page narrow>
       <PageHeader title={data.verdict.headline} summary={data.verdict.detail} actions={<ReportProblem apps={data.apps} />} />
+      {stale && (
+        <Notice tone="fault" title="Can't reach the server">
+          This is how things looked at <Time ts={data.checkedAt} kind="time" />. Trying again.
+        </Notice>
+      )}
       {data.announcements.length > 0 && (
         <div className={s.announcements}>
           {data.announcements.map((a) => (
