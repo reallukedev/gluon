@@ -1,0 +1,127 @@
+/* Settings → Integrations → Cloudflare */
+
+.head {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+}
+.headText { display: grid; gap: 3px; min-width: 0; }
+.title { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: var(--text-md); font-weight: 620; color: var(--ink); }
+.account { flex: none; font-size: var(--text-xs); font-weight: 450; color: var(--muted); }
+.line { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.45; }
+.state { display: flex; align-items: baseline; gap: 7px; min-width: 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.45; }
+.state > :first-child { flex: none; transform: translateY(1px); }
+.stateText { min-width: 0; text-wrap: pretty; }
+.when { color: var(--muted); }
+.headActions { display: flex; align-items: center; gap: 6px; }
+
+.pad { padding: 0 16px 14px; }
+
+.block { padding: 12px 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.tunnelLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+.tunnelLine > button { margin-left: auto; }
+
+/* The names Gluon keeps in the zone */
+.names { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.name {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 4px 16px;
+  min-height: var(--row);
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+}
+.name:first-child { border-top: 0; }
+.name[data-state="conflict"] { background: color-mix(in oklab, var(--attn-soft) 55%, transparent); }
+.nameMain { display: grid; gap: 1px; min-width: 0; }
+.host { font-size: var(--text-sm); color: var(--ink); overflow-wrap: anywhere; }
+.why { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.value { display: flex; align-items: baseline; gap: 7px; min-width: 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.4; }
+.value > :first-child { flex: none; transform: translateY(1px); }
+.value > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
+.value[data-fault] { color: var(--fault); }
+.updated {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  transition: opacity var(--dur-slow) var(--ease-out);
+  @starting-style { opacity: 0; }
+}
+
+@media (max-width: 720px) {
+  .head { grid-template-columns: 32px minmax(0, 1fr); }
+  .headActions { grid-column: 2; }
+  .name { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 16px; }
+  .value { grid-column: 1; }
+  .name > button { grid-column: 2; grid-row: 1 / span 2; }
+}
+
+/* Connect dialog */
+.form { display: grid; gap: 18px; }
+.make { display: grid; gap: 10px; }
+.makeHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; font-size: var(--text-sm); font-weight: 600; color: var(--ink); }
+.external {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-sm);
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.external svg { width: 14px; height: 14px; }
+@media (hover: hover) and (pointer: fine) { .external:hover { text-decoration-color: var(--ink); } }
+.perms { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-control); overflow: hidden; }
+.perm {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 46px 96px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+}
+.perm:first-child { border-top: 0; }
+.perm > :first-child { color: var(--muted); }
+.perm > :nth-child(3) { font-weight: 600; }
+.perm[data-optional] > :not(.permNote) { color: var(--ink-2); }
+.permNote { font-size: var(--text-xs); color: var(--muted); text-align: right; }
+@media (max-width: 420px) {
+  .perm { grid-template-columns: 64px minmax(0, 1fr) auto; }
+  .permNote { grid-column: 2 / -1; text-align: left; }
+  .permNote:empty { display: none; }
+}
+
+.checking { display: flex; align-items: center; gap: 7px; margin: 0; font-size: var(--text-sm); color: var(--ink-2); }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+/* The checks land one after another as the answer arrives: a short fade and 4px rise, 50ms apart. */
+.check {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 50ms);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(calc(4px * var(--motion)));
+  }
+}
+.check > :first-child:not(div) { flex: none; transform: translateY(1px); }
+.check > div { flex: 1; }
+.check b { color: var(--ink); font-weight: 600; }

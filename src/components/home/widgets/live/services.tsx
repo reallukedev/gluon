@@ -303,7 +303,7 @@ export function JsonFields({ item, size }: WidgetProps<IntegrationConfig>) {
       {(d) =>
         d.fields.length === 0 ? (
           <Quiet title="No values set up">
-            {viewer.role === "admin" ? "Choose which values to show in Settings → Connected apps." : "Whoever runs the server hasn't picked any values yet."}
+            {viewer.role === "admin" ? "Choose which values to show in Settings → Integrations." : "Whoever runs the server hasn't picked any values yet."}
           </Quiet>
         ) : (
           <div className={l.stats} data-cols={size === "s" || size === "t" ? 2 : 4}>

@@ -3,7 +3,8 @@ import * as React from "react";
 import { Lock, LockSlash, Cloud, CloudSync, Internet, HomeSimpleDoor, Server, Search } from "iconoir-react";
 import type { AppSummary } from "@/server/docker/apps";
 import type { ExposureReport, NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, SubdomainRouteT, RedirectRouteT } from "@/lib/network-types";
-import { api, ApiError } from "@/lib/client/api";
+import { api, ApiError, useApi } from "@/lib/client/api";
+import type { CloudflareStatus } from "@/lib/cloudflare-types";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, TextArea, AffixInput, Checkbox } from "@/components/ui/Field";
@@ -44,6 +45,8 @@ interface Form {
   other: boolean;
   port: string;
   lane: "direct" | "cloudflare";
+  /** With the Cloudflare Tunnel on: skip it and go straight to this network. */
+  direct: boolean;
   label: string;
   customHost: boolean;
   path: string;
@@ -77,6 +80,7 @@ function blank(): Form {
     other: false,
     port: "",
     lane: "direct",
+    direct: false,
     label: "",
     customHost: false,
     path: "",
@@ -121,6 +125,7 @@ function fromRoute(r: RouteT, cfg: RoutesConfigT, knownApp: string | null): Form
   if (r.type === "subdomain") {
     const underBase = r.host.endsWith(`.${base}`) && !r.host.slice(0, -base.length - 1).includes(".");
     f.lane = "direct";
+    f.direct = !!r.direct;
     f.label = underBase ? r.host.slice(0, -base.length - 1) : r.host;
     f.customHost = !underBase;
     f.scope = r.only_paths?.length ? "some" : "all";
@@ -194,6 +199,8 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
   const [loginOverride, setLoginOverride] = React.useState<"yes" | "no" | null>(null);
   const [marking, setMarking] = React.useState(false);
   const [checkingCert, setCheckingCert] = React.useState(false);
+  // Cloudflare (Settings → Integrations): Gluon writes DNS for names in its zone, and may run a tunnel.
+  const cf = useApi<CloudflareStatus>("/api/cloudflare", { revalidateOnFocus: false }).data;
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm((x) => ({ ...x, [k]: v }));
@@ -259,6 +266,10 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
   const storedCert = existing ? data.certs?.[existing.id] : undefined;
   const newCert = direct && hasNewCert(form.https, prevSub, storedCert, host);
   const knownDns = status?.routes.find((r) => r.host === host && r.dns)?.dns ?? null;
+  const cfZone = cf?.connected ? (cf.zone?.name ?? null) : null;
+  const dnsByGluon = !!cfZone && (host === cfZone || host.endsWith(`.${cfZone}`));
+  const tunnelOn = !!cfg.tunnel && !!cf?.tunnel;
+  const viaTunnel = direct && tunnelOn && !form.direct && dnsByGluon;
   const appName =
     mode === "redirect"
       ? null
@@ -290,7 +301,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
       if (form.customHost ? !HOST_RE.test(l) : !LABEL_RE.test(l)) return { state: "unhealthy", text: form.customHost ? "Enter a full name, like photos.example.com." : "Use letters, numbers and dashes; it can't start or end with a dash." };
       if (form.customHost && (l === base || l.endsWith(`.${base}`))) return { state: "unhealthy", text: `Use the box without “more options” for names under ${base}.` };
       if (takenHost) return { state: "unhealthy", text: `Already used by ${nameOf(takenHost)}.` };
-      return { state: "running", text: form.customHost ? "Free." : "Free. DNS already covers it." };
+      return { state: "running", text: form.customHost ? "Free." : tunnelOn && form.direct ? "Free. Gluon gives it its own DNS record." : "Free. DNS already covers it." };
     }
     const p = cleanPath(form.path);
     if (!p) return null;
@@ -436,7 +447,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
       // Extra paths have no editor; carry them through untouched instead of dropping them.
       const extra = existing?.type === "subdomain" && existing.extra_paths?.length ? { extra_paths: existing.extra_paths } : {};
       const https = httpsSetting(form.https);
-      route = { id, type: "subdomain", ...common, ...appRef, host, backend, ...(form.scope === "some" && onlyPaths.length ? { only_paths: onlyPaths } : {}), ...extra, ...(https ? { https } : {}) } as SubdomainRouteT;
+      route = { id, type: "subdomain", ...common, ...appRef, host, backend, ...(form.scope === "some" && onlyPaths.length ? { only_paths: onlyPaths } : {}), ...extra, ...(https ? { https } : {}), ...(form.direct ? { direct: true } : {}) } as SubdomainRouteT;
     } else {
       route = { id, type: "path", ...common, ...appRef, path: pathPart, backend, strip_prefix: form.stripPrefix };
     }
@@ -711,14 +722,25 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
               )}
               <p className={f.q}>How should people connect?</p>
               <div className={f.lanes} role="radiogroup" aria-label="How people connect">
+                {tunnelOn && (
+                  <LaneChoice
+                    on={form.lane === "direct" && !form.direct}
+                    onPick={() => setForm((x) => ({ ...x, lane: "direct", direct: false }))}
+                    icon={<CloudSync />}
+                    title="Through the tunnel"
+                    example={`${form.label || "name"}.${base}`}
+                    text="Nothing to forward on the router. Uploads stop at 100 MB, no video. Recommended."
+                  />
+                )}
                 <LaneChoice
-                  on={form.lane === "direct"}
-                  onPick={() => set("lane", "direct")}
+                  on={form.lane === "direct" && (!tunnelOn || form.direct)}
+                  onPick={() => setForm((x) => ({ ...x, lane: "direct", direct: tunnelOn }))}
                   icon={<Cloud />}
                   title="Direct"
                   example={`${form.label || "name"}.${base}`}
-                  text="Straight to your home. Video and big uploads work. Recommended."
+                  text={tunnelOn ? "Straight to your home, so video and big uploads work. Needs port 443 forwarded here." : "Straight to your home. Video and big uploads work. Recommended."}
                 />
+                {(!tunnelOn || form.lane === "cloudflare") && (
                 <LaneChoice
                   on={form.lane === "cloudflare"}
                   onPick={() => set("lane", "cloudflare")}
@@ -727,6 +749,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   example={`${base}/${cleanPath(form.path) || "name"}`}
                   text="Hides your home's address. Uploads stop at 100 MB, no video, and the app must work under a path."
                 />
+                )}
               </div>
 
               <div className={f.nameBlock}>
@@ -764,9 +787,12 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   </span>
                   {availability && !errors.label ? <Availability a={availability} /> : <span className={f.faint}>Type a name to see if it&rsquo;s free.</span>}
                 </div>
-                {direct && form.customHost && availability?.state === "running" && (
-                  <DnsHelp host={host} baseDomain={base} purpose="web" known={knownDns} publicIp={status?.publicIp ?? (publicIp ? { v4: publicIp, v6: [] } : null)} />
-                )}
+                {direct && form.customHost && availability?.state === "running" &&
+                  (dnsByGluon ? (
+                    <p className={f.faint}>Gluon adds its DNS record in Cloudflare.</p>
+                  ) : (
+                    <DnsHelp host={host} baseDomain={base} purpose="web" known={knownDns} publicIp={status?.publicIp ?? (publicIp ? { v4: publicIp, v6: [] } : null)} />
+                  ))}
               </div>
 
               {direct && (
@@ -788,7 +814,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                 </div>
               )}
 
-              {direct && (
+              {direct && !viaTunnel && (
                 <HttpsSetting
                   host={host}
                   kind="web"
@@ -812,7 +838,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   {direct && (
                     <Checkbox checked={form.customHost} onChange={(v) => set("customHost", v)}>
                       Use a name outside {base}
-                      <span className={f.hint}>It needs its own DNS record pointing at your router.</span>
+                      <span className={f.hint}>{cfZone ? `Names in ${cfZone} get their DNS record from Gluon; others need one pointing at your router.` : "It needs its own DNS record pointing at your router."}</span>
                     </Checkbox>
                   )}
                   {!direct && (
@@ -914,7 +940,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                 <span className="mono">{bare(url)}</span>
               </p>
               <MiniLane
-                lane={mode === "fallback" ? "cloudflare" : direct ? "direct" : "cloudflare"}
+                lane={mode === "fallback" ? "cloudflare" : direct && !viaTunnel ? "direct" : "cloudflare"}
                 end={
                   mode === "redirect" ? (
                     <span className={f.laneEnd}>
@@ -945,10 +971,10 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   {steps.includes("address") && (
                     <RecapRow label="Address" onChange={() => void go("address")}>
                       <span className="mono">{bare(url)}</span>{" "}
-                      <span className={f.dim}>{mode === "redirect" ? "short link" : direct ? "direct" : "through Cloudflare"}</span>
+                      <span className={f.dim}>{mode === "redirect" ? "short link" : viaTunnel ? "through the tunnel" : direct ? "direct" : "through Cloudflare"}</span>
                     </RecapRow>
                   )}
-                  {direct && (
+                  {direct && !viaTunnel && (
                     <RecapRow label="HTTPS" onChange={() => void go("address")}>
                       {httpsSummary(form.https, prevSub?.host === host ? storedCert : undefined)}
                     </RecapRow>
@@ -976,15 +1002,17 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   <>
                     {direct && form.customHost && (
                       <li>
-                        {knownDns?.status === "ok" && knownDns.matchesPublicIp !== false
+                        {dnsByGluon
+                          ? `Gluon adds ${host} to Cloudflare's DNS when you save.`
+                          : knownDns?.status === "ok" && knownDns.matchesPublicIp !== false
                           ? `${host} already points at this network.`
                           : `Needs an A record for ${host} pointing at ${status?.publicIp.v4 ?? publicIp ?? "your internet address"} before it works.`}
                       </li>
                     )}
-                    <li>{direct ? "Visitors can see your home's internet address." : "Your address stays hidden; uploads stop at 100 MB and video isn't allowed."}</li>
+                    <li>{direct && !viaTunnel ? "Visitors can see your home's internet address." : "Your address stays hidden; uploads stop at 100 MB and video isn't allowed."}</li>
                     {direct && form.https.mode === "own" && <li>Your certificate is served as it is. Gluon warns you three weeks before it ends.</li>}
                     {direct && form.https.mode === "http" && <li>Served over plain HTTP. Browsers call it not secure unless something in front adds HTTPS.</li>}
-                    {(!direct || form.https.mode === "auto") && (!existing || (existing.type === "subdomain" ? existing.host !== host || existing.https : true)) && <li>A certificate arrives within a minute of saving.</li>}
+                    {!viaTunnel && (!direct || form.https.mode === "auto") && (!existing || (existing.type === "subdomain" ? existing.host !== host || existing.https : true)) && <li>A certificate arrives within a minute of saving.</li>}
                     <li>
                       {direct && form.scope === "some"
                         ? `Only ${onlyPaths.join(", ")} ${onlyPaths.length === 1 ? "is" : "are"} reachable; everything else answers “not found”.`

@@ -42,6 +42,22 @@ const schemas = {
       memoryAttention: z.number().min(50).max(100),
     })
     .default({ diskAttention: 85, diskFault: 95, tempAttention: 80, certDays: 14, memoryAttention: 92 }),
+  /**
+   * Settings → Integrations → Cloudflare. Tokens are sealed with the server key (crypto.encrypt);
+   * `adopted` are names whose existing records the admin handed over to Gluon.
+   */
+  cloudflare: z
+    .object({
+      token: z.string(),
+      tokenHint: z.string().nullable(),
+      zone: z.object({ id: z.string(), name: z.string(), accountId: z.string(), accountName: z.string() }),
+      connectedAt: z.number(),
+      ipv6: z.boolean().default(false),
+      adopted: z.array(z.string().max(253)).max(500).default([]),
+      tunnel: z.object({ id: z.string(), name: z.string(), token: z.string(), createdAt: z.number() }).nullable().default(null),
+    })
+    .nullable()
+    .default(null),
   /** Which home server OS Gluon works alongside: where apps are installed, updated and removed. */
   platform: z.enum(["auto", "umbrel", "casaos", "none"]).default("auto"),
   setupDone: z.boolean().default(false),

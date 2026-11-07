@@ -319,8 +319,8 @@ export async function probeBackend(host: string, port: number): Promise<BackendR
 let traceCache: { at: number; ip: string | null } | null = null;
 
 /** This network's public IPv4 from Cloudflare's trace endpoint (used when the DDNS log has none). */
-export async function lookupPublicIpv4(): Promise<string | null> {
-  if (traceCache && Date.now() - traceCache.at < 10 * 60_000) return traceCache.ip;
+export async function lookupPublicIpv4(maxAgeMs = 10 * 60_000): Promise<string | null> {
+  if (traceCache && Date.now() - traceCache.at < maxAgeMs) return traceCache.ip;
   const ip = await new Promise<string | null>((resolve) => {
     const req = https.get({ host: "1.1.1.1", path: "/cdn-cgi/trace", timeout: 4000, headers: { "User-Agent": PROBE_UA } }, (res) => {
       let body = "";
