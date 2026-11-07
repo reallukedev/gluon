@@ -38,6 +38,28 @@ function explain(status: number, errors: { code: number; message: string }[]): s
 
 export type Fetch = typeof fetch;
 
+export interface RawRecord {
+  id: string;
+  name: string;
+  type: string;
+  content: string;
+  proxied: boolean;
+  proxiable: boolean;
+  ttl: number;
+  priority: number | null;
+  comment: string | null;
+}
+
+export interface RecordBody {
+  type: string;
+  name: string;
+  content: string;
+  ttl: number;
+  proxied?: boolean;
+  priority?: number;
+  comment?: string;
+}
+
 export class Cloudflare {
   constructor(
     private readonly token: string,
@@ -84,8 +106,19 @@ export class Cloudflare {
   }
 
   async records(zoneId: string): Promise<ExistingRecord[]> {
-    const raw = await this.pages<{ id: string; name: string; type: string; content: string; proxied?: boolean; comment?: string | null }>(`/zones/${zoneId}/dns_records`, 500);
-    return raw.map((r) => ({ id: r.id, name: r.name, type: r.type, content: r.content, proxied: !!r.proxied, comment: r.comment ?? null }));
+    return (await this.allRecords(zoneId)).map((r) => ({ id: r.id, name: r.name, type: r.type, content: r.content, proxied: r.proxied, comment: r.comment }));
+  }
+
+  /** Every record in a domain, with what the DNS editor needs. */
+  async allRecords(zoneId: string): Promise<RawRecord[]> {
+    const raw = await this.pages<{ id: string; name: string; type: string; content: string; proxied?: boolean; proxiable?: boolean; ttl?: number; priority?: number; comment?: string | null }>(`/zones/${zoneId}/dns_records`, 500);
+    return raw.map((r) => ({ id: r.id, name: r.name, type: r.type, content: r.content, proxied: !!r.proxied, proxiable: !!r.proxiable, ttl: r.ttl ?? 1, priority: r.priority ?? null, comment: r.comment ?? null }));
+  }
+
+  /** Make or replace a record exactly as given (the DNS editor). */
+  async putRecord(zoneId: string, id: string | null, body: RecordBody): Promise<void> {
+    if (id) await this.call("PUT", `/zones/${zoneId}/dns_records/${id}`, body);
+    else await this.call("POST", `/zones/${zoneId}/dns_records`, body);
   }
 
   async createRecord(zoneId: string, name: string, r: DnsRecordT, comment: string): Promise<void> {

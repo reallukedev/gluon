@@ -40,9 +40,10 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
 - **Network.** Which apps are on the internet, at what address, whether each one works and whether
   it asks for a login, drawn as a map from the visitor to the app. Manages
   [Caddy](https://caddyserver.com) routes and certificates.
-- **Cloudflare.** With one API token, Gluon writes the DNS records for every public address, keeps
-  them pointed at your internet address as it changes, and sends web addresses through Cloudflare's
-  proxy.
+- **Cloudflare.** With one API token, apps can have addresses in any of your domains
+  (`media.example.com`, `example.net`), and Gluon writes their DNS records, keeps them pointed at your
+  internet address and sends web traffic through Cloudflare's proxy. Each domain's DNS records can be
+  added, edited and removed from the Network page.
 - **Chat and voice.** Sets up and runs a Prosody (XMPP) chat server and a Mumble voice server, or
   takes over the ones you have: accounts, invite links, group chats, file sharing, phone
   notifications, and voice and video calls between homes through a coturn relay.
@@ -97,9 +98,11 @@ admin socket. Mount the config folder at `/proxy-caddy` and the admin socket's v
 ### Cloudflare (optional)
 
 Settings → Integrations → Cloudflare takes an API token with **Zone · DNS · Edit** and **Zone · Zone ·
-Read** for your domain (add **Zone · Zone Settings · Read** and Gluon also warns when the SSL mode would
+Read** for your domains (add **Zone · Zone Settings · Read** and Gluon also warns when the SSL mode would
 break proxied addresses). From then on:
 
+- Publishing an app offers every domain the token can see, so an address can be `media.example.com`
+  or another domain entirely, not only a name under the base domain.
 - DNS records for public addresses are added, changed and removed as you publish apps. Gluon marks
   the records it makes ("Managed by Gluon") and leaves every other record alone unless you hand a
   name over with "Let Gluon manage".
@@ -111,6 +114,9 @@ break proxied addresses). From then on:
   more than one level under the domain, which Cloudflare's free certificate doesn't cover. Your
   router still forwards ports 80 and 443 to this server, and Cloudflare's SSL mode should be
   Full (strict).
+- Network → Domains opens each domain's full DNS records: add, edit and remove A, AAAA, CNAME, TXT,
+  MX and NS records and switch the proxy per record. Other types open in Cloudflare, and records Gluon
+  keeps for public addresses are locked there.
 
 ### Reaching it from outside
 

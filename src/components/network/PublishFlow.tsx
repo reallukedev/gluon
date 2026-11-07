@@ -5,6 +5,7 @@ import type { AppSummary } from "@/server/docker/apps";
 import type { ExposureReport, NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, SubdomainRouteT, RedirectRouteT } from "@/lib/network-types";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { edgeCovered, type CloudflareStatus } from "@/lib/cloudflare-types";
+import { zoneOfHost } from "./Domains";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, TextArea, AffixInput, Checkbox } from "@/components/ui/Field";
@@ -38,6 +39,8 @@ const LABEL_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOST_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const PATH_RE = /^[A-Za-z0-9._~-]+(\/[A-Za-z0-9._~-]+)*$/;
 const MATCH_RE = /^\/[A-Za-z0-9._~/-]*\*?$/;
+/** The domain picker's "type the whole name" choice. */
+const OTHER = "__other__";
 const URL_RE = /^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?(\/[A-Za-z0-9._~%/-]*)?$/;
 
 interface Form {
@@ -48,7 +51,8 @@ interface Form {
   /** With Cloudflare's proxy on: skip it and go straight to this network. */
   direct: boolean;
   label: string;
-  customHost: boolean;
+  /** Which domain the name sits in: "" for the base domain, a Cloudflare domain, or OTHER for a full name typed in. */
+  domain: string;
   path: string;
   name: string;
   shortLink: boolean;
@@ -82,7 +86,7 @@ function blank(): Form {
     lane: "direct",
     direct: false,
     label: "",
-    customHost: false,
+    domain: "",
     path: "",
     name: "",
     shortLink: false,
@@ -127,7 +131,8 @@ function fromRoute(r: RouteT, cfg: RoutesConfigT, knownApp: string | null): Form
     f.lane = "direct";
     f.direct = !!r.direct;
     f.label = underBase ? r.host.slice(0, -base.length - 1) : r.host;
-    f.customHost = !underBase;
+    // Split into name and domain once Cloudflare's domain list arrives (see the effect below).
+    f.domain = underBase ? "" : OTHER;
     f.scope = r.only_paths?.length ? "some" : "all";
     f.https = httpsFormFrom(r);
     f.onlyPaths = (r.only_paths ?? []).join(" ");
@@ -258,7 +263,11 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
   // ---- derived
   const port = Number(form.port);
   const direct = mode === "app" && form.lane === "direct";
-  const host = direct ? (form.customHost ? form.label.trim().toLowerCase() : `${form.label.trim().toLowerCase()}.${base}`) : base;
+  const domain = form.domain || base;
+  const other = form.domain === OTHER;
+  const customHost = form.domain !== "";
+  const label = form.label.trim().toLowerCase();
+  const host = direct ? (other ? label : label ? `${label}.${domain}` : domain) : base;
   const pathPart = direct ? "" : `/${cleanPath(form.path)}`;
   const plainHttp = direct && form.https.mode === "http";
   const url = mode === "fallback" ? `https://${base}` : `${plainHttp ? "http" : "https"}://${host}${pathPart}`;
@@ -266,10 +275,30 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
   const storedCert = existing ? data.certs?.[existing.id] : undefined;
   const newCert = direct && hasNewCert(form.https, prevSub, storedCert, host);
   const knownDns = status?.routes.find((r) => r.host === host && r.dns)?.dns ?? null;
-  const cfZone = cf?.connected ? (cf.zone?.name ?? null) : null;
-  const dnsByGluon = !!cfZone && (host === cfZone || host.endsWith(`.${cfZone}`));
-  const proxyOn = !!cfZone && !!cf?.proxied && edgeCovered(`x.${base}`, cfZone);
-  const viaProxy = direct && proxyOn && !form.direct && dnsByGluon && edgeCovered(host, cfZone!);
+  const cfZones = React.useMemo(() => (cf?.connected ? cf.zones : []), [cf]);
+  const hostZone = zoneOfHost(cfZones, host)?.name ?? null;
+  const dnsByGluon = !!hostZone;
+  // The lanes speak about the name being typed, or a stand-in for it in the chosen domain.
+  const sample = other ? host : `${label || "name"}.${domain}`;
+  const sampleZone = zoneOfHost(cfZones, sample)?.name ?? null;
+  const proxyOn = !!cf?.proxied && !!sampleZone && edgeCovered(sample, sampleZone);
+  const viaProxy = direct && proxyOn && !form.direct && dnsByGluon;
+  const domainOptions = React.useMemo(
+    () => [
+      { value: "", label: `.${base}` },
+      ...cfZones.filter((z) => z.name !== base).map((z) => ({ value: z.name, label: `.${z.name}`, description: "Cloudflare" })),
+      { value: OTHER, label: "Another domain", description: cfZones.length ? "Its DNS record is yours to add" : "Type the whole name" },
+    ],
+    [base, cfZones],
+  );
+  // An address saved outside the base domain opens as a full name; split it once the domains are known.
+  const split = React.useRef(false);
+  React.useEffect(() => {
+    if (split.current || !cfZones.length || form.domain !== OTHER) return;
+    split.current = true;
+    const z = zoneOfHost(cfZones, form.label.trim().toLowerCase());
+    if (z && z.name !== base) setForm((x) => ({ ...x, domain: z.name, label: x.label.trim().toLowerCase() === z.name ? "" : x.label.trim().toLowerCase().slice(0, -z.name.length - 1) }));
+  }, [cfZones, form.domain, form.label, base]);
   const appName =
     mode === "redirect"
       ? null
@@ -296,12 +325,16 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
       return t ? { state: "unhealthy", text: `Already used by ${nameOf(t)}.` } : { state: "running", text: "Free." };
     }
     if (direct) {
-      const l = form.label.trim().toLowerCase();
-      if (!l) return null;
-      if (form.customHost ? !HOST_RE.test(l) : !LABEL_RE.test(l)) return { state: "unhealthy", text: form.customHost ? "Enter a full name, like photos.example.com." : "Use letters, numbers and dashes; it can't start or end with a dash." };
-      if (form.customHost && (l === base || l.endsWith(`.${base}`))) return { state: "unhealthy", text: `Use the box without “more options” for names under ${base}.` };
+      const l = label;
+      // A Cloudflare domain can be used as it is (leech.party itself); the base domain can't.
+      if (!l && (other || !customHost)) return null;
+      if (other ? !HOST_RE.test(l) : l && !/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/.test(l))
+        return { state: "unhealthy", text: other ? "Enter a full name, like photos.example.com." : "Use letters, numbers and dashes; it can't start or end with a dash." };
+      if (!customHost && l.includes(".") && !dnsByGluon) return { state: "unhealthy", text: "Use one word here; a longer name needs its own DNS record." };
+      if (other && (l === base || l.endsWith(`.${base}`))) return { state: "unhealthy", text: `Pick .${base} from the list for names under it.` };
       if (takenHost) return { state: "unhealthy", text: `Already used by ${nameOf(takenHost)}.` };
-      return { state: "running", text: form.customHost ? "Free." : proxyOn && form.direct ? "Free. Gluon gives it its own DNS record." : "Free. DNS already covers it." };
+      if (dnsByGluon && (customHost || (proxyOn && form.direct) || !LABEL_RE.test(l))) return { state: "running", text: "Free. Gluon adds its DNS record in Cloudflare." };
+      return { state: "running", text: customHost ? "Free." : "Free. DNS already covers it." };
     }
     const p = cleanPath(form.path);
     if (!p) return null;
@@ -353,7 +386,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
         if (!URL_RE.test(form.target.trim())) e.target = "Enter a full address starting with https://";
       } else {
         if (!form.name.trim()) e.name = "Give the address a name, e.g. Photos.";
-        if (direct && !form.label.trim()) e.label = "Choose the name people will type.";
+        if (direct && !form.label.trim() && (other || !customHost)) e.label = "Choose the name people will type.";
         else if (!direct && !cleanPath(form.path)) e.label = "Choose the path, e.g. photos.";
         else if (availability?.state === "unhealthy") e.label = availability.text;
         if (direct && form.shortLink) {
@@ -728,7 +761,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                     onPick={() => setForm((x) => ({ ...x, lane: "direct", direct: false }))}
                     icon={<CloudSync />}
                     title="Through Cloudflare"
-                    example={`${form.label || "name"}.${base}`}
+                    example={sample}
                     text="Hides your home's address. Uploads stop at 100 MB, no video. Recommended."
                   />
                 )}
@@ -737,7 +770,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   onPick={() => setForm((x) => ({ ...x, lane: "direct", direct: proxyOn }))}
                   icon={<Cloud />}
                   title="Direct"
-                  example={`${form.label || "name"}.${base}`}
+                  example={sample}
                   text={proxyOn ? "Straight to your home, so video and big uploads work. Visitors can see your address." : "Straight to your home. Video and big uploads work. Recommended."}
                 />
                 {(!proxyOn || form.lane === "cloudflare") && (
@@ -755,11 +788,32 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
               <div className={f.nameBlock}>
                 {direct ? (
                   <Field label="Address" error={errors.label}>
-                    {form.customHost ? (
-                      <AffixInput before="https://" value={form.label} onChange={(e) => (setTouched((t) => ({ ...t, label: true })), set("label", e.target.value.trim().toLowerCase()))} mono placeholder="photos.example.com" spellCheck={false} autoCapitalize="off" />
-                    ) : (
-                      <AffixInput before="https://" after={`.${base}`} value={form.label} onChange={(e) => (setTouched((t) => ({ ...t, label: true })), set("label", e.target.value.replace(/[^A-Za-z0-9-]/g, "").toLowerCase()))} mono placeholder="photos" spellCheck={false} autoCapitalize="off" />
-                    )}
+                    <div className={f.address}>
+                      <AffixInput
+                        before="https://"
+                        value={form.label}
+                        onChange={(e) => (setTouched((t) => ({ ...t, label: true })), set("label", other ? e.target.value.trim().toLowerCase() : e.target.value.replace(/[^A-Za-z0-9.-]/g, "").toLowerCase()))}
+                        mono
+                        placeholder={other ? "photos.example.com" : customHost ? "media, or leave empty" : "photos"}
+                        spellCheck={false}
+                        autoCapitalize="off"
+                        aria-label={other ? "Full address" : "Name"}
+                      />
+                      {(cfZones.length > 0 || other) && (
+                        <Select
+                          aria-label="Domain"
+                          className={f.domainPick}
+                          value={form.domain}
+                          onChange={(v) => {
+                            // Moving between "a name in a domain" and "the whole name" keeps what was typed sensible.
+                            setForm((x) => ({ ...x, domain: v, label: v === OTHER && x.domain !== OTHER ? (x.label ? `${x.label}.${x.domain || base}` : "") : v !== OTHER && x.domain === OTHER ? "" : x.label }));
+                            setErrors({});
+                          }}
+                          options={domainOptions}
+                        />
+                      )}
+                      {!cfZones.length && !other && <span className={`${f.domainFixed} mono`}>.{base}</span>}
+                    </div>
                   </Field>
                 ) : (
                   <Field label="Address" error={errors.label}>
@@ -770,12 +824,12 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   <span className={f.previewUrl}>
                     <span className={f.dim}>{plainHttp ? "http://" : "https://"}</span>
                     {direct ? (
-                      form.customHost ? (
+                      other ? (
                         <span>{form.label || "…"}</span>
                       ) : (
                         <>
-                          <span>{form.label || "…"}</span>
-                          <span className={f.dim}>.{base}</span>
+                          {(form.label || !customHost) && <span>{form.label || "…"}</span>}
+                          <span className={f.dim}>{form.label || !customHost ? "." : ""}{domain}</span>
                         </>
                       )
                     ) : (
@@ -787,10 +841,8 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   </span>
                   {availability && !errors.label ? <Availability a={availability} /> : <span className={f.faint}>Type a name to see if it&rsquo;s free.</span>}
                 </div>
-                {direct && form.customHost && availability?.state === "running" &&
-                  (dnsByGluon ? (
-                    <p className={f.faint}>Gluon adds its DNS record in Cloudflare.</p>
-                  ) : (
+                {direct && customHost && availability?.state === "running" &&
+                  (dnsByGluon ? null : (
                     <DnsHelp host={host} baseDomain={base} purpose="web" known={knownDns} publicIp={status?.publicIp ?? (publicIp ? { v4: publicIp, v6: [] } : null)} />
                   ))}
               </div>
@@ -835,10 +887,10 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   <Field label="Name in Gluon" error={errors.name} description="Also written as a comment in the Caddyfile.">
                     <Input value={form.name} onChange={(e) => (setTouched((t) => ({ ...t, name: true })), set("name", e.target.value))} maxLength={60} placeholder="Photos" />
                   </Field>
-                  {direct && (
-                    <Checkbox checked={form.customHost} onChange={(v) => set("customHost", v)}>
+                  {direct && !cfZones.length && (
+                    <Checkbox checked={other} onChange={(v) => setForm((x) => ({ ...x, domain: v ? OTHER : "", label: v ? (x.label ? `${x.label}.${base}` : "") : "" }))}>
                       Use a name outside {base}
-                      <span className={f.hint}>{cfZone ? `Names in ${cfZone} get their DNS record from Gluon; others need one pointing at your router.` : "It needs its own DNS record pointing at your router."}</span>
+                      <span className={f.hint}>It needs its own DNS record pointing at your router. Connect Cloudflare in Settings and Gluon adds it for you, in any of your domains.</span>
                     </Checkbox>
                   )}
                   {!direct && (
@@ -1000,7 +1052,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
                   </>
                 ) : (
                   <>
-                    {direct && form.customHost && (
+                    {direct && customHost && (
                       <li>
                         {dnsByGluon
                           ? `Gluon adds ${host} to Cloudflare's DNS when you save.`
