@@ -28,7 +28,7 @@ registerSearch({
         label: r.name,
         hint: `Connected app · ${KINDS[r.kind]?.label ?? r.kind}`,
         icon: "link",
-        href: `/settings/server#integration-${encodeURIComponent(r.id)}`,
+        href: `/settings/integrations#integration-${encodeURIComponent(r.id)}`,
         score,
       }));
     return { name: "Connected apps", items };

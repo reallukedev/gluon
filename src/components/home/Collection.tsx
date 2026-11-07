@@ -296,7 +296,7 @@ export function Collection({ open, onOpenChange, section, widgets, items, onPin,
               <ul className={c.grid} role="list">
                 {g.list.map((w) => {
                   const here = local.get(w.type);
-                  const reason = here && !here.available ? (here.reason ?? "Not available on this server.") : unavailable.has(apiType(w.type)) ? "Connect the app it reads from first, in Settings → Connected apps." : null;
+                  const reason = here && !here.available ? (here.reason ?? "Not available on this server.") : unavailable.has(apiType(w.type)) ? "Connect the app it reads from first, in Settings → Integrations." : null;
                   const pinned = onHome(w.type);
                   return (
                     <Entry

@@ -11,6 +11,7 @@ import "./system";
 import "./integrations";
 import "./files";
 import "./network";
+import "./cloudflare";
 import "./diagnostics";
 import "./monitors";
 import "./notify";

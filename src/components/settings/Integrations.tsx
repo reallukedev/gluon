@@ -30,6 +30,7 @@ import s from "./settings.module.css";
 import x from "./integrations.module.css";
 import { SectionHeader } from "./SectionHeader";
 import { ConnectDialog, type ConnectTarget } from "@/components/home/connect/Connect";
+import { CloudflarePanel, cloudflareSummary, useCloudflare } from "./Cloudflare";
 
 /** "Home Assistant" and "Homeassistant" are the same app. */
 const squash = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -82,8 +83,9 @@ export function Integrations() {
   const [connect, setConnect] = React.useState<ConnectTarget | null>(null);
   const [confirm, confirmNode] = useConfirm();
   const [testing, setTesting] = React.useState<string | null>(null);
+  const cf = useCloudflare(viewer.role === "admin");
 
-  if (viewer.role !== "admin") return <SectionHeader summary="Only admins can manage connected apps." />;
+  if (viewer.role !== "admin") return <SectionHeader summary="Only admins can manage integrations." />;
 
   const kindInfo = (k: IntegrationKind) => kinds.data?.find((i) => i.kind === k);
   const refresh = () => {
@@ -167,21 +169,27 @@ export function Integrations() {
   return (
     <>
       <SectionHeader
-        summary={
+        summary={[
+          cloudflareSummary(cf.data),
           !list.data
             ? "Checking what's connected…"
             : items.length === 0
               ? open.length
-                ? `Nothing connected yet. ${open.length === 1 ? "1 app is" : `${open.length} apps are`} ready to connect.`
-                : "Keys that let home page widgets read from your apps."
-              : `${broken ? `${broken === 1 ? "1 connection isn't" : `${broken} connections aren't`} working. ` : ""}${items.length === 1 ? "1 app" : `${items.length} apps`} connected${shared ? `, ${shared} shared with the household` : ""}.${open.length ? ` ${open.length === 1 ? "1 more is" : `${open.length} more are`} ready.` : ""}`
-        }
+                ? `No apps connected yet. ${open.length === 1 ? "1 is" : `${open.length} are`} ready to connect.`
+                : cf.data?.connected
+                  ? null
+                  : "Cloudflare, and the apps home page widgets read from."
+              : `${broken ? `${broken === 1 ? "1 app connection isn't" : `${broken} app connections aren't`} working. ` : ""}${items.length === 1 ? "1 app" : `${items.length} apps`} connected${shared ? `, ${shared} shared with the household` : ""}.${open.length ? ` ${open.length === 1 ? "1 more is" : `${open.length} more are`} ready.` : ""}`,
+        ]
+          .filter(Boolean)
+          .join(" ")}
       />
       <div className={s.stack}>
+        <CloudflarePanel />
 
         {(items.length > 0 || !list.data || list.error || (catalog.data && open.length === 0)) && (
           <Panel
-            title="Connections"
+            title="Apps"
             flush
             meta={
               <Button size="sm" icon={<Plus />} onClick={() => setForm({ mode: "create" })} disabled={!kinds.data}>

@@ -191,7 +191,13 @@ export function clientInfo(headers: Headers): { ip: string; zone: Zone } {
     const viaPublicName = !!host && host === getSetting("publicHost").toLowerCase();
     return { ip: "unknown", zone: viaPublicName ? "away" : "home" };
   }
-  return { ip, zone: isHomeIp(ip) ? "home" : "away" };
+  const home = isHomeIp(ip);
+  // A visit that crossed Cloudflare's network came from the internet, whatever the chain says. Through
+  // a Cloudflare Tunnel the last hop is cloudflared on this machine, so a chain that lost the visitor's
+  // address would otherwise end at loopback and read as home. These headers can only make a request
+  // count as away, so trusting them grants nothing.
+  if (home && (headers.has("cf-ray") || headers.has("cf-connecting-ip"))) return { ip: parseAddr(headers.get("cf-connecting-ip")) ?? ip, zone: "away" };
+  return { ip, zone: home ? "home" : "away" };
 }
 
 /**

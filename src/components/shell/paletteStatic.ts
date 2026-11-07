@@ -27,6 +27,7 @@ const SECTIONS: { id: string; parent: string; label: string; hint: string; keywo
   { id: "people:access", parent: "settings", label: "Who can open what", hint: "Settings · People", keywords: "access grants folders apps permissions share", href: peopleHref({ tab: "access" }), icon: "settings" },
   { id: "people:announcements", parent: "settings", label: "Announcements", hint: "Settings · People", keywords: "message banner household maintenance", href: peopleHref({ tab: "announcements" }), icon: "settings" },
   { id: "people:defaults", parent: "settings", label: "Home page for new members", hint: "Settings · People", keywords: "household defaults default layout widgets", href: peopleHref({ tab: "defaults" }), icon: "settings" },
+  { id: "settings:cloudflare", parent: "settings", label: "Cloudflare", hint: "Settings · Integrations", keywords: "dns tunnel cloudflared ddns dynamic dns records domain token", href: "/settings/integrations#cloudflare", icon: "settings" },
   { id: "apps:store", parent: "apps", label: "App store", hint: "Apps · get new apps", keywords: "install umbrel get apps", href: "/apps/store", icon: "apps" },
   { id: "apps:custom", parent: "apps", label: "Custom apps", hint: "Apps · apps you made", keywords: "make an app builder custom compose", href: "/apps/custom", icon: "apps" },
   { id: "apps:images", parent: "apps", label: "Docker images", hint: "Apps · Docker", keywords: "docker images pull prune", href: "/apps/images", icon: "apps" },
@@ -58,7 +59,11 @@ export function staticGroups(i: StaticInput): StaticGroup[] {
   }
 
   const settings: PaletteItem[] = SETTINGS.map(([id, label, keywords]) => ({ id: `settings:${id}`, label, hint: "Settings", keywords, icon: "settings", href: `/settings/${id}` }));
-  if (admin) settings.push({ id: "settings:server", label: "Server settings", hint: "Settings", keywords: "name network home public address integrations connected apps", icon: "settings", href: "/settings/server" });
+  if (admin)
+    settings.push(
+      { id: "settings:server", label: "Server settings", hint: "Settings", keywords: "name network home public address sign-in", icon: "settings", href: "/settings/server" },
+      { id: "settings:integrations", label: "Integrations", hint: "Settings", keywords: "cloudflare connected apps api keys widgets jellyfin immich", icon: "settings", href: "/settings/integrations" },
+    );
 
   const sections: PaletteItem[] = admin
     ? SECTIONS.filter((x) => x.parent === "settings" || i.nav.some((n) => n.id === x.parent)).map((x) => ({ id: x.id, label: x.label, hint: x.hint, keywords: x.keywords, icon: x.icon, href: x.href }))

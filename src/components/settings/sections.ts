@@ -31,7 +31,7 @@ export const SECTIONS: SettingsSection[] = [
   { id: "activity", label: "Activity", hint: "Who changed what, and when", summary: "Everything people changed and everything the server noticed.", group: "Watch", admin: true, ownHeader: true, wide: true },
   { id: "people", label: "People", hint: "Accounts, access, reports, invites", summary: "Everyone who can sign in, and what they can open.", group: "Watch", admin: true, ownHeader: true, wide: true },
   { id: "server", label: "Server", hint: "Umbrel or CasaOS, networks, sign-in", summary: "These apply to everyone on this server.", group: "Server", admin: true },
-  { id: "integrations", label: "Connected apps", hint: "API keys for app widgets", summary: "Keys that let home page widgets read from your apps.", group: "Server", admin: true, ownHeader: true },
+  { id: "integrations", label: "Integrations", hint: "Cloudflare, app widgets", summary: "Cloudflare, and the apps home page widgets read from.", group: "Server", admin: true, ownHeader: true },
   { id: "updates", label: "Updates", hint: "New versions, automatic updates", summary: "Keeping Gluon itself up to date.", group: "Server", admin: true },
   { id: "about", label: "About Gluon", hint: "Version, data and backups", summary: "What's running and where its data lives.", group: "Server", admin: true },
 ];

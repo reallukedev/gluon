@@ -141,6 +141,8 @@ async function save(user: User, where: Where, rev: string, raw: { routes: unknow
     invalidateStatus();
     invalidateExposure();
     publish("network.routes", { rev: configRev(saved) });
+    // Cloudflare: new names get their DNS records, removed ones lose Gluon's.
+    void import("../cloudflare/service").then((m) => m.scheduleSync()).catch(() => undefined);
     if (saved.routes.some((r) => r.type === "subdomain" && r.xmpp?.cert_sync)) {
       // Now for a domain Caddy already has; again once a new name has had time to get one.
       const run = () => void syncChatCertificates().then(invalidateStatus).catch(() => undefined);
@@ -204,4 +206,25 @@ export async function saveSiteRoutes(user: User, where: Where, change: (routes: 
       throw e;
     }
   }
+}
+
+/**
+ * Turn the Cloudflare Tunnel on for web addresses in `zone`, or off with null. Only Settings →
+ * Integrations calls this; the Network page's saves keep whatever is set.
+ */
+export function setTunnel(user: User, where: Where, tunnel: { zone: string } | null): Promise<RoutesConfig> {
+  return serial(async () => {
+    await caddySide();
+    const current = currentConfig();
+    const next: RoutesConfig = { ...current };
+    if (tunnel) next.tunnel = tunnel;
+    else delete next.tunnel;
+    const saved = await applyConfig(next, tunnel ? `Cloudflare Tunnel turned on by ${user.username} in Gluon` : `Cloudflare Tunnel turned off by ${user.username} in Gluon`);
+    audit(user, { action: "network.routes.save", summary: tunnel ? `Sent web addresses in ${tunnel.zone} through the Cloudflare Tunnel` : "Stopped sending web addresses through the Cloudflare Tunnel", target: saved.base_domain }, where);
+    invalidateApps();
+    invalidateStatus();
+    invalidateExposure();
+    publish("network.routes", { rev: configRev(saved) });
+    return saved;
+  });
 }

@@ -172,7 +172,7 @@ function ConnectButton({ kind, integrationId, label }: { kind: IntegrationKind; 
   if (!target) {
     return (
       <LinkButton href="/settings/integrations" size="sm">
-        Open Connected apps
+        Open Integrations
       </LinkButton>
     );
   }
@@ -282,7 +282,7 @@ export function Problem({
       >
         {admin ? (
           <>
-            Reconnect it here, or in Settings → Connected apps.
+            Reconnect it here, or in Settings → Integrations.
             <span className={l.stateWhy} title={error.message}>
               {error.message}
             </span>
