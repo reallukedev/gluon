@@ -221,7 +221,10 @@ export function NeedsYou({
           body.op !== "restore"
             ? {
                 label: "Undo",
-                onClick: () => void api.post(`/api/findings/${encodeURIComponent(f.id)}`, { op: "restore" }).then(onChange),
+                onClick: () =>
+                  void api
+                    .post(`/api/findings/${encodeURIComponent(f.id)}`, { op: "restore" })
+                    .then(onChange, (e: unknown) => toast.error(e instanceof Error ? `Couldn't undo. ${e.message}` : "Couldn't undo. Try again.")),
               }
             : undefined,
       });

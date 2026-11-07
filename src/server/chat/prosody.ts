@@ -534,14 +534,19 @@ function writeLike(file: string, text: string, like: string) {
       st = null;
     }
   }
-  fs.writeFileSync(tmp, text, { mode });
   try {
-    fs.chmodSync(tmp, mode);
-    if (st) fs.chownSync(tmp, st.uid, st.gid);
-  } catch {
-    /* best effort: Prosody only needs to read it */
+    fs.writeFileSync(tmp, text, { mode });
+    try {
+      fs.chmodSync(tmp, mode);
+      if (st) fs.chownSync(tmp, st.uid, st.gid);
+    } catch {
+      /* best effort: Prosody only needs to read it */
+    }
+    fs.renameSync(tmp, p);
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    throw e;
   }
-  fs.renameSync(tmp, p);
 }
 
 /** Copy the person's config aside once, before Gluon first touches it. */
@@ -674,6 +679,26 @@ export async function saveMainConfig(t: ProsodyTarget, snap: ConfigPlace, text: 
   const file = hostFile(snap);
   backupOnce(file);
   writeLike(file, text.endsWith("\n") ? text : `${text}\n`, file);
+}
+
+/**
+ * What writeSettings may change (gluon.cfg.lua and the main or custom file), as it is now, so a
+ * save Prosody can't read can be put back exactly.
+ */
+export function settingsBackup(snap: ConfigPlace): () => void {
+  const file = hostFile(snap);
+  const saved = [path.posix.join(path.posix.dirname(file), GLUON_CONFIG), file].map((f) => ({ f, text: readOr(f) }));
+  return () => {
+    for (const { f, text } of saved) {
+      if (text === null) fs.rmSync(hostPath(f), { force: true });
+      else if (readOr(f) !== text) writeLike(f, text, f);
+    }
+  };
+}
+
+/** Have Prosody read its config again without touching modules: throws when it can't. */
+export async function rereadConfig(t: ProsodyTarget) {
+  await prosodyLua<true>(t, `local ok,err=prosody.reload_config(); if ok==false then error(err or "Prosody couldn't read its config.") end; return true`);
 }
 
 /** Write gluon.cfg.lua for these settings and make sure the main config includes it. */

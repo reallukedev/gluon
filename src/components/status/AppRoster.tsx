@@ -20,7 +20,7 @@ import r from "./roster.module.css";
  * with a link to their fix in Needs you; stopped apps and old copies left by another installer fold
  * away. How each app is put together (Compose, parts) is in the name's tooltip, one step deeper.
  */
-export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Finding[] }) {
+export function AppRoster({ apps, findings, unavailable }: { apps: StatusApp[]; findings: Finding[]; unavailable?: boolean }) {
   const { viewer, prefs } = usePrefs();
   const fmt = useFormat();
 
@@ -52,6 +52,8 @@ export function AppRoster({ apps, findings }: { apps: StatusApp[]; findings: Fin
     />
   );
 
+  // An empty list because Docker didn't answer isn't "no apps".
+  if (unavailable) return <p className={r.none}>Can&apos;t list the apps until Docker answers.</p>;
   if (!current.length) {
     return <p className={r.none}>No apps yet. Apps from the app store or Docker show up here.</p>;
   }

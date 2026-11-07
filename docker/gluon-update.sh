@@ -23,7 +23,9 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 say() { printf '%s %s\n' "$(date +%H:%M:%S)" "$*"; }
 stage() { printf '::stage %s\n' "$1"; say "$2"; }
 fail() { printf '::done failed %s\n' "$1"; exit 1; }
-trap 'fail "The update stopped unexpectedly (line $LINENO)."' ERR
+# Once the running Gluon has been touched, `undo` puts it back; any unexpected error runs it first.
+undo() { :; }
+trap 'trap - ERR; undo; fail "The update stopped unexpectedly (line $LINENO)."' ERR
 
 action=$1; shift
 WORK=""
@@ -99,7 +101,15 @@ if [ "$mode" = umbrel ]; then
   # writing only Dockerfile is undone by the restart.
   files=("$appdata/Dockerfile")
   [ -f "$appdata/Dockerfile.template" ] && files+=("$appdata/Dockerfile.template")
+  # Whole files are kept, so going back restores exactly what Umbrel had.
+  for f in "${files[@]}"; do cp -p "$f" "$WORK/$(basename "$f").prev"; done
   prev=$(head -n1 "${files[-1]}")
+  prevcommit=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$container" 2>/dev/null | sed -n 's/^GLUON_COMMIT=//p' | head -n1 || true)
+  undo() {
+    undo() { :; }
+    for f in "${files[@]}"; do cp -p "$WORK/$(basename "$f").prev" "$f" || true; done
+    umbreld apps.restart.mutate --appId "$app" >/dev/null 2>&1 || true
+  }
   tag="$app:${NEW#gluon:}"
   stage apply "Handing Gluon $tag to Umbrel…"
   docker tag "$NEW" "$tag"
@@ -114,9 +124,12 @@ if [ "$mode" = umbrel ]; then
     exit 0
   fi
   say "Gluon didn't come back on the new version; going back to ${prev#FROM }."
-  for f in "${files[@]}"; do printf '%s\n' "$prev" > "$f"; done
-  umbreld apps.restart.mutate --appId "$app" >/dev/null || true
-  fail "The new version didn't start, so Gluon went back to the previous one."
+  undo
+  sleep 10
+  if wait_healthy "$container" "" "$prevcommit"; then
+    fail "The new version didn't start, so Gluon went back to the previous one."
+  fi
+  fail "The new version didn't start, and the previous one hasn't come back yet. Restart Gluon from Umbrel."
 fi
 
 # ---------------------------------------------------------------- put it in place: Compose (incl. CasaOS)
@@ -135,23 +148,34 @@ if [ "$mode" = compose ]; then
     docker compose "${args[@]}" pull "$service" 2>&1
     stage apply "Replacing $container…"
   fi
+  if [ -n "$previd" ]; then
+    undo() {
+      undo() { :; }
+      say "Putting the previous image back."
+      docker tag "$previd" "$image" || true
+      docker compose "${args[@]}" up -d --no-build --no-deps --force-recreate "$service" 2>&1 || true
+    }
+  fi
   newid=$(docker image inspect -f '{{.Id}}' "$image")
   if [ "$newid" = "$previd" ]; then
     printf '::done ok %s\n' "Gluon is already on the newest image."
     exit 0
   fi
-  docker compose "${args[@]}" up -d --no-build --no-deps "$service" 2>&1
+  # A failed `up` may already have removed the old container, so it goes back rather than stopping here.
+  up=0
+  docker compose "${args[@]}" up -d --no-build --no-deps "$service" 2>&1 || up=$?
   stage verify "Waiting for Gluon to come back…"
-  if wait_healthy "$container" "$newid"; then
+  if [ "$up" = 0 ] && wait_healthy "$container" "$newid"; then
     printf '::done ok %s\n' "Gluon is running the new version."
     exit 0
   fi
-  if [ -n "$previd" ]; then
-    say "Gluon didn't come back healthy; putting the previous image back."
-    docker tag "$previd" "$image"
-    docker compose "${args[@]}" up -d --no-build --no-deps "$service" 2>&1 || true
+  [ -n "$previd" ] || fail "The new version didn't start and there was no previous image to go back to. Run docker compose up -d in $workdir on the server."
+  say "Gluon didn't come back healthy on the new version."
+  undo
+  if wait_healthy "$container" "$previd"; then
+    fail "The new version didn't start, so Gluon went back to the previous one."
   fi
-  fail "The new version didn't start, so Gluon went back to the previous one."
+  fail "The new version didn't start, and the previous one hasn't come back yet. Run docker compose up -d in $workdir on the server."
 fi
 
 fail "Gluon doesn't know how to replace itself in \"$mode\" mode."
