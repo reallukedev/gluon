@@ -132,13 +132,18 @@ export function getRun(id: string): CheckupRun | null {
   return r ? toRun(r) : null;
 }
 
-export function latestFull(): CheckupRun | null {
+/** The most recent finished run of one kind (targetless kinds only). */
+export function latestOf(kind: CheckupKind): CheckupRun | null {
   ensureTable();
-  const r = one<Row>("SELECT * FROM checkup_runs WHERE kind = 'full' AND status = 'done' ORDER BY started_at DESC LIMIT 1");
+  const r = one<Row>("SELECT * FROM checkup_runs WHERE kind = ? AND status = 'done' ORDER BY started_at DESC LIMIT 1", kind);
   return r ? toRun(r) : null;
 }
 
-export function recentRuns(limit = 20): CheckupRunRow[] {
+export const latestFull = () => latestOf("full");
+
+export function recentRuns(limit = 20, kind: CheckupKind | null = null): CheckupRunRow[] {
   ensureTable();
-  return all<Row>("SELECT id, kind, target, title, status, started_at, finished_at, user_id, username, counts, verdict, '' AS meta, '' AS plan, '' AS results, NULL AS summary FROM checkup_runs ORDER BY started_at DESC LIMIT ?", limit).map(toRow);
+  const cols = "id, kind, target, title, status, started_at, finished_at, user_id, username, counts, verdict, '' AS meta, '' AS plan, '' AS results, NULL AS summary";
+  const rows = kind ? all<Row>(`SELECT ${cols} FROM checkup_runs WHERE kind = ? ORDER BY started_at DESC LIMIT ?`, kind, limit) : all<Row>(`SELECT ${cols} FROM checkup_runs ORDER BY started_at DESC LIMIT ?`, limit);
+  return rows.map(toRow);
 }

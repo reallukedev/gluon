@@ -433,7 +433,7 @@ The whole machine as a field of hairlines: one 2px line per container inside a 1
 ### Instruments (one per screen)
 Each screen draws its main idea as a picture you can act on, in the same hairline and StateLine grammar:
 - **Visitor map** (Network): Anyone → Cloudflare DNS (Direct and Through Cloudflare lanes) → router → Caddy → apps; each hop is a button whose state line opens its details.
-- **Probe path and sweep** (Diagnostics → Checkup): a chain of hops that turns short red where a path breaks, with the fix under the break; the full checkup is one row of ticks per category.
+- **Probe path and sweep** (Diagnostics → Checkup): a chain of hops that turns short red where a path breaks, with the fix under the break; the full checkup is one row of ticks per category. Diagnostics → Security reuses the sweep with one row per area (internet, network, SSH, server, containers, Gluon accounts).
 - **Stack diagram** (App detail): addresses → containers (ports as sockets) → folders, joined by wires; hover traces, click acts.
 - **Faceplate** (System): CPU threads as live hairlines, memory as a SegmentBar by app, every sensor on one graduated scale. **Swimlanes** (Sign-ins) draw who was connected when.
 - **Space map** (Storage): a squarified treemap in 1px rules with cleanups attached to the blocks. **Partition strip** callouts hang tiny partitions' labels on hairlines.

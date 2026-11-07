@@ -353,3 +353,21 @@ export interface CheckupState {
   recent: CheckupRunRow[];
   targets: CheckupTargets;
 }
+
+/** The security checkup's areas, in the order the instrument draws them. */
+export const SECURITY_GROUPS: CheckupGroup[] = [
+  { id: "internet", label: "From the internet" },
+  { id: "network", label: "Network" },
+  { id: "ssh", label: "SSH" },
+  { id: "server", label: "Server" },
+  { id: "containers", label: "Containers" },
+  { id: "accounts", label: "Gluon accounts" },
+];
+
+export interface SecurityState {
+  /** The most recent finished security checkup, with its results. */
+  latest: CheckupRun | null;
+  recent: CheckupRunRow[];
+  /** Security checkups running right now (any admin). */
+  active: CheckupRunRow[];
+}

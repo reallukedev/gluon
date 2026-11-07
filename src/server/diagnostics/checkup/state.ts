@@ -3,9 +3,9 @@ import { listApps, type AppSummary } from "../../docker/apps";
 import { tryReadConfig, routeUrl } from "../../caddy/routes";
 import { getInventory } from "../../storage/inventory";
 import { FALLBACK_ID } from "../../network/routes-meta";
-import type { CheckupState, CheckupTargets } from "@/lib/diagnostics-types";
+import type { CheckupState, CheckupTargets, SecurityState } from "@/lib/diagnostics-types";
 import { activeRuns } from "./runner";
-import { latestFull, recentRuns } from "./history";
+import { latestFull, latestOf, recentRuns } from "./history";
 import { displayUrl } from "./addresses";
 
 /** What the Checkup tab needs on load: runs in progress, the last full checkup, history and pickers. */
@@ -32,4 +32,9 @@ export async function checkupTargets(): Promise<CheckupTargets> {
 export async function checkupState(): Promise<CheckupState> {
   const targets = await checkupTargets();
   return { active: activeRuns(), latest: latestFull(), recent: recentRuns(20), targets };
+}
+
+/** What the Security tab needs: the last security checkup, earlier ones, and whether one is running. */
+export function securityState(): SecurityState {
+  return { latest: latestOf("safety"), recent: recentRuns(20, "safety"), active: activeRuns().filter((r) => r.kind === "safety") };
 }
