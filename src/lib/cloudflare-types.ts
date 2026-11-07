@@ -24,6 +24,8 @@ export interface ManagedName {
   message: string | null;
   /** Why the name is here, in a few words ("Base domain", "Photos"). */
   why: string;
+  /** The Cloudflare domain it lives in. */
+  zone: string;
 }
 
 export interface CloudflareZoneT {
@@ -50,6 +52,8 @@ export interface CloudflareStatus {
   network: boolean;
   baseDomain: string | null;
   zone: CloudflareZoneT | null;
+  /** Every domain the token can see, the base domain's first. */
+  zones: CloudflareZoneT[];
   /** Last four of the token. */
   tokenHint: string | null;
   connectedAt: number | null;
@@ -79,4 +83,44 @@ export function edgeCovered(host: string, zone: string): boolean {
   const h = host.toLowerCase().replace(/\.$/, "");
   const z = zone.toLowerCase().replace(/\.$/, "");
   return h === z || (h.endsWith(`.${z}`) && !h.slice(0, -z.length - 1).includes("."));
+}
+
+/** Record types Gluon edits itself; anything else is shown and edited in Cloudflare. */
+export const EDITABLE_TYPES = ["A", "AAAA", "CNAME", "TXT", "MX", "NS"] as const;
+export type EditableType = (typeof EDITABLE_TYPES)[number];
+
+/** One record in a domain, as the DNS editor shows it. */
+export interface DnsRecordFull {
+  id: string;
+  type: string;
+  /** Full name, like media.leech.party. */
+  name: string;
+  content: string;
+  proxied: boolean;
+  /** Cloudflare can proxy this record (A, AAAA and CNAME). */
+  proxiable: boolean;
+  /** Seconds; 1 means automatic. */
+  ttl: number;
+  priority: number | null;
+  comment: string | null;
+  /** Gluon keeps this record for a public address and rewrites it as needed. */
+  managed: boolean;
+}
+
+export interface DnsZoneView {
+  zone: CloudflareZoneT;
+  records: DnsRecordFull[];
+  /** Cloudflare's dashboard page for the domain's DNS, for record types Gluon doesn't edit. */
+  dashboard: string;
+}
+
+export interface DnsRecordInput {
+  type: EditableType;
+  /** Relative to the domain ("@" for the domain itself, "www") or a full name inside it. */
+  name: string;
+  content: string;
+  proxied: boolean;
+  ttl: number;
+  priority?: number | null;
+  comment?: string | null;
 }

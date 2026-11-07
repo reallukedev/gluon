@@ -48,7 +48,6 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
     if (!open || open === "apps" || !window.matchMedia("(max-width: 900px)").matches) return;
     document.getElementById(detailsId)?.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
   }, [open, detailsId]);
-  const b = model.baseDomain;
   return (
     <div className={m.wrap}>
       <figure className={m.map} aria-label="How visitors reach your apps">
@@ -71,25 +70,25 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
             area={m.direct}
             icon={<Cloud />}
             title="Direct"
-            detail={`DNS · name.${b}`}
+            detail="DNS only"
             st={model.direct}
             count={model.directCount}
             selected={open === "dns"}
             controls={detailsId}
             onClick={() => toggle("dns")}
-            label={`Direct lane, DNS for name.${b}`}
+            label="Direct lane, DNS straight to your router"
           />
           <Hop
             area={m.proxy}
             icon={<CloudSync />}
             title="Through Cloudflare"
-            detail={`Proxy · ${b}/…`}
+            detail="Cloudflare proxy"
             st={model.proxy}
             count={model.proxyCount}
             selected={open === "dns"}
             controls={detailsId}
             onClick={() => toggle("dns")}
-            label={`Cloudflare lane, proxy for ${b}`}
+            label="Cloudflare lane, through Cloudflare's proxy"
           />
 
           <Wire kind="merge" area={m.merge} />
@@ -132,13 +131,13 @@ export function NetworkMap({ model, open, onOpen, onApps, detailsId, children, d
           <p>
             <Cloud className={m.laneKey} aria-hidden />
             <span>
-              <b>Direct</b> <span className="mono">name.{b}</span>: no size limits, but visitors can see your internet address.
+              <b>Direct</b>: no size limits, but visitors can see your internet address.
             </span>
           </p>
           <p>
             <CloudSync className={m.laneKey} aria-hidden />
             <span>
-              <b>Through Cloudflare</b> <span className="mono">{b}/…</span>: hides your address. Uploads stop at 100 MB and video isn't allowed.
+              <b>Through Cloudflare</b>: hides your address. Uploads stop at 100 MB and video isn't allowed.
             </span>
           </p>
         </figcaption>

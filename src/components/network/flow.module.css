@@ -134,3 +134,13 @@
   .recapRow dd { grid-column: 1; grid-row: 2; }
   .recapRow > :last-child { grid-column: 2; grid-row: 1 / span 2; }
 }
+
+/* Address: the name, then the domain it sits in (a picker once Cloudflare is connected). */
+.address { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.address > :first-child { flex: 1 1 auto; min-width: 0; }
+.domainPick { flex: 0 1 auto; max-width: 55%; min-width: 132px; font-family: var(--font-mono); font-size: 0.93em; }
+.domainFixed { display: flex; align-items: center; padding: 0 2px; color: var(--muted); font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
+@media (max-width: 520px) {
+  .address { flex-wrap: wrap; }
+  .domainPick { max-width: none; flex: 1 1 100%; }
+}
