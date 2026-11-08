@@ -62,6 +62,7 @@ export function NewSiteDialog({ open, onOpenChange, start: initialStart, baseDom
   const ready = start === "starter" || (start === "files" ? !!picked?.ok.length && !tooMany && !tooBig : !!zip && !zipTooBig);
 
   async function create() {
+    if (busy) return;
     const n = name.trim();
     if (!n) {
       setNameError("Give the site a name.");

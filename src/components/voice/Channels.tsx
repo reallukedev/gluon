@@ -150,7 +150,7 @@ export function ChannelDialog({ appId, live, edit, onClose, onChanged }: { appId
     .sort((a, b) => (a.value === "0" ? -1 : b.value === "0" ? 1 : a.label.localeCompare(b.label)));
 
   async function save() {
-    if (!e) return;
+    if (!e || busy) return;
     setBusy(true);
     setError(null);
     try {

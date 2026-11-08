@@ -139,6 +139,7 @@ export function MonitorForm({
   const fieldErr = (...keys: string[]) => (err?.field && keys.includes(err.field) ? err.message : null);
 
   async function save() {
+    if (busy) return;
     setBusy(true);
     setErr(null);
     const timing = { intervalSec: Number(d.interval), timeoutSec: Number(d.timeout), failAfter: Number(d.failAfter) };

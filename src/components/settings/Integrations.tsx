@@ -490,7 +490,7 @@ function IntegrationForm({ state, kinds, onClose, onSaved }: { state: FormState;
   }
 
   async function save() {
-    if (!kind) return;
+    if (!kind || busy) return;
     setBusy("save");
     setError(null);
     try {

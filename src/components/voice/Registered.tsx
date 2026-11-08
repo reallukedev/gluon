@@ -130,7 +130,7 @@ function EditDialog({ appId, edit, onClose, onDone }: { appId: string; edit: Edi
   const ready = (!needsName || name.trim().length > 0) && (!needsPassword || password.length >= 8);
 
   async function save() {
-    if (!e || !ready) return;
+    if (!e || !ready || busy) return;
     setBusy(true);
     setError(null);
     try {

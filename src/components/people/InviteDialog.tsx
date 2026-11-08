@@ -34,6 +34,8 @@ export function InviteDialog({ open, onOpenChange, onCreated }: { open: boolean;
   }, [open]);
 
   async function create() {
+    // Enter in the form submits too, so a second press mustn't make a second invite.
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {

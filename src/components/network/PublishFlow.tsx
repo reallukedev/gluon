@@ -512,6 +512,7 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
   }
 
   async function save() {
+    if (saving) return;
     setGeneral(null);
     for (const s of steps) {
       const e = check(s);
