@@ -4,7 +4,6 @@ import { audit } from "@/server/audit";
 import { readFile, siteRow, writeText } from "@/server/sites/store";
 import { pathStr, siteId } from "../../_shared";
 
-/** One file, as text when the editor can open it. */
 export const GET = route({ auth: "admin", query: z.object({ path: pathStr }) }, ({ params, query }) => {
   const id = siteId(params);
   siteRow(id);

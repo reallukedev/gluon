@@ -3,11 +3,7 @@ import { notFound } from "@/server/errors";
 import { subscribe } from "@/server/events";
 import { follow, getRun, runBuffer, runTopic, type RunEvent } from "@/server/system/apt-runner";
 
-/**
- * Live output of an update run.
- * Events: `snapshot` { run, lines, from } → `line` { n, text }… → `done` { run }.
- * Finished runs send snapshot + done immediately. Dedupe lines by `n` after reconnecting.
- */
+/** Finished runs send snapshot + done at once. Dedupe lines by `n` after reconnecting. */
 export const GET = route({ auth: "admin" }, ({ req, params }) => {
   const id = String(params.id);
   const run = getRun(id);

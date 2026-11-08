@@ -11,7 +11,7 @@ const body = z.object({
   confirm: z.string().max(400).optional(),
 });
 
-/** Remove an image (or one of its tags). Refuses images running containers use. */
+/** Refuses images that running containers use. */
 export const DELETE = route({ auth: "admin", recent: true, body }, async ({ params, body, user, ip, zone }) => {
   const id = param(params.id);
   try {

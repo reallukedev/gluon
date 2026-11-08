@@ -10,13 +10,7 @@ const HOPS: HopId[] = ["dns", "router", "caddy"];
 
 type Params = { tab?: string; hop?: string; publish?: string; route?: string };
 
-/**
- * Deep links, old and new:
- *  ?publish=<appId>   opens "Put an app on the internet" with that app picked
- *  ?route=<id>        opens that address (any of an app's addresses, or __fallback__)
- *  ?hop=dns|router|caddy   opens that hop of the map
- *  ?tab=dns           (older links) the DNS hop; ?tab=exposure / ?tab=addresses land on the app list
- */
+/** Deep links: ?publish=<appId>, ?route=<id> (or __fallback__), ?hop=dns|router|caddy, and the older ?tab=. */
 function landing(sp: Params): Landing | null {
   const str = (v: unknown) => (typeof v === "string" && v.length > 0 && v.length <= 200 ? v : null);
   const publish = str(sp.publish);
@@ -32,8 +26,7 @@ function landing(sp: Params): Landing | null {
 export default async function NetworkPage({ searchParams }: { searchParams: Promise<Params> }) {
   const at = Date.now();
   await requireAdmin();
-  const sp = await searchParams;
   // Best effort: if routes.json can't be read the client shows why (and retries).
-  const initial = await routesResponse().catch(() => null);
+  const [sp, initial] = await Promise.all([searchParams, routesResponse().catch(() => null)]);
   return <Seeded at={at}><NetworkView initial={initial} landing={landing(sp)} /></Seeded>;
 }

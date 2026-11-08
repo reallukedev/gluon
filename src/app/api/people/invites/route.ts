@@ -3,7 +3,6 @@ import { route } from "@/server/api";
 import { audit } from "@/server/audit";
 import { cancelInvite, makeInvite, openInvites } from "@/server/people/users";
 
-/** Unused, unexpired invites. */
 export const GET = route({ auth: "admin" }, () => openInvites());
 
 const post = z.object({ role: z.enum(["admin", "member"]).default("member"), displayName: z.string().trim().max(60).nullable().default(null) });

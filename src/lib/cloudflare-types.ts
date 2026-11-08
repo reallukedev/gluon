@@ -1,4 +1,4 @@
-/** Settings → Integrations → Cloudflare, as the browser sees it. The API token never leaves the server. */
+/** The API token never leaves the server. */
 
 export type DnsType = "A" | "AAAA" | "CNAME";
 
@@ -8,7 +8,6 @@ export interface DnsRecordT {
   proxied: boolean;
 }
 
-/** One name Gluon keeps in Cloudflare, and how it stands after the last sync. */
 export interface ManagedName {
   name: string;
   /** What Gluon wants there. Empty: Gluon is removing records it made. */
@@ -27,9 +26,7 @@ export interface ManagedName {
   /** One of the names the admin asked Gluon to keep (Settings), rather than an address. */
   kept: boolean;
   message: string | null;
-  /** Why the name is here, in a few words ("Base domain", "Photos"). */
   why: string;
-  /** The Cloudflare domain it lives in. */
   zone: string;
 }
 
@@ -41,7 +38,6 @@ export interface CloudflareZoneT {
 }
 
 export interface TokenCheck {
-  /** The token works and can list zones. */
   ok: boolean;
   message: string | null;
   zones: CloudflareZoneT[];
@@ -57,9 +53,7 @@ export interface CloudflareStatus {
   network: boolean;
   baseDomain: string | null;
   zone: CloudflareZoneT | null;
-  /** Every domain the token can see, the base domain's first. */
   zones: CloudflareZoneT[];
-  /** Last four of the token. */
   tokenHint: string | null;
   connectedAt: number | null;
   ipv6: boolean;
@@ -69,7 +63,6 @@ export interface CloudflareStatus {
     at: number | null;
     running: boolean;
     ok: boolean | null;
-    /** The address A records point at. */
     ipv4: string | null;
     ipv6: string | null;
     names: ManagedName[];
@@ -80,7 +73,6 @@ export interface CloudflareStatus {
     /** Problems that aren't about one name (no internet address, token revoked). */
     problems: string[];
   };
-  /** Extra names Gluon keeps pointed here, beyond its addresses (wildcards allowed). */
   kept: KeptName[];
   /** cloudflare-ddns is on this server: what it keeps, and whether Gluon can take over. */
   handoff: DdnsHandoff | null;
@@ -103,7 +95,6 @@ export type HandoffReason = "not-kept" | "foreign" | "outside" | "read-only" | "
 export interface DdnsHandoff {
   container: string;
   running: boolean;
-  /** The Compose project it's part of. */
   project: string | null;
   /** For "differs": what's there now and what Gluon would write. */
   names: { name: string; proxied: boolean; reason: HandoffReason | null; have: DnsRecordT[]; want: DnsRecordT[] }[];
@@ -113,7 +104,6 @@ export interface DdnsHandoff {
   blocked: string | null;
   /** Some of its names have IPv6 records Gluon wouldn't write, so those go once Gluon takes over. */
   ipv6Differs: boolean;
-  /** Take over fixes every name that isn't ready. */
   canTakeOver: boolean;
   /** Stopping it now changes nothing: Gluon keeps every name it did, with the same records. */
   safe: boolean;
@@ -133,15 +123,12 @@ export function edgeCovered(host: string, zone: string): boolean {
 export const EDITABLE_TYPES = ["A", "AAAA", "CNAME", "TXT", "MX", "NS"] as const;
 export type EditableType = (typeof EDITABLE_TYPES)[number];
 
-/** One record in a domain, as the DNS editor shows it. */
 export interface DnsRecordFull {
   id: string;
   type: string;
-  /** Full name, like media.leech.party. */
   name: string;
   content: string;
   proxied: boolean;
-  /** Cloudflare can proxy this record (A, AAAA and CNAME). */
   proxiable: boolean;
   /** Seconds; 1 means automatic. */
   ttl: number;
@@ -154,7 +141,6 @@ export interface DnsRecordFull {
 export interface DnsZoneView {
   zone: CloudflareZoneT;
   records: DnsRecordFull[];
-  /** Cloudflare's dashboard page for the domain's DNS, for record types Gluon doesn't edit. */
   dashboard: string;
 }
 

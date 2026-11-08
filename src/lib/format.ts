@@ -26,7 +26,6 @@ export function formatBytes(n: number | null | undefined, mode: "decimal" | "bin
   return `${n < 0 ? "−" : ""}${v.toFixed(d)} ${units[i]}`;
 }
 
-/** Bytes per second → "4.2 MB/s" or "34 Mb/s". */
 export function formatRate(bytesPerSec: number | null | undefined, mode: "bytes" | "bits" = "bytes"): string {
   if (bytesPerSec === null || bytesPerSec === undefined || !Number.isFinite(bytesPerSec)) return "Unknown";
   if (mode === "bits") {
@@ -57,7 +56,6 @@ export function formatTemp(celsius: number | null | undefined, unit: "c" | "f" =
   return unit === "f" ? `${Math.round((celsius * 9) / 5 + 32)}°F` : `${Math.round(celsius)}°C`;
 }
 
-/** 5025 s → "1 h 23 m"; 42 s → "42 s"; 3 days → "3 d 4 h". */
 export function formatDuration(seconds: number | null | undefined, parts = 2): string {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return "Unknown";
   let s = Math.max(0, Math.floor(seconds));
@@ -82,7 +80,6 @@ export function formatDuration(seconds: number | null | undefined, parts = 2): s
 
 const rtf = typeof Intl !== "undefined" ? new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "long" }) : null;
 
-/** "just now", "4 minutes ago", "in 2 days". */
 export function formatRelative(ts: number | null | undefined, now = Date.now()): string {
   if (!ts) return "never";
   const diff = (ts - now) / 1000;
@@ -155,7 +152,6 @@ export function formatDate(ts: number | Date, p?: Pick<FormatPrefs, "dateOrder" 
   }).format(d);
 }
 
-/** The calendar day of `ts` in the viewer's chosen zone (or the runtime's when it's "auto"). */
 function dayKey(ts: number, p?: Pick<FormatPrefs, "timezone">): string {
   return dateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz(p) }).format(ts);
 }
@@ -171,7 +167,6 @@ export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n.toLocaleString()} ${n === 1 ? one : many}`;
 }
 
-/** "a, b and c" */
 export function listJoin(items: string[]): string {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;

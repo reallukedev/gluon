@@ -10,5 +10,4 @@ const body = z.object({
   resolver: resolverField,
 });
 
-/** DNS lookup with dig. */
 export const POST = route({ auth: "admin", body }, ({ body }) => dnsLookup(body.name, body.type, body.resolver));

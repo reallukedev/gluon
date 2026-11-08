@@ -7,7 +7,6 @@ import { CHANNEL_KINDS, defaultKinds } from "@/lib/alerts-types";
 import { createChannel, listChannelsFor, viewChannel } from "@/server/notify/channels";
 import { setSubscription } from "@/server/notify/subscriptions";
 
-/** Channels the viewer can see: admins every channel, members their own. */
 export const GET = route({ auth: "user" }, ({ user }) => listChannelsFor(user));
 
 const body = z.object({

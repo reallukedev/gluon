@@ -9,5 +9,4 @@ const body = z.object({
   family: z.union([z.literal(4), z.literal(6)]).optional(),
 });
 
-/** Ping from the server. */
 export const POST = route({ auth: "admin", body }, ({ body }) => ping(body.host, body.count, body.family));

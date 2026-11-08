@@ -1,10 +1,3 @@
-/**
- * Storage types shared by the server (src/server/storage) and the Storage UI.
- * No server imports here.
- */
-
-// ---------------------------------------------------------------- inventory
-
 export type DiskMedia = "hdd" | "ssd" | "nvme" | "flash" | "card" | "unknown";
 
 export type DiskState =
@@ -57,7 +50,6 @@ export interface Persistence {
   matchedBy: FstabSourceKind | null;
   /** Matched by /dev/sdX name, which can change between boots. */
   fragile: boolean;
-  /** Where fstab would mount it (for different-target). */
   fstabTarget: string | null;
 }
 
@@ -66,7 +58,6 @@ export interface VolumeUser {
   app: string;
   container: string;
   running: boolean;
-  /** Host path the container uses. */
   source: string;
   destination: string;
 }
@@ -87,17 +78,12 @@ export interface VolumeView {
   partUuid: string | null;
   role: VolumeRole;
   mounts: MountView[];
-  /** The main (non-bind) mount point, if mounted. */
   primaryMount: string | null;
   swapActive: boolean;
   usage: FsUsageView | null;
-  /** Only for mounted filesystems. */
   persistence: Persistence | null;
-  /** 1-based /etc/fstab lines that refer to this volume. */
   fstabLines: number[];
-  /** Device is write-protected. */
   deviceReadOnly: boolean;
-  /** Mounted read-only right now. */
   mountedReadOnly: boolean;
   system: boolean;
   usedBy: VolumeUser[];
@@ -126,9 +112,7 @@ export interface DiskView {
   system: boolean;
   systemReason: string | null;
   state: DiskState;
-  /** "1.5 TB hard drive" */
   title: string;
-  /** Plain-language one-liner: "Mounted at /mnt/hdd2 · 2% used". */
   summary: string;
   /** A filesystem written directly on the disk (no partitions). */
   wholeDisk: VolumeView | null;
@@ -178,11 +162,8 @@ export interface Inventory {
   fstab: FstabView;
   generatedAt: number;
   smartCheckedAt: number | null;
-  /** Non-fatal problems gathering the inventory (a command missing, a timeout). */
   warnings: string[];
 }
-
-// ---------------------------------------------------------------- SMART
 
 export type SmartState = "ok" | "warning" | "failing" | "asleep" | "unavailable" | "unknown";
 
@@ -218,9 +199,7 @@ export interface SmartSummary {
   lastSelfTest: { type: string; status: string; passed: boolean | null; lifetimeHours: number | null } | null;
   /** In smartctl's drive database: attribute names/meanings are known. */
   known: boolean;
-  /** Plain sentences explaining anything notable. */
   notes: string[];
-  /** Why SMART couldn't be read (state = unavailable). */
   message: string | null;
   /** While asleep: the verdict of the last real reading (a failing drive that spins down is still failing). */
   lastState?: SmartState | null;
@@ -233,11 +212,8 @@ export interface SmartDetail {
   history: { at: number; temperature: number | null; reallocated: number | null; pending: number | null }[];
 }
 
-// ---------------------------------------------------------------- holders
-
 export interface Holder {
   kind: "process" | "container" | "swap" | "loop" | "mount";
-  /** Plain sentence: "Immich (immich-server) uses /mnt/hdd2/photos". */
   label: string;
   pid?: number;
   command?: string;
@@ -245,8 +221,6 @@ export interface Holder {
   container?: { id: string; name: string; appId: string | null };
   paths?: string[];
 }
-
-// ---------------------------------------------------------------- plans
 
 export interface LineChange {
   line: number;
@@ -320,8 +294,6 @@ export interface PersistPlan {
   skipped: { target: string; reason: string }[];
 }
 
-// ---------------------------------------------------------------- jobs
-
 export type JobKind = "rename" | "setup" | "usage" | "cleanup" | "mount" | "unmount" | "persist";
 export type JobStatus = "running" | "done" | "failed" | "rolled-back" | "interrupted" | "cancelled";
 export type StepStatus = "pending" | "running" | "done" | "failed" | "skipped" | "undone" | "undo-failed";
@@ -346,16 +318,12 @@ export interface StorageJob {
   status: JobStatus;
   steps: JobStep[];
   progress: { done: number; total: number } | null;
-  /** Kind-specific result (UsageResult for usage jobs). */
   result: unknown;
-  /** Plain-language outcome when it didn't succeed. */
   error: string | null;
   username: string | null;
   startedAt: number;
   finishedAt: number | null;
 }
-
-// ---------------------------------------------------------------- usage breakdown
 
 export interface UsageEntry {
   name: string;
@@ -378,17 +346,13 @@ export interface UsageResult {
   entries: UsageEntry[];
   /** One level deeper, for the biggest folders (keyed by their path), so the map can nest and drill without waiting. */
   children?: Record<string, UsageChildren>;
-  /** Everything beyond the top entries, summed. */
   otherBytes: number;
   otherCount: number;
-  /** Items du couldn't read. */
   unreadable: number;
   filesystem: { mount: string; size: number; used: number; avail: number } | null;
   scannedAt: number;
   durationMs: number;
 }
-
-// ---------------------------------------------------------------- cleanup
 
 export interface DockerUsage {
   images: { count: number; bytes: number; reclaimable: number };

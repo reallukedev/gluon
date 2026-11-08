@@ -23,10 +23,7 @@ const body = z.object({
   integrationId: z.string().max(64).optional(),
 });
 
-/**
- * Connect Jellyfin or Immich by signing in once. Gluon asks the app for its own API key named "Gluon", saves only
- * that key (encrypted), tests it, and forgets the password.
- */
+/** Asks the app for its own API key named "Gluon", saves only that key (encrypted), and forgets the password. */
 export const POST = route({ auth: "admin", body }, async ({ user, session, body, ip, zone }): Promise<SignInResult> => {
   // A new connection shared with the household: confirm it's the admin before anything is made.
   if (!body.integrationId && body.shared) requireRecentAuth(session);

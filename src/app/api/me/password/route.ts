@@ -13,10 +13,9 @@ const body = z.object({
   signOutOthers: z.boolean().default(true),
 });
 
-/** When the password was last changed (for Settings → Security). */
 export const GET = route({ auth: "user" }, ({ user }) => ({ changedAt: findById(user.id)?.password_changed_at ?? null }));
 
-/** Change your own password. Needs the current one (throttled like sign-in). */
+/** Needs the current password, throttled like sign-in. */
 export const POST = route({ auth: "user", body }, ({ user, session, body, ip, zone }) => {
   // With two-step on, a password alone isn't enough to change the password: someone holding the
   // cookie and the old password, but not the phone, could otherwise lock the owner out.

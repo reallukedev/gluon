@@ -2,7 +2,6 @@ import { z } from "zod";
 import { route } from "@/server/api";
 import { installDefaults, startVoiceInstall } from "@/server/voice/install";
 
-/** Starting values for a new voice server, and the ports already taken. */
 export const GET = route({ auth: "admin" }, () => installDefaults());
 
 const body = z.object({

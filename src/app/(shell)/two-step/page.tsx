@@ -6,10 +6,7 @@ import { Page } from "@/components/ui/Surface";
 
 export const metadata = { title: "Two-step sign-in" };
 
-/**
- * Where pages send someone who must set up two-step sign-in first. It renders nothing of its own:
- * the shell's setup dialog covers it, and once that's done the person is sent home.
- */
+/** Where pages send someone who must set up two-step sign-in. The shell's setup dialog covers it. */
 export default async function TwoStepPage() {
   const { user } = await requireSignedIn();
   if (!mustSetUpMfa(user, clientInfo(await headers()).zone)) redirect("/");

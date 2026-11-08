@@ -8,7 +8,7 @@ const body = z.object({
   allowOlder: z.boolean().optional(),
 });
 
-/** Start updating Gluon. It restarts itself when the new version is ready. */
+/** Gluon restarts itself when the new version is ready. */
 export const POST = route({ auth: "admin", body, recent: true }, ({ user, body, ip, zone }) =>
   startUpdate({ method: body.method, allowOlder: body.allowOlder === true, user, auto: false, where: { ip, zone } }),
 );

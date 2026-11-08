@@ -18,7 +18,6 @@ const body = z.object({
     }, "Enter a full address starting with http:// or https://."),
   method: z.enum(["GET", "HEAD"]).default("GET"),
   followRedirects: z.boolean().default(true),
-  /** Don't fail on untrusted/self-signed certificates. */
   insecure: z.boolean().default(false),
 });
 

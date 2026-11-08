@@ -23,10 +23,7 @@ const body = z.object({
   password: z.string().min(1, "Choose a password.").max(256),
 });
 
-/**
- * Accept an invite: creates the account and signs in. An admin joining from outside home (with the
- * away rule on) is signed in only after linking an authenticator app: `{ next: "enrol" }`.
- */
+/** An admin joining from outside home (with the away rule on) links an authenticator first: `{ next: "enrol" }`. */
 export const POST = route({ auth: "public", body, burst: { limit: 10, windowMs: 60_000 } }, async ({ params, body, ip, zone, req }) => {
   if (!tokenOk(params.token)) throw new AppError("invite_invalid", "This invite link isn't valid.", 400);
   const user = await acceptInvite(params.token, body);

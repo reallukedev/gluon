@@ -1,11 +1,5 @@
-/**
- * Types shared between the Files API (src/app/api/files/**) and the client.
- * No server imports here.
- */
-
 export type Access = "read" | "write";
 
-/** Coarse bucket for icons, filters and sorting. */
 export type FileKind = "folder" | "image" | "video" | "audio" | "document" | "archive" | "text" | "disk-image" | "other";
 
 /** How the client can show the file inline. null = download only. */
@@ -18,7 +12,6 @@ export interface LinkInfo {
   target: string;
   /** Absolute host path it points at after resolving every link, or null when broken. */
   resolved: string | null;
-  /** What the link ends at. */
   type: "file" | "dir" | "other" | null;
   broken: boolean;
   /** Points outside the folders this person can open (members only; always false for admins). */
@@ -35,7 +28,6 @@ export interface FileEntry {
   size: number | null;
   /** Epoch ms. */
   mtime: number;
-  /** "drwxr-xr-x" */
   mode: string;
   /** Permission bits, e.g. 0o755 → 493. */
   perms: number;
@@ -47,9 +39,7 @@ export interface FileEntry {
   kind: FileKind;
   mime: string | null;
   preview: PreviewKind;
-  /** Cached folder size (see GET /api/files/size), when one has been calculated. */
   dirSize: { bytes: number; computedAt: number } | null;
-  /** Folders only: pinned by the current person. */
   pinned: { id: string; label: string } | null;
 }
 
@@ -67,7 +57,6 @@ export type SortKey = "name" | "size" | "mtime" | "kind" | "type";
 
 export interface Listing {
   path: string;
-  /** The same folder with every link resolved. */
   real: string;
   name: string;
   /** Parent folder the person may open, or null at the top of what they can see. */
@@ -98,28 +87,22 @@ export interface PlaceApp {
   icon: string | null;
 }
 
-/** Which group of the Places rail a place belongs to. */
 export type PlaceSection = "drives" | "homes" | "apps" | "shared" | "pins" | "recent";
 
 export type PlaceMedia = "hdd" | "ssd" | "nvme" | "flash" | "card" | "unknown";
 
 export interface Place {
   id: string;
-  /** Human name: "2.0 TB hard drive", "Luke", "media". */
   label: string;
   path: string;
   kind: "root" | "drive" | "data" | "home" | "media" | "grant" | "pin" | "recent";
   section?: PlaceSection;
   access: Access;
-  /** Second line in plain words: the drive's model, "Part of the 256 GB SSD", "Home folder". */
   detail?: string | null;
-  /** Drives: what kind of disk holds it, for its glyph. */
   media?: PlaceMedia | null;
-  /** Present for drives/mount points. */
   fs?: FilesystemInfo | null;
   /** For media and app folders found from containers: the apps that keep files there. */
   apps?: PlaceApp[];
-  /** Pinned by the current person. */
   pinned?: { id: string } | null;
   /** Folder no longer exists / is not mounted. */
   missing?: boolean;
@@ -142,9 +125,7 @@ export interface TextFile {
   content: string | null;
   /** Safe to edit and save in the browser (small, UTF-8, writable, not a system file). */
   editable: boolean;
-  /** Why it isn't editable, in plain words. */
   readOnlyReason: string | null;
-  /** Hint for syntax highlighting: yaml, json, sh, ini, md, … */
   language: string | null;
 }
 
@@ -156,7 +137,6 @@ export interface ZipEstimate {
   dirs: number;
   /** Counting stopped early (very large tree); the numbers are a lower bound. */
   partial: boolean;
-  /** Plain-language warning for very large downloads, or null. */
   warning: string | null;
 }
 
@@ -174,7 +154,6 @@ export interface UploadSession {
   error: string | null;
   createdAt: number;
   updatedAt: number;
-  /** Suggested chunk size in bytes. */
   chunkSize: number;
 }
 
@@ -187,9 +166,7 @@ export interface JobProgress {
   total: number | null;
   bytesDone: number;
   bytesTotal: number | null;
-  /** Path currently being worked on. */
   current: string | null;
-  /** Plain-language phase: "Counting files", "Copying", "Removing originals"… */
   phase: string;
 }
 
@@ -201,10 +178,8 @@ export interface FileJob {
   userId: string | null;
   username: string | null;
   progress: JobProgress;
-  /** Plain-language outcome when finished. */
   message: string | null;
   error: string | null;
-  /** Kind-specific result (e.g. created paths, skipped items). */
   result: Record<string, unknown> | null;
   createdAt: number;
   startedAt: number | null;
@@ -230,7 +205,6 @@ export interface TrashItem {
 
 export interface TrashSummary {
   items: TrashItem[];
-  /** Bytes held per filesystem mount root. */
   byFilesystem: { fsRoot: string; bytes: number; items: number }[];
 }
 
@@ -253,9 +227,7 @@ export interface AppUse {
   icon: string | null;
   container: string;
   containerState: string;
-  /** Host folder the container mounts. */
   source: string;
-  /** Where it appears inside the container. */
   destination: string;
   /** Where *this* folder appears inside the container (when this folder is inside the mount). */
   containerPath: string | null;
@@ -270,7 +242,6 @@ export interface RunsAs {
   gid: number;
   user: string | null;
   group: string | null;
-  /** Where it came from: "PUID/PGID", "user: 1000:1000", "root (default)". */
   source: string;
   root: boolean;
 }
@@ -285,7 +256,6 @@ export interface OwnershipPreview {
   samples: { path: string; type: "file" | "dir" | "symlink" | "other"; user: string | null; group: string | null }[];
   /** Counting stopped early (timeout). */
   partial: boolean;
-  /** Human sentence summarising what will happen. */
   summary: string;
 }
 

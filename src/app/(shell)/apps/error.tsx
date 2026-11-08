@@ -2,7 +2,6 @@
 import { Page, PageHeader, Notice } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 
-/** Apps (or one app's page) failed to load: say what happened and offer to try again. */
 export default function AppsError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <Page>

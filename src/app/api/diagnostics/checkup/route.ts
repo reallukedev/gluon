@@ -4,7 +4,6 @@ import { checkupState } from "@/server/diagnostics/checkup/state";
 import { startOrAttach, follow } from "@/server/diagnostics/checkup/runner";
 import type { CheckupEvent } from "@/lib/diagnostics-types";
 
-/** Runs in progress, the last full checkup with its results, recent runs, and what can be picked. */
 export const GET = route({ auth: "admin" }, () => checkupState());
 
 const body = z.object({
@@ -13,8 +12,7 @@ const body = z.object({
 });
 
 /**
- * Start a checkup (or attach to the same one already running) and stream it as NDJSON:
- * {type:"start", meta, plan, results, attached} → {type:"result", result}… → {type:"done", summary}.
+ * Starts a checkup, or attaches to the same one running, streamed as NDJSON (start, result…, done).
  * Closing the request stops the run once nobody else is watching.
  */
 export const POST = route({ auth: "admin", body }, async ({ body, user, ip, zone, req }) => {

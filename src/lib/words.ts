@@ -1,6 +1,3 @@
-/** Spoken time spans for the machine. Readings themselves are figures (components/charts/readings). */
-
-/** Seconds of uptime as a person would say it: "Up 23 days", "Up 5 hours", "Just started". */
 export function upFor(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   if (days >= 1) return `Up ${days} ${days === 1 ? "day" : "days"}`;
@@ -9,7 +6,6 @@ export function upFor(seconds: number): string {
   return "Just started";
 }
 
-/** Days until a filesystem fills, as a rough spoken estimate; null when it isn't filling. */
 export function timeLeft(days: number | null | undefined): string | null {
   if (days === null || days === undefined || !Number.isFinite(days)) return null;
   if (days < 1) return "full within a day";

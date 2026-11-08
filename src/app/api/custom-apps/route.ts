@@ -5,7 +5,6 @@ import { validateRef } from "@/server/appstore/github";
 import { createSchema } from "@/server/appstore/schemas";
 import type { CustomAppsResponse } from "@/lib/builder-types";
 
-/** The apps you made, with where each runs and how it's doing, plus the state of Gluon's store. */
 export const GET = route({ auth: "admin" }, async (): Promise<CustomAppsResponse> => {
   const [store, apps] = await Promise.all([storeStatus(), listCustomApps()]);
   return { store, apps };
@@ -20,7 +19,6 @@ type G = typeof globalThis & { __gluonCreateKeys?: Map<string, Pending> };
 const keys = ((globalThis as G).__gluonCreateKeys ??= new Map<string, Pending>());
 const KEY_TTL = 10 * 60_000;
 
-/** Start a new app (a draft) from what the New app page gathered. */
 export const POST = route(
   { auth: "admin", body: createSchema, query: z.object({ key: z.string().regex(/^[A-Za-z0-9-]{8,64}$/).optional() }), maxBody: 1024 * 1024 },
   async ({ body, query, user, ip, zone }) => {

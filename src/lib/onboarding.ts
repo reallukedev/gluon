@@ -1,9 +1,4 @@
-/**
- * First run (/welcome). Shared by the server (which steps apply to whom, where to resume) and the
- * client (the flow itself). No server imports.
- *
- * Progress lives in prefs.onboarding: "pending" (not started), a step id (resume there), or "done".
- */
+/** Progress lives in prefs.onboarding: "pending" (not started), a step id (resume there), or "done". */
 
 export const ADMIN_STEPS = ["found", "updates", "notify", "people", "security", "summary"] as const;
 export const MEMBER_STEPS = ["hello", "apps", "ready"] as const;
@@ -15,7 +10,6 @@ export type StepId = AdminStep | MemberStep;
 export const ONBOARDING_STATES = ["pending", "done", ...ADMIN_STEPS, ...MEMBER_STEPS] as const;
 export type OnboardingState = (typeof ONBOARDING_STATES)[number];
 
-/** Short names for the progress line and the page title. */
 export const STEP_LABEL: Record<StepId, string> = {
   found: "What's here",
   updates: "Updates",
@@ -38,16 +32,12 @@ export function resumeAt(saved: OnboardingState, steps: readonly StepId[]): Step
   return after ?? first;
 }
 
-// ---------------------------------------------------------------- what the page starts with
-
 export interface AdminPlan {
   role: "admin";
   steps: AdminStep[];
   start: AdminStep;
   serverName: string;
-  /** How this admin reaches Gluon, and whether Gluon is published to the internet. */
   reach: { zone: "home" | "away"; publicAt: string | null };
-  /** Admins signing in from outside home must use two-step (Settings → Server). */
   requireMfaAway: boolean;
   mfa: boolean;
 }
@@ -64,16 +54,12 @@ export interface MemberPlan {
 
 export type Plan = AdminPlan | MemberPlan;
 
-// ---------------------------------------------------------------- first-look inventory (admin)
-
 export type InventoryPart = "apps" | "drives" | "addresses" | "attention";
 
 export interface InventoryApps {
   total: number;
   running: number;
-  /** How the apps were installed. */
   sources: { umbrel: number; casaos: number; compose: number; docker: number };
-  /** The platform Gluon works alongside ("Umbrel", "CasaOS" or "Docker"). */
   platform: string;
   /** Up to 12, running ones with icons first. */
   sample: { id: string; name: string; icon: string | null }[];
@@ -89,7 +75,6 @@ export interface InventoryAddresses {
   configured: boolean;
   count: number;
   sample: { name: string; url: string }[];
-  /** Gluon's own public address, if it has one. */
   gluon: string | null;
 }
 
@@ -98,8 +83,6 @@ export interface InventoryAttention {
   attention: number;
   top: { id: string; title: string; severity: "fault" | "attention" | "info" }[];
 }
-
-// ---------------------------------------------------------------- the last admin screen
 
 export interface OnboardingSummary {
   updates: { touched: boolean; channel: "stable" | "nightly"; auto: boolean; hour: number; nightlyTiming: "asap" | "hour" } | null;

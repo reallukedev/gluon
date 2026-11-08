@@ -4,7 +4,6 @@ import { audit } from "@/server/audit";
 import { MONITOR_KINDS } from "@/lib/alerts-types";
 import { monitorDetail, monitorView, patchMonitor, removeMonitor } from "@/server/monitors/service";
 
-/** Detail: the view plus the latest 300 checks, outages in the last 30 days and a 7-day hourly strip. */
 export const GET = route({ auth: "admin" }, ({ params }) => monitorDetail(String(params.id)));
 
 const patch = z.object({
@@ -13,7 +12,6 @@ const patch = z.object({
   target: z.string().trim().min(1).max(2000).optional(),
   /** Only the fields you change. Automatic monitors: intervalSec, timeoutSec, failAfter. */
   config: z.record(z.string(), z.unknown()).optional(),
-  /** false = pause, true = resume. */
   enabled: z.boolean().optional(),
 });
 

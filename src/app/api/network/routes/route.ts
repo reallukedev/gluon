@@ -2,7 +2,6 @@ import { z } from "zod";
 import { route } from "@/server/api";
 import { routesResponse, saveRoutes } from "@/server/network/routes-service";
 
-/** Public addresses: the routes model (routes.json), its revision and whether the Caddyfile drifted. */
 export const GET = route({ auth: "admin" }, () => routesResponse());
 
 const backend = z.object({ host: z.string().max(253), port: z.coerce.number().int(), tls: z.boolean().default(false) });

@@ -17,13 +17,14 @@ export default async function ShellLayout({ children }: { children: React.ReactN
   const isAdmin = user.role === "admin";
   const c = isAdmin ? counts() : { fault: 0, attention: 0 };
   const memberFiles = !isAdmin && (one<{ n: number }>("SELECT COUNT(*) AS n FROM file_grants WHERE user_id = ?", user.id)?.n ?? 0) > 0;
+  const [announcements, jar] = await Promise.all([currentAnnouncements(user, 5), cookies()]);
   const initial = {
     ...c,
     reports: isAdmin ? (one<{ n: number }>("SELECT COUNT(*) AS n FROM reports WHERE resolved_at IS NULL")?.n ?? 0) : 0,
     pins: listPins(user.id),
-    announcements: (await currentAnnouncements(user, 5)).map(({ id, message, app_id }) => ({ id, message, app_id })),
+    announcements: announcements.map(({ id, message, app_id }) => ({ id, message, app_id })),
   };
-  const tzCookie = (await cookies()).get("gluon_tz")?.value;
+  const tzCookie = jar.get("gluon_tz")?.value;
   const tz = tzCookie && /^[A-Za-z_]+(\/[A-Za-z0-9_+-]+){0,2}$/.test(decodeURIComponent(tzCookie)) ? decodeURIComponent(tzCookie) : null;
   return (
     <PrefsProvider

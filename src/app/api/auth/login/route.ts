@@ -30,11 +30,7 @@ function noteThrottle(row: UserRow, failures: number, ip: string, zone: Zone) {
   });
 }
 
-/**
- * Password step. Answers `{ next: "done" }`, or `{ next: "mfa" }` when a second step follows.
- * Unknown usernames, wrong passwords and disabled accounts all get the same answer, after the same
- * amount of work.
- */
+/** Unknown usernames, wrong passwords and disabled accounts all get the same answer, after the same work. */
 export const POST = route({ auth: "public", body, burst: { limit: 20, windowMs: 60_000 } }, ({ body, ip, zone, req }) =>
   oneAtATime(`login:${body.username}`, zone, () => signIn(body.username, body.password, ip, zone, req.headers.get("user-agent"))),
 );

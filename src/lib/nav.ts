@@ -4,9 +4,7 @@ export interface NavItem {
   label: string;
   href: string;
   admin?: boolean;
-  /** Short description for the command palette and the sidebar editor. */
   hint: string;
-  /** What the page is to a household member, when it differs. */
   memberHint?: string;
   /** Second key of the "g then a letter" jump (see Shell). */
   key: string;
@@ -34,7 +32,6 @@ export const SETTINGS_JUMPS: { key: string; label: string; href: string }[] = [
   { key: "p", label: "People", href: "/settings/people" },
 ];
 
-/** The hint for this person's role. */
 export const hintFor = (n: NavItem, role: "admin" | "member") => (role === "member" && n.memberHint ? n.memberHint : n.hint);
 
 /**

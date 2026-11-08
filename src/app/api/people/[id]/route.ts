@@ -6,7 +6,6 @@ import { notFound } from "@/server/errors";
 import { changeRole, describePerson, listPeople, personOrThrow, removePerson, rename, sessionsOf, setDisabled } from "@/server/people/users";
 import { listGrants } from "@/server/people/access";
 
-/** One person: their summary, signed-in devices, folder grants and individually granted apps. */
 export const GET = route({ auth: "admin" }, ({ user, params, session }) => {
   const id = String(params.id);
   const person = listPeople(user).find((p) => p.id === id);

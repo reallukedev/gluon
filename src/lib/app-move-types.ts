@@ -1,18 +1,11 @@
-/**
- * Shapes shared by "Move to Gluon" and "Uninstall" (src/server/apps) and their screens
- * (src/components/apps). No server imports here.
- */
-
 export type MoveSource = "compose" | "casaos" | "umbrel" | "docker";
 
-/** Something Gluon copies into the new app's folder before it starts the copy. */
 export interface MoveCopy {
   /** Host path read from (a folder, a file, or a Docker volume's data folder). */
   from: string;
   /** Host path written to, always inside the new app's folder. */
   to: string;
   kind: "folder" | "file" | "volume";
-  /** Volume name for kind "volume". */
   volume?: string;
   services: string[];
   /** Bytes, when measuring finished in time. */
@@ -43,7 +36,6 @@ export interface MovePlan {
   source: MoveSource;
   /** The new app's id (its Compose project name). */
   newId: string;
-  /** The new app's folder on the server. */
   folder: string;
   compose: string;
   copies: MoveCopy[];
@@ -54,7 +46,6 @@ export interface MovePlan {
   stops: { name: string; containers: string[]; via: "umbrel" | "compose" | "containers" };
   space: { needed: number; free: number | null; enough: boolean; unmeasured: string[] };
   warnings: string[];
-  /** Reasons the move can't run. Empty when it can. */
   blockers: string[];
 }
 
@@ -77,11 +68,8 @@ export interface MoveJob {
   events: MoveEvent[];
 }
 
-// ---------------------------------------------------------------- uninstall
-
 export interface UninstallItem {
   kind: "folder" | "file" | "volume";
-  /** Host path (folders and files) or volume name. */
   target: string;
   size: number | null;
   note?: string;
@@ -95,7 +83,6 @@ export interface UninstallMode {
    * movies, photos, downloads) or hold a lot. Always empty when keeping data.
    */
   optional: UninstallItem[];
-  /** What stays on disk. */
   keeps: UninstallItem[];
 }
 
@@ -105,13 +92,10 @@ export interface UninstallPlan {
   name: string;
   source: "gluon" | "compose" | "casaos" | "docker";
   containers: string[];
-  /** How the containers go: `docker compose down` or one by one. */
   via: "compose" | "containers";
   keep: UninstallMode;
   everything: UninstallMode;
 }
-
-// ---------------------------------------------------------------- who can do what
 
 interface AppLike {
   source: string;
@@ -125,7 +109,6 @@ interface AppLike {
 
 const UMBREL_BUSY = new Set(["installing", "updating", "uninstalling", "starting", "stopping", "restarting"]);
 
-/** Why an app can't be moved to Gluon right now, or null when it can. */
 export function moveBlock(a: AppLike): string | null {
   if (a.self) return "Gluon can't move itself.";
   if (a.source === "gluon") return "It already runs from Gluon.";
@@ -135,7 +118,6 @@ export function moveBlock(a: AppLike): string | null {
   return null;
 }
 
-/** Why Gluon can't uninstall an app itself, or null when it can. */
 export function uninstallBlock(a: AppLike): string | null {
   if (a.self) return "Gluon can't uninstall itself.";
   if (a.source === "umbrel") return "Umbrel installed it, so it's uninstalled through Umbrel.";

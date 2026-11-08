@@ -13,7 +13,6 @@ const body = z.object({
   attachable: z.boolean().optional(),
 });
 
-/** Create a bridge network. */
 export const POST = route({ auth: "admin", body }, async ({ body, user, ip, zone }) => {
   const r = await createNetwork(body);
   audit(user, { action: "docker.network.create", target: body.name.trim(), summary: r.message.replace(/\.$/, ""), detail: { subnet: body.subnet ?? null, internal: !!body.internal } }, { ip, zone });

@@ -11,7 +11,7 @@ import s from "../auth.module.css";
 
 export const metadata = { title: "Set up" };
 
-/** How Gluon is installed decides where its log (and so the setup code) is. Never slows the page much. */
+/** Where the log (and so the setup code) is depends on how Gluon is installed. */
 async function whereIsTheCode(): Promise<CodeWhere> {
   const found = await Promise.race([detectInstall().catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 2500))]);
   if (!found) return { kind: "unknown" };

@@ -5,10 +5,7 @@ import { activityHref, alertsHref } from "@/lib/settings-links";
 type Search = Promise<Record<string, string | string[] | undefined>>;
 const str = (v: string | string[] | undefined, max: number) => (typeof v === "string" && v ? v.slice(0, max) : undefined);
 
-/**
- * Status was removed: its problem list is Home's Needs you widget and its live use by app is on Diagnostics.
- * Old links (emails, bookmarks) land on Home, where a #problem anchor survives; its old tabs keep going to Settings.
- */
+/** Status was removed. Old links land on Home (a #problem anchor survives); its old tabs go to Settings. */
 export default async function StatusRedirect({ searchParams }: { searchParams: Search }) {
   const { user } = await requireUser();
   if (user.role === "admin") {

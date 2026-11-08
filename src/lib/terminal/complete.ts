@@ -2,10 +2,8 @@ import { commandStart, completionContext, quoteWord, type CompletionContext } fr
 import type { DirEntry, SpecArg, SpecNode, SpecOption } from "./types";
 
 /**
- * Suggestions for the command line, from everything we know about the target, ranked together:
- * the person's history, programs on the PATH, subcommands and options of known programs, files and
- * folders, containers and systemd units. Two steps: `analyze` says what's needed for the word under
- * the cursor (so the UI fetches only that), `suggest` ranks what came back.
+ * Suggestions for the command line, ranked together. `analyze` says what's needed for the word under the
+ * cursor (so the UI fetches only that); `suggest` ranks what came back.
  */
 
 export type SuggestionKind = "history" | "command" | "subcommand" | "option" | "folder" | "file" | "container" | "unit" | "value";
@@ -14,7 +12,6 @@ export interface Suggestion {
   kind: SuggestionKind;
   label: string;
   description?: string;
-  /** The whole line after choosing it, and where the cursor goes. */
   line: string;
   caret: number;
   score: number;
@@ -24,7 +21,6 @@ export interface Analysis {
   ctx: CompletionContext;
   /** The program being typed into (`docker` for `sudo docker ps`), or null at the start of a command. */
   program: string | null;
-  /** The command name is the word under the cursor. */
   atCommand: boolean;
   /** Folder to list for path suggestions, as typed ("" is the working folder), or null when paths don't apply. */
   dir: string | null;
@@ -33,11 +29,9 @@ export interface Analysis {
 }
 
 export interface Sources {
-  /** Most recent first. */
   history: string[];
   commands: string[] | null;
   spec: SpecNode | null;
-  /** The listing of `analysis.dir`. */
   entries: DirEntry[] | null;
   containers: string[];
   units: string[];
@@ -48,8 +42,6 @@ const FOLDER_ONLY = new Set(["cd", "pushd", "rmdir"]);
 const CONTAINER_SUBS = new Set(["exec", "logs", "restart", "stop", "start", "kill", "inspect", "rm", "top", "stats", "attach", "pause", "unpause", "port", "diff", "export", "commit", "rename", "update", "wait"]);
 const MANY_CONTAINERS = new Set(["restart", "stop", "start", "kill", "rm", "pause", "unpause", "inspect", "stats", "wait", "update"]);
 const UNIT_SUBS = new Set(["start", "stop", "restart", "reload", "status", "enable", "disable", "is-active", "is-enabled", "is-failed", "show", "cat", "edit", "mask", "unmask", "kill", "reset-failed", "try-restart", "reload-or-restart", "list-dependencies", "revert"]);
-
-// ------------------------------------------------------------------ matching
 
 /** How well `typed` matches `candidate`: 1 for a prefix, less for looser matches, 0 for none. */
 export function matchQuality(candidate: string, typed: string): number {
@@ -78,10 +70,6 @@ const WEIGHT: Record<SuggestionKind, number> = {
   file: 0.88,
   command: 0.85,
 };
-
-// ------------------------------------------------------------------ spec walking
-
-const names = (x: { name: string[] }) => x.name;
 
 interface SpecState {
   node: SpecNode;
@@ -139,8 +127,6 @@ function argAt(node: SpecNode, i: number): SpecArg | null {
 
 const takesPaths = (a: SpecArg | null) => !!a?.template?.length;
 
-// ------------------------------------------------------------------ analyze
-
 export function analyze(line: string, cursor: number, spec: SpecNode | null = null): Analysis {
   const ctx = completionContext(line, cursor);
   const words = ctx.words.map((w) => w.value);
@@ -178,8 +164,6 @@ export function analyze(line: string, cursor: number, spec: SpecNode | null = nu
   return { ctx, program, atCommand, dir, wantsContainers, wantsUnits };
 }
 
-// ------------------------------------------------------------------ suggest
-
 function replaceWord(line: string, cursor: number, ctx: CompletionContext, value: string, final: boolean): { line: string; caret: number } {
   const q = ctx.current.openQuote;
   let text = q ? q + quoteWord(value, q) + (final ? q : "") : quoteWord(value, null);
@@ -204,7 +188,6 @@ export function suggest(line: string, cursor: number, a: Analysis, src: Sources,
     out.push({ kind, label, description: opts.description, ...r, score: quality * WEIGHT[kind] + (opts.bonus ?? 0) });
   };
 
-  // History: whole commands that start with what's typed so far.
   const before = line.slice(0, cursor);
   const prefix = before.trimStart();
   src.history.forEach((h, i) => {

@@ -2,13 +2,7 @@ import type { EmailConfig, MonitorConfig, MonitorInput, NtfyConfig, ParsedFilter
 
 export type { EmailConfig, MonitorConfig, MonitorInput, NtfyConfig, PushoverConfig, WebhookConfig, XmppConfig };
 
-/**
- * Notifications (channels, subscriptions, delivery log) and uptime monitors.
- * Shared by the server and the client (forms, views). No server imports, and no zod: the schemas are in
- * alerts-schemas.ts so client bundles stay small.
- */
-
-// ---------------------------------------------------------------- channels
+/** Shared by server and client. No zod here: the schemas are in alerts-schemas.ts so client bundles stay small. */
 
 export const CHANNEL_KINDS = ["ntfy", "pushover", "email", "webhook", "xmpp"] as const;
 export type ChannelKind = (typeof CHANNEL_KINDS)[number];
@@ -21,7 +15,6 @@ export const JID_RE = /^[^\s@/"&'<>:]{1,64}@[a-z0-9.-]{1,253}(?:\/\S{1,64})?$/i;
 
 export type ChannelConfig = NtfyConfig | PushoverConfig | EmailConfig | WebhookConfig | XmppConfig;
 
-/** Chat servers Gluon runs, for the XMPP channel form. */
 export interface XmppServersResponse {
   servers: {
     app: string;
@@ -47,13 +40,9 @@ export interface ChannelView {
   createdAt: number;
   /** Config with secrets replaced by a masked hint (`••••a1b2`). */
   config: Record<string, unknown>;
-  /** Which secret fields hold a value. */
   secrets: Record<string, boolean>;
-  /** One line for lists: "ntfy.sh · homeserver-alerts", "2 addresses via Home mail". */
   summary: string;
-  /** Delivery health from the log. */
   health: { lastSentAt: number | null; lastFailedAt: number | null; lastError: string | null; failing: boolean };
-  /** Can the current viewer edit it? */
   editable: boolean;
   /** How many people it sends to, and what it sends the viewer (null: nothing). */
   audience: { people: number; mine: NotifyKind[] | null };
@@ -61,17 +50,10 @@ export interface ChannelView {
 
 export interface TestResult {
   ok: boolean;
-  /** Human sentence: "Sent. Check your phone." / "ntfy answered 401: check the token." */
   message: string;
   latencyMs: number;
 }
 
-// ---------------------------------------------------------------- subscriptions
-
-/**
- * What a subscription can be told about. Problems come from findings; the rest are events Gluon
- * notices (updates, sign-ins, the chat server).
- */
 export const NOTIFY_KINDS = [
   "fault",
   "attention",
@@ -187,7 +169,6 @@ export interface SubscriptionView {
   channelName: string;
   channelKind: ChannelKind;
   filter: SubscriptionFilter;
-  /** Is quiet time in effect right now? */
   quietNow: boolean;
 }
 
@@ -203,10 +184,7 @@ export interface SubscriptionsResponse {
   mailSetups: { id: string; name: string }[];
 }
 
-// ---------------------------------------------------------------- delivery log
-
 export const DELIVERY_EVENTS = ["problem", "resolved", "digest", "report", "update", "security", "chat"] as const;
-/** problem/resolved come from findings; update, security and chat are events Gluon noticed (see NotifyKind). */
 export type DeliveryEvent = (typeof DELIVERY_EVENTS)[number];
 export type DeliveryStatus = "pending" | "sent" | "failed" | "cancelled";
 
@@ -237,8 +215,6 @@ export interface DeliveryPage {
   /** Pass as `before` for the next page; null at the end. */
   next: number | null;
 }
-
-// ---------------------------------------------------------------- monitors
 
 export const MONITOR_KINDS = ["http", "tcp"] as const;
 export type MonitorKind = (typeof MONITOR_KINDS)[number];
@@ -294,7 +270,6 @@ export interface MonitorDetail extends MonitorView {
   checks: MonitorCheck[];
   /** Outages (runs of failures) in the retained history, newest first. */
   incidents: { start: number; end: number | null; checks: number; error: string | null }[];
-  /** Hourly strip for the last 7 days (168 buckets). */
   week: StripBucket[];
 }
 

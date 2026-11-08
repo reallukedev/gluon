@@ -2,10 +2,6 @@ import { route } from "@/server/api";
 import { activePlatform } from "@/server/platform";
 import { umbrelApps, umbrelStores } from "@/server/platform/umbrel";
 
-/**
- * The app store for the platform Gluon works with. Umbrel: its official store plus any community
- * stores, each app marked with what's installed and whether an update is waiting.
- */
 export const GET = route({ auth: "admin" }, async () => {
   const platform = await activePlatform();
   if (platform !== "umbrel") return { platform, stores: [], installed: {} };

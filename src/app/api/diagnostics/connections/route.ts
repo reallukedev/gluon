@@ -3,7 +3,6 @@ import { route, sse } from "@/server/api";
 import { subscribeConnections } from "@/server/diagnostics/connections";
 
 const query = z.object({
-  /** Include loopback-to-loopback chatter between local services. */
   local: z.enum(["0", "1"]).default("0"),
   /** Look up names for remote addresses (cached; names appear over the next few updates). */
   resolve: z.enum(["0", "1"]).default("0"),

@@ -1,5 +1,3 @@
-/** Types shared by the chat server (Prosody or Quark) API and its screens. No server imports. */
-
 /** Which XMPP server an app runs: both are managed through the same screens. */
 export type ChatServerKind = "prosody" | "quark";
 export const CHAT_SERVER_NAME: Record<ChatServerKind, string> = { prosody: "Prosody", quark: "Quark" };
@@ -18,7 +16,6 @@ export interface ChatSettings {
   files: { on: boolean; host: string; maxMb: number; keepDays: number };
   /** Notifications on phones when the chat app is closed (XEP-0357). */
   push: boolean;
-  /** Talk to people on other chat servers. */
   federation: boolean;
   /** Chat from a web browser (BOSH and WebSocket) through the chat domain's web address. */
   web: boolean;
@@ -27,7 +24,6 @@ export interface ChatSettings {
    * `host`. Optional so settings saved before calls existed still read.
    */
   calls?: { on: boolean; host: string };
-  /** A message every new account gets. */
   welcome: string | null;
   /** Where people can reach the server's admin (XEP-0157), e.g. you@chat.example.com. */
   contact: string | null;
@@ -37,7 +33,6 @@ export type ChatRole = "member" | "admin" | "owner" | "other";
 
 export interface ChatDevice {
   resource: string;
-  /** A friendlier name guessed from the resource ("Conversations", "Gajim"), or null. */
   client: string | null;
   ip: string | null;
   secure: boolean;
@@ -52,11 +47,9 @@ export interface ChatAccount {
   user: string;
   jid: string;
   role: ChatRole;
-  /** Prosody's role name, e.g. prosody:member. */
   roleName: string | null;
   /** Listed in `admins` in the config file, which outranks the role Gluon can set. */
   fromConfig: boolean;
-  /** The account Gluon sends XMPP notifications from. */
   sender: boolean;
   enabled: boolean;
   created: number | null;
@@ -67,14 +60,11 @@ export interface ChatAccount {
 
 export interface ChatInvite {
   token: string;
-  /** Set when the invite is for one specific username. */
   username: string | null;
   role: ChatRole;
   created: number;
   expires: number;
-  /** xmpp: link chat apps open. */
   uri: string;
-  /** Gluon's web page for the invite, when Gluon has a public address. */
   page: string | null;
   reusable: boolean;
   reset: boolean;
@@ -90,16 +80,12 @@ export interface ChatRoom {
   occupants: number;
 }
 
-/** What chat apps can do with this server, by what a person notices. */
 export interface ChatCapability {
   key: "secure" | "history" | "devices" | "mobile" | "push" | "files" | "groups" | "federation" | "contact" | "web" | "calls" | "invites";
   label: string;
   on: boolean;
-  /** One sentence: what it means, or why it's off. */
   detail: string;
-  /** XEPs or RFCs behind it, for the curious. */
   specs: string[];
-  /** The setting that turns it on, when Gluon can. */
   fix: "signUp" | "history" | "groups" | "files" | "push" | "federation" | "web" | "contact" | "calls" | null;
 }
 
@@ -131,11 +117,8 @@ export interface ChatSnapshot {
   major: number | null;
   startedAt: number | null;
   hosts: ChatHostSnapshot[];
-  /** The chat domain on Network, when one points here. */
   routeHost: string | null;
-  /** Where the config lives on the server, and whether Gluon can change it. */
   config: { file: string | null; hostPath: string | null; writable: boolean; reason: string | null; managed: boolean; layout: "main" | "confd"; rev: string };
-  /** Gluon's public address, for invite pages. */
   publicBase: string | null;
   /** Quark's built-in call relay. null for Prosody, which uses a coturn app. */
   builtInRelay: { builtIn: boolean; running: boolean; port: number; relayMin: number; relayMax: number } | null;
@@ -148,10 +131,8 @@ export interface ChatConfigFiles {
   file: string;
 }
 
-/** What the config editor gets: the file, what it's written in, and whether Gluon can save it. */
 export interface ChatConfigView extends ChatConfigFiles {
   server: ChatServerKind;
-  /** Prosody's config is Lua; Quark's is TOML. */
   language: "lua" | "toml";
   writable: boolean;
   reason: string | null;
@@ -159,7 +140,6 @@ export interface ChatConfigView extends ChatConfigFiles {
   canRestart: boolean;
 }
 
-/** Calls across networks: the TURN relay and whether people outside can reach it. */
 export interface ChatCallsStatus {
   on: boolean;
   /** The name chat apps are given for the relay (the chat domain, pointing at your home). */

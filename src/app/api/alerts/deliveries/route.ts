@@ -4,7 +4,7 @@ import { audit } from "@/server/audit";
 import { listDeliveries, retryDelivery } from "@/server/notify/log";
 import { DELIVERY_EVENTS } from "@/lib/alerts-types";
 
-/** Sent history (and queued/failed messages). Admins see all; members their own channels. */
+/** Admins see every delivery; members only their own channels'. */
 const query = z.object({
   before: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),

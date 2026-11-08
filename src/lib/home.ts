@@ -38,10 +38,8 @@ export const HOME_SEEN = "gluon_home_seen";
 /** How many entries the Activity widget lists at each size (its request, and the server's first paint, agree). */
 export const activityLimit = (size: Size) => (size === "s" ? 1 : size === "m" ? 2 : size === "t" || size === "w" ? 5 : 9);
 
-/** Items that open a Home page: new pins go in after them, not above the greeting. */
 export const START_TYPES = new Set(["greeting", "search"]);
 
-/** Where a newly pinned item goes: just after the greeting and search bar at the top. */
 export function insertIndex(items: WidgetItem[]): number {
   let i = 0;
   while (i < items.length && START_TYPES.has(items[i]!.type)) i++;

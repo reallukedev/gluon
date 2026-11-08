@@ -12,7 +12,6 @@ export const PUT = route({ auth: "user", query: z.object({ offset: z.coerce.numb
   putChunk(user, id(params), query.offset, req.body),
 );
 
-/** Cancel and discard the partial upload. */
 export const DELETE = route({ auth: "user" }, ({ user, params }) => {
   cancelUpload(user, id(params));
   return { ok: true };
