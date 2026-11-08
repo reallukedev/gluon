@@ -54,8 +54,7 @@ describe("varsIn", () => {
   });
 });
 
-// Suspected bug: names inside a default are not reported (returns ["A"]).
-it.fails("varsIn counts names inside defaults", () => {
+it("varsIn counts names inside defaults", () => {
   expect(varsIn("${A:-${B}}")).toEqual(["A", "B"]);
 });
 
@@ -154,13 +153,11 @@ describe("parseEnvFile", () => {
     });
   });
 
-  // Suspected bug: \$ inside double quotes is kept as "\$".
-  it.fails("undoes \\$ inside double quotes", () => {
+  it("undoes \\$ inside double quotes", () => {
     expect(parseEnvFile('PRICE="\\$5"').PRICE).toBe("$5");
   });
 
-  // Suspected bug: escapes are not read left to right, so \\n (escaped backslash, then n) becomes a backslash and a newline.
-  it.fails("reads an escaped backslash before n as a backslash and n", () => {
+  it("reads an escaped backslash before n as a backslash and n", () => {
     expect(parseEnvFile('K="a\\\\nb"').K).toBe("a\\nb");
   });
 
@@ -198,8 +195,7 @@ describe("envLine", () => {
     expect(parseEnvFile(envLine("K", v)).K).toBe(v);
   });
 
-  // Suspected bug, see the two parseEnvFile cases above.
-  it.fails.each(["it's $5", "a\\nb'", "it's \\nope"])("round-trips %j through parseEnvFile", (v) => {
+  it.each(["it's $5", "a\\nb'", "it's \\nope"])("round-trips %j through parseEnvFile", (v) => {
     expect(parseEnvFile(envLine("K", v)).K).toBe(v);
   });
 
@@ -210,7 +206,7 @@ describe("envLine", () => {
     }
   });
 
-  it.fails("round-trips arbitrary values", () => {
+  it("round-trips arbitrary values", () => {
     for (const v of strings(
       400,
       TRICKY.filter((c) => c !== "\r\n"),

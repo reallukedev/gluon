@@ -148,8 +148,7 @@ describe("validateGrantPath", () => {
     expect((await refusal(validateGrantPath("/var/log/nginx"))).message).toContain("/var/log");
   });
 
-  // Suspected bug: key folders two levels down are missed, so /srv/share is accepted.
-  it.fails("refuses a folder with a key folder deeper below it", async () => {
+  it("refuses a folder with a key folder deeper below it", async () => {
     expect(await refusal(validateGrantPath("/srv/share"))).toMatchObject({ code: "unsafe", status: 400 });
   });
 

@@ -282,22 +282,26 @@ function* ruleDates(ev: VEvent, rule: RRule, fromDay: number, maxDay: number): G
       for (const m of months) {
         if (rule.freq === "MONTHLY" && rule.byMonth.length && !rule.byMonth.includes(m)) continue;
         const dim = daysInMonth(y, m);
-        const found: number[] = [];
+        let found: number[] = [];
+        const weekdays: number[] = [];
+        for (const b of rule.byDay) {
+          const matches: number[] = [];
+          for (let d = 1; d <= dim; d++) if (weekday(dayNumber(y, m, d)) === b.wd) matches.push(d);
+          if (b.n === null) weekdays.push(...matches);
+          else {
+            const d = b.n > 0 ? matches[b.n - 1] : matches[matches.length + b.n];
+            if (d) weekdays.push(d);
+          }
+        }
         if (rule.byMonthDay.length) {
           for (const md of rule.byMonthDay) {
             const d = md > 0 ? md : dim + md + 1;
             if (d >= 1 && d <= dim) found.push(d);
           }
+          // RFC 5545: alongside BYMONTHDAY, BYDAY limits instead of expanding.
+          if (rule.byDay.length) found = found.filter((d) => weekdays.includes(d));
         } else if (rule.byDay.length) {
-          for (const b of rule.byDay) {
-            const matches: number[] = [];
-            for (let d = 1; d <= dim; d++) if (weekday(dayNumber(y, m, d)) === b.wd) matches.push(d);
-            if (b.n === null) found.push(...matches);
-            else {
-              const d = b.n > 0 ? matches[b.n - 1] : matches[matches.length + b.n];
-              if (d) found.push(d);
-            }
-          }
+          found = weekdays;
         } else if (s.d <= dim) {
           found.push(s.d); // Feb 29 / 31st: skip months without that day (RFC behaviour)
         }

@@ -49,7 +49,15 @@ function ianaParts(ms: number, tz: string): Wall {
   return { y: p.year!, m: p.month!, d: p.day!, h: p.hour === 24 ? 0 : p.hour!, mi: p.minute!, s: p.second! };
 }
 
-const wallMs = (w: Wall) => Date.UTC(w.y, w.m - 1, w.d, w.h, w.mi, w.s);
+/** Date.UTC reads years 0-99 as 1900-1999; setUTCFullYear does not. */
+function utcMs(y: number, mo: number, d: number, h = 0, mi = 0, s = 0): number {
+  const dt = new Date(0);
+  dt.setUTCFullYear(y, mo, d);
+  dt.setUTCHours(h, mi, s, 0);
+  return dt.getTime();
+}
+
+const wallMs = (w: Wall) => utcMs(w.y, w.m - 1, w.d, w.h, w.mi, w.s);
 
 function offsetAt(ms: number, zone: Zone): number {
   if (zone.kind === "fixed") return zone.offsetMs;
@@ -60,11 +68,12 @@ function offsetAt(ms: number, zone: Zone): number {
 /** Times in a DST gap move forward; ambiguous ones take the first. */
 export function zonedToUtc(w: Wall, zone: Zone): number {
   const wall = wallMs(w);
-  const off1 = offsetAt(wall, zone);
-  let t = wall - off1;
-  const off2 = offsetAt(t, zone);
-  if (off2 !== off1) t = wall - off2;
-  return t;
+  if (zone.kind === "fixed") return wall - zone.offsetMs;
+  // The offsets in force a day either side cover any single transition near this wall time.
+  const offs = [...new Set([offsetAt(wall - 86_400_000, zone), offsetAt(wall, zone), offsetAt(wall + 86_400_000, zone)])];
+  const fits = offs.filter((o) => offsetAt(wall - o, zone) === o);
+  // Repeated: the larger offset is the earlier instant. Gap: the smaller (pre-transition) offset lands past it.
+  return fits.length ? wall - Math.max(...fits) : wall - Math.min(...offs);
 }
 
 export function utcToWall(ms: number, zone: Zone): Wall {
@@ -76,7 +85,7 @@ export function utcToWall(ms: number, zone: Zone): Wall {
 }
 
 /** Days since epoch for a calendar date (zone-free arithmetic). */
-export const dayNumber = (y: number, m: number, d: number) => Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
+export const dayNumber = (y: number, m: number, d: number) => Math.floor(utcMs(y, m - 1, d) / 86_400_000);
 export function fromDayNumber(n: number): { y: number; m: number; d: number } {
   const dt = new Date(n * 86_400_000);
   return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
@@ -84,7 +93,7 @@ export function fromDayNumber(n: number): { y: number; m: number; d: number } {
 /** 0 = Sunday … 6 = Saturday */
 export const weekday = (dayNum: number) => (((dayNum + 4) % 7) + 7) % 7;
 export const isoDate = (y: number, m: number, d: number) => `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-export const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+export const daysInMonth = (y: number, m: number) => new Date(utcMs(y, m, 0)).getUTCDate();
 
 /** Common Windows zone names used by Outlook/Exchange calendars. */
 const WINDOWS: Record<string, string> = {

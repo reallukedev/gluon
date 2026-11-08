@@ -69,8 +69,7 @@ describe("zonedToUtc", () => {
     springGap("Europe/Berlin", wall(2026, 3, 29, 2, 30), "2026-03-29T01:30:00.000Z"),
   );
 
-  // Suspected bug: lands on 01:30 EST (06:30Z), the earlier side of the gap.
-  it.fails(
+  it(
     "moves a wall time in the America/New_York spring gap forward",
     springGap("America/New_York", wall(2026, 3, 8, 2, 30), "2026-03-08T07:30:00.000Z"),
   );
@@ -79,8 +78,7 @@ describe("zonedToUtc", () => {
     expect(iso(zonedToUtc(wall(2026, 11, 1, 1, 30), iana("America/New_York")))).toBe("2026-11-01T05:30:00.000Z");
   });
 
-  // Suspected bug: returns 02:30 CET (01:30Z), the second occurrence.
-  it.fails("picks the first (CEST) occurrence of an ambiguous Europe/Berlin wall time", () => {
+  it("picks the first (CEST) occurrence of an ambiguous Europe/Berlin wall time", () => {
     expect(iso(zonedToUtc(wall(2026, 10, 25, 2, 30), iana("Europe/Berlin")))).toBe("2026-10-25T00:30:00.000Z");
   });
 });
@@ -133,8 +131,7 @@ describe("calendar arithmetic", () => {
     expect(dayNumber(2024, 3, 1) - dayNumber(2024, 2, 28)).toBe(2);
   });
 
-  // Suspected bug: years 0-99 are read as 1900-1999 (dayNumber(1, 1, 1) === -25202).
-  it.fails("handles years below 100", () => {
+  it("handles years below 100", () => {
     expect(dayNumber(1, 1, 1)).toBe(-719_162);
     expect(fromDayNumber(dayNumber(5, 1, 1))).toEqual({ y: 5, m: 1, d: 1 });
   });

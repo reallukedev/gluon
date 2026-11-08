@@ -59,8 +59,7 @@ describe("compareVersions", () => {
       for (const b of sample) expect(sign(compareVersions(a, b)) + 0).toBe(-sign(compareVersions(b, a)) + 0);
   });
 
-  // Suspected bug: "1.0a" sorts after "1.0+", against Debian policy.
-  it.fails("sorts letters before other symbols", () => {
+  it("sorts letters before other symbols", () => {
     expect(sign(compareVersions("1.0a", "1.0+"))).toBe(-1);
     expect(sign(compareVersions("1.0+", "1.0a"))).toBe(1);
   });
