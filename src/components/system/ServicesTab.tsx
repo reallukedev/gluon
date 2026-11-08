@@ -204,7 +204,7 @@ export function ServicesTab({ list, initialUnit }: { list: SWRResponse<{ service
   );
 }
 
-function ServicesSkeleton() {
+export function ServicesSkeleton() {
   return (
     <div className={s.stack} aria-busy>
       <Skeleton height={34} width={380} radius={7} />

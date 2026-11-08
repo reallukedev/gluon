@@ -667,7 +667,7 @@ function RunLog({ id }: { id: string }) {
   );
 }
 
-function UpdatesSkeleton() {
+export function UpdatesSkeleton() {
   return (
     <div className={s.stack} aria-busy>
       <Panel title="Updates">

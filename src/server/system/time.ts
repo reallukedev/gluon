@@ -9,24 +9,18 @@ import { parseShow } from "./units";
 /** Clock, timezone, NTP and hostname: small settings that change the host. */
 
 export async function timeStatus(): Promise<TimeStatus> {
-  let r: Record<string, string> = {};
-  try {
-    const { stdout } = await host("timedatectl", ["show"], {
-      timeoutMs: 10_000,
-    });
-    r = parseShow(stdout)[0] ?? {};
-  } catch {
-    /* timedated unavailable: fall back to /etc/localtime */
-  }
-  let server: string | null = null;
-  if (r.NTP === "yes") {
-    try {
-      const { stdout } = await host("timedatectl", ["show-timesync", "-p", "ServerName", "--value"], { timeoutMs: 5000 });
-      server = stdout.trim() || null;
-    } catch {
-      /* chrony/ntpsec, or timesyncd not running */
-    }
-  }
+  // Both at once: asking for the time server costs nothing when NTP turns out to be off, and saves a round.
+  const [r, synced] = await Promise.all([
+    host("timedatectl", ["show"], { timeoutMs: 10_000 })
+      .then(({ stdout }): Record<string, string> => parseShow(stdout)[0] ?? {})
+      // timedated unavailable: fall back to /etc/localtime
+      .catch((): Record<string, string> => ({})),
+    host("timedatectl", ["show-timesync", "-p", "ServerName", "--value"], { timeoutMs: 5000 })
+      .then(({ stdout }) => stdout.trim() || null)
+      // chrony/ntpsec, or timesyncd not running
+      .catch(() => null),
+  ]);
+  const server = r.NTP === "yes" ? synced : null;
   let timezone = r.Timezone || null;
   if (!timezone) {
     try {

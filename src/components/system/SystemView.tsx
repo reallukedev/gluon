@@ -3,26 +3,27 @@ import * as React from "react";
 import type { LiveLogins, MemoryBreakdown, PowerStatus, ServiceInfo, SystemOverview, UpdatesStatus } from "@/lib/system-types";
 import { useApi, useStream, type ApiError } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader } from "@/components/ui/Surface";
+import { Page, PageHeader, Skeleton } from "@/components/ui/Surface";
 import { Tabs } from "@/components/ui/Tabs";
-import { OverviewTab } from "./OverviewTab";
-import { UpdatesTab } from "./UpdatesTab";
-import { ServicesTab } from "./ServicesTab";
-import { PowerTab } from "./PowerTab";
-import { SignInsTab } from "./SignInsTab";
+import { OverviewTab, OverviewSkeleton } from "./OverviewTab";
+import { UpdatesTab, UpdatesSkeleton } from "./UpdatesTab";
+import { ServicesTab, ServicesSkeleton } from "./ServicesTab";
+import { PowerTab, PowerSkeleton } from "./PowerTab";
+import { SignInsTab, SignInsSkeleton } from "./SignInsTab";
 import { peopleList } from "./loginWords";
 import { hostFailure } from "./hostFailure";
 import s from "./system.module.css";
 
 export type SystemTab = "overview" | "updates" | "services" | "sign-ins" | "power";
 
+/** The server's reads, still on their way: each part of the page waits only for its own. */
 export interface SystemInitial {
-  updates?: UpdatesStatus;
-  services?: { services: ServiceInfo[] };
-  overview?: SystemOverview;
-  memory?: MemoryBreakdown;
-  power?: PowerStatus;
-  logins?: LiveLogins;
+  updates: Promise<UpdatesStatus | undefined>;
+  services: Promise<{ services: ServiceInfo[] } | undefined>;
+  overview?: Promise<SystemOverview | undefined>;
+  memory?: Promise<MemoryBreakdown | undefined>;
+  power?: Promise<PowerStatus | undefined>;
+  logins?: Promise<LiveLogins | undefined>;
 }
 
 const DAY = 86_400_000;
@@ -44,22 +45,99 @@ function unreadSummary(updatesError: ApiError | null, servicesError: ApiError | 
   return `Couldn't check ${list}.`;
 }
 
-export function SystemView({ tab, unit, initial }: { tab: SystemTab; unit: string | null; initial: SystemInitial }) {
-  const fmt = useFormat();
-  // Shared with the tabs through SWR's cache (same keys), so the header and tabs agree.
-  const updates = useApi<UpdatesStatus>("/api/system/updates", {
-    refresh: 60_000,
-    fallbackData: initial.updates,
-  });
-  const services = useApi<{ services: ServiceInfo[] }>("/api/system/services", {
-    refresh: tab === "services" ? 10_000 : 30_000,
-    fallbackData: initial.services,
-  });
+// The header and the tab below read the same SWR keys at the same pace, so their polls coincide.
+const useUpdates = (fallbackData: UpdatesStatus | undefined) => useApi<UpdatesStatus>("/api/system/updates", { refresh: 60_000, fallbackData });
+const useServices = (tab: SystemTab, fallbackData: { services: ServiceInfo[] } | undefined) =>
+  useApi<{ services: ServiceInfo[] }>("/api/system/services", { refresh: tab === "services" ? 10_000 : 30_000, fallbackData });
+const useLogins = (tab: SystemTab, fallbackData: LiveLogins | undefined) => useApi<LiveLogins>("/api/system/logins", { refresh: tab === "sign-ins" ? 5000 : 30_000, fallbackData });
 
-  const logins = useApi<LiveLogins>("/api/system/logins", {
-    refresh: tab === "sign-ins" ? 5000 : 30_000,
-    fallbackData: initial.logins,
-  });
+export function SystemView({ tab, unit, initial }: { tab: SystemTab; unit: string | null; initial: SystemInitial }) {
+  return (
+    <Page>
+      <React.Suspense fallback={<SystemHead tab={tab} summary={<Skeleton width="min(380px, 80%)" height={12} />} />}>
+        <SystemHeadLive tab={tab} initial={initial} />
+      </React.Suspense>
+      <div className={s.tabBody}>
+        {tab === "overview" && (
+          <React.Suspense fallback={<OverviewSkeleton />}>
+            <OverviewBody initial={initial} />
+          </React.Suspense>
+        )}
+        {tab === "updates" && (
+          <React.Suspense fallback={<UpdatesSkeleton />}>
+            <UpdatesBody initial={initial} />
+          </React.Suspense>
+        )}
+        {tab === "services" && (
+          <React.Suspense fallback={<ServicesSkeleton />}>
+            <ServicesBody initial={initial} unit={unit} />
+          </React.Suspense>
+        )}
+        {tab === "sign-ins" && (
+          <React.Suspense fallback={<SignInsSkeleton />}>
+            <SignInsBody initial={initial} />
+          </React.Suspense>
+        )}
+        {tab === "power" && (
+          <React.Suspense fallback={<PowerSkeleton />}>
+            <PowerBody initial={initial} />
+          </React.Suspense>
+        )}
+      </div>
+    </Page>
+  );
+}
+
+function OverviewBody({ initial }: { initial: SystemInitial }) {
+  const overview = initial.overview ? React.use(initial.overview) : undefined;
+  const memory = initial.memory ? React.use(initial.memory) : undefined;
+  return <OverviewTab initial={overview} memory={memory} />;
+}
+
+function UpdatesBody({ initial }: { initial: SystemInitial }) {
+  return <UpdatesTab status={useUpdates(React.use(initial.updates))} />;
+}
+
+function ServicesBody({ initial, unit }: { initial: SystemInitial; unit: string | null }) {
+  return <ServicesTab list={useServices("services", React.use(initial.services))} initialUnit={unit} />;
+}
+
+function SignInsBody({ initial }: { initial: SystemInitial }) {
+  return <SignInsTab live={useLogins("sign-ins", initial.logins ? React.use(initial.logins) : undefined)} />;
+}
+
+function PowerBody({ initial }: { initial: SystemInitial }) {
+  return <PowerTab initial={initial.power ? React.use(initial.power) : undefined} />;
+}
+
+type TabCount = { count?: number; attention: boolean };
+
+/** Title and tabs, known before any host command answers; the summary and counts come with the data. */
+function SystemHead({ tab, summary, counts = {} }: { tab: SystemTab; summary: React.ReactNode; counts?: { updates?: TabCount; services?: TabCount; signIns?: TabCount } }) {
+  return (
+    <>
+      <PageHeader title="System" summary={summary} />
+      <Tabs
+        value={tab}
+        hrefFor={(v) => (v === "overview" ? "/system" : `/system?tab=${v}`)}
+        items={[
+          { value: "overview", label: "Overview" },
+          { value: "updates", label: "Updates", ...counts.updates },
+          { value: "services", label: "Services", ...counts.services },
+          { value: "sign-ins", label: "Sign-ins", ...counts.signIns },
+          { value: "power", label: "Power" },
+        ]}
+        aria-label="System sections"
+      />
+    </>
+  );
+}
+
+function SystemHeadLive({ tab, initial }: { tab: SystemTab; initial: SystemInitial }) {
+  const fmt = useFormat();
+  const updates = useUpdates(React.use(initial.updates));
+  const services = useServices(tab, React.use(initial.services));
+  const logins = useLogins(tab, initial.logins ? React.use(initial.logins) : undefined);
 
   // The server tells us when updates or services change; revalidate instead of waiting for the poll.
   useStream("/api/system/events", {
@@ -118,42 +196,14 @@ export function SystemView({ tab, unit, initial }: { tab: SystemTab; unit: strin
     );
 
   return (
-    <Page>
-      <PageHeader title="System" summary={summary} />
-      <Tabs
-        value={tab}
-        hrefFor={(v) => (v === "overview" ? "/system" : `/system?tab=${v}`)}
-        items={[
-          { value: "overview", label: "Overview" },
-          {
-            value: "updates",
-            label: "Updates",
-            count: u?.counts.total || undefined,
-            attention: updatesOverdue(u),
-          },
-          {
-            value: "services",
-            label: "Services",
-            count: failed.length || undefined,
-            attention: failedImportant.length > 0,
-          },
-          {
-            value: "sign-ins",
-            label: "Sign-ins",
-            count: people.length || undefined,
-            attention: awayPeople.length > 0,
-          },
-          { value: "power", label: "Power" },
-        ]}
-        aria-label="System sections"
-      />
-      <div className={s.tabBody}>
-        {tab === "overview" && <OverviewTab initial={initial.overview} memory={initial.memory} />}
-        {tab === "updates" && <UpdatesTab status={updates} />}
-        {tab === "services" && <ServicesTab list={services} initialUnit={unit} />}
-        {tab === "sign-ins" && <SignInsTab live={logins} />}
-        {tab === "power" && <PowerTab initial={initial.power} />}
-      </div>
-    </Page>
+    <SystemHead
+      tab={tab}
+      summary={summary}
+      counts={{
+        updates: { count: u?.counts.total || undefined, attention: updatesOverdue(u) },
+        services: { count: failed.length || undefined, attention: failedImportant.length > 0 },
+        signIns: { count: people.length || undefined, attention: awayPeople.length > 0 },
+      }}
+    />
   );
 }
