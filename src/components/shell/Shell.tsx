@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
-import Link, { useLinkStatus } from "next/link";
+import { useLinkStatus } from "next/link";
+import { IntentLink } from "@/components/ui/IntentLink";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Drawer } from "@base-ui/react/drawer";
@@ -402,10 +403,10 @@ export function Shell({ children, memberFiles, initial }: ShellProps) {
               </Drawer.Viewport>
             </Drawer.Portal>
           </Drawer.Root>
-          <Link href="/" className={s.topTitle} aria-label={`${serverName}, home`}>
+          <IntentLink href="/" className={s.topTitle} aria-label={`${serverName}, home`}>
             <HostMark />
             <span className={s.topName}>{serverName}</span>
-          </Link>
+          </IntentLink>
           <IconButton label="Search" tooltip={false} onClick={() => setPaletteOpen(true)}>
             <Search />
           </IconButton>
@@ -463,16 +464,13 @@ function NavLink({
   external?: boolean;
 }) {
   const link = (
-    <Link
+    <IntentLink
       href={href}
       className={s.link}
       aria-current={active ? "page" : undefined}
       // On the icon rail the label is hidden, so the link carries its name (and count) itself.
       aria-label={collapsed ? (tooltip ?? label) : undefined}
-      // Pointing at a link (or touching it) fetches the whole page, so the click lands on real content
-      // instead of a skeleton. External links aren't routes.
       prefetch={external ? false : undefined}
-      unstable_dynamicOnHover={!external}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
     >
@@ -480,7 +478,7 @@ function NavLink({
       <span className={s.linkLabel}>{label}</span>
       {badge}
       {!external && <NavPending />}
-    </Link>
+    </IntentLink>
   );
   return collapsed ? (
     <Tooltip content={tooltip ?? label} side="right">
