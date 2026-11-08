@@ -1,3 +1,4 @@
+import "server-only";
 import { z } from "zod";
 import { JID_RE, MONITOR_KINDS, NOTIFY_KINDS, WEBHOOK_FORMATS } from "./alerts-types";
 
