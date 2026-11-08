@@ -18,7 +18,7 @@ export interface UmbrelEndpoint {
   container: string | null;
 }
 
-type G = typeof globalThis & { __gluonUmbrel?: { at: number; value: UmbrelEndpoint | null } };
+type G = typeof globalThis & { __gluonUmbrel?: { at: number; value: UmbrelEndpoint | null }; __gluonUmbrelLooking?: Promise<UmbrelEndpoint | null> };
 const g = globalThis as G;
 
 const NATIVE_ROOTS = ["/home/umbrel/umbrel", "/umbrel"];
@@ -26,6 +26,16 @@ const NATIVE_ROOTS = ["/home/umbrel/umbrel", "/umbrel"];
 export async function findUmbrel(fresh = false): Promise<UmbrelEndpoint | null> {
   const c = g.__gluonUmbrel;
   if (!fresh && c && Date.now() - c.at < 60_000) return c.value;
+  // A page and its layout (or a page and the API call it seeds) often ask at the same moment: look once.
+  if (!fresh && g.__gluonUmbrelLooking) return g.__gluonUmbrelLooking;
+  const looking = lookForUmbrel().finally(() => {
+    if (g.__gluonUmbrelLooking === looking) g.__gluonUmbrelLooking = undefined;
+  });
+  g.__gluonUmbrelLooking = looking;
+  return looking;
+}
+
+async function lookForUmbrel(): Promise<UmbrelEndpoint | null> {
   let value: UmbrelEndpoint | null = null;
   try {
     for (const ctr of await docker().listContainers()) {
