@@ -10,7 +10,7 @@ export const GET = route({ auth: "user" }, ({ user }) => listSubscriptions(user)
 
 const put = z.object({
   channelId: z.string().min(1).max(64),
-  /** See subscriptionFilterSchema in lib/alerts-types (validated server-side; members are narrowed). */
+  /** See subscriptionFilterSchema in lib/alerts-schemas (validated server-side; members are narrowed). */
   filter: z.record(z.string(), z.unknown()).default({}),
 });
 

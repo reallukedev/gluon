@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { route } from "@/server/api";
 import { homeFor, resetHome, saveHome } from "@/server/home";
-import { layoutSchema } from "@/lib/home";
+import { layoutSchema } from "@/lib/home-schema";
 
 export const GET = route({ auth: "user" }, ({ user }) => homeFor(user.id, user.role));
 

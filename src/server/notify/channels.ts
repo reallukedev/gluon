@@ -4,7 +4,8 @@ import { decryptJson, encryptJson, id as newId } from "../crypto";
 import { AppError, conflict, forbidden, notFound } from "../errors";
 import { findById, type User } from "../auth/users";
 import { publicBaseUrl, getSetting } from "../settings";
-import { MEMBER_CHANNEL_KINDS, normalizeFilter, subscriptionFilterSchema, type ChannelKind, type ChannelView, type EmailConfig, type TestResult, type XmppConfig } from "@/lib/alerts-types";
+import { MEMBER_CHANNEL_KINDS, normalizeFilter, type ChannelKind, type ChannelView, type EmailConfig, type TestResult, type XmppConfig } from "@/lib/alerts-types";
+import { subscriptionFilterSchema } from "@/lib/alerts-schemas";
 import { maskConfig, mergeConfig, summarize, validateConfig, type StoredConfig } from "./config";
 import { assertReachableTarget, configHosts, deliver, DeliveryError, type OutMessage, type SendContext } from "./transports";
 

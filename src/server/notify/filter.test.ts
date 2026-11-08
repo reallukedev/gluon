@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { normalizeFilter, presetOf, subscriptionFilterSchema, PROBLEM_KINDS } from "@/lib/alerts-types";
+import { normalizeFilter, presetOf, PROBLEM_KINDS } from "@/lib/alerts-types";
+import { subscriptionFilterSchema } from "@/lib/alerts-schemas";
 import { wantsEvent, wantsFinding } from "./filter";
 
 const parse = (raw: unknown) => normalizeFilter(subscriptionFilterSchema.parse(raw));

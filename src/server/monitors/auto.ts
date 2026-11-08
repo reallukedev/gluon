@@ -2,7 +2,7 @@ import "server-only";
 import { all, now } from "../db";
 import { tryReadConfig, routeUrl, isRedirect } from "../caddy/routes";
 import { listApps, type AppSummary } from "../docker/apps";
-import { monitorConfigSchema, type MonitorConfig } from "@/lib/alerts-types";
+import { monitorConfigSchema, type MonitorConfig } from "@/lib/alerts-schemas";
 import { serviceKind } from "@/lib/service-kind";
 import { deleteMonitorRow, insertMonitor, listMonitorRows, updateMonitorRow } from "./store";
 import { clearFindings, invalidateMonitors } from "./runner";

@@ -10,12 +10,12 @@ import {
   WIDGET_REFRESH_MS,
   WIDGET_SOURCE,
   WIDGET_TYPES,
-  widgetConfigSchemas,
   type WidgetBatchItem,
   type WidgetRequest,
   type WidgetResponse,
   type WidgetType,
 } from "@/lib/widgets-types";
+import { widgetConfigSchemas } from "@/lib/widgets-schemas";
 
 /** How long a last-good answer may be shown (marked stale) while the source is failing. 0 = never. */
 const STALE_MS: Record<WidgetType, number> = {
