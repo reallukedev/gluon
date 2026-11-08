@@ -232,6 +232,7 @@ export function ChannelDialog({ open, onOpenChange, channel, scope, admin, kinds
   }
 
   async function run(kind: "save" | "test") {
+    if (busy) return;
     setBusy(kind);
     setErr(null);
     if (kind === "test") setTest(null);
