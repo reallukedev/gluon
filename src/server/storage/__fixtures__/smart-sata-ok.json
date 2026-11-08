@@ -1,0 +1,20 @@
+{
+  "smartctl": { "version": [7, 3], "exit_status": 0 },
+  "device": { "name": "/dev/sdb", "type": "sat" },
+  "model_name": "Example HDD 4TB",
+  "serial_number": "EXAMPLE0001",
+  "firmware_version": "CC43",
+  "in_smartctl_database": true,
+  "smart_support": { "available": true, "enabled": true },
+  "smart_status": { "passed": true },
+  "temperature": { "current": 34 },
+  "power_on_time": { "hours": 12000 },
+  "power_cycle_count": 210,
+  "ata_smart_attributes": {
+    "table": [
+      { "id": 5, "name": "Reallocated_Sector_Ct", "value": 100, "worst": 100, "thresh": 10, "when_failed": "", "flags": { "prefailure": true }, "raw": { "value": 0, "string": "0" } },
+      { "id": 197, "name": "Current_Pending_Sector", "value": 100, "worst": 100, "thresh": 0, "when_failed": "", "flags": { "prefailure": false }, "raw": { "value": 0, "string": "0" } },
+      { "id": 198, "name": "Offline_Uncorrectable", "value": 100, "worst": 100, "thresh": 0, "when_failed": "", "flags": { "prefailure": false }, "raw": { "value": 0, "string": "0" } }
+    ]
+  }
+}

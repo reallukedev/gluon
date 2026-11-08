@@ -80,7 +80,7 @@ export function readSwaps(): string[] {
 /** glibc makedev(): the st_dev value for a "major:minor" pair. */
 export function devNumber(majMin: string): number {
   const [maj, min] = majMin.split(":").map(Number) as [number, number];
-  return (min & 0xff) + (maj & 0xfff) * 256 + Math.floor(min / 256) * 1_048_576 + Math.floor(maj / 4096) * 2 ** 32;
+  return (min & 0xff) + (maj & 0xfff) * 256 + Math.floor(min / 256) * 2 ** 20 + Math.floor(maj / 4096) * 2 ** 44;
 }
 
 export function mountAt(target: string, mounts = readMountinfo()): MountEntry | null {
@@ -125,8 +125,8 @@ export function isSystemTarget(t: string): boolean {
 
 /** Canonical path on the host (resolves symlinks in the parts that exist). */
 export async function hostRealpath(p: string): Promise<string> {
-  const { stdout } = await host("realpath", ["-m", "--", normalizeHostPath(p)], { timeoutMs: 10_000 });
-  return stdout.trim();
+  const { stdout } = await host("realpath", ["-m", "-z", "--", normalizeHostPath(p)], { timeoutMs: 10_000 });
+  return stdout.replace(/\0$/, "");
 }
 
 /** Resolve symlinks for several paths in one host call. Missing paths resolve as-is. */
@@ -136,9 +136,10 @@ export async function hostRealpaths(ps: string[]): Promise<Map<string, string>> 
   for (let i = 0; i < uniq.length; i += 200) {
     const chunk = uniq.slice(i, i + 200);
     try {
-      const { stdout } = await host("realpath", ["-m", "--", ...chunk], { timeoutMs: 15_000 });
-      const lines = stdout.split("\n");
-      chunk.forEach((p, j) => out.set(p, lines[j]?.trim() || p));
+      // NUL-separated: a folder name can contain a newline, which would shift every answer after it.
+      const { stdout } = await host("realpath", ["-m", "-z", "--", ...chunk], { timeoutMs: 15_000 });
+      const lines = stdout.split("\0");
+      chunk.forEach((p, j) => out.set(p, lines[j] || p));
     } catch {
       for (const p of chunk) out.set(p, p);
     }

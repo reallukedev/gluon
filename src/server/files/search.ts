@@ -9,7 +9,7 @@ import { localSpawn } from "../host/exec";
 import type { User } from "../auth/users";
 import type { FileKind, SearchHit } from "@/lib/files-types";
 import { authorize, LEGACY_TRASH_DIR, TRASH_DIR } from "./paths";
-import { engineChooser, globToRegExp, probeFindPrintf, walkTree } from "./walk";
+import { engineChooser, globToRegExp, probeFindPrintf, splitFields, walkTree } from "./walk";
 import { displayPath } from "./list";
 import { extensionsOf, kindOf } from "./kinds";
 import { places } from "./places";
@@ -137,7 +137,7 @@ export async function runSearch(user: User, q: SearchQuery, onBatch: (hits: Sear
       while ((i = buf.indexOf("\0")) >= 0) {
         const rec = buf.slice(0, i);
         buf = buf.slice(i + 1);
-        const [y, s, m, rel] = rec.split("\t");
+        const [y, s, m, rel] = splitFields(rec, 4);
         if (!rel) continue;
         const type = y === "d" ? "dir" : y === "f" ? "file" : y === "l" ? "symlink" : "other";
         const name = path.posix.basename(rel);

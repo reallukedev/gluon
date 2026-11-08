@@ -6,7 +6,7 @@ import { id as newId } from "../crypto";
 import { AppError, forbidden, notFound } from "../errors";
 import { audit } from "../audit";
 import { publish } from "../events";
-import { Changed, inDir, inParent, mkdirs } from "./safe";
+import { Changed, childName, inDir, inParent, mkdirs, openFileIn } from "./safe";
 import { hostPath, isWithin, normalizeHostPath } from "../host/paths";
 import type { User } from "../auth/users";
 import type { FileJob, TrashItem, TrashSummary } from "@/lib/files-types";
@@ -51,19 +51,25 @@ function trashRoot(mount: string) {
 /** Make sure `<mount>/.gluon-trash` is a real root-owned directory (never a link someone planted). */
 async function ensureTrashDir(mount: string): Promise<string> {
   const dir = trashRoot(mount);
-  const fsDir = hostPath(dir);
   try {
-    await fs.promises.mkdir(fsDir, { mode: 0o700 });
+    await inDir(mount, null, (m) => fs.promises.mkdir(m.at(TRASH_DIR), { mode: 0o700 }));
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "EROFS") throw new AppError("read_only", `${mount} is mounted read-only, so nothing on it can be moved to the trash.`, 409);
     if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
   }
-  const st = await fs.promises.lstat(fsDir);
-  if (!st.isDirectory() || st.isSymbolicLink()) {
-    throw new AppError("trash_broken", `${dir} isn't a normal folder, so Gluon won't use it as the trash. Remove it by hand and try again.`, 409);
+  // Owner and mode are fixed on the opened folder: anyone who can write in the drive's top folder
+  // could swap the trash for a link to /etc between a check and a chmod by path.
+  try {
+    await inDir(dir, null, async (d) => {
+      if (d.stat.uid !== 0 || d.stat.gid !== 0) await d.chown(0, 0).catch(() => {});
+      if ((d.stat.mode & 0o777) !== 0o700) await d.chmod(0o700).catch(() => {});
+    });
+  } catch (e) {
+    if (e instanceof Changed || (e as NodeJS.ErrnoException).code === "ENOTDIR") {
+      throw new AppError("trash_broken", `${dir} isn't a normal folder, so Gluon won't use it as the trash. Remove it by hand and try again.`, 409);
+    }
+    throw e;
   }
-  if (st.uid !== 0) await fs.promises.chown(fsDir, 0, 0).catch(() => {});
-  if ((st.mode & 0o777) !== 0o700) await fs.promises.chmod(fsDir, 0o700).catch(() => {});
   return dir;
 }
 
@@ -111,7 +117,14 @@ export async function moveToTrash(real: string, userId: string | null, expect?: 
     if (code === "EBUSY") throw new AppError("busy", `${real} is in use (probably a mount point), so it can't be moved to the trash.`, 409);
     throw e;
   }
-  await fs.promises.writeFile(hostPath(path.posix.join(dir, `${id}.json`)), JSON.stringify(side), { mode: 0o600 }).catch(() => {});
+  await inDir(dir, null, async (t) => {
+    const fh = await openFileIn(t, `${id}.json`, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o600);
+    try {
+      await fh.writeFile(JSON.stringify(side));
+    } finally {
+      await fh.close();
+    }
+  }).catch(() => {});
   run(
     "INSERT INTO trash (id, original_path, trash_path, fs_root, size, is_dir, deleted_at, deleted_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     id,
@@ -246,7 +259,15 @@ export async function restore(
     }
     const dest = path.posix.join(parent.real, name);
     try {
-      await inParent(r.trash_path, (from, n) => inDir(parent.real, null, (to) => fs.promises.rename(from.at(n), to.at(name))));
+      await inParent(r.trash_path, (from, n) =>
+        inDir(parent.real, null, async (to) => {
+          // rename(2) replaces what's there: look once more right before, in the opened folder.
+          if (await fs.promises.lstat(to.at(name)).then(() => true, () => false)) {
+            throw new AppError("conflict", `Something called ${name} just appeared in ${parentPath}. Try restoring it again.`, 409, { id, originalPath: r.original_path });
+          }
+          await fs.promises.rename(from.at(n), to.at(name));
+        }),
+      );
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "EXDEV") {
         throw new AppError("cross_device", `${parentPath} is now on a different drive than the trash, so ${name} can't be put back automatically.`, 409);
@@ -254,8 +275,10 @@ export async function restore(
       throw e;
     }
     const trashDir = path.posix.dirname(path.posix.dirname(r.trash_path));
-    await fs.promises.rmdir(hostPath(path.posix.dirname(r.trash_path))).catch(() => {});
-    await fs.promises.unlink(hostPath(path.posix.join(trashDir, `${id}.json`))).catch(() => {});
+    await inDir(trashDir, null, async (t) => {
+      await fs.promises.rmdir(t.at(id)).catch(() => {});
+      await fs.promises.unlink(t.at(`${id}.json`)).catch(() => {});
+    }).catch(() => {});
     run("DELETE FROM trash WHERE id = ?", id);
     restored.push({ id, path: dest });
     publish("files.trash", { id, change: "restored" });
@@ -292,8 +315,12 @@ export function deleteForever(user: User, ids: string[] | "all", where: { ip?: s
           throw new AppError("unsafe", `Refusing to delete ${r.trash_path}: it doesn't look like a trash item.`, 500);
         }
         if (mountsBelow(itemDir).length) throw new AppError("unsafe", `Something is mounted inside ${itemDir}; unmount it first.`, 409);
-        await fs.promises.rm(hostPath(itemDir), { recursive: true, force: true, maxRetries: 2 });
-        await fs.promises.unlink(hostPath(path.posix.join(trashDir, `${r.id}.json`))).catch(() => {});
+        // Through the opened trash folder: the drive's top folder may be writable by others, and a
+        // trash swapped for a link mid-delete must not send a recursive delete somewhere else.
+        await inDir(trashDir, null, async (t) => {
+          await fs.promises.rm(t.at(r.id), { recursive: true, force: true, maxRetries: 2 });
+          await fs.promises.unlink(t.at(`${r.id}.json`)).catch(() => {});
+        });
         run("DELETE FROM trash WHERE id = ?", r.id);
         publish("files.trash", { id: r.id, change: "deleted" });
         done++;
@@ -330,10 +357,11 @@ export async function reconcileTrash() {
     for (const n of names) {
       if (!n.endsWith(".json")) continue;
       const id = n.slice(0, -5);
-      if (known.has(id)) continue;
+      if (known.has(id) || !/^[A-Za-z0-9_-]{6,40}$/.test(id)) continue;
       try {
         const side = JSON.parse(await fs.promises.readFile(hostPath(path.posix.join(dir, n)), "utf8")) as Sidecar;
-        const tp = path.posix.join(dir, id, side.name);
+        // A sidecar can come from another machine (a drive plugged in here): its name must stay inside the item.
+        const tp = path.posix.join(dir, id, childName(String(side.name)));
         if (side.id !== id || !(await exists(tp))) continue;
         normalizeHostPath(side.originalPath);
         run(

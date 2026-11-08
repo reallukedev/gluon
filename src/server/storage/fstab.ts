@@ -238,25 +238,21 @@ export interface VerifyResult {
 }
 
 export async function verifyFstabFile(file: string): Promise<VerifyResult> {
-  let stdout = "";
-  let stderr = "";
-  let crashed = false;
-  let code: number | null = 0;
   try {
     const r = await host("findmnt", ["--verify", "--tab-file", file], { timeoutMs: 30_000 });
-    stdout = r.stdout;
-    stderr = r.stderr;
+    return parseVerify(r.stdout, r.stderr, 0);
   } catch (e) {
-    if (e instanceof CommandError) {
-      stdout = e.stdout;
-      stderr = e.stderr;
-      code = e.code;
-      if (code === null || code > 1) crashed = true;
-    } else throw e;
+    if (e instanceof CommandError) return parseVerify(e.stdout, e.stderr, e.code);
+    throw e;
   }
+}
+
+/** Read `findmnt --verify` output. Anything it didn't clearly check counts as a failed check, never a pass. */
+export function parseVerify(stdout: string, stderr: string, code: number | null): VerifyResult {
   const errors: VerifyResult["errors"] = [];
   const warnings: VerifyResult["warnings"] = [];
   let target = "";
+  let parseLines = 0;
   for (const line of `${stdout}\n${stderr}`.split("\n")) {
     if (!line.trim()) continue;
     const m = line.match(/^\s+\[([EW ])\]\s+(.*)$/);
@@ -265,9 +261,19 @@ export async function verifyFstabFile(file: string): Promise<VerifyResult> {
       else if (m[1] === "W") warnings.push({ target, message: m[2]! });
       continue;
     }
-    if (/^\S/.test(line) && !line.startsWith("findmnt:") && !/parse errors?,/.test(line)) target = line.trim();
+    if (/parse error at line/i.test(line)) {
+      parseLines++;
+      continue;
+    }
+    if (/^\S/.test(line) && !line.startsWith("findmnt:") && !/parse errors?,/.test(line) && !/^Success/.test(line)) target = line.trim();
   }
-  const parseErrors = (stderr.match(/parse error/g) ?? []).length;
+  // The summary ("1 parse error, 0 errors, 2 warnings") is the count; the per-line notes are the fallback.
+  const summary = `${stdout}\n${stderr}`.match(/(\d+) parse errors?,/);
+  const parseErrors = summary ? Number(summary[1]) : parseLines;
+  // Exit 1 means "found errors"; with none to show for it (an old findmnt without --verify, a
+  // missing file) nothing was really checked.
+  const unexplained = code !== 0 && !errors.length && !warnings.length && !parseErrors;
+  const crashed = code === null || code > 1 || unexplained;
   return { ok: !crashed && errors.length === 0 && parseErrors === 0, errors, warnings, parseErrors, crashed, output: `${stdout}${stderr}`.slice(0, 4000) };
 }
 

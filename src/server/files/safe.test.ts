@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "gluon-safe-"));
 vi.stubEnv("GLUON_HOST_ROOT", root);
 vi.stubEnv("GLUON_DATA", path.join(root, ".data"));
-const { Changed, inDir, mkdirs, openDir, openFileIn } = await import("./safe");
+const { Changed, inDir, lchownMany, mkdirs, openDir, openFileIn } = await import("./safe");
 const { settle } = await import("./extract");
 
 const host = (p: string) => path.join(root, p);
@@ -106,5 +106,32 @@ describe("settle (after extracting)", () => {
     fs.symlinkSync("/etc", host("share/.gluon-extract-2/etc"));
     const admin = { admin: true, roots: [{ id: "root", label: "Computer", path: "/", real: "/", access: "write" as const, missing: false }] };
     expect(await settle("/share/.gluon-extract-2", "", "/share/x", process.getuid?.() ?? 0, process.getgid?.() ?? 0, admin, ctx)).toBe(0);
+  });
+});
+
+describe("lchownMany", () => {
+  const uid = process.getuid?.() ?? 0;
+  const gid = process.getgid?.() ?? 0;
+  async function* items(paths: string[]) {
+    for (const p of paths) yield { path: p, uid, gid };
+  }
+
+  it("changes owners in place and never through a folder swapped for a link", async () => {
+    fs.mkdirSync(host("share/app/config"), { recursive: true });
+    fs.writeFileSync(host("share/app/config/a.yml"), "a");
+    fs.writeFileSync(host("share/app/b.txt"), "b");
+    // The app swaps a folder it owns for a link to /etc between listing and changing.
+    fs.renameSync(host("share/app/config"), host("share/app/config-old"));
+    fs.symlinkSync(host("etc"), host("share/app/config"));
+    const touched: string[] = [];
+    const spy = vi.spyOn(fs.promises, "lchown").mockImplementation(async (p) => void touched.push(String(p)));
+    try {
+      const r = await lchownMany(items(["/share/app/b.txt", "/share/app/config/shadow", "/share/app/../app/b.txt"]), () => {}, () => {});
+      expect(r).toEqual({ done: 3, failed: 1 });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(touched).toHaveLength(2);
+    expect(touched.every((p) => !p.includes("shadow"))).toBe(true);
   });
 });

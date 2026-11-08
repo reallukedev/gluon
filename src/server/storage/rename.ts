@@ -449,7 +449,11 @@ export async function planRename(input: RenameInput): Promise<RenameWork> {
       blockers,
     }),
   ).slice(0, 16);
-  return { plan, from, to, device: rec.vol.path, mountOptions: m.options.filter((o) => !/^(shared|master|propagate_from|unbindable)/.test(o)), apps, files, fstabChanges, fstabHasTarget };
+  return { plan, from, to, device: rec.vol.path, mountOptions: [
+      ...m.options.filter((o) => !/^(shared|master|propagate_from|unbindable)/.test(o)),
+      // FAT/exFAT/NTFS owners live in the mount options; without them the drive comes back owned by root.
+      ...m.superOptions.filter((o) => /^(uid|gid|umask|fmask|dmask)=/.test(o) && !m.options.includes(o)),
+    ], apps, files, fstabChanges, fstabHasTarget };
 }
 
 // ---------------------------------------------------------------- execute

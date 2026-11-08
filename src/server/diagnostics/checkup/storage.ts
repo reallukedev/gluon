@@ -132,7 +132,13 @@ export function smartOutcome(d: DiskView): Outcome {
   const notes = sm.notes.slice(0, 2).join(" ");
   if (sm.state === "failing") return fail(`The ${named(d)} is failing`, { detail: `${notes} Copy anything important off it and plan to replace it.`, evidence, findings, fix });
   if (sm.state === "warning") return warn(`The ${named(d)} is showing signs of wear`, { detail: `${notes} Make sure what's on it is backed up.`, evidence, findings, fix });
-  if (sm.state === "asleep") return ok(`The ${named(d)} is asleep; its last health reading was fine`, { evidence });
+  if (sm.state === "asleep") {
+    // Only vouch for the drive when Gluon actually saw it healthy before it went to sleep.
+    if (sm.lastState === "ok") return ok(`The ${named(d)} is asleep; its last health reading was fine`, { evidence });
+    if (sm.lastState === "failing") return fail(`The ${named(d)} is asleep; its last health reading said it's failing`, { detail: "Copy anything important off it and plan to replace it.", evidence, findings, fix });
+    if (sm.lastState === "warning") return warn(`The ${named(d)} is asleep; its last health reading showed signs of wear`, { detail: "Make sure what's on it is backed up.", evidence, findings, fix });
+    return skip(`The ${named(d)} is asleep and hasn't been read awake yet`, { detail: "Its health will show the next time it spins up.", evidence });
+  }
   if (sm.reallocatedRising) return warn(`The ${named(d)} is replacing bad sectors`, { detail: `${sm.reallocated} so far, and the number went up recently. That often comes before a failure.`, evidence, findings, fix });
   return ok(`The ${named(d)} reports good health`, { detail: (sm.reallocated ?? 0) > 0 ? `${sm.reallocated} replaced sector${sm.reallocated === 1 ? "" : "s"}, not rising.` : null, evidence });
 }

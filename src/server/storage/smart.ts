@@ -156,6 +156,12 @@ export function parseSmart(j: J, exit: number, media: DiskMedia, now = Date.now(
     return { summary: s, attributes, firmware: typeof j.firmware_version === "string" ? j.firmware_version : null };
   }
 
+  if (smartSupport.enabled === false) {
+    s.state = "unavailable";
+    s.message = "Health reporting is turned off on this drive, so its health is unknown.";
+    return { summary: s, attributes, firmware: typeof j.firmware_version === "string" ? j.firmware_version : null };
+  }
+
   s.readAt = now;
   s.known = j.in_smartctl_database === true || !!j.nvme_smart_health_information_log;
   const status = obj(j.smart_status);
@@ -260,11 +266,18 @@ export function parseSmart(j: J, exit: number, media: DiskMedia, now = Date.now(
     const warn: string[] = [];
     if (trustSectorCounts && (s.pending ?? 0) > 0) warn.push(`${s.pending} sector${s.pending === 1 ? " is" : "s are"} waiting to be remapped because ${s.pending === 1 ? "it" : "they"} couldn't be read.`);
     if (trustSectorCounts && (s.uncorrectable ?? 0) > 0) warn.push(`${s.uncorrectable} sector${s.uncorrectable === 1 ? "" : "s"} couldn't be read or fixed.`);
+    if (cw & 0x02) warn.push("It reports a temperature outside its safe range.");
+    if (cw & 0x10) warn.push("Its backup power for unsaved data has failed, so a power cut could lose recent writes.");
     if ((s.nvme?.mediaErrors ?? 0) > 0) warn.push(`${s.nvme!.mediaErrors} unrecoverable read/write errors have happened.`);
     if (s.wearPercent !== null && s.wearPercent >= 90) warn.push(`It has used ${Math.round(s.wearPercent)}% of its rated write endurance.`);
     for (const a of failedPast) warn.push(`${a.name.replace(/_/g, " ")} dropped below the safe limit at some point in the past.`);
     s.state = warn.length ? "warning" : "ok";
     s.notes.push(...warn);
+    // No overall verdict from the drive (SMART command failed, odd bridge): nothing found isn't "healthy".
+    if (s.state === "ok" && s.passed === null) {
+      s.state = "unknown";
+      s.message = "The drive didn't report an overall health result, so Gluon can't say it's healthy.";
+    }
     if ((s.reallocated ?? 0) > 0) s.notes.push(`${s.reallocated} bad sector${s.reallocated === 1 ? " has" : "s have"} been replaced with spares.`);
   }
   if (exit & 64) s.notes.push("The drive has logged errors in the past.");
@@ -374,7 +387,8 @@ export function refreshSmart(targets: SmartTarget[]): Promise<void> {
       }
       if (entry.summary.state === "asleep" && prev) {
         // Keep the last real values; just say it's asleep now.
-        const kept: SmartSummary = { ...prev.summary, state: "asleep", checkedAt: now, message: entry.summary.message };
+        const lastState = prev.summary.state === "asleep" ? (prev.summary.lastState ?? null) : prev.summary.state;
+        const kept: SmartSummary = { ...prev.summary, state: "asleep", lastState, checkedAt: now, message: entry.summary.message };
         state.byId.set(t.id, { summary: kept, attributes: prev.attributes, firmware: prev.firmware });
         continue;
       }

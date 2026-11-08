@@ -199,6 +199,16 @@ async function runSetup(job: Job, w: SetupWork, user: User, where: Where) {
       await host("partprobe", ["--", disk.path], { timeoutMs: 30_000 }).catch(() => undefined);
       await host("udevadm", ["settle", "--timeout=30"], { timeoutMs: 40_000 }).catch(() => undefined);
       await waitFor(part);
+      // If the kernel couldn't re-read the table (something still had the disk open), the old
+      // partition is still there under the same name, and formatting it would put the filesystem
+      // where the new table doesn't expect it. The new single partition fills the disk.
+      const { stdout } = await host("lsblk", ["-b", "-n", "-d", "-o", "SIZE", "--", part], { timeoutMs: 20_000 }).catch((e) => {
+        throw cmdErr(e, "Couldn't check the new partition");
+      });
+      const size = Number(stdout.trim());
+      if (!Number.isFinite(size) || size < disk.size - 64 * 1024 ** 2) {
+        throw new AppError("setup_failed", `The system is still using ${disk.name}'s old partitions, so it wasn't formatted. Restart the server and run the setup again.`, 500);
+      }
     });
 
     failedAt = `Format it as ext4 with the name ${plan.label}`;

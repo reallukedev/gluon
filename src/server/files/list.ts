@@ -11,6 +11,7 @@ import { authorize, canSee, isTrashDirName, protectionReason, resolveHost, type 
 import { groupName, modeString, userName } from "./ids";
 import { kindOf, mimeOf, previewOf } from "./kinds";
 import { fsInfo, hostMounts, isVirtualFs } from "./mounts";
+import { openDir, type Dir } from "./safe";
 
 const MAX_ENTRIES = 250_000;
 /** Above this many entries, size/date sorting (which needs a stat per entry) falls back to name. */
@@ -84,19 +85,24 @@ export async function toEntry(ctx: EntryContext, logical: string, real: string, 
     }
     let resolved: string | null = null;
     let ltype: "file" | "dir" | "other" | null = null;
+    let outside = false;
     try {
       const r = await resolveHost(real);
       if (r.exists && r.stat) {
         resolved = r.real;
-        ltype = r.stat.isDirectory() ? "dir" : r.stat.isFile() ? "file" : "other";
-        if (r.stat.isFile()) size = r.stat.size;
-        targetIsDir = r.stat.isDirectory();
-        targetReal = r.real;
+        outside = !canSee(ctx.scope, r.real);
+        // A link out of a member's folders shows where it points, but nothing about what's there.
+        if (!outside) {
+          ltype = r.stat.isDirectory() ? "dir" : r.stat.isFile() ? "file" : "other";
+          if (r.stat.isFile()) size = r.stat.size;
+          targetIsDir = r.stat.isDirectory();
+          targetReal = r.real;
+        }
       }
     } catch {
       /* loop or permission: broken */
     }
-    link = { target, resolved, type: ltype, broken: !resolved, outside: resolved ? !canSee(ctx.scope, resolved) : false };
+    link = { target, resolved, type: ltype, broken: !resolved, outside };
     type = "symlink";
   }
   const isDir = st.isDirectory() || targetIsDir;
@@ -140,13 +146,13 @@ interface StatLite {
 
 const statCache = new Map<string, { at: number; stats: Map<string, StatLite> }>();
 
-async function statAll(dirReal: string, key: string, names: string[]): Promise<Map<string, StatLite>> {
+async function statAll(held: Dir, key: string, names: string[]): Promise<Map<string, StatLite>> {
   const hit = statCache.get(key);
   if (hit && Date.now() - hit.at < 60_000) return hit.stats;
   const stats = new Map<string, StatLite>();
   await pool(names, STAT_CONCURRENCY, async (n) => {
     try {
-      const s = await fs.promises.lstat(hostPath(path.posix.join(dirReal, n)));
+      const s = await fs.promises.lstat(held.at(n));
       stats.set(n, { size: s.isFile() ? s.size : -1, mtime: s.mtimeMs });
     } catch {
       stats.set(n, { size: -1, mtime: 0 });
@@ -211,6 +217,25 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
   if (!t.stat?.isDirectory()) {
     throw new AppError("not_a_folder", `${path.posix.basename(t.path)} is a file, not a folder.`, 400, { type: "file" });
   }
+  // Listed through the folder that was checked, opened without following links: a folder on the
+  // way swapped for a link would otherwise show what's in /etc to someone it isn't shared with.
+  let held: Dir;
+  try {
+    held = await openDir(t.real, t.stat);
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === "EACCES" || code === "EPERM") throw new AppError("forbidden", "The server isn't allowed to open this folder.", 403);
+    throw e;
+  }
+  try {
+    return await listHeld(user, o, t, held);
+  } finally {
+    await held.close();
+  }
+}
+
+async function listHeld(user: User, o: ListOptions, t: Target, held: Dir): Promise<Listing> {
+  if (!t.stat) throw new AppError("not_a_folder", "That isn't a folder.", 400);
   const shown = displayPath(t);
   const sort = o.sort ?? "name";
   const order = o.order ?? "asc";
@@ -223,7 +248,7 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
   // Read names only (cheap even for 100k entries); stat just the page.
   let dir: fs.Dir;
   try {
-    dir = await fs.promises.opendir(t.fsPath, { bufferSize: 512 });
+    dir = await fs.promises.opendir(held.here, { bufferSize: 512 });
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     if (code === "EACCES" || code === "EPERM") throw new AppError("forbidden", "The server isn't allowed to open this folder.", 403);
@@ -267,7 +292,7 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
   let dirBytes: Map<string, { bytes: number }> | null = null;
   if ((sort === "size" || sort === "mtime") && raws.length > 0) {
     if (raws.length <= STAT_ALL_LIMIT) {
-      stats = await statAll(t.real, `${t.real}:${t.stat.mtimeMs}:${t.stat.ino}:${showHidden}`, raws.map((r) => r.name));
+      stats = await statAll(held, `${t.real}:${t.stat.mtimeMs}:${t.stat.ino}:${showHidden}`, raws.map((r) => r.name));
       if (sort === "size") dirBytes = cachedSizes(raws.filter((r) => r.dir).map((r) => path.posix.join(t.real, r.name)));
     } else {
       sortLimited = true;
@@ -335,7 +360,7 @@ export async function listDir(user: User, o: ListOptions): Promise<Listing> {
     await pool(page, 32, async (r) => {
       const real = path.posix.join(t.real, r.name);
       try {
-        const st = await fs.promises.lstat(hostPath(real));
+        const st = await fs.promises.lstat(held.at(r.name));
         return await toEntry(ctx, shown === "/" ? `/${r.name}` : `${shown}/${r.name}`, real, st);
       } catch {
         return null; // vanished between readdir and stat

@@ -39,7 +39,9 @@ export function parseMountinfo(text: string): MountEntry[] {
       dev: a[2]!,
       root: unescapeMount(a[3]!),
       mount: unescapeMount(a[4]!),
-      readOnly: a[5]!.split(",").includes("ro"),
+      // Per-mount "rw" stays when the kernel turns the filesystem itself read-only after errors
+      // (errors=remount-ro); that shows only in the super options.
+      readOnly: a[5]!.split(",").includes("ro") || (b[2] ?? "").split(",").includes("ro"),
       fstype: b[0]!,
       source: unescapeMount(b[1]!),
     });
@@ -140,40 +142,76 @@ export function containerToHost(p: string, near?: string): string | null {
   return fallback;
 }
 
-export function fsInfo(p: string): FilesystemInfo | null {
+/**
+ * statfs on a hard-mounted share whose server is gone blocks forever (and with it the whole
+ * process), so network and FUSE filesystems are only read in the background: a recent answer is
+ * used, a stuck or old one reads as unknown.
+ */
+const REMOTE = /^(nfs4?|cifs|smb3|smbfs|9p|ceph|glusterfs|davfs|fuse(\..+)?)$/;
+const REMOTE_STALE_MS = 5 * 60_000;
+export const isRemoteFs = (t: string) => REMOTE.test(t);
+interface Space {
+  blocks: number;
+  bfree: number;
+  bavail: number;
+  bsize: number;
+}
+const remote = new Map<string, { at: number; s: Space | null; pending: boolean }>();
+
+function remoteStatfs(fsPath: string, key: string): Space | null {
+  const r = remote.get(key) ?? { at: 0, s: null, pending: false };
+  remote.set(key, r);
+  if (!r.pending) {
+    r.pending = true;
+    fs.statfs(fsPath, (err, s) => {
+      r.pending = false;
+      if (err) return void (r.at = 0);
+      r.s = { blocks: s.blocks, bfree: s.bfree, bavail: s.bavail, bsize: s.bsize };
+      r.at = Date.now();
+    });
+  }
+  return r.at && Date.now() - r.at < REMOTE_STALE_MS ? r.s : null;
+}
+
+/** statfs of the filesystem holding host path `p`, or null when it can't be read (or not without risk of hanging). */
+export function hostStatfs(p: string): Space | null {
   const m = mountOf(p);
-  if (!m) return null;
   try {
-    const s = fs.statfsSync(hostPath(m.mount));
-    return {
-      mount: m.mount,
-      device: m.source,
-      fstype: m.fstype,
-      size: s.blocks * s.bsize,
-      used: (s.blocks - s.bfree) * s.bsize,
-      avail: s.bavail * s.bsize,
-      readOnly: m.readOnly,
-    };
+    if (m && isRemoteFs(m.fstype)) return remoteStatfs(hostPath(m.mount), `host:${m.mount}`);
+    return fs.statfsSync(hostPath(p));
   } catch {
     return null;
   }
+}
+
+export function fsInfo(p: string): FilesystemInfo | null {
+  const m = mountOf(p);
+  if (!m) return null;
+  const s = hostStatfs(m.mount);
+  if (!s) return null;
+  return {
+    mount: m.mount,
+    device: m.source,
+    fstype: m.fstype,
+    size: s.blocks * s.bsize,
+    used: (s.blocks - s.bfree) * s.bsize,
+    avail: s.bavail * s.bsize,
+    readOnly: m.readOnly,
+  };
 }
 
 /** Free bytes available to unprivileged users on the filesystem holding `p` (a host path). */
 export function freeBytes(p: string): number | null {
-  try {
-    const s = fs.statfsSync(hostPath(p));
-    return s.bavail * s.bsize;
-  } catch {
-    return null;
-  }
+  const s = hostStatfs(p);
+  return s ? s.bavail * s.bsize : null;
 }
 
 /** Free bytes on a container-local path (e.g. /data). */
 export function localFreeBytes(p: string): number | null {
+  const m = containing(selfMounts(), p);
   try {
-    const s = fs.statfsSync(p);
-    return s.bavail * s.bsize;
+    const s = m && isRemoteFs(m.fstype) ? remoteStatfs(m.mount, `local:${m.mount}`) : fs.statfsSync(p);
+    return s ? s.bavail * s.bsize : null;
   } catch {
     return null;
   }
