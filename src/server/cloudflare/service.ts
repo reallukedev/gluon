@@ -4,7 +4,7 @@ import { audit } from "../audit";
 import { AppError } from "../errors";
 import { publish } from "../events";
 import { getSetting, setSetting, type SettingValue } from "../settings";
-import { ddnsStatus } from "../network/ddns";
+import { ddnsStatus, dockerUp } from "../network/ddns";
 import { gameAddresses } from "../games/service";
 import { tryReadConfig, type RoutesConfig } from "../caddy/routes";
 import { lookupPublicIpv4 } from "../network/probes";
@@ -48,6 +48,10 @@ type G = typeof globalThis & {
     running: boolean;
     last: CloudflareStatus["sync"] | null;
     timer: ReturnType<typeof setTimeout> | null;
+    /** The names last deferred to cloudflare-ddns, kept while Docker doesn't answer. */
+    defer?: string[];
+    /** Whether the token can change each domain's DNS, checked now and then (zone id → when, answer). */
+    edit?: Map<string, { at: number; ok: boolean }>;
   };
 };
 const g = globalThis as G;
@@ -228,15 +232,34 @@ export async function takeover(user: User, where: Where): Promise<CloudflareStat
     const keeps = new Set([...last.names.filter((n) => n.want.length && !n.kept).map((n) => n.name), ...last.covered]);
     const names = ddnsNamesOf(d).filter((n) => DNS_NAME.test(n) && !!zoneFor(zonesOf(c), n.replace(/^\*\./, "")));
     if (!names.length) return;
-    const proxied = new Set(d.config.proxiedDomains);
-    const add = names.filter((n) => !keeps.has(n) && !c.kept.some((k) => k.name === n)).map((n) => ({ name: n, proxied: proxied.has(n) }));
+    // cloudflare-ddns keeps whatever proxy setting a record already has, so that's what to keep.
+    const proxiedNow = (n: string) => {
+      const have = last.names.find((x) => x.name === n)?.have ?? [];
+      return have.length ? have.some((r) => r.proxied) : d.config.proxiedDomains.includes(n);
+    };
+    const add = names.filter((n) => !keeps.has(n) && !c.kept.some((k) => k.name === n)).map((n) => ({ name: n, proxied: proxiedNow(n) }));
     setSetting("cloudflare", { ...c, kept: [...c.kept, ...add].slice(0, 200), adopted: [...new Set([...c.adopted, ...names])].slice(-500) });
     audit(
       user,
       { action: "cloudflare.takeover", summary: `Gluon took over ${names.length === 1 ? names[0] : `${names.length} names`} from ${d.container.name}`, target: c.zone.name, detail: { names, added: add.map((a) => a.name) } },
       where,
     );
-    await syncNow();
+    const next = await syncNow();
+    // Names Gluon didn't keep before had no records in its last look; now they do, so match them.
+    const cur = connection();
+    if (!cur) return;
+    let fixed = false;
+    const kept = cur.kept.map((k) => {
+      const have = add.some((a) => a.name === k.name) ? (next.names.find((n) => n.name === k.name)?.have ?? []) : [];
+      const p = have.some((r) => r.proxied);
+      if (!have.length || p === k.proxied) return k;
+      fixed = true;
+      return { ...k, proxied: p };
+    });
+    if (fixed) {
+      setSetting("cloudflare", { ...cur, kept });
+      await syncNow();
+    }
   });
   return status();
 }
@@ -262,7 +285,7 @@ async function syncNow(): Promise<CloudflareStatus["sync"]> {
   const s = st();
   const c = connection();
   const cfg = tryReadConfig();
-  const empty = { at: Date.now(), running: false, ipv4: null, ipv6: null, names: [] as ManagedName[], covered: [] as string[] };
+  const empty = { at: Date.now(), running: false, ipv4: null, ipv6: null, names: [] as ManagedName[], covered: [] as string[], readOnly: [] as string[] };
   if (!c) return (s.last = { ...empty, ok: null, problems: [] });
   if (!cfg) return (s.last = { ...empty, ok: false, problems: ["Set up public addresses on the Network page first. DNS follows them."] });
   s.running = true;
@@ -280,8 +303,13 @@ async function syncNow(): Promise<CloudflareStatus["sync"]> {
     const [ipv4, games, ddns] = await Promise.all([lookupPublicIpv4(4 * 60_000), gameAddresses(), ddnsStatus(true).catch(() => null)]);
     const ipv6 = c.ipv6 ? (hostGlobalIpv6()[0] ?? null) : null;
     const routes = routesFor(cfg);
-    // Names a running cloudflare-ddns still writes. Docker unreadable: no updater to defer to.
-    const defer = ddns?.container.running ? ddnsNamesOf(ddns) : [];
+    // Names a running cloudflare-ddns still writes. If Docker doesn't answer, it may well still be
+    // running, so Gluon keeps holding off on the names it last deferred.
+    let defer: string[];
+    if (ddns?.container.exists) defer = ddns.container.running ? ddnsNamesOf(ddns) : [];
+    else defer = (await dockerUp()) ? [] : (s.defer ?? []);
+    s.defer = defer;
+    const readOnly: string[] = [];
     const keptSet = new Set(c.kept.map((k) => k.name));
     const problems: string[] = [];
     const names: ManagedName[] = [];
@@ -311,6 +339,17 @@ async function syncNow(): Promise<CloudflareStatus["sync"]> {
       }
       const p = plan(input, existing, c.adopted);
       for (const pr of p.problems) if (!problems.includes(pr)) problems.push(pr);
+      // Names Gluon only waits on here are never written, so a token that can't edit this domain
+      // would go unnoticed until the old updater is gone. Ask now and then (a test record).
+      if (p.names.some((n) => n.state === "deferred")) {
+        const edit = (s.edit ??= new Map());
+        let known = edit.get(z.id);
+        if (!known || Date.now() - known.at > 6 * 3600_000) {
+          known = { at: Date.now(), ok: await cf.canEditDns(z.id, z.name).catch(() => known?.ok ?? true) };
+          edit.set(z.id, known);
+        }
+        if (!known.ok) readOnly.push(z.name);
+      }
       if (c.proxied && p.names.some((n) => n.want.some((w) => w.proxied))) {
         const ssl = await cf.sslMode(z.id);
         // Flexible means Cloudflare talks plain HTTP to Caddy, which answers with a redirect to HTTPS, forever.
@@ -359,13 +398,14 @@ async function syncNow(): Promise<CloudflareStatus["sync"]> {
         adopted: adoptedNow.size ? [...new Set([...now.adopted, ...adoptedNow])].slice(-500) : now.adopted,
       });
     }
+    if (games === null) problems.push("Couldn't read mc-router's Minecraft addresses, so no records were removed this time.");
     const ok = !failed.size && !problems.length && !names.some((n) => n.state === "conflict");
     if (changed) invalidateStatus();
-    s.last = { at: Date.now(), running: false, ok, ipv4, ipv6, names, covered, problems };
+    s.last = { at: Date.now(), running: false, ok, ipv4, ipv6, names, covered, readOnly, problems };
     if (changed || failed.size) publish("cloudflare.sync", { ok });
     return s.last;
   } catch (e) {
-    s.last = { ...empty, ipv4: s.last?.ipv4 ?? null, ipv6: s.last?.ipv6 ?? null, names: s.last?.names ?? [], covered: s.last?.covered ?? [], ok: false, problems: [e instanceof AppError ? e.message : "Couldn't reach Cloudflare."] };
+    s.last = { ...empty, ipv4: s.last?.ipv4 ?? null, ipv6: s.last?.ipv6 ?? null, names: s.last?.names ?? [], covered: s.last?.covered ?? [], readOnly: s.last?.readOnly ?? [], ok: false, problems: [e instanceof AppError ? e.message : "Couldn't reach Cloudflare."] };
     return s.last;
   } finally {
     s.running = false;
@@ -379,7 +419,7 @@ export async function status(): Promise<CloudflareStatus> {
   const cfg = tryReadConfig();
   const s = st();
   const ddns = c ? await ddnsStatus().catch(() => null) : null;
-  const sync: CloudflareStatus["sync"] = s.last ? { ...s.last, running: s.running } : { at: null, running: s.running, ok: null, ipv4: null, ipv6: null, names: [], covered: [], problems: [] };
+  const sync: CloudflareStatus["sync"] = s.last ? { ...s.last, running: s.running } : { at: null, running: s.running, ok: null, ipv4: null, ipv6: null, names: [], covered: [], readOnly: [], problems: [] };
   return {
     connected: !!c,
     network: !!cfg,
@@ -392,7 +432,7 @@ export async function status(): Promise<CloudflareStatus> {
     proxied: c?.proxied ?? true,
     sync,
     kept: c?.kept ?? [],
-    handoff: c && ddns?.container.exists ? handoff(ddns, zonesOf(c), sync, c.ipv6) : null,
+    handoff: c && ddns?.container.exists ? handoff(ddns, zonesOf(c), sync) : null,
   };
 }
 

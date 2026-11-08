@@ -23,6 +23,8 @@
 .handoff { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
 .handoff li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
 .handoff .mono { overflow-wrap: anywhere; }
+.reason { min-width: 0; font-size: var(--text-xs); color: var(--muted); }
+.after { margin: 8px 0 0; }
 
 .block { padding: 12px 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 /* The names Gluon keeps in the zone */

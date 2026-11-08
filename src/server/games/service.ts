@@ -171,6 +171,14 @@ export async function gameAddresses(): Promise<{ host: string; why: string }[] |
   try {
     const { router, doc, mappings } = await readRouter(await listContainers());
     if (router?.settings.routesConfig && !doc) return null;
+    // mc-router missing, or its routes file gone, is usually a container being recreated or a
+    // volume not mounted yet. Only after half an hour of that do its addresses count as gone.
+    const fileGone = !!router?.file && !fs.existsSync(hostPath(router.file));
+    const st = (g.__gluonGameDns ??= { had: false, missingSince: null });
+    if (!router || fileGone) {
+      st.missingSince ??= Date.now();
+      if (st.had && Date.now() - st.missingSince < 30 * 60_000) return null;
+    } else st.missingSince = null;
     const out = new Map<string, string>();
     for (const [h] of mappings) {
       const host = h.trim().toLowerCase().replace(/\.$/, "");
@@ -180,6 +188,7 @@ export async function gameAddresses(): Promise<{ host: string; why: string }[] |
       const host = p.address?.trim().toLowerCase().replace(/\.$/, "");
       if (host && HOSTNAME.test(host) && !out.has(host)) out.set(host, p.name);
     }
+    st.had = mappings.length > 0 && !fileGone;
     return [...out].map(([host, why]) => ({ host, why }));
   } catch {
     return null;
@@ -209,7 +218,7 @@ interface Checks {
   publicIp: { v4: string | null; v6: string[] };
 }
 
-type G = typeof globalThis & { __gluonGameChecks?: Checks; __gluonGameChecking?: Promise<Checks> | null; __gluonGameLock?: Promise<unknown>; __gluonJavaNeed?: { at: number; v: Promise<{ hostPort: number; addresses: number } | null> } };
+type G = typeof globalThis & { __gluonGameChecks?: Checks; __gluonGameChecking?: Promise<Checks> | null; __gluonGameLock?: Promise<unknown>; __gluonJavaNeed?: { at: number; v: Promise<{ hostPort: number; addresses: number } | null> }; __gluonGameDns?: { had: boolean; missingSince: number | null } };
 const g = globalThis as G;
 const CHECK_TTL = 90_000;
 /** What a player gets when they type an address mc-router doesn't know. */

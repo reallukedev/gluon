@@ -337,6 +337,10 @@ export function gluonUpdater(cf: CloudflareStatus | undefined): { state: LineSta
   if (s.problems.length) return { state: "attention", label: "Address updates failing", sentence: s.problems[0]! };
   const refused = s.names.filter((n) => n.state === "error");
   if (refused.length) return { state: "attention", label: "Address updates failing", sentence: refused[0]!.message ?? `Cloudflare refused the change to ${refused[0]!.name}.` };
+  const h = cf.handoff;
+  if (h && !h.running && !h.safe) return { state: "attention", label: "Names left behind", sentence: `${h.container} is stopped, and Gluon doesn't keep all of its names yet.` };
+  const blocked = s.names.filter((n) => n.state === "conflict");
+  if (blocked.length) return { state: "attention", label: "Some names blocked", sentence: `${blocked.length === 1 ? `${blocked[0]!.name} has records` : `${blocked.length} names have records`} Gluon didn't make, so it leaves them as they are.` };
   return { state: "running", label: "Address kept up to date", sentence: `Gluon keeps DNS pointed at ${s.ipv4 ?? "this network"}, checked every 5 minutes.` };
 }
 

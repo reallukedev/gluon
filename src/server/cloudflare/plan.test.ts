@@ -163,3 +163,26 @@ describe("game addresses and other names", () => {
     expect(plan(input(), [...base, mine]).actions).toHaveLength(1);
   });
 });
+
+describe("wildcards and the names beneath them", () => {
+  it("gives a name its own record when something sits beneath it, since the wildcard no longer answers", () => {
+    const off = input({ proxy: false, games: [{ host: "mc.example.com", why: "Minecraft" }], kept: [{ name: "*.mc.example.com", proxied: false }] });
+    expect(wanted(off).wants.map((w) => w.name)).toContain("mc.example.com");
+    // A record beneath it that Gluon doesn't keep counts too.
+    const p = plan(input({ proxy: false, games: [{ host: "mc.example.com", why: "Minecraft" }] }), [rec("example.com", "A", "203.0.113.7", true), rec("*.example.com", "A", "203.0.113.7", false), rec("_srv.mc.example.com", "TXT", "x", false, null)]);
+    expect(p.actions.map((a) => `${a.op} ${a.name}`)).toEqual(["create mc.example.com"]);
+  });
+
+  it("lets a web address keep its proxy when the same name is also kept by hand", () => {
+    const { wants, covered } = wanted(input({ routes: [route("shop.example.com")], kept: [{ name: "shop.example.com", proxied: false }] }));
+    expect(wants.some((w) => w.name === "shop.example.com")).toBe(false);
+    expect(covered.map((c) => c.name)).toEqual(["shop.example.com"]);
+  });
+
+  it("still plans a deferred name the wildcard covers, so its records count in the handoff", () => {
+    const theirs = rec("photos.example.com", "A", "198.51.100.1", true, null);
+    const p = plan(input({ routes: [route("photos.example.com")], defer: ["photos.example.com"] }), [rec("example.com", "A", "203.0.113.7", true), rec("*.example.com", "A", "203.0.113.7", true), theirs]);
+    expect(p.names.find((n) => n.name === "photos.example.com")).toMatchObject({ state: "deferred", foreign: true });
+    expect(p.actions).toEqual([]);
+  });
+});
