@@ -62,6 +62,7 @@ export function SettingsFrame({ sections, children }: { sections: SettingsSectio
                     <Link
                       key={x.id}
                       href={`/settings/${x.id}`}
+                      unstable_dynamicOnHover
                       className={s.navItem}
                       aria-current={x.id === active && section ? "page" : undefined}
                       data-active={x.id === active ? "" : undefined}

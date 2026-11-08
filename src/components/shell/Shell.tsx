@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Drawer } from "@base-ui/react/drawer";
@@ -94,7 +94,7 @@ function navWindow(mode: "enter" | "still", hold: number) {
 
 /**
  * The navigation window (globals.css holds arrival fades back while it's open): "enter" settles a clicked
- * page in over 200ms, "still" keeps a keyboard jump still. It sits before the page in the tree so its layout
+ * page in over 150ms, "still" keeps a keyboard jump still. It sits before the page in the tree so its layout
  * effect runs before the page's own: a page that measures itself on mount would otherwise style its
  * arrivals (and start their fades) before the window is open.
  */
@@ -109,8 +109,8 @@ function NavWindow({ pathname, input }: { pathname: string; input: React.RefObje
     if (lastPath.current === pathname) return;
     lastPath.current = pathname;
     if (input.current === "in-page") return;
-    // Outlasts the 200ms settle, or a skeleton's 120ms wait.
-    return input.current === "pointer" ? navWindow("enter", 260) : navWindow("still", 120);
+    // Outlasts the 150ms settle, or a skeleton's 120ms wait.
+    return input.current === "pointer" ? navWindow("enter", 200) : navWindow("still", 120);
   }, [pathname, input]);
   return null;
 }
@@ -436,6 +436,12 @@ export function Shell({ children, memberFiles, initial }: ShellProps) {
   );
 }
 
+/** Marks the link while its page is on the way, so a click answers at once even when the server is slow. */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return <span className={s.linkPending} data-on={pending ? "" : undefined} aria-hidden />;
+}
+
 function NavLink({
   href,
   label,
@@ -473,6 +479,7 @@ function NavLink({
       {id === "pin" ? <Pin /> : <NavIcon id={id} />}
       <span className={s.linkLabel}>{label}</span>
       {badge}
+      {!external && <NavPending />}
     </Link>
   );
   return collapsed ? (

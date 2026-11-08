@@ -2,8 +2,8 @@
 .frame { padding: 28px var(--gutter) 64px; max-width: 1480px; margin: 0 auto; width: 100%; }
 @media (max-width: 720px) { .frame { padding-top: 18px; } }
 :global(:root[data-nav="enter"]) .content,
-.content[data-settle] { animation: sectionIn var(--dur-base) var(--ease-out); }
-@keyframes sectionIn { from { opacity: 0; transform: translateY(calc(6px * var(--motion))); } }
+.content[data-settle] { animation: sectionIn var(--dur-fast) var(--ease-out); }
+@keyframes sectionIn { from { opacity: 0.5; transform: translateY(calc(4px * var(--motion))); } }
 .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; align-items: start; }
 .nav { position: sticky; top: 24px; display: grid; gap: 22px; }
 .navTitle { font-size: var(--text-3xl); font-weight: 540; font-family: var(--font-display); font-stretch: 80%; line-height: 1; letter-spacing: -0.012em; margin-bottom: 4px; }
@@ -43,7 +43,7 @@
   /* List-first on phones: /settings shows the list, /settings/<x> shows the section. */
   .layout:not([data-section]) .content { display: none; }
   .layout[data-section] .nav { display: none; }
-  :global(:root[data-nav="enter"]) .layout:not([data-section]) .nav { animation: sectionIn var(--dur-base) var(--ease-out); }
+  :global(:root[data-nav="enter"]) .layout:not([data-section]) .nav { animation: sectionIn var(--dur-fast) var(--ease-out); }
   .content > header a:first-child { display: inline-flex; }
 }
 

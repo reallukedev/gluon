@@ -67,7 +67,7 @@ export function Tabs<T extends string>({ value, onChange, items, hrefFor, childr
             key={it.value}
             value={it.value}
             className={s.tab}
-            render={hrefFor ? <Link href={hrefFor(it.value)} scroll={false} /> : undefined}
+            render={hrefFor ? <Link href={hrefFor(it.value)} scroll={false} unstable_dynamicOnHover /> : undefined}
             nativeButton={!hrefFor}
           >
             {it.label}

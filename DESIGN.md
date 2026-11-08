@@ -450,7 +450,7 @@ Time charts draw a 1.5px ink line with a 7% area, dashed hairline grid, tabular 
 
 **The Damped Settle Rule.** State transitions use `--ease-out` (cubic-bezier(0.23, 1, 0.32, 1)) at 150–250 ms. Sheets and drawers use `--ease-drawer` at 400ms. The command palette does not animate. Reduced motion, from the system or the person's own setting, collapses all of it.
 
-**The Pointer Settles, the Keyboard Jumps Rule.** A page reached by a click settles in (200ms fade and a 6px rise); one reached by a keyboard chord, the palette or a first load appears at once. The shell sets `data-nav="enter"` on the root for 260ms after a clicked path change, so query-only changes (a folder in Files) stay still. Skeletons wait 120ms before fading in so a fast load never flashes grey.
+**The Pointer Settles, the Keyboard Jumps Rule.** A page reached by a click settles in (a 150ms rise of 4px from half opacity, so its content reads from the first frame); one reached by a keyboard chord, the palette or a first load appears at once. The shell sets `data-nav="enter"` on the root for 200ms after a clicked path change, so query-only changes (a folder in Files) stay still. Skeletons wait 120ms before fading in so a fast load never flashes grey.
 
 Copy follows `docs/COPY.md`: one sentence of state, each fact once per screen, verb-first buttons, no em dashes.
 
