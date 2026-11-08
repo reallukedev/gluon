@@ -312,21 +312,35 @@ async function guessIcon(projectOrName: string, image: string): Promise<string |
   return null;
 }
 
-let lanHostCache: { at: number; value: string } | null = null;
+let lanHostCache: { at: number; value: string; ttl: number } | null = null;
+let lanHostLooking: Promise<string> | null = null;
 
 /** The server's LAN address for "at home" links (e.g. 192.168.1.10). */
 export async function lanHost(): Promise<string> {
   const override = (process.env.GLUON_LAN_HOST ?? process.env.TEND_LAN_HOST);
   if (override) return override;
-  if (lanHostCache && Date.now() - lanHostCache.at < 10 * 60_000) return lanHostCache.value;
+  if (lanHostCache && Date.now() - lanHostCache.at < lanHostCache.ttl) return lanHostCache.value;
+  lanHostLooking ??= lookUpLanHost().finally(() => {
+    lanHostLooking = null;
+  });
+  return lanHostLooking;
+}
+
+async function lookUpLanHost(): Promise<string> {
   try {
     const { stdout } = await host("ip", ["-4", "route", "get", "1.1.1.1"], { timeoutMs: 3000 });
     const ip = stdout.match(/\bsrc (\d+\.\d+\.\d+\.\d+)/)?.[1];
-    if (ip) lanHostCache = { at: Date.now(), value: ip };
+    if (ip) {
+      lanHostCache = { at: Date.now(), value: ip, ttl: 10 * 60_000 };
+      return ip;
+    }
   } catch {
     /* fall through */
   }
-  return lanHostCache?.value ?? "localhost";
+  // Every app list waits on this, so a lookup that found nothing isn't repeated for a minute.
+  const value = lanHostCache?.value ?? "localhost";
+  lanHostCache = { at: Date.now(), value, ttl: 60_000 };
+  return value;
 }
 
 // ---------------------------------------------------------------- listing
