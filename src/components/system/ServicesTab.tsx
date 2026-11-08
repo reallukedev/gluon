@@ -207,7 +207,7 @@ export function ServicesTab({ list, initialUnit }: { list: SWRResponse<{ service
 export function ServicesSkeleton() {
   return (
     <div className={s.stack} aria-busy>
-      <Skeleton height={34} width={380} radius={7} />
+      <Skeleton height={34} width="min(380px, 100%)" radius={7} />
       <div className={s.table}>
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className={s.svcRow} style={{ cursor: "default" }}>
