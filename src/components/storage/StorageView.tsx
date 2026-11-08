@@ -5,7 +5,7 @@ import { Refresh } from "iconoir-react";
 import type { Finding } from "@/server/findings";
 import { api, useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader, Panel, Notice, Empty } from "@/components/ui/Surface";
+import { Page, PageHeader, Panel, Notice, Empty, Skeleton } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { toast } from "@/components/ui/Toast";
@@ -67,7 +67,83 @@ export function mountChoices(disks: DiskView[]): MountChoice[] {
   });
 }
 
-export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: StorageTab; usage: string | null }) {
+function StorageTabs({ tab }: { tab: StorageTab }) {
+  return (
+    <Tabs
+      value={tab}
+      hrefFor={(v) => (v === "disks" ? "/storage" : `/storage?tab=${v}`)}
+      items={[
+        { value: "disks", label: "Disks" },
+        { value: "space", label: "Space" },
+        { value: "fstab", label: "At startup" },
+        { value: "changes", label: "History" },
+      ]}
+      aria-label="Storage sections"
+    />
+  );
+}
+
+/** While the server reads the drives: the title and tabs as they will be, the rest in its places. */
+function StorageSkeleton({ tab }: { tab: StorageTab }) {
+  return (
+    <>
+      <PageHeader title="Storage" summary={<Skeleton width="min(340px, 80%)" height={12} />} />
+      <StorageTabs tab={tab} />
+      <div className={s.tabBody} aria-busy>
+        {tab === "disks" ? (
+          <div className={s.stack}>
+            <Panel title="Disks" flush>
+              <ul className={s.disks} role="list">
+                {[0, 1].map((i) => (
+                  <li key={i} className={s.disk} style={{ display: "grid", gap: 12, padding: "18px 18px 16px" }}>
+                    <div className={s.diskHead}>
+                      <Skeleton width={40} height={40} radius={10} />
+                      <span className={s.diskName}>
+                        <Skeleton width={`${38 + i * 12}%`} height={14} />
+                        <Skeleton width={`${26 + i * 8}%`} height={11} />
+                      </span>
+                    </div>
+                    <Skeleton height={26} radius={6} />
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+            <Panel title="Mounted" flush>
+              <div style={{ display: "grid", gap: 14, padding: 18 }}>
+                {[58, 46, 52].map((w, i) => (
+                  <Skeleton key={i} width={`${w}%`} height={14} />
+                ))}
+              </div>
+            </Panel>
+          </div>
+        ) : tab === "space" ? (
+          <div className={s.grid}>
+            <div className={s.span2}>
+              <Skeleton height={300} radius={8} />
+            </div>
+            <Skeleton height={80} radius={8} />
+          </div>
+        ) : (
+          <Skeleton height={120} radius={8} />
+        )}
+      </div>
+    </>
+  );
+}
+
+/** The page stays put while the drives are read; only what depends on them waits. */
+export function StorageView({ initial, tab, usage }: { initial: Promise<Inventory>; tab: StorageTab; usage: string | null }) {
+  return (
+    <Page>
+      <React.Suspense fallback={<StorageSkeleton tab={tab} />}>
+        <StorageLive initial={initial} tab={tab} usage={usage} />
+      </React.Suspense>
+    </Page>
+  );
+}
+
+function StorageLive({ initial: pending, tab, usage }: { initial: Promise<Inventory>; tab: StorageTab; usage: string | null }) {
+  const initial = React.use(pending);
   const fmt = useFormat();
   const router = useRouter();
   const params = useSearchParams();
@@ -129,7 +205,7 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
   const mounts = mountChoices(inv.disks);
 
   return (
-    <Page>
+    <>
       <PageHeader
         title="Storage"
         summary={storageSummary(inv, fmt)}
@@ -142,17 +218,7 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
         }
       />
 
-      <Tabs
-        value={tab}
-        hrefFor={(v) => (v === "disks" ? "/storage" : `/storage?tab=${v}`)}
-        items={[
-          { value: "disks", label: "Disks" },
-          { value: "space", label: "Space" },
-          { value: "fstab", label: "At startup" },
-          { value: "changes", label: "History" },
-        ]}
-        aria-label="Storage sections"
-      />
+      <StorageTabs tab={tab} />
 
       <div className={s.tabBody}>
         {error && (
@@ -235,7 +301,7 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
       <PersistDialog target={persist?.vol.primaryMount ?? null} hdd={!!persist?.disk.rotational} users={persist?.vol.usedBy} onClose={() => setPersist(null)} onDone={refresh} />
       <RenameFlow from={rename} onClose={() => setRename(null)} onDone={refresh} />
       <JobDialog id={jobOpen} onClose={closeJob} />
-    </Page>
+    </>
   );
 }
 

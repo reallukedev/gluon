@@ -449,3 +449,22 @@ export function DiskDetailView({ initial }: { initial: Detail }) {
     </Page>
   );
 }
+
+/** A disk's page while the server reads the drives: back link, name, the drawing and its panels in their places. */
+export function DiskDetailSkeleton() {
+  return (
+    <Page pending>
+      <PageHeader back={{ href: "/storage", label: "Storage" }} title={<Skeleton width={220} height={30} radius={6} />} summary={<Skeleton width="min(340px, 80%)" height={12} />} />
+      <div className={s.grid} aria-busy aria-label="Loading the disk">
+        <Panel className={s.span2} flush>
+          <div className={s.detailBar}>
+            <Skeleton height={44} radius={6} />
+            <Skeleton width="60%" height={14} />
+          </div>
+        </Panel>
+        <Skeleton height={180} radius={12} />
+        <Skeleton height={180} radius={12} />
+      </div>
+    </Page>
+  );
+}
