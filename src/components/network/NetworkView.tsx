@@ -356,7 +356,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
         serverName,
         direct: dns.direct,
         proxy: dns.proxy,
-        router: routerHop(status.data, ddns.data),
+        router: routerHop(status.data, ddns.data, cf.data),
         caddy: caddyHop(status.data, data.caddyRunning && (status.data?.caddyRunning ?? true)),
         apps: appsHop(entries),
         directCount: entries?.filter((e) => e.on && e.main.lane === "direct").length ?? 0,
@@ -434,7 +434,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
                 checking={checking}
               >
                 {hop === "dns" && <DnsDetails status={status.data} statusError={status.error?.message ?? null} onRecheck={() => void recheck()} checking={checking} />}
-                {hop === "router" && <RouterDetails status={status.data} ddns={ddns.data} ddnsError={ddns.error?.message ?? null} />}
+                {hop === "router" && <RouterDetails status={status.data} ddns={ddns.data} ddnsError={ddns.error?.message ?? null} cf={cf.data} />}
                 {hop === "caddy" && <CaddyDetails data={data} status={status.data} onRecheck={() => void recheck()} checking={checking} onCaddyfile={() => setCaddyfile(true)} onHistory={() => setHistory(true)} />}
               </NetworkMap>
             </Panel>

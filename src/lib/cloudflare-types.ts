@@ -18,9 +18,14 @@ export interface ManagedName {
   /**
    * ok: Cloudflare already has it. changed: the last sync fixed it. conflict: records Gluon didn't
    * make are in the way, and Gluon leaves them until told to take the name over. error: Cloudflare
-   * refused the change.
+   * refused the change. deferred: cloudflare-ddns still writes this name, so Gluon waits for it to
+   * stop instead of taking turns with it.
    */
-  state: "ok" | "changed" | "conflict" | "error";
+  state: "ok" | "changed" | "conflict" | "error" | "deferred";
+  /** Has records Gluon didn't make and wasn't handed. */
+  foreign: boolean;
+  /** One of the names the admin asked Gluon to keep (Settings), rather than an address. */
+  kept: boolean;
   message: string | null;
   /** Why the name is here, in a few words ("Base domain", "Photos"). */
   why: string;
@@ -68,11 +73,50 @@ export interface CloudflareStatus {
     ipv4: string | null;
     ipv6: string | null;
     names: ManagedName[];
+    /** Names a wildcard Gluon keeps already answers for, so they need no record of their own. */
+    covered: string[];
+    /** Domains the token can read but not change, where Gluon keeps names it can't write yet. */
+    readOnly: string[];
     /** Problems that aren't about one name (no internet address, token revoked). */
     problems: string[];
   };
-  /** The older cloudflare-ddns updater is still running next to Gluon. */
-  ddnsContainer: string | null;
+  /** Extra names Gluon keeps pointed here, beyond its addresses (wildcards allowed). */
+  kept: KeptName[];
+  /** cloudflare-ddns is on this server: what it keeps, and whether Gluon can take over. */
+  handoff: DdnsHandoff | null;
+}
+
+export interface KeptName {
+  name: string;
+  /** Through Cloudflare's proxy; only honored where Cloudflare's free certificate covers the name. */
+  proxied: boolean;
+}
+
+/**
+ * Why Gluon isn't ready to keep one of cloudflare-ddns's names. not-kept: Gluon doesn't keep it.
+ * foreign: its records weren't handed to Gluon. outside: the token can't see its domain.
+ * read-only: the token can't change that domain's DNS. error: Cloudflare refused Gluon's last
+ * change there. differs: Gluon would write something else there (no IPv6, another proxy setting).
+ */
+export type HandoffReason = "not-kept" | "foreign" | "outside" | "read-only" | "error" | "differs";
+
+export interface DdnsHandoff {
+  container: string;
+  running: boolean;
+  /** The Compose project it's part of. */
+  project: string | null;
+  /** For "differs": what's there now and what Gluon would write. */
+  names: { name: string; proxied: boolean; reason: HandoffReason | null; have: DnsRecordT[]; want: DnsRecordT[] }[];
+  /** DELETE_ON_STOP is set, so stopping it removes the records it keeps. */
+  deleteOnStop: boolean;
+  /** A problem with Gluon's own last check, which has to clear first. */
+  blocked: string | null;
+  /** Some of its names have IPv6 records Gluon wouldn't write, so those go once Gluon takes over. */
+  ipv6Differs: boolean;
+  /** Take over fixes every name that isn't ready. */
+  canTakeOver: boolean;
+  /** Stopping it now changes nothing: Gluon keeps every name it did, with the same records. */
+  safe: boolean;
 }
 
 /**

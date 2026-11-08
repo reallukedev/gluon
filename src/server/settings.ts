@@ -61,6 +61,8 @@ const schemas = {
       /** Web addresses go through Cloudflare's proxy, unless marked direct. */
       proxied: z.boolean().default(true),
       adopted: z.array(z.string().max(253)).max(500).default([]),
+      /** Names kept pointed here beyond the addresses, like the ones an older updater kept. */
+      kept: z.array(z.object({ name: z.string().max(253), proxied: z.boolean().default(false) })).max(200).default([]),
     })
     .nullable()
     .default(null),
