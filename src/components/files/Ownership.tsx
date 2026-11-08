@@ -69,6 +69,8 @@ export function Ownership({ path, onClose, onStarted }: { path: string | null; o
         },
         ctl.signal,
       );
+      // Ended without a preview or an error: don't leave it "checking" forever.
+      setPhase((cur) => (cur.kind === "checking" ? { kind: "error", message: "Lost the connection before the check finished. Try again." } : cur));
     } catch (e) {
       if (!ctl.signal.aborted) setPhase({ kind: "error", message: e instanceof Error ? e.message : "Checking failed." });
     }

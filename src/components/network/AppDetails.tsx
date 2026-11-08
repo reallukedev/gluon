@@ -532,8 +532,8 @@ function VoiceFacts({ v }: { v: VoiceStatus }) {
             <dt>On now</dt>
             <dd>
               <span className="num">
-                {v.udp.users ?? 0} {v.udp.users === 1 ? "person" : "people"}
-                {v.udp.maxUsers ? ` of ${v.udp.maxUsers}` : ""}
+                {v.udp.users === null || v.udp.users === undefined ? "Not reported" : `${v.udp.users} ${v.udp.users === 1 ? "person" : "people"}`}
+                {v.udp.maxUsers && v.udp.users != null ? ` of ${v.udp.maxUsers}` : ""}
               </span>
               {v.udp.version && <span className={c.factNote}>Mumble {v.udp.version}</span>}
             </dd>

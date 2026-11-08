@@ -16,7 +16,13 @@ export function formatBytes(n: number | null | undefined, mode: "decimal" | "bin
     v /= base;
     i++;
   }
-  const d = digits ?? (i === 0 ? 0 : v < 10 ? 1 : 0);
+  let d = digits ?? (i === 0 ? 0 : v < 10 ? 1 : 0);
+  // 999.7 kB would print as "1000 kB": step up a unit when rounding reaches the base.
+  if (Number(v.toFixed(d)) >= base && i < units.length - 1) {
+    v /= base;
+    i++;
+    d = digits ?? 1;
+  }
   return `${n < 0 ? "−" : ""}${v.toFixed(d)} ${units[i]}`;
 }
 
@@ -38,7 +44,12 @@ export function formatRate(bytesPerSec: number | null | undefined, mode: "bytes"
 
 export function formatPercent(v: number | null | undefined, digits = 0): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "Unknown";
-  return `${v.toFixed(v > 0 && v < 1 && digits === 0 ? 1 : digits)}%`;
+  const d = v > 0 && v < 1 && digits === 0 ? 1 : digits;
+  const text = v.toFixed(d);
+  // A drive at 99.6% isn't full and one at 0.04% isn't empty: rounding must not reach either end.
+  if (v < 100 && Number(text) >= 100) return `${(Math.floor(v * 10 ** d) / 10 ** d).toFixed(d)}%`;
+  if (v > 0 && Number(text) === 0) return `<${(1 / 10 ** Math.max(d, 1)).toFixed(Math.max(d, 1))}%`;
+  return `${text}%`;
 }
 
 export function formatTemp(celsius: number | null | undefined, unit: "c" | "f" = "c"): string {
@@ -105,6 +116,7 @@ function tz(p?: Pick<FormatPrefs, "timezone">): string | undefined {
 }
 
 export function formatTime(ts: number | Date, p?: Pick<FormatPrefs, "clock" | "timezone">, seconds = false): string {
+  if (!Number.isFinite(+ts)) return "Unknown";
   return new Date(ts).toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
@@ -115,6 +127,7 @@ export function formatTime(ts: number | Date, p?: Pick<FormatPrefs, "clock" | "t
 }
 
 export function formatDate(ts: number | Date, p?: Pick<FormatPrefs, "dateOrder" | "timezone">, opts: { year?: boolean; weekday?: boolean } = {}): string {
+  if (!Number.isFinite(+ts)) return "Unknown";
   const d = new Date(ts);
   if (p && p.dateOrder === "ymd") {
     const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz(p) }).format(d);
@@ -130,9 +143,15 @@ export function formatDate(ts: number | Date, p?: Pick<FormatPrefs, "dateOrder" 
   });
 }
 
-export function formatDateTime(ts: number, p?: FormatPrefs): string {
-  const d = new Date(ts);
-  const sameDay = new Date().toDateString() === d.toDateString();
+/** The calendar day of `ts` in the viewer's chosen zone (or the runtime's when it's "auto"). */
+function dayKey(ts: number, p?: Pick<FormatPrefs, "timezone">): string {
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz(p) }).format(ts);
+}
+
+export function formatDateTime(ts: number, p?: FormatPrefs, now = Date.now()): string {
+  if (!Number.isFinite(ts)) return "Unknown";
+  // "Today" is decided in the zone the time is shown in, not the machine's own, or it's wrong near midnight.
+  const sameDay = dayKey(ts, p) === dayKey(now, p);
   return sameDay ? `Today ${formatTime(ts, p)}` : `${formatDate(ts, p)}, ${formatTime(ts, p)}`;
 }
 

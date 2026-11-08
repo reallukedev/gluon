@@ -125,7 +125,7 @@ export function MountsTable({ disks, onAction, busy }: { disks: DiskView[]; onAc
             <span role="cell" className={s.spaceCell}>
               {u ? (
                 <>
-                  <UsageBar value={u.pct} attention={85} fault={95} label={`${vol.primaryMount} ${Math.round(u.pct)}% used`} />
+                  <UsageBar value={u.pct} attention={85} fault={95} label={`${vol.primaryMount} ${fmt.percent(u.pct)} used`} />
                   <span className={`${s.sub} num`}>
                     {fmt.bytes(u.avail)} free of {fmt.bytes(u.size)}
                   </span>

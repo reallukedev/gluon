@@ -10,6 +10,8 @@ export function MachineVitals() {
   const list = [readings.cpu, readings.mem, readings.net, readings.disk];
 
   if (!readings.cpu) {
+    // A stream that never connected isn't still loading: say so instead of a skeleton forever.
+    if (status === "offline") return <p className={s.vitalsOff}>Can&apos;t get live readings from the server. Trying again.</p>;
     return (
       <div className={s.vitals} aria-busy="true" aria-label="Loading live readings">
         {[0, 1, 2, 3].map((i) => (

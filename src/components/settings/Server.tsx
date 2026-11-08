@@ -76,7 +76,7 @@ function Threshold({ value, min, max, unit, label, onChange }: { value: number; 
 }
 
 export function Server() {
-  const { data, mutate } = useApi<ServerSettings>("/api/settings/server");
+  const { data, error: loadError, mutate } = useApi<ServerSettings>("/api/settings/server");
   const { viewer } = usePrefs();
   const [f, setF] = React.useState<ServerSettings | null>(null);
   const [cidr, setCidr] = React.useState("");
@@ -86,6 +86,13 @@ export function Server() {
   React.useEffect(() => {
     if (data && !f) setF(data);
   }, [data, f]);
+  if ((!f || !data) && loadError) {
+    return (
+      <Notice tone="fault" title="Couldn't load the server settings" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+        {loadError.message}
+      </Notice>
+    );
+  }
   if (!f || !data) {
     // Shaped like the panels that follow (works-with, this server, home network, signing in).
     return (

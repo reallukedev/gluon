@@ -102,7 +102,7 @@ function SpaceWidget({ size }: WidgetProps) {
             </>
           ) : (
             <>
-              <span className={names.has(fullest.mount) ? undefined : "mono"}>{nameOf(fullest.mount)}</span> <span className="num">{Math.round(fullest.pct)}%</span> full
+              <span className={names.has(fullest.mount) ? undefined : "mono"}>{nameOf(fullest.mount)}</span> <span className="num">{fmt.percent(fullest.pct)}</span> full
             </>
           )}
         </span>
@@ -124,11 +124,11 @@ function SpaceWidget({ size }: WidgetProps) {
                 </span>
                 <Tooltip content={`${fmt.bytes(d.used)} of ${fmt.bytes(d.size)}, ${fmt.bytes(d.avail)} free`}>
                   <span className={`${m.diskFig} num`} tabIndex={0}>
-                    {Math.round(d.pct)}% full
+                    {fmt.percent(d.pct)} full
                   </span>
                 </Tooltip>
               </span>
-              <UsageBar value={d.pct} attention={85} fault={95} label={`${nameOf(d.mount)}: ${Math.round(d.pct)}% used`} />
+              <UsageBar value={d.pct} attention={85} fault={95} label={`${nameOf(d.mount)}: ${fmt.percent(d.pct)} used`} />
               <span className={m.diskMeta} data-line={diskLine(d)}>
                 {trendText(d)}
               </span>

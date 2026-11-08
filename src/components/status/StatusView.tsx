@@ -60,7 +60,7 @@ function AdminStatus({ initial, allFindings, alertsUnreachable }: { initial: Sta
       <div className={s.body}>
         {error && (
           <Notice tone="fault" title="Couldn't refresh">
-            {error.message} Showing the last reading; trying again.
+            {error.message} This is how things looked at <Time ts={data.checkedAt} kind="time" />. Trying again.
           </Notice>
         )}
         <Overview data={data} allFindings={allFindings} alertsUnreachable={alertsUnreachable} refresh={refresh} />
@@ -264,8 +264,9 @@ function foldRepeats(entries: Recent[]) {
 function AppsMeta({ apps }: { apps: StatusApp[] }) {
   const ids = new Set(apps.map((a) => a.id));
   const current = apps.filter((a) => !(a.copyOf && ids.has(a.copyOf.id)));
-  const running = current.filter((a) => a.line !== "stopped").length;
-  const stopped = current.length - running;
+  // Only apps that are actually running count as running; starting, unhealthy or unknown ones don't.
+  const running = current.filter((a) => a.line === "running").length;
+  const stopped = current.filter((a) => a.line === "stopped").length;
   return (
     <span className="num">
       {running} running{stopped > 0 && ` · ${stopped} stopped`} · <Link href="/apps">Manage</Link>
@@ -299,7 +300,7 @@ function MemberStatus({ data, stale }: { data: StatusPayload; stale: boolean }) 
                 </span>
                 <div className={s.memberAppText}>
                   <span className={s.memberAppName}>{a.name}</span>
-                  <StateLine state={a.line === "stopped" ? "unhealthy" : a.line} label={a.line === "running" ? "Working" : a.line === "starting" ? "Starting up" : "Not working"} />
+                  <StateLine state={a.line === "stopped" ? "unhealthy" : a.line} label={MEMBER_LABEL[a.line]} />
                 </div>
                 {a.line === "running" && (a.urls.home || a.urls.away) && <OpenLink urls={a.urls} />}
               </li>
@@ -317,6 +318,17 @@ function MemberStatus({ data, stale }: { data: StatusPayload; stale: boolean }) 
     </Page>
   );
 }
+
+// Unknown isn't broken: a member is told it can't be checked, not that it's down.
+const MEMBER_LABEL: Record<StatusApp["line"], string> = {
+  running: "Working",
+  starting: "Starting up",
+  unhealthy: "Not working",
+  stopped: "Not working",
+  attention: "Working, with a problem",
+  paused: "Paused",
+  unknown: "Can't tell right now",
+};
 
 function OpenLink({ urls }: { urls: StatusApp["urls"] }) {
   const { viewer, prefs } = usePrefs();

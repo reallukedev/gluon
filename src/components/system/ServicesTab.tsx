@@ -79,6 +79,11 @@ export function ServicesTab({ list, initialUnit }: { list: SWRResponse<{ service
 
   return (
     <div className={s.stack}>
+      {error && (
+        <Notice tone="fault" title="Couldn't refresh the services" action={<Button size="sm" onClick={refresh}>Try again</Button>}>
+          {error.message} The list may be out of date.
+        </Notice>
+      )}
       <div className={s.toolbar}>
         <label className={s.filter}>
           <Search aria-hidden />
@@ -105,7 +110,7 @@ export function ServicesTab({ list, initialUnit }: { list: SWRResponse<{ service
           {term
             ? "Try part of the service's name, like smbd or docker, or words from its description."
             : filter === "failed"
-              ? "Every service that should be running is running."
+              ? "None have failed."
               : "Services are the programs systemd starts in the background: file sharing, remote login, Docker and so on."}
         </Empty>
       ) : (

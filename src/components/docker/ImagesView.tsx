@@ -243,7 +243,7 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
             "separator",
           ] as MenuEntry[])
         : []),
-      { label: "Copy image ID", icon: <Copy />, onSelect: () => void copyText(i.id).then(() => toast.success("Copied the image ID")) },
+      { label: "Copy image ID", icon: <Copy />, onSelect: () => void copyText(i.id).then((ok) => (ok ? toast.success("Copied the image ID") : toast.error("Couldn't copy", { description: i.id }))) },
       ...(i.tags.length > 1 && i.guard?.level !== "block" ? ([{ kind: "sub", label: "Remove a tag", icon: <TagIcon />, items: i.tags.map((t) => ({ label: t, onSelect: () => askUntag(i, t) })) }] as MenuEntry[]) : []),
       "separator",
       {

@@ -72,7 +72,7 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
   const router = useRouter();
   const params = useSearchParams();
   const jobParam = params.get("job");
-  const { data: inv = initial, mutate } = useApi<Inventory>("/api/storage", { refresh: 15_000, fallbackData: initial });
+  const { data: inv = initial, error, mutate } = useApi<Inventory>("/api/storage", { refresh: 15_000, fallbackData: initial });
   const { data: findings, mutate: mutateFindings } = useApi<Finding[]>("/api/findings", { refresh: 30_000 });
   const running = useRunningJob();
   const [checking, setChecking] = React.useState(false);
@@ -155,6 +155,13 @@ export function StorageView({ initial, tab, usage }: { initial: Inventory; tab: 
       />
 
       <div className={s.tabBody}>
+        {error && (
+          <div className={s.banner}>
+            <Notice tone="fault" title="Couldn't refresh the drives" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+              {error.message} This is how they looked at <Time ts={inv.generatedAt} kind="time" />.
+            </Notice>
+          </div>
+        )}
         {running && (
           <div className={s.banner}>
             <Notice

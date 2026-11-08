@@ -69,7 +69,7 @@ export function ReportsTab({ focus }: { focus: string | null }) {
       </div>
       )}
       {error && !data ? (
-        <LoadError what="problem reports" error={error} />
+        <LoadError what="problem reports" error={error} onRetry={mutate} />
       ) : (
         <Panel flush>
           {isLoading && !data ? (

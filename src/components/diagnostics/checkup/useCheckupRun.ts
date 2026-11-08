@@ -85,13 +85,18 @@ export async function startCheckup(kind: CheckupKind, target: string | null = nu
     );
     if (frame) cancelAnimationFrame(frame);
     if (queue.length) flush();
+    // The stream closed without a summary: the run isn't live here any more, and it didn't finish
+    // that we know of. Leaving it "live" would spin forever.
+    if (!c.signal.aborted && snap.view?.live && !snap.view.summary) {
+      set((s) => ({ view: s.view ? { ...s.view, live: false, running: [] } : s.view, error: "Lost the connection to the checkup before it finished. Run it again to get a full result." }));
+    }
   } catch (e) {
     const quiet = c.signal.aborted || (e as Error).name === "AbortError" || (e instanceof ApiError && e.code === "reauth_cancelled");
     if (!quiet) set({ error: e instanceof Error ? e.message : "The checkup couldn't start." });
   } finally {
     if (ctrl === c) {
       ctrl = null;
-      set({ pending: null });
+      set((s) => ({ pending: null, view: s.view?.live && !s.view.summary ? { ...s.view, live: false, running: [] } : s.view }));
     }
     void mutate(STATE_URL);
   }

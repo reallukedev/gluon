@@ -63,7 +63,7 @@ export function PreviewBody({ entry, fit = "contain", textHeight = "min(56dvh, 5
           </p>
           <div className={s.fallbackActions}>
             <Button icon={<Download />} onClick={() => downloadUrl(rawUrl(entry.path, true))}>
-              Download {fmt.bytes(entry.size ?? 0)}
+              {entry.size === null || entry.size === undefined ? "Download" : `Download ${fmt.bytes(entry.size)}`}
             </Button>
             {isArchive(entry.name) && canExtract && onExtract && (
               <Button icon={<Archive />} onClick={() => onExtract(entry)}>

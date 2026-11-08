@@ -49,7 +49,8 @@ function LiveSummary() {
   const live = useLive();
   const h = live.host.at(-1);
   if (live.status === "offline") return <>The live feed from this server dropped. Reconnecting…</>;
-  if (!h) return <>Connecting to this server&apos;s live data…</>;
+  // While reconnecting the last sample is old: it isn't "right now".
+  if (!h || live.status !== "live") return <>Connecting to this server&apos;s live data…</>;
   return (
     <>
       Receiving <strong className="num">{fmt.rate(h.net.rx)}</strong> and sending <strong className="num">{fmt.rate(h.net.tx)}</strong> right now; the processor is{" "}

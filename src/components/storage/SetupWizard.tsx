@@ -76,11 +76,13 @@ export function SetupWizard({ disk, onClose, onDone }: { disk: DiskView | null; 
     setPhase("run");
     setRun(emptyRun);
     setRunning(true);
+    let ended = false;
     try {
       await streamPost<JobEvent>(
         "/api/storage/operations",
         { op: "setup", disk: p.disk.id, label: p.label, mountPath: p.mountPath, noatime, planHash: p.hash, confirmSerial: p.confirmWith },
         (e) => {
+          if (e.type === "done" || e.type === "error") ended = true;
           if (e.type === "job") setJobParam(e.job.id);
           setRun((st) => reduceJob(st, e));
           if (e.type === "done") {
@@ -89,6 +91,7 @@ export function SetupWizard({ disk, onClose, onDone }: { disk: DiskView | null; 
           }
         },
       );
+      if (!ended) setRun((st) => reduceJob(st, { type: "error", message: "Lost the connection before it finished. It may still be running; Storage history shows how it ends." }));
     } catch (e) {
       const msg = errorText(e);
       if (msg === null) setPhase("review");

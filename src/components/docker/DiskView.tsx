@@ -101,7 +101,7 @@ export function DiskView() {
           "."
         )}
       </b>{" "}
-      {tight ? <b>That disk is {Math.round(pctFull! * 100)}% full. </b> : null}
+      {tight ? <b>That disk is {fmt.percent(pctFull! * 100)} full. </b> : null}
       {canFree > 0 ? (
         <>
           About <span className="num">{fmt.bytes(canFree)}</span> of it could go.

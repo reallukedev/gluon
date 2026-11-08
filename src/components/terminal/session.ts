@@ -58,7 +58,7 @@ export class LiveSession {
       },
       (err: unknown) => {
         this.ended = true;
-        if (this.abort.signal.aborted) h.onError("Stopped before it started.", "aborted");
+        if (this.abort.signal.aborted) h.onError(this.id ? "Stopped." : "Stopped before it started.", "aborted");
         else if (err instanceof ApiError) h.onError(err.message, err.code);
         else h.onError("Can't reach the server. Check your connection and try again.", "network");
       },
@@ -108,6 +108,8 @@ export class LiveSession {
   /** Drop the stream; the server ends whatever is running. */
   close() {
     this.ended = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
     this.abort.abort();
   }
 

@@ -51,7 +51,9 @@ export function SentTab({ compact }: { compact?: boolean }) {
   const { data, error, isLoading, mutate } = useApi<DeliveryPage>(url, { refresh: 20_000 });
   const { data: channels } = useApi<ChannelView[]>(compact ? null : CHANNELS_URL);
 
+  const urlRef = React.useRef(url);
   React.useEffect(() => {
+    urlRef.current = url;
     setOlder([]);
     setNext(undefined);
   }, [url]);
@@ -61,7 +63,10 @@ export function SentTab({ compact }: { compact?: boolean }) {
     if (!cursor) return;
     setLoadingMore(true);
     try {
-      const p = await api.get<DeliveryPage>(`${url}&before=${cursor}`);
+      const from = url;
+      const p = await api.get<DeliveryPage>(`${from}&before=${cursor}`);
+      // The filter changed while this was loading: these rows belong to the old one.
+      if (urlRef.current !== from) return;
       setOlder((o) => [...o, ...p.items]);
       setNext(p.next);
     } catch (e) {
@@ -121,7 +126,7 @@ export function SentTab({ compact }: { compact?: boolean }) {
       <Panel title={compact ? "Recently sent" : undefined} flush>
         {error && !data ? (
           <div className={s.pad}>
-            <Notice tone="fault" title="Couldn't load the log">
+            <Notice tone="fault" title="Couldn't load the log" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
               {error.message}
             </Notice>
           </div>
