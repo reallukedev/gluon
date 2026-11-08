@@ -1,11 +1,11 @@
 import "server-only";
 import fs from "node:fs";
-import { filesystems, sampleFilesystems, history, type FsUsage } from "../../metrics/sampler";
+import { filesystems, sampleFilesystems, history, REMOTE_FS, type FsUsage } from "../../metrics/sampler";
 import { getInventoryState, type InventoryState } from "../../storage/inventory";
 import { notPersistent } from "../../storage/ops";
 import { hostPath } from "../../host/paths";
 import { getSetting } from "../../settings";
-import { formatBytes, listJoin } from "@/lib/format";
+import { formatBytes, listJoin, plural } from "@/lib/format";
 import type { DiskView } from "@/lib/storage-types";
 import { fail, go, kv, ok, skip, warn, type CheckCtx, type CheckSpec, type Outcome } from "./core";
 
@@ -76,26 +76,37 @@ function spaceCheck(mount: string): CheckSpec {
 export function inodeOutcome(list: FsUsage[]): Outcome {
   const rows: [string, string][] = [];
   const high: { mount: string; pct: number }[] = [];
+  let unread = 0;
+  let checked = 0;
   for (const f of list) {
+    // A share whose server went away would block statfs (and the whole process) for good.
+    if (REMOTE_FS.has(f.fstype)) {
+      rows.push([f.mount, "network share, not checked"]);
+      continue;
+    }
     try {
       const s = fs.statfsSync(hostPath(f.mount));
       if (!s.files) {
         rows.push([f.mount, "no inode limit"]);
         continue;
       }
+      checked++;
       const pct = ((s.files - s.ffree) / s.files) * 100;
       rows.push([f.mount, `${(s.files - s.ffree).toLocaleString("en-US")} of ${s.files.toLocaleString("en-US")} (${pct.toFixed(1)}%)`]);
       if (pct >= 85) high.push({ mount: f.mount, pct });
     } catch {
       rows.push([f.mount, "unreadable"]);
+      unread++;
     }
   }
   const evidence = kv(rows);
   if (!rows.length) return skip("No filesystems to check");
+  if (!checked && unread) return skip("Couldn't read how many file slots are used", { evidence });
   const worstOne = high.sort((a, b) => b.pct - a.pct)[0];
   if (worstOne && worstOne.pct >= 95) return fail(`${worstOne.mount} has almost no room left for new files`, { detail: `${worstOne.pct.toFixed(0)}% of its file slots (inodes) are used, usually by millions of tiny files like caches or thumbnails. New files fail even with free space.`, evidence, fix: go("See what's using it", `/storage?usage=${encodeURIComponent(worstOne.mount)}`) });
   if (worstOne) return warn(`${worstOne.mount} is running low on file slots (${worstOne.pct.toFixed(0)}% of inodes used)`, { detail: "Usually caused by huge numbers of tiny files, like caches or thumbnails.", evidence, fix: go("See what's using it", `/storage?usage=${encodeURIComponent(worstOne.mount)}`) });
-  return ok(`Every filesystem has plenty of room for new files`, { evidence });
+  if (unread) return warn(`Couldn't check room for new files on ${plural(unread, "filesystem")}`, { detail: "The others have plenty of room.", evidence });
+  return ok(checked ? "Every filesystem has plenty of room for new files" : "No local filesystem has an inode limit to check", { evidence });
 }
 
 const named = (d: DiskView) => `${d.title}${d.model ? ` (${d.model})` : ""}`;

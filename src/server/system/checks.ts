@@ -192,6 +192,8 @@ const g = globalThis as G;
 
 registerCheck("system-clock", 5 * 60_000, async () => {
   const t = await timeStatus();
+  // timedatectl didn't answer: that's no news about the clock, so leave any open finding as it is.
+  if (t.ntp === null && t.synced === null) return;
   if (t.ntp === false && t.canNtp !== false) {
     g.__gluonClockUnsynced = null;
     raise({

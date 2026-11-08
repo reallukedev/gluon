@@ -117,10 +117,17 @@ export function countStates(results: CheckResult[]): Record<CheckState, number> 
   return c;
 }
 
-export function verdictFor(meta: CheckupMeta, plan: CheckPlanItem[], results: CheckResult[], status: CheckupSummary["status"]): string {
+export function verdictFor(meta: CheckupMeta, plan: CheckPlanItem[], results: CheckResult[], status: CheckupSummary["status"], unchecked = 0): string {
   const c = countStates(results);
   if (status === "cancelled") return `Stopped after ${results.length} of ${plan.length} checks.`;
   if (status === "failed") return "The checkup couldn't finish.";
+  // Probes that errored or timed out say nothing either way, so they never count as "checks out".
+  const left = unchecked ? ` ${plural(unchecked, "check")} couldn't run.` : "";
+  const body = verdictBody(meta, plan, results, c);
+  return unchecked && body === "Everything checks out." ? `Everything that ran checks out.${left}` : body + left;
+}
+
+function verdictBody(meta: CheckupMeta, plan: CheckPlanItem[], results: CheckResult[], c: Record<CheckState, number>): string {
   const byId = new Map(results.map((r) => [r.id, r]));
   if (meta.layout === "path") {
     const hops = plan.filter((p) => p.hop);
@@ -131,7 +138,7 @@ export function verdictFor(meta: CheckupMeta, plan: CheckPlanItem[], results: Ch
     const n = c.warn + detailFails;
     return `Every step gets through, with ${plural(n, "thing")} to look at.`;
   }
-  if (!c.fail && !c.warn) return "Everything checks out.";
+  if (!c.fail && !c.warn) return c.ok ? "Everything checks out." : "Nothing could be checked.";
   if (!c.fail) return `Nothing is broken; ${plural(c.warn, "thing")} to look at.`;
   return `Found ${plural(c.fail, "problem")}${c.warn ? ` and ${plural(c.warn, "thing")} to look at` : ""}.`;
 }
@@ -151,6 +158,7 @@ async function execute(a: Active) {
       return memo.get(k) as Promise<T>;
     },
   };
+  const unchecked = new Set<string>();
   const runOne = async (spec: CheckSpec) => {
     if (signal.aborted) return;
     a.running.add(spec.id);
@@ -163,6 +171,7 @@ async function execute(a: Active) {
       const msg = (e as Error).message;
       out = msg === "timeout" ? skip(`${spec.label}: didn't finish in time`, { detail: "The probe took too long, so it was left out. Try again in a minute." }) : skip(`${spec.label}: couldn't be checked`, { detail: msg.slice(0, 300) });
       if (msg !== "timeout") console.error(`[gluon] checkup ${spec.id} failed`, e);
+      unchecked.add(spec.id);
     }
     a.running.delete(spec.id);
     if (signal.aborted) return;
@@ -202,7 +211,7 @@ async function execute(a: Active) {
     status,
     finishedAt: Date.now(),
     counts: countStates(results),
-    verdict: verdictFor(a.meta, a.plan, results, status),
+    verdict: verdictFor(a.meta, a.plan, results, status, results.filter((r) => unchecked.has(r.id)).length),
     diff: prev ? diffRuns(prev, results) : null,
   };
   const run: CheckupRun = { meta: a.meta, plan: a.plan, results, summary: a.summary };

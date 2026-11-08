@@ -500,12 +500,20 @@ export function followJournal(unit: string, opts: { afterCursor?: string; backlo
     if (e) onEntry(e);
   });
   child.stdout?.on("data", (d) => reader.push(d));
+  // Unread, a full stderr pipe would stall journalctl and the live view with it.
+  child.stderr?.resume();
+  let ended = false;
+  const end = () => {
+    if (ended) return;
+    ended = true;
+    onEnd();
+  };
   child.on("close", () => {
     reader.flush();
     child = null;
-    onEnd();
+    end();
   });
-  child.on("error", () => onEnd());
+  child.on("error", () => end());
   // A live view is still a bounded one: no follower outlives six hours.
   const limit = setTimeout(() => child?.kill("SIGTERM"), 6 * 3600_000);
   limit.unref?.();

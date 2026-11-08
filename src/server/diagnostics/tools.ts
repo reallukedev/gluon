@@ -15,6 +15,9 @@ import type { DnsToolResult, HttpHop, HttpToolResult, PingToolResult, PortToolRe
 
 // ---------------------------------------------------------------- DNS lookup (dig)
 
+/** The program itself isn't there: spawn says ENOENT, a shell says 127. */
+const missing = (e: CommandError) => e.code === 127 || (e.code === null && /\bENOENT\b/.test(e.message));
+
 export const DNS_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "PTR", "SRV", "CAA"] as const;
 
 export async function dnsLookup(name: string, type: (typeof DNS_TYPES)[number], resolverChoice: string): Promise<DnsToolResult> {
@@ -27,7 +30,7 @@ export async function dnsLookup(name: string, type: (typeof DNS_TYPES)[number], 
   try {
     ({ stdout } = await local("dig", args, { timeoutMs: 10_000, okCodes: [9] }));
   } catch (e) {
-    if (e instanceof CommandError && e.code === 127) throw new AppError("no_dig", "dig isn't installed in Gluon's container.", 501);
+    if (e instanceof CommandError && missing(e)) throw new AppError("no_dig", "dig isn't installed in Gluon's container.", 501);
     const msg = e instanceof CommandError ? e.stdout || e.message : (e as Error).message;
     return { name, type, resolver: server ?? "system", status: "ERROR", answers: [], queryMs: null, server: null, message: `The lookup failed: ${msg.trim().split("\n").at(-1)}` };
   }
@@ -70,7 +73,7 @@ export async function ping(target: string, count: number, family?: 4 | 6): Promi
     ({ stdout } = await local("ping", args, { timeoutMs: (count + 6) * 1000, okCodes: [1] }));
   } catch (e) {
     if (e instanceof CommandError) {
-      if (e.code === 127) throw new AppError("no_ping", "ping isn't installed in Gluon's container.", 501);
+      if (missing(e)) throw new AppError("no_ping", "ping isn't installed in Gluon's container.", 501);
       const err = (e.stderr || e.message).trim();
       const message = /Name or service not known|Temporary failure in name resolution|unknown host/i.test(err)
         ? `${target} doesn't resolve to an address.`

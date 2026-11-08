@@ -52,7 +52,8 @@ export function diskTempOutcome(disks: DiskView[]): Outcome {
 
 export function memoryOutcome(): Outcome {
   const m = memInfo();
-  const pct = m.total ? (m.used / m.total) * 100 : 0;
+  if (!m.total) return skip("Couldn't read how much memory the server has");
+  const pct = (m.used / m.total) * 100;
   const psi = pressure("memory");
   const limit = getSetting("thresholds").memoryAttention;
   const evidence = kv([

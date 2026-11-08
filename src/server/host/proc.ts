@@ -51,7 +51,8 @@ export function memInfo(): MemInfo {
     if (m) kv[m[1]!] = Number(m[2]) * 1024;
   }
   const total = kv.MemTotal ?? 0;
-  const available = kv.MemAvailable ?? 0;
+  // Kernels before 3.14 have no MemAvailable; free plus reclaimable cache is the usual estimate.
+  const available = kv.MemAvailable ?? Math.min(total, (kv.MemFree ?? 0) + (kv.Buffers ?? 0) + (kv.Cached ?? 0) + (kv.SReclaimable ?? 0));
   return { total, available, used: total - available, swapTotal: kv.SwapTotal ?? 0, swapUsed: (kv.SwapTotal ?? 0) - (kv.SwapFree ?? 0) };
 }
 

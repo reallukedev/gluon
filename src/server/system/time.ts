@@ -85,6 +85,11 @@ export async function setNtp(enabled: boolean): Promise<void> {
     }
     throw e;
   }
+  const after = await timeStatus();
+  if (after.ntp !== enabled) {
+    const now = after.ntp === null ? "The server didn't confirm the change." : `Automatic time is still ${after.ntp ? "on" : "off"}.`;
+    throw new AppError("ntp_unchanged", `${now} Check that a time-sync service (systemd-timesyncd or chrony) is installed and running.`, 500);
+  }
 }
 
 // ---------------------------------------------------------------- hostname

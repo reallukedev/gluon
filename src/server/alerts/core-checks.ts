@@ -12,8 +12,16 @@ import { host, local } from "../host/exec";
 import { getSetting } from "../settings";
 import { formatBytes } from "@/lib/format";
 import { AppError } from "../errors";
+import { all } from "../db";
 
 // ---------------------------------------------------------------- disk space
+
+/** Percentage points below the threshold a disk or memory must drop before its alert clears. */
+const DISK_HYSTERESIS = 2;
+const MEMORY_HYSTERESIS = 3;
+const STALE_SAMPLE_MS = 60_000;
+
+const listOpenIds = (kind: string) => all<{ id: string }>("SELECT id FROM findings WHERE kind = ? AND resolved_at IS NULL", kind).map((r) => r.id);
 
 /** Leftovers from moving Docker/containerd storage: `<dir>.old` next to a live dir that is now a mount. */
 interface Leftover {
@@ -79,15 +87,21 @@ function humanDays(d: number) {
 
 registerCheck("disk-space", 60_000, async () => {
   const { diskAttention, diskFault } = getSetting("thresholds");
+  const list = filesystems();
+  // No reading yet (or the mount table couldn't be read): that says nothing about free space.
+  if (!list.length) return;
   const open = new Set<string>();
-  for (const f of filesystems()) {
+  const wasOpen = new Set(listOpenIds("disk.full"));
+  for (const f of list) {
     if (f.size < 256 * 1024 * 1024) continue; // tiny (EFI etc.)
     const pct = f.pct;
     const days = daysToFull(f.mount, f.avail);
     // "Filling fast" only matters for disks that are already fairly full.
     const soon = days !== null && days < 3 && pct >= 60;
-    if (pct < diskAttention && !soon) continue;
     const id = `disk.full:${f.mount}`;
+    // Once raised, it stays until there's real room again, not the moment it dips below the line.
+    const limit = wasOpen.has(id) ? diskAttention - DISK_HYSTERESIS : diskAttention;
+    if (pct < limit && !soon) continue;
     open.add(id);
     const severity = pct >= diskFault || (days !== null && days < 1 && pct >= 80) ? "fault" : "attention";
     let cause = `${formatBytes(f.avail)} free of ${formatBytes(f.size)}.`;
@@ -141,6 +155,7 @@ registerRemedy("storage.removeLeftovers", {
       freed += (await findLeftovers()).find((l) => l.path === p)?.bytes ?? 0;
       await host("rm", ["-rf", "--one-file-system", "--", p], { timeoutMs: 10 * 60_000 });
       leftoverCache.delete(p);
+      if (fs.existsSync(hostPath(p))) throw new AppError("remove_incomplete", `Some of ${p} couldn't be removed. Check what's left in a terminal.`, 500);
     }
     return { message: `Freed ${formatBytes(freed)} by removing ${paths.join(" and ")}` };
   },
@@ -216,7 +231,8 @@ registerRemedy("apps.start", {
 
 registerCheck("memory", 30_000, () => {
   const h = latestHost();
-  if (!h) return;
+  // A sample that stopped updating says nothing about now.
+  if (!h || Date.now() - h.t > STALE_SAMPLE_MS || !(h.mem.total > 0)) return;
   const pct = (h.mem.used / h.mem.total) * 100;
   const limit = getSetting("thresholds").memoryAttention;
   if (pct >= limit) {
@@ -229,12 +245,12 @@ registerCheck("memory", 30_000, () => {
       cause: `${formatBytes(h.mem.available)} left. Apps may slow down or be killed. The Apps page shows which ones use the most.`,
       remedy: { action: "", label: "See memory by app", href: "/apps?sort=memory" },
     });
-  } else resolve("host.memory");
+  } else if (pct < limit - MEMORY_HYSTERESIS) resolve("host.memory");
 });
 
 registerCheck("temperature", 30_000, () => {
   const h = latestHost();
-  if (!h || h.temp === null) return;
+  if (!h || h.temp === null || Date.now() - h.t > STALE_SAMPLE_MS) return;
   const limit = getSetting("thresholds").tempAttention;
   if (h.temp >= limit) {
     raise({

@@ -145,15 +145,11 @@ export async function powerNow(action: PowerAction, opts: { force?: boolean } = 
       { timeoutMs: 15_000 },
     );
   } catch (e) {
-    // No systemd-run: fall back to asking systemd directly once the response has gone out.
+    // No systemd-run: queue the job directly. --no-block returns at once and stopping every
+    // service takes seconds, so the response still goes out, and a refusal reaches the person
+    // instead of a "restarting" message for a machine that stays up.
     console.error("[gluon] systemd-run for power failed, falling back", (e as Error).message);
-    setTimeout(
-      () =>
-        void host("systemctl", [verb, "--no-block"], {
-          timeoutMs: 15_000,
-        }).catch((err) => console.error("[gluon] power action failed", err)),
-      3000,
-    );
+    await host("systemctl", [verb, "--no-block"], { timeoutMs: 15_000 });
   }
   return { at: Date.now() + 3000 };
 }
@@ -173,5 +169,6 @@ export async function cancelScheduled(): Promise<boolean> {
   const before = await scheduledShutdown();
   if (!before) return false;
   await host("shutdown", ["-c", "--no-wall"], { timeoutMs: 15_000 });
+  if (await scheduledShutdown()) throw new AppError("cancel_failed", "The server still has the restart scheduled. Try cancelling again.", 500);
   return true;
 }
