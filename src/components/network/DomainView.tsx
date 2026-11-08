@@ -41,22 +41,63 @@ const proxiable = (t: string) => t === "A" || t === "AAAA" || t === "CNAME";
 const editable = (t: string): t is EditableType => (EDITABLE_TYPES as readonly string[]).includes(t);
 const short = (name: string, zone: string) => (name === zone ? "@" : name.endsWith(`.${zone}`) ? name.slice(0, -zone.length - 1) : name);
 
-export function DomainView({ zone, initial }: { zone: string; initial: DnsZoneView | null }) {
-  const { data, error, mutate, isLoading } = useApi<DnsZoneView>(`/api/cloudflare/zones/${encodeURIComponent(zone)}/records`, { fallbackData: initial ?? undefined, revalidateOnFocus: true });
+const BACK = { href: "/network", label: "Network" };
+
+/** The domain's page goes out at once; its records follow when Cloudflare answers. */
+export function DomainView({ zone, initial }: { zone: string; initial: Promise<DnsZoneView | null> }) {
+  return (
+    <Page>
+      <React.Suspense fallback={<DomainSkeleton zone={zone} />}>
+        <Domain zone={zone} initial={initial} />
+      </React.Suspense>
+    </Page>
+  );
+}
+
+function DomainSkeleton({ zone }: { zone: string }) {
+  return (
+    <>
+      <PageHeader
+        back={BACK}
+        title={zone}
+        summary="Reading this domain's records…"
+        actions={
+          <Button variant="primary" icon={<Plus />} disabled>
+            Add record
+          </Button>
+        }
+      />
+      <Panel flush>
+        <div className={d.toolbar}>
+          <div className={d.search}>
+            <Skeleton height={34} radius={8} />
+          </div>
+        </div>
+        <div className={d.pad} aria-busy>
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} height={36} radius={6} style={{ marginBottom: 8 }} />
+          ))}
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+function Domain({ zone, initial }: { zone: string; initial: Promise<DnsZoneView | null> }) {
+  const { data, error, mutate, isLoading } = useApi<DnsZoneView>(`/api/cloudflare/zones/${encodeURIComponent(zone)}/records`, { fallbackData: React.use(initial) ?? undefined, revalidateOnFocus: true });
   const [query, setQuery] = React.useState("");
   const [editing, setEditing] = React.useState<{ record: DnsRecordFull | null; n: number } | null>(null);
   const [open, setOpen] = React.useState(false);
   const [confirm, confirmNode] = useConfirm();
 
-  const back = { href: "/network", label: "Network" };
   if (error && !data) {
     return (
-      <Page>
-        <PageHeader back={back} title={zone} summary="Couldn't read this domain's DNS records." />
+      <>
+        <PageHeader back={BACK} title={zone} summary="Couldn't read this domain's DNS records." />
         <Notice tone="fault" title="Couldn't load the records" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
           {error.message}
         </Notice>
-      </Page>
+      </>
     );
   }
 
@@ -86,9 +127,9 @@ export function DomainView({ zone, initial }: { zone: string; initial: DnsZoneVi
     });
 
   return (
-    <Page>
+    <>
       <PageHeader
-        back={back}
+        back={BACK}
         title={zone}
         summary={
           !data
@@ -213,7 +254,7 @@ export function DomainView({ zone, initial }: { zone: string; initial: DnsZoneVi
         />
       )}
       {confirmNode}
-    </Page>
+    </>
   );
 }
 
