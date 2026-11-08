@@ -1,8 +1,9 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { currentAuth, requireAdmin } from "@/server/auth/session";
 import { getInventoryState, findDisk } from "@/server/storage/inventory";
 import { smartDetail, smartFor } from "@/server/storage/smart";
-import { DiskDetailView } from "@/components/storage/DiskDetailView";
+import { DiskDetailView, DiskDetailSkeleton } from "@/components/storage/DiskDetailView";
 
 export async function generateMetadata({ params }: { params: Promise<{ disk: string }> }) {
   // Metadata can render before the page's own admin check: never describe a disk to anyone else.
@@ -16,6 +17,15 @@ export async function generateMetadata({ params }: { params: Promise<{ disk: str
 export default async function DiskPage({ params }: { params: Promise<{ disk: string }> }) {
   await requireAdmin();
   const id = decodeURIComponent((await params).disk);
+  // Reading the drives runs host commands: the page's shape goes out first.
+  return (
+    <Suspense fallback={<DiskDetailSkeleton />}>
+      <Disk id={id} />
+    </Suspense>
+  );
+}
+
+async function Disk({ id }: { id: string }) {
   const disk = findDisk(await getInventoryState(), id);
   if (!disk) notFound();
   const view = { ...disk, smart: smartFor(disk.id) };
