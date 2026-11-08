@@ -26,27 +26,26 @@ const state = () => (g.__gluonApt ??= {});
 
 const PENDING_TTL = 10 * 60_000;
 
-/** Loose Debian-ish version compare: numeric runs compare as numbers, "~" sorts before anything. */
+/** Debian version order (dpkg's verrevcmp, without epochs): numeric runs compare as numbers, "~" sorts before anything, letters before other symbols. */
 export function compareVersions(a: string, b: string): number {
-  const ta = a.match(/\d+|~|[^\d~]+/g) ?? [];
-  const tb = b.match(/\d+|~|[^\d~]+/g) ?? [];
-  for (let i = 0; i < Math.max(ta.length, tb.length); i++) {
-    const x = ta[i];
-    const y = tb[i];
-    if (x === y) continue;
-    if (x === undefined) return y === "~" ? 1 : -1;
-    if (y === undefined) return x === "~" ? -1 : 1;
-    if (x === "~") return -1;
-    if (y === "~") return 1;
-    const nx = /^\d+$/.test(x);
-    const ny = /^\d+$/.test(y);
-    if (nx && ny) {
-      const d = Number(x) - Number(y);
+  const order = (c: string | undefined) => (c === undefined ? 0 : c === "~" ? -1 : /[A-Za-z]/.test(c) ? c.charCodeAt(0) : c.charCodeAt(0) + 256);
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    while ((i < a.length && !/\d/.test(a[i]!)) || (j < b.length && !/\d/.test(b[j]!))) {
+      const x = i < a.length && !/\d/.test(a[i]!) ? a[i] : undefined;
+      const y = j < b.length && !/\d/.test(b[j]!) ? b[j] : undefined;
+      const d = order(x) - order(y);
       if (d) return d;
-      continue;
+      i++;
+      j++;
     }
-    if (nx !== ny) return nx ? 1 : -1;
-    return x < y ? -1 : 1;
+    const na = /^\d*/.exec(a.slice(i))![0];
+    const nb = /^\d*/.exec(b.slice(j))![0];
+    i += na.length;
+    j += nb.length;
+    const d = Number(na || 0) - Number(nb || 0);
+    if (d) return d;
   }
   return 0;
 }

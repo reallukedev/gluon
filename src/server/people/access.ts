@@ -156,11 +156,46 @@ export async function validateGrantPath(input: string): Promise<string> {
   const segs = real.split("/");
   const secretSeg = segs.find((s) => SECRET_DIRS.includes(s));
   if (secretSeg) throw new AppError("unsafe", `${real} holds sign-in keys (${secretSeg}), so it can't be shared.`, 400, { field: "path" });
-  const contains = SECRET_DIRS.find((d) => fs.existsSync(hostPath(`${real}/${d}`)));
-  if (contains) {
-    throw new AppError("unsafe", `${real} contains ${real}/${contains} (sign-in keys). Share a folder inside it instead.`, 400, { field: "path" });
+  const found = await findSecretDir(real);
+  if (found === "too_big") {
+    throw new AppError("unsafe", `${real} has too many folders to check for sign-in keys. Share a smaller folder inside it.`, 400, { field: "path" });
   }
+  if (found) throw new AppError("unsafe", `${real} contains ${found} (sign-in keys). Share a folder inside it instead.`, 400, { field: "path" });
   return real;
+}
+
+// Folders, not files: a photo library with a million files in a few hundred folders is still quick to check.
+const SCAN_MAX_FOLDERS = 100_000;
+const SCAN_MAX_DEPTH = 32;
+
+/** First key folder anywhere below `root`, or "too_big" when the tree can't be fully checked; a grant we couldn't check isn't safe. */
+async function findSecretDir(root: string): Promise<string | "too_big" | null> {
+  let folders = 0;
+  let level = [root];
+  for (let depth = 0; level.length; depth++) {
+    if (depth > SCAN_MAX_DEPTH) return "too_big";
+    const next: string[] = [];
+    for (const dir of level) {
+      let handle: fs.Dir;
+      try {
+        handle = await fs.promises.opendir(hostPath(dir), { bufferSize: 512 });
+      } catch {
+        continue; // unreadable here means unreadable through the grant too
+      }
+      for await (const d of handle) {
+        // Leaving the for-await early closes the handle.
+        const child = dir === "/" ? `/${d.name}` : `${dir}/${d.name}`;
+        if (SECRET_DIRS.includes(d.name)) return child;
+        // Symlinks are skipped: browsing resolves them, and their targets outside the grant aren't reachable.
+        if (d.isDirectory()) {
+          if (++folders > SCAN_MAX_FOLDERS) return "too_big";
+          next.push(child);
+        }
+      }
+    }
+    level = next;
+  }
+  return null;
 }
 
 export async function createGrant(input: { userId: string; path: string; label?: string | null; access: "read" | "write" }): Promise<FolderGrant> {

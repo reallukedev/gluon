@@ -505,8 +505,7 @@ describe("upcoming: RRULE", () => {
     ]);
   });
 
-  // Suspected bug: every 13th is returned, BYDAY is not applied as a limit.
-  it.fails("lets BYDAY limit BYMONTHDAY (Friday the 13th)", () => {
+  it("lets BYDAY limit BYMONTHDAY (Friday the 13th)", () => {
     expect(
       dates(series("20261113T180000Z", "FREQ=MONTHLY;BYDAY=FR;BYMONTHDAY=13"), "2026-11-01T00:00:00Z", 400),
     ).toEqual(["2026-11-13", "2027-08-13"]);
