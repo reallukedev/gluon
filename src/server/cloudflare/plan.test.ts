@@ -116,3 +116,50 @@ describe("plan", () => {
     expect(p.actions).toEqual([]);
   });
 });
+
+describe("game addresses and other names", () => {
+  const base = [rec("example.com", "A", "203.0.113.7", true), rec("*.example.com", "A", "203.0.113.7", true)];
+
+  it("points game addresses straight here, leaning on a kept wildcard instead of a record each", () => {
+    const games = [{ host: "survival.mc.example.com", why: "Minecraft" }, { host: "creative.mc.example.com", why: "Minecraft" }, { host: "valheim.example.com", why: "Valheim" }];
+    const without = wanted(input({ games }));
+    expect(without.wants.filter((w) => w.name.includes("mc") || w.name.startsWith("valheim")).map((w) => `${w.name} ${w.records[0]!.proxied}`)).toEqual([
+      "survival.mc.example.com false",
+      "creative.mc.example.com false",
+      // One level under the base, but the base wildcard is proxied, so a game needs its own record.
+      "valheim.example.com false",
+    ]);
+    const withWild = wanted(input({ games, kept: [{ name: "mc.example.com", proxied: false }, { name: "*.mc.example.com", proxied: false }] }));
+    expect(withWild.wants.map((w) => w.name)).toEqual(["example.com", "*.example.com", "*.mc.example.com", "valheim.example.com", "mc.example.com"]);
+    expect(withWild.covered.map((c) => c.name)).toEqual(["survival.mc.example.com", "creative.mc.example.com"]);
+  });
+
+  it("won't proxy a kept name Cloudflare's certificate doesn't cover, even when asked", () => {
+    const { wants } = wanted(input({ kept: [{ name: "*.mc.example.com", proxied: true }, { name: "shop.example.com", proxied: true }] }));
+    expect(Object.fromEntries(wants.map((w) => [w.name, w.records[0]!.proxied]))).toMatchObject({ "*.mc.example.com": false, "shop.example.com": true });
+  });
+
+  it("leaves names another updater still writes alone, without counting their records as leftovers", () => {
+    const theirs = [rec("mc.example.com", "A", "198.51.100.1", false, null), rec("mc.example.com", "AAAA", "2001:db8::1", false, null), rec("old.example.com", "A", "203.0.113.7", false)];
+    const p = plan(input({ kept: [{ name: "mc.example.com", proxied: false }], defer: ["mc.example.com", "old.example.com"] }), [...base, ...theirs], ["mc.example.com"]);
+    expect(p.actions).toEqual([]);
+    expect(p.names.find((n) => n.name === "mc.example.com")).toMatchObject({ state: "deferred", foreign: false });
+    expect(p.names.some((n) => n.name === "old.example.com")).toBe(false);
+    // Once it stops, Gluon brings the handed-over name in line: one A record, no stale AAAA.
+    const after = plan(input({ kept: [{ name: "mc.example.com", proxied: false }] }), [...base, ...theirs], ["mc.example.com"]);
+    expect(after.actions.map((a) => `${a.op} ${a.name} ${a.record.type}`)).toEqual(["delete mc.example.com AAAA", "delete old.example.com A", "update mc.example.com A"]);
+  });
+
+  it("removes handed-over records once their name is no longer kept, but nobody else's", () => {
+    const handed = rec("play.example.com", "A", "203.0.113.7", false, "set by hand");
+    const other = rec("other.example.com", "A", "203.0.113.7", false, null);
+    const p = plan(input(), [...base, handed, other], ["play.example.com"]);
+    expect(p.actions).toEqual([{ op: "delete", name: "play.example.com", id: handed.id, record: A(false) }]);
+  });
+
+  it("deletes nothing when the game addresses couldn't be read", () => {
+    const mine = rec("survival.mc.example.com", "A", "203.0.113.7", false);
+    expect(plan(input({ partial: true }), [...base, mine]).actions).toEqual([]);
+    expect(plan(input(), [...base, mine]).actions).toHaveLength(1);
+  });
+});

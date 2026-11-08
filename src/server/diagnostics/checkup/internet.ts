@@ -136,12 +136,12 @@ export function publicIpCheck(group: string): CheckSpec {
         if (d.proxied) proxied++;
       }
       const evidence = kv(rows);
-      if (!ip) return warn("Couldn't find this network's public address", { detail: "Neither the DDNS updater's log nor Cloudflare's trace gave one, so DNS couldn't be compared.", evidence });
+      if (!ip) return warn("Couldn't find this network's public address", { detail: "Neither Cloudflare's trace nor the address updater gave one, so DNS couldn't be compared.", evidence });
       if (traced && st.publicIp.v4 && traced !== st.publicIp.v4) {
-        return warn(`Your public address changed to ${traced}`, { detail: `The DDNS updater last saw ${st.publicIp.v4}. It should update DNS within a few minutes.`, evidence, fix: go("See DNS", "/network?tab=dns") });
+        return warn(`Your public address changed to ${traced}`, { detail: `DNS was last set for ${st.publicIp.v4}. The address updater should catch up within a few minutes.`, evidence, fix: go("See DNS", "/network?tab=dns") });
       }
       if (missing.length) return { state: "fail", title: `${missing[0]}${missing.length > 1 ? ` and ${missing.length - 1} more` : ""} ${missing.length > 1 ? "have" : "has"} no DNS record`, detail: "Nobody can reach those addresses by name.", evidence, findings: missing.map((h) => `net.dns:${h}`), fix: go("See DNS", "/network?tab=dns") };
-      if (wrong.length) return { state: "warn", title: `${wrong[0]}${wrong.length > 1 ? ` and ${wrong.length - 1} more` : ""} ${wrong.length > 1 ? "point" : "points"} somewhere else`, detail: `This network's address is ${ip}. The DDNS updater should fix it within minutes; if not, check its log.`, evidence, findings: wrong.map((h) => `net.dns:${h}`), fix: go("See DNS", "/network?tab=dns") };
+      if (wrong.length) return { state: "warn", title: `${wrong[0]}${wrong.length > 1 ? ` and ${wrong.length - 1} more` : ""} ${wrong.length > 1 ? "point" : "points"} somewhere else`, detail: `This network's address is ${ip}. The address updater should fix it within minutes; if not, check Settings, Integrations, Cloudflare.`, evidence, findings: wrong.map((h) => `net.dns:${h}`), fix: go("See DNS", "/network?tab=dns") };
       const direct = hosts.size - proxied;
       return ok(`All ${hosts.size} of your domain names point at this network (${ip})`, { detail: proxied ? `${direct} directly and ${proxied} through Cloudflare's proxy.` : null, evidence });
     },

@@ -308,11 +308,11 @@ async function addressPlan(routeId: string): Promise<Plan> {
         const evidence = kv([
           ["This network", `${st.publicIp.v4 ?? "unknown"}${st.publicIp.v6.length ? `, ${st.publicIp.v6[0]}` : ""} (from ${st.publicIp.source})`],
           ["DNS says", d ? [...d.a, ...d.aaaa].join(", ") : null],
-          ["DDNS updater", ddns ? `${ddns.container.running ? "running" : "stopped"} · ${ddns.summary}` : "not found"],
+          ["cloudflare-ddns", ddns?.container.exists ? `${ddns.container.running ? "running" : "stopped"} · ${ddns.summary}` : "not on this server"],
         ]);
         if (!d || d.status === "missing" || d.status === "error") return skip("Can't compare without a DNS answer", { evidence });
         if (d.proxied) return ok("It goes through Cloudflare's proxy, which forwards to this network", { value: "Cloudflare", evidence });
-        if (d.status === "mismatch") return fail("DNS points somewhere other than this network", { value: "elsewhere", detail: `${d.message} The DDNS updater should correct it within minutes; if it doesn't, check its log.`, evidence, findings: [`net.dns:${hostName}`], fix: go("See DNS", "/network?tab=dns") });
+        if (d.status === "mismatch") return fail("DNS points somewhere other than this network", { value: "elsewhere", detail: `${d.message} The address updater should correct it within minutes; if it doesn't, check Settings, Integrations, Cloudflare.`, evidence, findings: [`net.dns:${hostName}`], fix: go("See DNS", "/network?tab=dns") });
         return ok(`It points at this network (${st.publicIp.v4 ?? "your address"})`, { value: st.publicIp.v4 ?? "ok", evidence });
       },
     },

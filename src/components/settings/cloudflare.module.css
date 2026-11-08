@@ -19,12 +19,19 @@
 
 .pad { padding: 0 16px 14px; }
 
+/* cloudflare-ddns names Gluon isn't ready for yet */
+.handoff { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.handoff li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.handoff .mono { overflow-wrap: anywhere; }
+
 .block { padding: 12px 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 /* The names Gluon keeps in the zone */
-.names { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+/* One grid for every row (subgrid), so values line up whether or not a row has an action. */
+.names { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto; }
 .name {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   gap: 4px 16px;
   min-height: var(--row);
@@ -36,7 +43,7 @@
 .nameMain { display: grid; gap: 1px; min-width: 0; }
 .host { font-size: var(--text-sm); color: var(--ink); overflow-wrap: anywhere; }
 .why { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.value { display: flex; align-items: baseline; gap: 7px; min-width: 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.4; }
+.value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 7px; min-width: 0; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.4; }
 .value > :first-child { flex: none; transform: translateY(1px); }
 .value > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
 .value[data-fault] { color: var(--fault); }
@@ -48,10 +55,14 @@
   @starting-style { opacity: 0; }
 }
 
+/* Its own line under the value, lined up with the text after the state mark. */
+.waiting { flex-basis: 100%; min-width: 0; padding-left: 9px; font-size: var(--text-xs); color: var(--muted); }
+
 @media (max-width: 720px) {
   .head { grid-template-columns: 32px minmax(0, 1fr); }
   .headActions { grid-column: 2; }
-  .name { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 16px; }
+  .names { grid-template-columns: minmax(0, 1fr) auto; }
+  .name { padding: 10px 16px; }
   .value { grid-column: 1; }
   .name > button { grid-column: 2; grid-row: 1 / span 2; }
 }

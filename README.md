@@ -51,7 +51,8 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
   fiber light level, live traffic, every device on the network, Wi-Fi and the firewall. With the
   router's access code it forwards the ports your apps need.
 - **Game servers.** Minecraft Java addresses through mc-router (`survival.mc.example.com`, all on
-  port 25565), each checked with a real server ping, and port forwards for other games.
+  port 25565), each checked with a real server ping, and port forwards for other games. With
+  Cloudflare connected, their DNS records are kept too.
 - **Sites.** Plain web pages you make, upload or edit in the browser, published at an address of
   their own, with the last few versions kept for rolling back.
 - **System.** OS updates, services, power, who's signed in over SSH, temperatures and memory by app.
@@ -110,7 +111,16 @@ break proxied addresses). From then on:
   the records it makes ("Managed by Gluon") and leaves every other record alone unless you hand a
   name over with "Let Gluon manage".
 - Those records follow your internet address (checked every 5 minutes), so a separate dynamic DNS
-  container isn't needed.
+  container isn't needed. Game addresses get records too: every Minecraft address in mc-router and
+  every game port with an address, always pointing straight here.
+- Other names (a leftover like `play.example.com`, or a wildcard like `*.mc.example.com`) can be
+  added under Other names and are kept pointed here the same way. Addresses under a wildcard Gluon
+  keeps don't get records of their own.
+- Coming from [cloudflare-ddns](https://github.com/favonia/cloudflare-ddns)? While it runs, Gluon
+  leaves the names it updates alone, so the two never take turns rewriting a record. Take over adds
+  its names to Gluon and hands their records over; Gluon only says it can be stopped once it keeps
+  every one of them, and not while `DELETE_ON_STOP` would remove the records on the way out. Gluon
+  takes over within a minute of it stopping.
 - Web addresses go through Cloudflare's proxy, which hides your home's address. Uploads through it
   stop at 100 MB and video streaming isn't allowed, so any address can be marked Direct to keep a
   plain record pointing straight at your network. Chat and voice always go direct, and so do names
