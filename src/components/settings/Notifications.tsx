@@ -145,6 +145,9 @@ function SubscriptionRow({
   /** The editor is folded away until someone wants to change it; the line under the name says what it sends. */
   const [open, setOpen] = React.useState(false);
   const on = !!sub;
+  // The switch moves on the click and goes back if the server says no; the rest of the row waits for the answer.
+  const [flipped, setFlipped] = React.useState<boolean | null>(null);
+  React.useEffect(() => setFlipped(null), [on]);
 
   // Reset only when the saved filter really changes: saving another channel hands every row a new
   // (equal) object, and an identity dependency would wipe this row's unsaved edits.
@@ -159,7 +162,9 @@ function SubscriptionRow({
   const toggleKinds = (keys: NotifyKind[], v: boolean) => draft && setKinds(v ? [...new Set([...draft.kinds, ...keys])] : draft.kinds.filter((k) => !keys.includes(k)));
 
   async function toggle(next: boolean) {
+    if (busy === "toggle") return;
     setBusy("toggle");
+    setFlipped(next);
     setErr(null);
     try {
       if (next) await api.put(SUBS_URL, { channelId: channel.id, filter: defaults(role, tz) });
@@ -167,6 +172,7 @@ function SubscriptionRow({
       setOpen(next);
       onChange();
     } catch (e) {
+      setFlipped(null);
       if (!(e instanceof ApiError && e.code === "reauth_cancelled")) toast.error(e instanceof Error ? e.message : "Couldn't change that.");
     } finally {
       setBusy(null);
@@ -233,7 +239,7 @@ function SubscriptionRow({
               {open ? "Close" : "Change"}
             </Button>
           )}
-          <Switch checked={on} onChange={(v) => void toggle(v)} disabled={busy === "toggle" || !channel.enabled} aria-label={switchLabel} />
+          <Switch checked={flipped ?? on} onChange={(v) => void toggle(v)} disabled={!channel.enabled} aria-label={switchLabel} />
         </span>
       </div>
 

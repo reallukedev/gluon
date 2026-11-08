@@ -53,7 +53,9 @@ export function AccessMap({ memberId }: { memberId?: string }) {
   }, [grants]);
 
   async function setHousehold(appId: string, name: string, on: boolean) {
+    if (busy === `h:${appId}`) return;
     setBusy(`h:${appId}`);
+    if (data) void vis.mutate({ ...data, apps: data.apps.map((a) => (a.id === appId ? { ...a, household: on } : a)) }, { revalidate: false });
     try {
       const next = await api.put<VisibilityResponse>(APPS_URL, { appId, household: on });
       void vis.mutate(next, { revalidate: false });
@@ -61,6 +63,7 @@ export function AccessMap({ memberId }: { memberId?: string }) {
         description: on ? undefined : "People you tick individually still see it.",
       });
     } catch (e) {
+      void vis.mutate();
       if (!quiet(e)) toast.error(errorMessage(e));
     } finally {
       setBusy(null);
@@ -215,7 +218,7 @@ export function AccessMap({ memberId }: { memberId?: string }) {
                 </th>
                 {!single && (
                   <td className={s.cell}>
-                    <Switch checked={a.household} onChange={(v) => void setHousehold(a.id, a.name, v)} disabled={busy === `h:${a.id}`} aria-label={`Everyone in the household sees ${a.name}`} />
+                    <Switch checked={a.household} onChange={(v) => void setHousehold(a.id, a.name, v)} aria-label={`Everyone in the household sees ${a.name}`} />
                   </td>
                 )}
                 {members.map((m) => {
