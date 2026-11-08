@@ -1,5 +1,5 @@
 import * as React from "react";
-import Link from "next/link";
+import { IntentLink } from "./IntentLink";
 import { NavArrowLeft } from "iconoir-react";
 import s from "./surface.module.css";
 
@@ -25,10 +25,10 @@ export function PageHeader({ title, summary, actions, back }: PageHeaderProps) {
     <header className={s.header}>
       <div className={s.headerText}>
         {back && (
-          <Link href={back.href} className={s.back} unstable_dynamicOnHover>
+          <IntentLink href={back.href} className={s.back}>
             <NavArrowLeft strokeWidth={2} />
             {back.label}
-          </Link>
+          </IntentLink>
         )}
         <h1 className={s.title}>{title}</h1>
         {summary && <p className={s.summary}>{summary}</p>}

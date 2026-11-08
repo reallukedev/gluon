@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import { IntentLink } from "./IntentLink";
 import { Tabs as BaseTabs } from "@base-ui/react/tabs";
 import { prefersReducedMotion } from "@/lib/client/motion";
 import s from "./tabs.module.css";
@@ -67,7 +67,7 @@ export function Tabs<T extends string>({ value, onChange, items, hrefFor, childr
             key={it.value}
             value={it.value}
             className={s.tab}
-            render={hrefFor ? <Link href={hrefFor(it.value)} scroll={false} unstable_dynamicOnHover /> : undefined}
+            render={hrefFor ? <IntentLink href={hrefFor(it.value)} scroll={false} /> : undefined}
             nativeButton={!hrefFor}
           >
             {it.label}

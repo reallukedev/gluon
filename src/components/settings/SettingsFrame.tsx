@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import { IntentLink } from "@/components/ui/IntentLink";
 import { usePathname } from "next/navigation";
 import { Bell, Clock, Community, HomeSimple, InfoCircle, Journal, Lock, NavArrowRight, Palette, PlugTypeA, Refresh, Server, SidebarExpand, WarningTriangle } from "iconoir-react";
 import { useApi } from "@/lib/client/api";
@@ -59,10 +59,9 @@ export function SettingsFrame({ sections, children }: { sections: SettingsSectio
                   const count = x.id === "people" ? reports : 0;
                   const countText = count ? `${count} problem report${count === 1 ? "" : "s"} waiting` : "";
                   return (
-                    <Link
+                    <IntentLink
                       key={x.id}
                       href={`/settings/${x.id}`}
-                      unstable_dynamicOnHover
                       className={s.navItem}
                       aria-current={x.id === active && section ? "page" : undefined}
                       data-active={x.id === active ? "" : undefined}
@@ -83,7 +82,7 @@ export function SettingsFrame({ sections, children }: { sections: SettingsSectio
                         </span>
                       ) : null}
                       <NavArrowRight className={s.navChevron} aria-hidden />
-                    </Link>
+                    </IntentLink>
                   );
                 })}
               </div>
