@@ -7,11 +7,8 @@ import { isHomeIp } from "../net-zone";
 import type { AddrScope, Owner } from "@/lib/diagnostics-types";
 
 /**
- * Who owns a process, a socket or an address: which container (and app), which systemd unit.
- * Used by the connections view, the process list and the exposure audit.
- *
- * With `pid: host`, /proc here is the host's /proc, so /proc/<pid>/cgroup tells us the container
- * (cgroup v2: `0::/system.slice/docker-<id>.scope`).
+ * With `pid: host`, /proc here is the host's, so /proc/<pid>/cgroup names the container (cgroup v2:
+ * `0::/system.slice/docker-<id>.scope`).
  */
 
 export interface ContainerMeta {
@@ -121,7 +118,7 @@ async function build(): Promise<Index> {
   return idx;
 }
 
-/** Running containers with pid, IPs, published ports and app. Cached a few seconds. */
+/** Cached a few seconds. */
 export async function containerIndex(maxAgeMs = 5000): Promise<Index> {
   const s = st();
   if (s.index && Date.now() - s.index.at < maxAgeMs) return s.index;
@@ -139,7 +136,7 @@ export async function containerIndex(maxAgeMs = 5000): Promise<Index> {
   }
 }
 
-/** Docker networks (bridge name, subnets). Cached a minute. */
+/** Cached a minute. */
 export async function dockerNetworks(): Promise<{ list: DockerNetwork[]; block: net.BlockList }> {
   const s = st();
   if (s.networks && Date.now() - s.networks.at < 60_000) return s.networks;
@@ -177,7 +174,6 @@ export function isLoopback(ip: string): boolean {
   return a === "::1" || a.startsWith("127.");
 }
 
-/** Where an address lives, relative to this machine. */
 export function scopeOf(ip: string, dockerBlock: net.BlockList): AddrScope {
   const a = stripMapped(ip);
   if (isLoopback(a)) return "local";

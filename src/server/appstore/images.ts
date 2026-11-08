@@ -7,11 +7,9 @@ import { hubQuery, mapHubSearch, mapHubTags, pageTags, retryAt, sortTags } from 
 import type { HubSearchResult, ImageLookup, TagPage } from "@/lib/builder-types";
 
 /**
- * Looks an image up where Docker would: this server first, then its registry (Docker Hub, GHCR,
- * Quay, lscr.io… anything speaking the registry v2 API with anonymous pull tokens). Reads the
- * image's config so the form can suggest its ports, folders and variables. Registry hosts come
- * from what the person typed, so requests go through Gluon's guarded fetch with the "member"
- * policy: public internet only, never this server or the LAN.
+ * This server first, then its registry (anything speaking registry v2 with anonymous pull tokens).
+ * Registry hosts come from what the person typed, so requests use the "member" fetch policy: public
+ * internet only, never this server or the LAN.
  */
 
 type G = typeof globalThis & { __gluonImageCache?: Map<string, { at: number; value: ImageLookup }> };
@@ -78,7 +76,6 @@ export async function lookupImage(ref: string): Promise<ImageLookup> {
   const hit = cache.get(clean);
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit.value;
 
-  // On this server already?
   let result: ImageLookup = { ...empty };
   try {
     const info = await docker().getImage(clean.includes(":") || clean.includes("@") ? clean : `${clean}:latest`).inspect();
@@ -156,8 +153,6 @@ class RegistryAnswer extends Error {
     super(`answered ${status}`);
   }
 }
-
-// ---------------------------------------------------------------- Docker Hub search and tag pages
 
 /**
  * Docker Hub allows anonymous clients about 180 requests a minute per address, shared by

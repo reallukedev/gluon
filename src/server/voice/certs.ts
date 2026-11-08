@@ -16,19 +16,10 @@ import { voiceReason } from "./cert-words";
 import type { VoiceCertView } from "./types";
 
 /**
- * Keeps a Mumble server's certificate current from the one Caddy holds for a public address.
- *
- * Mumble reads its certificate files (sslCert/sslKey) only when it starts, but Ice's
- * updateCertificate swaps it live: people already connected keep the old one, new connections get
- * the new one. So Gluon writes the files on the server (the container mounts them read-only, so
- * the write happens on the host side, keeping each file's owner and mode) and hands the same pair
- * to Mumble over Ice, with no restart. Mumble keeps that pair in its database, where it wins over
- * the files from then on; Gluon keeps both the same.
- *
- * The decision of whether to copy is the chat servers' one (decideCopy): Gluon only replaces a
- * certificate that is missing, untrusted or within 21 days of expiring.
+ * Mumble reads sslCert/sslKey only at start, but Ice's updateCertificate swaps it live, so Gluon
+ * writes the host files and hands the same pair over Ice. Mumble keeps that pair in its database,
+ * where it wins over the files; Gluon keeps both the same.
  */
-
 
 export interface Served {
   pem: string | null;
@@ -41,9 +32,8 @@ export interface Served {
 }
 
 /**
- * The certificate Mumble serves, read over Ice rather than by connecting to its voice port: Mumble
- * counts every connection towards its autoban (10 in 2 minutes), so probing it would lock Gluon out.
- * A per-server certificate (what updateCertificate stores) wins over the config file's.
+ * Read over Ice rather than by connecting: Mumble counts every connection towards its autoban (10 in
+ * 2 minutes). A per-server certificate (what updateCertificate stores) wins over the config file's.
  */
 export async function mumbleCert(c: MumbleConn, host: string | null): Promise<Served | null> {
   const own = await c.server.getConf("certificate").catch(() => "");
@@ -68,7 +58,6 @@ export async function mumbleCert(c: MumbleConn, host: string | null): Promise<Se
   }
 }
 
-/** The host folder holding Mumble's certificate files, from its sslCert setting and its mounts. */
 export function certFiles(f: Pick<MumbleFacts, "env" | "mounts">): { crt: string; key: string; folder: string } | null {
   const crtIn = envFor("sslCert", f.env)?.value;
   const keyIn = envFor("sslKey", f.env)?.value;
@@ -85,7 +74,7 @@ export function certFiles(f: Pick<MumbleFacts, "env" | "mounts">): { crt: string
   return { crt, key, folder: path.posix.dirname(crt) };
 }
 
-/** Write `data` over a host file, keeping its owner and mode (or the folder's owner, 0644/0600, when new). */
+/** Keeps the file's owner and mode (or the folder's owner, 0644/0600, when new). */
 function writeKeeping(file: string, data: Buffer, newMode: number) {
   const p = hostPath(file);
   let st: fs.Stats | null = null;
@@ -132,7 +121,6 @@ const st = () => (g.__gluonVoiceCerts ??= { state: new Map(), running: null });
 
 export const certSyncState = (appId: string) => st().state.get(appId) ?? null;
 
-/** Check one voice server and copy Caddy's certificate in when it's due. */
 export async function syncVoiceCert(appId: string, opts: { force?: boolean } = {}): Promise<CertSync> {
   const rec = getVoice(appId);
   const prev = st().state.get(appId);
@@ -196,7 +184,7 @@ export async function syncVoiceCert(appId: string, opts: { force?: boolean } = {
 
 const RECHECK_OK_MS = 6 * 60 * 60_000;
 
-/** Every voice server that follows an address. `onlyDue` skips ones checked recently that were fine. */
+/** `onlyDue` skips servers checked recently that were fine. */
 export function syncVoiceCertificates(opts: { onlyDue?: boolean } = {}): Promise<void> {
   const s = st();
   if (s.running) return s.running;
@@ -255,9 +243,8 @@ export async function certView(appId: string, f: MumbleFacts | null, c: MumbleCo
 }
 
 /**
- * Stop following an address. Mumble's own copy (from updateCertificate) would otherwise keep
- * winning over the files forever, so it's cleared: Mumble serves the current certificate until it
- * restarts, then reads its files again.
+ * Mumble's copy from updateCertificate would otherwise win over the files forever, so it's cleared;
+ * Mumble reads its files again on the next restart.
  */
 export async function releaseCert(appId: string): Promise<string> {
   const rec = getVoice(appId);

@@ -26,9 +26,8 @@ const schema = z.object({
   token: z.string().trim().min(20, "Paste the whole long-lived access token from Home Assistant.").max(1000),
   allowSelfSigned: z.boolean().default(false),
   /**
-   * What household members may press (entity ids), and what they may only look at. Admins set both from a Home
-   * Assistant widget's settings; they live here, on the connection, so a member can't grant them to themselves by
-   * editing their own widget. Pressing implies seeing.
+   * Lives on the connection, not the widget, so a member can't grant themselves controls by editing
+   * their own widget. Pressing implies seeing.
    */
   householdControls: z.array(z.string().regex(HA_ENTITY_ID)).max(200).default([]),
   householdVisible: z.array(z.string().regex(HA_ENTITY_ID)).max(200).default([]),
@@ -103,10 +102,7 @@ async function people(ctx: Ctx): Promise<HomeAssistantPeopleData> {
   return { people: list, home: list.filter((p) => p.where === "home").length, places: ctx.config.showPlaces };
 }
 
-/**
- * Everything a Home Assistant widget can show, for its settings (no states, just what and where).
- * `limitTo` narrows it for household members: only those ids, and their rooms, leave the server.
- */
+/** `limitTo` narrows it for household members: only those ids, and their rooms, leave the server. */
 export async function pickable(ctx: KindContext<Record<string, unknown>>, limitTo?: ReadonlySet<string>): Promise<HomeAssistantPickableList> {
   const c = ctx as unknown as Ctx;
   const [states, areas] = await Promise.all([allStates(c), areaSafe(c)]);
@@ -123,7 +119,7 @@ export async function pickable(ctx: KindContext<Record<string, unknown>>, limitT
   return { entities: list, areas: areas.areas.map((a) => a.name), areasNote: areas.note };
 }
 
-/** Call a service on one entity, then read it back so the widget can show the result straight away. */
+/** Reads the entity back so the widget can show the result straight away. */
 export async function callService(ctx: KindContext<Record<string, unknown>>, plan: { domain: string; service: string }, entityId: string): Promise<HomeAssistantEntity | null> {
   const c = ctx as unknown as Ctx;
   const h = http(c);
@@ -138,34 +134,27 @@ export async function callService(ctx: KindContext<Record<string, unknown>>, pla
   }
 }
 
-/** The name people know a thing by, from the shared states fetch (for activity entries). */
 export async function nameOf(ctx: KindContext<Record<string, unknown>>, entityId: string): Promise<string | null> {
   const s = (await allStates(ctx as unknown as Ctx).catch(() => [] as HaState[])).find((x) => x.entity_id === entityId);
   return s ? displayName(s) : null;
 }
 
-/** Drop what a control changed, so the next widget refresh reads Home Assistant again. */
 export function forgetStates(ctx: KindContext<Record<string, unknown>>) {
   invalidate(`int:${ctx.id}:${ctx.version}:ha:states`);
   invalidate(`int:${ctx.id}:${ctx.version}:homeassistant.`);
 }
 
 const idList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
-/** What an admin let household members press. */
 export const householdControlsOf = (config: Record<string, unknown> | null): string[] => idList(config?.householdControls);
-/** What an admin shared with household members only to look at. */
 export const householdVisibleOf = (config: Record<string, unknown> | null): string[] => idList(config?.householdVisible);
-/** Everything household members may see: the "see" list and the "press" list together. */
 export const sharedOf = (config: Record<string, unknown> | null): string[] => [...new Set([...householdVisibleOf(config), ...householdControlsOf(config)])];
 
-/** An entity's device class from the shared states fetch (garage, gate, door…), or null. */
 /** The entity's device class (null when it has none), or undefined when Home Assistant doesn't list the entity. */
 export async function deviceClassOf(ctx: KindContext<Record<string, unknown>>, entityId: string): Promise<string | null | undefined> {
   const s = (await allStates(ctx as unknown as Ctx)).find((x) => x.entity_id === entityId);
   return s ? str(s.attributes?.device_class) : undefined;
 }
 
-/** Device classes for many entities at once (for checking an admin's household edits). */
 export async function deviceClasses(ctx: KindContext<Record<string, unknown>>): Promise<Map<string, string | null>> {
   return new Map((await allStates(ctx as unknown as Ctx)).map((s) => [s.entity_id, str(s.attributes?.device_class)]));
 }

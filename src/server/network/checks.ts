@@ -9,17 +9,6 @@ import { ddnsStatus } from "./ddns";
 import { exposureReport } from "./exposure";
 import { FALLBACK_ID } from "./routes-meta";
 
-/**
- * Findings for the Network domain:
- *  net.cert     certificate expiring / expired / not issued (pending > 30 min or Caddy reported an error)
- *  net.backend  a public address whose app isn't answering (2 checks in a row)
- *  net.dns      a public name that doesn't resolve, or resolves somewhere else
- *  net.ddns     the dynamic DNS updater is stopped or reporting errors
- *  net.exposed  an app with no login of its own is on the internet
- *  net.xmpp     a chat server people can't sign in to, or whose certificate or federation needs work (2 checks in a row)
- *  net.reach    the router doesn't let people outside reach a chat or voice port (2 checks in a row)
- */
-
 const PENDING_GRACE = 30 * 60_000;
 const failures = new Map<string, number>();
 
@@ -42,7 +31,6 @@ registerCheck("network-status", 120_000, async () => {
     if (!r.enabled) continue;
     const name = r.app?.name ?? r.name;
 
-    // ---- backend down (debounced)
     if (r.backend) {
       const key = r.id;
       if (!r.backend.reachable) failures.set(key, (failures.get(key) ?? 0) + 1);
@@ -72,7 +60,6 @@ registerCheck("network-status", 120_000, async () => {
       }
     }
 
-    // ---- certificate (once per host)
     if (r.tls && !seenHosts.has(r.host)) {
       seenHosts.add(r.host);
       const t = r.tls;
@@ -123,7 +110,7 @@ registerCheck("network-status", 120_000, async () => {
       }
     }
 
-    // ---- DNS (subdomains; the base domain is covered by its own entry)
+    // Subdomains only; the base domain is covered by its own entry.
     if (r.dns && (r.type === "subdomain" || r.id === FALLBACK_ID)) {
       const id = `net.dns:${r.host}`;
       if (r.dns.status === "missing" || r.dns.status === "mismatch") {
@@ -144,7 +131,7 @@ registerCheck("network-status", 120_000, async () => {
       }
     }
 
-    // ---- chat server (debounced like the backend: one failed handshake isn't news)
+    // Debounced like the backend: one failed handshake isn't news.
     if (r.xmpp) {
       const verdict = xmppVerdict(r.xmpp);
       const key = `xmpp:${r.id}`;
@@ -166,7 +153,7 @@ registerCheck("network-status", 120_000, async () => {
       }
     }
 
-    // ---- the router lets chat or voice apps in (debounced: one lost packet isn't news)
+    // Debounced: one lost packet isn't news.
     const reach = r.xmpp?.reach ?? r.voice?.reach ?? null;
     if (reach) {
       const key = `reach:${r.id}`;
@@ -203,14 +190,12 @@ registerCheck("network-status", 120_000, async () => {
   resolveMissing("net.reach", openReach);
 });
 
-/** Names in a domain Gluon's own Cloudflare connection can write. */
 function cloudflareHolds(host: string): boolean {
   const c = getSetting("cloudflare");
   if (!c) return false;
   return (c.zones.length ? c.zones : [c.zone]).some((z) => host === z.name || host.endsWith(`.${z.name}`));
 }
 
-/** What to add so a name resolves: Gluon's Cloudflare connection when it can write there, plain records anywhere else. */
 function dnsFix(host: string, status: Awaited<ReturnType<typeof networkStatus>>): string {
   const base = status.baseDomain;
   const v4 = status.publicIp.v4;

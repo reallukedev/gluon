@@ -5,8 +5,8 @@ import net from "node:net";
 import type { MonitorConfig } from "@/lib/alerts-types";
 
 /**
- * One check. Errors are short, stable phrases ("connection refused", "no answer within 10 s") because
- * they end up in finding causes and the check log; stable wording also stops findings churning.
+ * Errors are short, stable phrases because they end up in finding causes and the check log, and
+ * stable wording stops findings churning.
  */
 
 export interface ProbeResult {

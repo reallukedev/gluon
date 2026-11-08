@@ -31,13 +31,10 @@ const SERVER_ID = /^[a-z0-9-]{1,64}$/;
 const MAX_SERVERS = 60;
 const COMMAND: Record<CraftyAction, string> = { start: "start_server", stop: "stop_server", restart: "restart_server", kill: "kill_server" };
 
-// ------------------------------------------------------------------ signing in
-
 /**
- * Crafty's tokens are JWTs with no expiry: they stop working only when the user's tokens are revoked (password
- * change, "invalidate tokens") or the key is deleted. A token from a username and password is kept in memory per
- * connection version and fetched again once if Crafty refuses it. A failed sign-in is remembered for five minutes,
- * because Crafty locks an address out for five minutes after three wrong passwords in three minutes.
+ * Crafty's tokens are JWTs with no expiry, so one from a username and password is kept per connection
+ * version and fetched again once if refused. A failed sign-in is remembered for five minutes because
+ * Crafty locks an address out for five minutes after three wrong passwords in three minutes.
  */
 type G = typeof globalThis & {
   __gluonCraftyTokens?: Map<string, string>;
@@ -62,7 +59,6 @@ function remember<K, V>(m: Map<K, V>, k: K, v: V, max = 64) {
 function http(ctx: Ctx) {
   return client(def, ctx, () => null);
 }
-
 
 async function login(ctx: Ctx): Promise<string> {
   const k = tokenKey(ctx);
@@ -164,8 +160,6 @@ async function call(ctx: Ctx, path: string, o: { method?: "GET" | "POST"; timeou
 
 const isNotAuthorized = (a: Answer) => a.status === 400 && /NOT_AUTHORIZED/.test(a.error?.code ?? "");
 
-// ------------------------------------------------------------------ reading servers
-
 const key = (ctx: Ctx, what: string) => `int:${ctx.id ?? ctx.baseUrl}:${ctx.version}:crafty:${what}`;
 
 async function craftyVersion(ctx: Ctx): Promise<string | null> {
@@ -227,7 +221,6 @@ async function servers(ctx: Ctx): Promise<CraftyServersData> {
   return { version, servers: list };
 }
 
-/** One server, read fresh from Crafty (for following an action until it settles). */
 export async function serverNow(ctx: KindContext<Record<string, unknown>>, id: string): Promise<CraftyServer> {
   const c = ctx as unknown as Ctx;
   if (!SERVER_ID.test(id)) throw new UpstreamError("That isn't a Crafty server.", null, "bad_request");
@@ -238,13 +231,12 @@ export async function serverNow(ctx: KindContext<Record<string, unknown>>, id: s
   return mapAll([{ item, stats }])[0]!;
 }
 
-/** The server's name as Crafty knows it, for activity entries. */
 export async function serverName(ctx: KindContext<Record<string, unknown>>, id: string): Promise<string | null> {
   const list = await allServers(ctx as unknown as Ctx).catch(() => [] as CraftyServer[]);
   return list.find((s) => s.id === id)?.name ?? null;
 }
 
-/** Ask Crafty to start, stop, restart or force-stop one server. Crafty queues the command and answers at once. */
+/** Crafty queues the command and answers at once. */
 export async function runAction(ctx: KindContext<Record<string, unknown>>, id: string, action: CraftyAction): Promise<void> {
   const c = ctx as unknown as Ctx;
   if (!SERVER_ID.test(id)) throw new UpstreamError("That isn't a Crafty server.", null, "bad_request");
@@ -262,13 +254,10 @@ export async function runAction(ctx: KindContext<Record<string, unknown>>, id: s
   if (a.status >= 400) throw new UpstreamError(`Crafty refused (${a.error?.detail || a.error?.code || a.status}).`, a.status);
 }
 
-/** Drop what an action changed, so the next widget refresh asks Crafty again. */
 export function forgetServers(ctx: KindContext<Record<string, unknown>>) {
   invalidate(`int:${ctx.id}:${ctx.version}:crafty:servers`);
   invalidate(`int:${ctx.id}:${ctx.version}:crafty.servers`);
 }
-
-// ------------------------------------------------------------------ search and links
 
 /** Crafty's page for a server, when the address is one a browser could open too. */
 function panelUrl(ctx: Ctx, id: string): string | undefined {
@@ -313,8 +302,6 @@ async function search(ctx: Ctx, q: string, opts: { limit: number; signal: AbortS
       return { id: s.id, label: s.name, hint: `${s.game} server · ${STATE_WORD[s.state]}${playing}`, type: "game", url: panelUrl(ctx, s.id) };
     });
 }
-
-// ------------------------------------------------------------------ the kind
 
 export const def: KindDef<Config> = {
   kind: "crafty",

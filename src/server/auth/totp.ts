@@ -24,9 +24,8 @@ const ENROL_TTL_MS = 20 * 60_000;
 const enrolTicket = (userId: string, secret: string, expires: number) => `${expires}.${hmac("totp-enrol", `${userId}\0${secret}\0${expires}`)}`;
 
 /**
- * Start enrolment: a fresh secret (not saved until confirmed) + QR code for authenticator apps.
- * The secret travels through the browser, so it comes with a signed ticket: confirming only accepts
- * a secret this server generated for this person in the last 20 minutes.
+ * The secret isn't saved until confirmed and travels through the browser, so it comes with a signed
+ * ticket: confirming only accepts a secret this server made for this person in the last 20 minutes.
  */
 export async function beginEnrolment(user: Pick<UserRow, "id" | "username">) {
   const secret = new OTPAuth.Secret({ size: 20 });
@@ -44,13 +43,15 @@ export function checkEnrolTicket(userId: string, secret: string, ticket: string)
   return safeEqual(enrolTicket(userId, secret, expires), ticket);
 }
 
-/** Verify a 6-digit code against a secret, allowing ±1 step, rejecting replays. Returns the matched step. */
+/** Allows one step either side and rejects replays. Returns the matched step. */
 export function checkCode(secretB32: string, code: string, lastStep: number | null, label = "user"): number | null {
   const cleaned = code.replace(/\s/g, "");
   if (!/^\d{6}$/.test(cleaned)) return null;
-  const delta = totpFor(secretB32, label).validate({ token: cleaned, window: 1 });
+  // One clock reading for both, or a check that straddles a step boundary records the wrong step.
+  const timestamp = Date.now();
+  const delta = totpFor(secretB32, label).validate({ token: cleaned, timestamp, window: 1 });
   if (delta === null) return null;
-  const step = Math.floor(Date.now() / 1000 / PERIOD) + delta;
+  const step = Math.floor(timestamp / 1000 / PERIOD) + delta;
   if (lastStep !== null && step <= lastStep) return null; // replay
   return step;
 }
@@ -78,10 +79,7 @@ export function disableTotp(userId: string) {
   run("UPDATE users SET totp_secret_enc = NULL, totp_enabled = 0, totp_last_step = NULL, recovery_codes = NULL, updated_at = ? WHERE id = ?", now(), userId);
 }
 
-/**
- * Verify a second factor: a TOTP code or a single-use recovery code. Reads the account fresh so two
- * concurrent requests can't both spend the same code.
- */
+/** Reads the account fresh so two concurrent requests can't both spend the same code. */
 export function verifySecondFactor(userId: string, input: string): { ok: boolean; usedRecovery?: boolean; remainingRecovery?: number } {
   const user = findById(userId);
   if (!user || !user.totp_enabled || !user.totp_secret_enc) return { ok: false };

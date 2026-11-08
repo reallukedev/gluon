@@ -53,7 +53,7 @@ export interface ValidationResult {
   services?: string[];
 }
 
-/** Check YAML syntax locally, then ask Compose itself (with a temp file beside the real one so relative paths resolve). */
+/** Compose gets a temp file beside the real one so relative paths resolve. */
 export async function validateCompose(id: string, content: string): Promise<ValidationResult> {
   const app = await appWithCompose(id);
   try {
@@ -81,8 +81,8 @@ export async function validateCompose(id: string, content: string): Promise<Vali
 }
 
 /**
- * Save and apply a compose file. Streams progress lines. If `docker compose up` fails, the previous
- * file is restored and brought back up, so a bad edit can't leave the app down.
+ * If `docker compose up` fails, the previous file is restored and brought back up, so a bad edit
+ * can't leave the app down.
  */
 export async function applyCompose(
   id: string,

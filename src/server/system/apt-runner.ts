@@ -14,12 +14,10 @@ import { aptLockHolders, assertPackageName, describeHolders, dpkgInterrupted, in
 import { parseShow } from "./units";
 
 /**
- * Installing updates.
- *
- * apt runs as a transient systemd service on the host (`systemd-run`), not as a child of Gluon.
- * Upgrading docker-ce or containerd restarts Docker, which stops Gluon's container; if apt were our
- * child it would be killed mid-install and leave dpkg half-configured. As a systemd unit it keeps
- * going, writes to a log file on the host, and Gluon picks the run back up when it starts again.
+ * apt runs as a transient systemd service on the host, not as Gluon's child: upgrading docker-ce or
+ * containerd restarts Docker and stops Gluon's container, which would kill a child mid-install and
+ * leave dpkg half-configured. The unit keeps going and Gluon picks the run back up when it starts
+ * again.
  */
 
 const LOG_DIR = "/var/log/gluon";
@@ -51,8 +49,6 @@ const st = () => (g.__gluonAptRuns ??= { followers: new Map(), starting: false }
 export const runTopic = (id: string) => `system.apt.${id}`;
 
 export type RunEvent = { type: "line"; n: number; text: string } | { type: "done"; run: UpdateRunSummary };
-
-// ---------------------------------------------------------------- reads
 
 export function getRun(id: string): UpdateRun | null {
   const r = one<RunRow>("SELECT * FROM update_runs WHERE id = ?", id);
@@ -87,8 +83,6 @@ export function runBuffer(id: string): { lines: string[]; from: number } | null 
   const f = st().followers.get(id);
   return f ? { lines: f.lines.slice(), from: f.from } : null;
 }
-
-// ---------------------------------------------------------------- start
 
 export interface StartOptions {
   kind: "upgrade" | "repair";
@@ -221,8 +215,6 @@ export async function startRun(user: { id: string; username: string }, opts: Sta
   }
 }
 
-// ---------------------------------------------------------------- follow
-
 function readNew(f: Follower, push: (text: string) => void) {
   let fd: number | null = null;
   try {
@@ -244,7 +236,6 @@ function readNew(f: Follower, push: (text: string) => void) {
   }
 }
 
-/** Start (or return) the follower that tails a run's log and notices when it finishes. */
 export function follow(id: string): Follower {
   const s = st();
   const existing = s.followers.get(id);

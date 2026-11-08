@@ -27,10 +27,9 @@ export function certInfo(pem: Buffer | string, host: string): CertInfo | null {
 }
 
 /**
- * Gluon is a safety net, not the only renewer: a chat server whose certificate is valid and not
- * close to expiring is left alone, since another tool (certbot, the server itself) may manage it
- * and copying over it at every renewal would make the two take turns. Caddy renews about 30 days
- * ahead, so by the time a certificate is within this window Caddy has a fresher one.
+ * Gluon is a safety net, not the only renewer: copying over a valid certificate at every renewal
+ * would fight another tool (certbot, the server itself). Caddy renews about 30 days ahead, so inside
+ * this window it has a fresher one.
  */
 export const COPY_WITHIN_DAYS = 21;
 

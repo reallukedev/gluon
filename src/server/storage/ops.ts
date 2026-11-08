@@ -21,13 +21,11 @@ export interface Where {
 const VIRTUAL_FS = new Set(["proc", "sysfs", "devtmpfs", "devpts", "cgroup", "cgroup2", "securityfs", "pstore", "efivarfs", "bpf", "autofs", "hugetlbfs", "mqueue", "debugfs", "tracefs", "fusectl", "configfs", "binfmt_misc", "nsfs", "overlay", "rpc_pipefs", "ramfs", "squashfs"]);
 const SYSTEM_TREES = ["/proc", "/sys", "/dev", "/boot", "/var/lib/docker", "/var/lib/containerd", "/snap", "/run/docker", "/run/containerd", "/run/user", "/run/lock", "/run/credentials"];
 
-/** Filesystems Gluon knows how to mount. */
 const MOUNTABLE = new Set(["ext4", "ext3", "ext2", "xfs", "btrfs", "vfat", "exfat", "ntfs", "ntfs3", "f2fs"]);
 const NON_POSIX = new Set(["vfat", "exfat", "ntfs", "ntfs3"]);
 
 export const PERSIST_BASE_OPTIONS = ["defaults", "nofail", "x-systemd.device-timeout=30s"];
 
-/** Turn mount/umount stderr into something a person can act on. */
 export function mountError(e: unknown, what: string): AppError {
   const stderr = e instanceof CommandError ? `${e.stderr}\n${e.message}` : (e as Error).message ?? "";
   const s = stderr.toLowerCase();
@@ -81,8 +79,6 @@ function volumeOrThrow(s: InventoryState, key: string): VolumeRecord {
   if (!r) throw notFound("That drive or partition");
   return r;
 }
-
-// ---------------------------------------------------------------- mount
 
 export async function planMount(input: { device: string; target: string; persist?: boolean; noatime?: boolean }): Promise<MountPlan & { entry: FstabEntry | null; record: VolumeRecord }> {
   const s = await getInventoryState(true);
@@ -148,8 +144,6 @@ export async function mountVolume(user: User, input: { device: string; target: s
   });
 }
 
-// ---------------------------------------------------------------- unmount
-
 export async function planUnmount(target: string): Promise<UnmountPlan & { record: VolumeRecord | null; fstabIndex: number | null }> {
   const s = await getInventoryState(true);
   const blockers: string[] = [];
@@ -211,15 +205,12 @@ export async function unmountTarget(user: User, input: { target: string; removeF
   });
 }
 
-// ---------------------------------------------------------------- make permanent
-
 interface PersistWork {
   plan: PersistPlan;
   changes: FstabChange[];
   text: string;
 }
 
-/** Mounted filesystems that won't come back after a restart. */
 export function notPersistent(s: InventoryState): VolumeRecord[] {
   return s.volumes.filter(
     (r) =>

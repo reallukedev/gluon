@@ -5,16 +5,11 @@ import { resolve } from "../findings";
 import type { Zone } from "../net-zone";
 
 /**
- * Sign-in throttling, stored in SQLite so it survives restarts.
- *
- * Every secret-checking endpoint (password, second step, re-auth, password change, setup code) calls
- * `guard()` first and `recordAttempt()` after. Failures are counted per subject (an account, for one
- * purpose) *and per zone*, so strangers hammering an account from the internet slow down the
- * internet: never the person signing in at home. Per IP address there is a hard cap as well.
- *
- *   away, per account: 5 free failures in 24 h, then 1 min, 2, 4 … up to 1 h between tries
- *   home, per account: 5 free failures in 15 min, then 30 s, 1 min … up to 15 min
- *   per IP:            30 failures in 15 min, or (away) 100 in 24 h, blocks that address for the window
+ * Stored in SQLite so it survives restarts. Failures are counted per subject and per zone, so
+ * strangers hammering an account from the internet slow down the internet, never the person signing
+ * in at home. Away: 5 free failures in 24 h, then 1 min doubling up to 1 h. Home: 5 in 15 min, then
+ * 30 s doubling up to 15 min. Per IP: 30 in 15 min, or (away) 100 in 24 h, blocks that address for
+ * the window.
  */
 const HOME = { window: 15 * 60_000, free: 5, base: 30_000, max: 15 * 60_000 };
 const AWAY = { window: 24 * 3600_000, free: 5, base: 60_000, max: 60 * 60_000 };
@@ -24,7 +19,6 @@ const IP_LONG = { window: 24 * 3600_000, max: 100 };
 const acctKey = (subject: string, zone: Zone) => `acct:${zone}:${subject.toLowerCase()}`;
 const ipKey = (ip: string) => `ip:${ip}`;
 
-/** Seconds to wait before `subject` may try again from this address, or 0. */
 export function retryAfter(subject: string, ip: string, zone: Zone = "home"): number {
   const t = now();
   const p = zone === "away" ? AWAY : HOME;
@@ -63,7 +57,7 @@ export function waitText(seconds: number): string {
   return `${h} hour${h === 1 ? "" : "s"}`;
 }
 
-/** Throw a friendly 429 if this subject/address has to wait. */
+/** Throws a friendly 429. */
 export function guard(subject: string, ip: string, zone: Zone, what = "attempts") {
   const wait = retryAfter(subject, ip, zone);
   if (wait > 0) {
@@ -75,10 +69,9 @@ type L = typeof globalThis & { __gluonAttemptLocks?: Set<string> };
 const locks = () => ((globalThis as L).__gluonAttemptLocks ??= new Set<string>());
 
 /**
- * Run a guarded check that awaits (a password hash) one at a time per subject and zone. Otherwise
- * many requests sent at once all pass `guard()` before the first failure is recorded, and the
- * throttle allows a burst of guesses instead of one. Per zone, so tries from outside never hold up
- * someone at home.
+ * Otherwise many requests sent at once all pass `guard()` before the first failure is recorded, and
+ * the throttle allows a burst of guesses. Per zone, so tries from outside never hold up someone at
+ * home.
  */
 export async function oneAtATime<T>(subject: string, zone: Zone, fn: () => Promise<T>): Promise<T> {
   const key = acctKey(subject, zone);
@@ -95,9 +88,8 @@ export async function oneAtATime<T>(subject: string, zone: Zone, fn: () => Promi
 }
 
 /**
- * Record the outcome. A success clears the subject's failures in both zones (the secret is proven).
- * Returns the subject's failure count in this zone's window after a failure, and whether this failure
- * is the one that started the slowdown (so the caller can tell an admin once).
+ * A success clears the subject's failures in both zones. `startedThrottle` is true for the failure
+ * that started it, so the caller can tell an admin once.
  */
 export function recordAttempt(subject: string, ip: string, ok: boolean, zone: Zone = "home"): { failures: number; startedThrottle: boolean } {
   const t = now();
@@ -111,16 +103,13 @@ export function recordAttempt(subject: string, ip: string, ok: boolean, zone: Zo
   return { failures: n, startedThrottle: n === p.free };
 }
 
-// ---------------------------------------------------------------- bursts (in memory)
-
 type G = typeof globalThis & { __gluonBursts?: Map<string, number[]> };
 const g = globalThis as G;
 const bursts = () => (g.__gluonBursts ??= new Map<string, number[]>());
 
 /**
- * Cheap flood control for public endpoints (sign-in, setup, invites): at most `limit` requests per
- * `windowMs` per key. In memory on purpose: it only has to blunt floods, the durable limits above
- * do the real work. Returns seconds to wait, or 0 (and counts this request).
+ * In memory on purpose: it only has to blunt floods; the durable limits above do the real work.
+ * Counts this request.
  */
 export function burst(key: string, limit: number, windowMs: number): number {
   const t = Date.now();
@@ -145,7 +134,7 @@ export function pruneAttempts() {
   for (const f of open) if (now() - f.last_seen > AWAY.window) resolve(f.id, "No more failed sign-ins");
 }
 
-/** Forget an account's sign-in failures (after an admin resets its password). */
+/** After an admin resets its password. */
 export function clearThrottle(username: string) {
   const u = username.toLowerCase();
   run("DELETE FROM login_attempts WHERE key IN (?, ?, ?)", `acct:home:login:${u}`, `acct:away:login:${u}`, `user:${u}`);

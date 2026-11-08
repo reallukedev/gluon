@@ -2,15 +2,11 @@ import "server-only";
 import { AppError } from "../errors";
 import type { ServiceAction } from "@/lib/system-types";
 
-/**
- * Unit names, the curated "important" list and the safety policy for service actions.
- * Pure functions only, so they can be reused by routes, checks and remedies.
- */
+/** Pure, so routes, checks and remedies share them. */
 
 /**
- * `^[A-Za-z0-9@._:-]+\.service$`, plus systemd's own `\xNN` escapes (e.g.
- * `systemd-fsck@dev-disk-by\x2duuid-….service`), which appear in real unit lists. Names are
- * passed as argv elements, never through a shell, but we still refuse anything else.
+ * Also allows systemd's own `\xNN` escapes, which appear in real unit lists. Names go as argv
+ * elements, never through a shell, but anything else is still refused.
  */
 const UNIT_RE = /^(?:[A-Za-z0-9@._:-]|\\x[0-9a-fA-F]{2})+\.service$/;
 
@@ -130,8 +126,6 @@ export function blockedReason(unit: string, action: ServiceAction): string {
 
 export const takesGluonDown = (unit: string) => TAKES_GLUON_DOWN.test(unit);
 
-// ---------------------------------------------------------------- systemctl show parsing
-
 /** `systemctl show a b c -p X,Y` → one record per unit (blank-line separated). */
 export function parseShow(stdout: string): Record<string, string>[] {
   const out: Record<string, string>[] = [];
@@ -169,8 +163,6 @@ export function showTimestamp(v: string | undefined): number | null {
 
 /** Split systemd list properties ("a.target b.target"). */
 export const showList = (v: string | undefined) => (v ? v.split(/\s+/).filter(Boolean) : []);
-
-// ---------------------------------------------------------------- plain-language descriptions
 
 /** What common services do, for people who don't know systemd. First match wins. */
 const ABOUT: [RegExp, string][] = [

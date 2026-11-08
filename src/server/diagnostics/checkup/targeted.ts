@@ -36,8 +36,6 @@ import { cpuWindow, download, hostNameservers, httpAnswer, pingSeries, summarize
 import { mfaRequired } from "../../auth/policy";
 import * as h from "./hardening";
 
-/** Targeted checkups: go deeper along one path for one symptom. */
-
 export interface Plan {
   title: string;
   layout: "sweep" | "path";
@@ -50,8 +48,6 @@ export interface Plan {
 
 const DETAILS: CheckupGroup = { id: "details", label: "Details" };
 const PATH: CheckupGroup = { id: "path", label: "Path" };
-
-// ---------------------------------------------------------------- an app won't open
 
 async function findApp(id: string): Promise<AppSummary> {
   const { listApps } = await import("../../docker/apps");
@@ -167,7 +163,6 @@ async function appPlan(appId: string): Promise<Plan> {
     });
   }
 
-  // ---- details
   if (app.urls.home && /^https?:\/\//.test(app.urls.home)) {
     const home = app.urls.home;
     specs.push({
@@ -266,8 +261,6 @@ async function appPlan(appId: string): Promise<Plan> {
     subject: app.name,
   };
 }
-
-// ---------------------------------------------------------------- a public address isn't working
 
 async function addressPlan(routeId: string): Promise<Plan> {
   const cfg = tryReadConfig();
@@ -412,8 +405,6 @@ async function addressPlan(routeId: string): Promise<Plan> {
   });
   return { title: `${where} isn't working`, layout: "path", origin: "The internet", groups: [PATH, DETAILS], specs, subject: where };
 }
-
-// ---------------------------------------------------------------- the internet feels slow
 
 interface SpeedProbe {
   idle: ReturnType<typeof summarizeRtts> & { rtts: number[] };
@@ -560,8 +551,6 @@ function internetPlan(): Plan {
   return { title: "The internet feels slow", layout: "path", origin: "This server", groups: [PATH, DETAILS], specs, subject: null };
 }
 
-// ---------------------------------------------------------------- the server feels slow
-
 function serverPlan(): Plan {
   const g = "server";
   const win = (ctx: CheckCtx) => ctx.memo("cpuwin", () => cpuWindow(2500, ctx.signal));
@@ -653,8 +642,6 @@ function serverPlan(): Plan {
   return { title: "The server feels slow", layout: "sweep", origin: null, groups: [{ id: g, label: "Right now" }], specs, subject: null };
 }
 
-// ---------------------------------------------------------------- running out of space
-
 async function waitForUsage(path: string, ctx: CheckCtx, capMs: number): Promise<UsageResult | null> {
   const recent = latestUsage(path);
   if (recent && recent.finishedAt && Date.now() - recent.finishedAt < 6 * 3_600_000) return recent.result as UsageResult;
@@ -721,8 +708,6 @@ function spacePlan(): Plan {
   specs.push({ id: "storage.inodes", group: g, label: "Room for new files", run: async () => inodeOutcome(realFilesystems()) });
   return { title: "Running out of space", layout: "sweep", origin: null, groups: [{ id: g, label: "Space" }], specs, subject: null };
 }
-
-// ---------------------------------------------------------------- a drive is acting up
 
 async function drivePlan(diskId: string): Promise<Plan> {
   const { getInventoryState } = await import("../../storage/inventory");
@@ -795,7 +780,10 @@ async function drivePlan(diskId: string): Promise<Plan> {
       label: "Kernel log",
       run: async () => {
         const names = [d.name, ...d.partitions.map((p) => p.name)];
-        const re = new RegExp(`\\b(${names.map((n) => n.replace(/[^A-Za-z0-9]/g, "")).join("|")})\\b`);
+        // NVMe errors are logged against the controller (nvme0), not the namespace (nvme0n1).
+        const controller = /^(nvme\d+)n\d+$/.exec(d.name)?.[1];
+        const terms = [...names, ...(controller ? [controller] : [])].map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+        const re = new RegExp(`(?<![\\w-])(${terms.join("|")})(?![\\w-])`);
         const bad = /I\/O error|\berror\b|\bfail(ed|ure|ing)?\b|\breset\b|time(d)? ?out|critical medium|\bUNC\b|uncorrect|\boffline\b|\babort|exception Emask/i;
         let stdout = "";
         try {
@@ -832,9 +820,6 @@ async function drivePlan(diskId: string): Promise<Plan> {
   ];
   return { title: `The ${d.title} (${d.name}) is acting up`, layout: "sweep", origin: null, groups: [{ id: g, label: d.title }], specs, subject: `${d.name} ${d.model ?? ""}`.trim() };
 }
-
-// ---------------------------------------------------------------- how secure is this server?
-
 
 async function safetyPlan(): Promise<Plan> {
   const specs: CheckSpec[] = [];
@@ -931,8 +916,6 @@ async function safetyPlan(): Promise<Plan> {
     subject: null,
   };
 }
-
-// ---------------------------------------------------------------- entry
 
 export async function targetedPlan(kind: Exclude<CheckupKind, "full">, target: string | null): Promise<Plan> {
   switch (kind) {

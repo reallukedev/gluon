@@ -7,11 +7,9 @@ import { sharedPoll } from "./poller";
 import type { Connection, ConnectionsSnapshot, Owner } from "@/lib/diagnostics-types";
 
 /**
- * Active connections, attributed to apps.
- *
- * Host namespace: `ss -tunpH state established` (gives the process). Containers with their own
- * network namespace: /proc/<pid>/net/{tcp,udp}{,6} of the container's init process (no spawn per
- * container). Direction: a connection whose local port is a listening port is inbound.
+ * Containers with their own network namespace are read from their init process's /proc/<pid>/net
+ * files, so there's no spawn per container. A connection whose local port is a listening port is
+ * inbound.
  */
 
 const MAX = 1500;
@@ -37,8 +35,6 @@ async function hostListening(): Promise<{ tcp: Set<number>; udp: Set<number> }> 
   listenCache = { at: Date.now(), tcp, udp };
   return listenCache;
 }
-
-// ---------------------------------------------------------------- reverse DNS
 
 const rdns = new Map<string, { name: string | null; at: number }>();
 let rdnsWanted = 0;
@@ -73,8 +69,6 @@ async function resolveSome(ips: string[]) {
   }
 }
 
-// ---------------------------------------------------------------- sampling
-
 interface Raw {
   t: number;
   list: Connection[];
@@ -86,7 +80,6 @@ async function sample(): Promise<Raw> {
   const gateways = new Set(nets.list.flatMap((n) => n.gateways));
   const out: Connection[] = [];
 
-  // ---- host namespace
   let hostSockets: SsSocket[] = [];
   try {
     hostSockets = await hostEstablished();
@@ -114,7 +107,6 @@ async function sample(): Promise<Raw> {
     });
   }
 
-  // ---- containers with their own network namespace
   const hostNs = netnsOf(1);
   const seenNs = new Set<string>();
   for (const m of idx.list) {

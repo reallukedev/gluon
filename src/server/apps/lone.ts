@@ -94,11 +94,7 @@ const managers: [RegExp, string][] = [
   [/^caprover\./, "CapRover"],
 ];
 
-/**
- * A compose service that recreates a container started with `docker run`. Only what differs from
- * the image goes in (env the image doesn't set, a command that isn't the image's own), so the file
- * reads like one a person would write.
- */
+/** Only what differs from the image goes in, so the file reads like one a person would write. */
 export function composeFromContainer(input: LoneInput): Rewritten {
   const { container: ct, image } = input;
   const c = new Collector(input.newDir);

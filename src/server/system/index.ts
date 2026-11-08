@@ -8,14 +8,9 @@ import { pruneRuns, resumeRuns } from "./apt-runner";
 import { listServices } from "./services";
 import "./checks";
 
-/**
- * System section: registers background jobs (daily package-list refresh, resuming update runs),
- * checks and remedies (./checks) and the ⌘K search provider.
- */
-
 const HOUR = 3_600_000;
 
-/** Refresh package lists once a day; after a failure, retry every 3 hours. */
+/** After a failure, retry every 3 hours. */
 async function dailyRefresh() {
   const h = refreshHistory();
   const t = Date.now();
@@ -40,8 +35,6 @@ onStart("system", () => {
   }, 2 * 60_000).unref?.();
   every(24 * HOUR, pruneRuns);
 });
-
-// ---------------------------------------------------------------- search
 
 const PLACES: { id: string; label: string; hint: string; keywords: string; href: string }[] = [
   { id: "updates", label: "Updates", hint: "System · install package updates", keywords: "upgrade apt packages security patches debian", href: "/system?tab=updates" },

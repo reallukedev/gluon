@@ -7,10 +7,7 @@ import { uptimeAll } from "../monitors/stats";
 import { listJoin, plural } from "@/lib/format";
 import type { SubscriptionFilter } from "@/lib/alerts-types";
 
-/**
- * What notifications say. Admins get the finding as written (title, cause, the fix); household
- * members get a calm version about their app, with no jargon.
- */
+/** Household members get a calm version about their app, with no jargon. */
 
 export interface Composed {
   title: string;
@@ -111,8 +108,6 @@ export function reportReplyMessage(r: { id: string; appName: string | null; repl
     severity: null,
   };
 }
-
-// ---------------------------------------------------------------- daily digest
 
 export function digestMessage(): Composed {
   const t = now();

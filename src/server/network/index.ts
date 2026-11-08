@@ -9,8 +9,6 @@ import { caddySide } from "./caddy-certs";
 import "./checks";
 import "../voice/schedule";
 
-/** Network domain: checks (./checks), search provider, and a warm status cache at start-up. */
-
 registerSearch((user, q) => {
   if (user.role !== "admin") return null;
   const cfg = tryReadConfig();

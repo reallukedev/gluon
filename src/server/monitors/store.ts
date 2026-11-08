@@ -63,7 +63,7 @@ export function listMonitorRows(): Monitor[] {
   return all<MonitorRow>("SELECT * FROM monitors ORDER BY source = 'auto', name COLLATE NOCASE").map(toMonitor);
 }
 
-/** Validate a merged config; throws a field-specific message. */
+/** Throws a field-specific message. */
 export function checkConfig(merged: Record<string, unknown>): MonitorConfig {
   const p = monitorConfigSchema.safeParse(merged);
   if (!p.success) {

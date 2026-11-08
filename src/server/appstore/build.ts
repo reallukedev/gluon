@@ -13,10 +13,9 @@ import { parseCompose, readService, serviceNames } from "@/lib/builder/compose";
 import { LOCAL_REGISTRY } from "@/lib/builder/names";
 
 /**
- * Builds a GitHub app's images on this server. The repository is shallow-cloned inside Gluon's
- * container; each build context is streamed as a tar into the host's `docker build -` (BuildKit),
- * so the host needs nothing but Docker. Images are tagged gluon.local/<app>[-<service>]:<commit>:
- * the made-up registry host means a missing image can never be fetched from Docker Hub instead.
+ * Each build context is streamed as a tar into the host's `docker build -`, so the host needs nothing
+ * but Docker. Images are tagged gluon.local/<app>[-<service>]:<commit>; the made-up registry host
+ * means a missing image can never be fetched from Docker Hub instead.
  */
 
 const WORK = path.join(STORE_DIR, "work");
@@ -27,7 +26,6 @@ export function imageName(slug: string, service: string) {
   return `${LOCAL_REGISTRY}/${svc === slug || !svc ? slug : `${slug}-${svc}`}`;
 }
 
-/** Services that build from the repository. */
 export function buildServices(compose: string): { service: string; context: string; dockerfile: string; target: string }[] {
   const p = parseCompose(compose);
   if (!p.ok) return [];
@@ -59,10 +57,7 @@ interface BuildResult {
   images: Record<string, string>;
 }
 
-/**
- * Clone and build every service with build:. Streams output through onLine; records the build
- * (log kept for later) whatever happens.
- */
+/** Records the build (log kept for later) whatever happens. */
 export async function buildApp(
   app: AppRow,
   token: string | undefined,
@@ -165,7 +160,7 @@ function dockerBuild(
   });
 }
 
-/** Remove this app's older images (found by their builder label), keeping the given tags. */
+/** Found by their builder label. */
 export async function pruneImages(appId: string, keep: string[]) {
   try {
     const list = await docker().listImages({ filters: { label: [`app.gluon.builder=${appId}`] } });

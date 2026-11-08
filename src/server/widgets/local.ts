@@ -6,7 +6,7 @@ import { scheduleAvailable } from "./schedule";
 import { guestWifiConfigured } from "./guest-wifi";
 import type { LocalWidgetAvailability } from "@/lib/home-widgets-types";
 
-/** Home widgets that read this machine: can this person use them here, and if not, why. Cheap checks only. */
+/** Cheap checks only. */
 export function localAvailability(user: Pick<User, "role">): LocalWidgetAvailability[] {
   const admin = user.role === "admin";
   const out: LocalWidgetAvailability[] = [{ type: "household.internet", available: true, reason: null }];

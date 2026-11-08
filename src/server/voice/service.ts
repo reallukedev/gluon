@@ -18,8 +18,6 @@ import type { ManagePlan, VoiceChannel, VoiceDetails, VoiceLive, VoiceProblemCod
 
 type Where = { ip?: string; zone?: string };
 
-// ---------------------------------------------------------------- connecting
-
 class Problem extends AppError {
   constructor(
     public readonly kind: VoiceProblemCode,
@@ -29,7 +27,6 @@ class Problem extends AppError {
   }
 }
 
-/** The app's facts and a live Ice connection, or a Problem saying why there isn't one. */
 async function open(appId: string, f?: MumbleFacts): Promise<{ f: MumbleFacts; c: MumbleConn }> {
   f ??= await mumbleFacts(appId);
   if (!f.running) throw new Problem("stopped", `${f.app.name} is stopped.`);
@@ -59,8 +56,6 @@ async function live(appId: string): Promise<MumbleConn> {
     throw e;
   }
 }
-
-// ---------------------------------------------------------------- reading
 
 function ip(addr: Uint8Array | null | undefined): string | null {
   if (!addr || addr.length !== 16) return null;
@@ -107,7 +102,6 @@ async function address(f: MumbleFacts): Promise<VoiceLive["address"]> {
   return host && host !== "localhost" ? { host, port: f.voiceHostPort } : { host: LOCAL_HOST, port: f.voiceHostPort };
 }
 
-/** Everything the tab shows at a glance, polled every few seconds. */
 export async function voiceLive(appId: string): Promise<VoiceLive> {
   const f = await mumbleFacts(appId);
   const { option } = await changeTarget(f);
@@ -169,7 +163,6 @@ export async function voiceLive(appId: string): Promise<VoiceLive> {
   }
 }
 
-/** Registrations, settings and the certificate: read when the tab opens and after changes. */
 export async function voiceDetails(appId: string): Promise<VoiceDetails> {
   const f = await mumbleFacts(appId);
   const notes: string[] = [];
@@ -196,8 +189,6 @@ export async function voiceDetails(appId: string): Promise<VoiceDetails> {
   return { managed: true, registered: regs, settings: effectiveSettings({ db: obj(conf), defaults: obj(defaults), env: f.env }), cert, notes };
 }
 
-// ---------------------------------------------------------------- changing things live
-
 export type VoiceOp =
   | { op: "kick"; session: number; reason: string }
   | { op: "move"; session: number; channel: number }
@@ -217,7 +208,7 @@ export type VoiceOp =
 const CHANNEL_NAME = /^[^\n\r\t/]{1,100}$/;
 const USER_NAME = /^[^\n\r\t]{1,128}$/;
 
-/** Do one thing on the live server, and record it. Returns a sentence for the toast. */
+/** Returns a sentence for the toast. */
 export async function voiceAct(appId: string, a: VoiceOp, user: User, where: Where): Promise<string> {
   const c = await live(appId);
   const s = c.server;
@@ -392,8 +383,6 @@ export async function voiceAct(appId: string, a: VoiceOp, user: User, where: Whe
   }
 }
 
-// ---------------------------------------------------------------- letting Gluon manage it
-
 const jobKey = (appId: string) => `voice:${appId}`;
 
 export async function managePlan(appId: string): Promise<ManagePlan> {
@@ -422,7 +411,7 @@ const STAGES = [
   { key: "connect", label: "Connect" },
 ];
 
-/** The one-time change that opens Ice to Gluon. Runs as a job, so closing the page doesn't stop it. */
+/** Runs as a job, so closing the page doesn't stop it. */
 export async function startManage(appId: string, user: User, where: Where) {
   const f = await mumbleFacts(appId);
   const { target, option } = await changeTarget(f);
@@ -481,8 +470,8 @@ async function waitForIce(appId: string, ms: number): Promise<boolean> {
 export const manageJobKey = jobKey;
 
 /**
- * Take the join password out of the compose file (a restart), for when the file sets one: Ice can
- * replace it with another, but clearing it there only falls back to the file's.
+ * Ice can replace the compose file's join password, but clearing it over Ice only falls back to the
+ * file's, so removing it means editing the file (a restart).
  */
 export async function startRemoveEnvPassword(appId: string, user: User, where: Where) {
   const f = await mumbleFacts(appId);

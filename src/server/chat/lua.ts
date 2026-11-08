@@ -1,12 +1,8 @@
 /**
- * Talking to Prosody through `prosodyctl shell`: Gluon sends one line of Lua and reads back one
- * marked line of JSON. Pure functions only, so they can be tested without a chat server.
- *
- * The console treats a line starting with ">" as raw Lua in Prosody's global environment, prints
- * what it returns as "Result: ...", and reports errors as "! ...". Arguments travel as JSON, never
- * spliced into code, so a name or password can't change what runs. They don't travel in the line
- * itself either: the console keeps every line in a history file in Prosody's data folder, so
- * Gluon leaves them in a private file that the Lua reads and deletes first thing.
+ * The console runs a line starting with ">" as raw Lua, prints the result as "Result: ...", and
+ * reports errors as "! ...". Arguments travel as JSON, never spliced into code, so a name or password
+ * can't change what runs. They aren't in the line either: the console keeps every line in a history
+ * file in Prosody's data folder, so they go in a private file the Lua reads and deletes first thing.
  */
 
 /** A Lua long-bracket string whose level never appears in the text: [==[ ... ]==]. */
@@ -23,8 +19,7 @@ export function luaString(text: string): string {
 }
 
 /**
- * One console line that runs `body` (Lua statements ending in `return <value>`) with `A` bound to
- * the arguments read from `argsFile` (JSON nulls become nil) and `J` to util.json, then prints
+ * `A` is bound to the arguments from `argsFile` (JSON nulls become nil) and `J` to util.json; prints
  * `<nonce>:<json>` or `<nonce>!<error>`.
  */
 export function rawLine(body: string, argsFile: string, nonce: string): string {
@@ -43,7 +38,6 @@ export function rawLine(body: string, argsFile: string, nonce: string): string {
 
 export type ShellResult = { ok: true; value: unknown } | { ok: false; error: string; fromLua?: boolean };
 
-/** Find the marked result in everything the console printed (banner, prompts and all). */
 export function parseShellOutput(out: string, nonce: string): ShellResult {
   // Only a printed result counts ("| Result: <nonce>..."), never an echo of the input.
   const result = out.split(/\r?\n/).find((l) => /^(?:prosody>\s*)?\|?\s*Result:\s*/.test(l) && l.includes(nonce));

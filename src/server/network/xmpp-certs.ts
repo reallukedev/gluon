@@ -15,14 +15,10 @@ import { reloadQuark } from "../chat/quark";
 import type { XmppCertSync } from "@/lib/network-types";
 
 /**
- * A safety net for a chat server's certificate. Caddy holds (and renews) a certificate for every
- * published name, including the chat domain; the chat server reads its own copy from a folder in
- * its container. When that copy is missing, untrusted or close to expiring, Gluon copies Caddy's
- * in, asks the chat server to reload, then checks the server really presents it.
- *
- * Prosody runs under tini and runuser in its official image, so a SIGHUP would most likely kill
- * runuser rather than reach Prosody. The reload goes through prosodyctl's admin shell instead.
- * Quark picks new certificates up by itself; `quark ctl` reload makes it happen now.
+ * When a chat server's own copy is missing, untrusted or close to expiring, Gluon copies Caddy's in,
+ * reloads, and checks the server really presents it. Prosody runs under tini and runuser in its
+ * official image, so a SIGHUP would likely kill runuser; the reload goes through prosodyctl's admin
+ * shell instead. Quark picks new certificates up itself; `quark ctl` reload makes it happen now.
  */
 
 type ChatKind = "prosody" | "quark";
@@ -171,9 +167,8 @@ async function syncOne(r: ChatRoute, caddyCerts: CaddyCerts): Promise<XmppCertSy
 const RECHECK_OK_MS = 6 * 60 * 60_000;
 
 /**
- * Compare and, where needed, copy the certificate for every chat address that asks for it.
- * `onlyDue` skips addresses checked recently that were fine, so a frequent timer can retry the
- * ones that need attention without re-reading every certificate.
+ * `onlyDue` skips addresses checked recently that were fine, so a frequent timer can retry the ones
+ * that need attention.
  */
 export function syncChatCertificates(opts: { onlyDue?: boolean } = {}): Promise<void> {
   const s = st();

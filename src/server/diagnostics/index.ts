@@ -6,8 +6,8 @@ import { listApps } from "../docker/apps";
 import { ensureCaddyFollower } from "./caddy-log";
 
 /**
- * Diagnostics domain. Live samplers (connections, processes) only run while someone is watching;
- * the Caddy request feed runs all the time so the request stats cover more than the open tab.
+ * Live samplers only run while someone is watching; the Caddy request feed runs all the time so the
+ * request stats cover more than the open tab.
  */
 onStart("caddy-request-feed", () => {
   ensureCaddyFollower();

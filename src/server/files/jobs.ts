@@ -11,16 +11,14 @@ import type { FileJob, JobKind, JobProgress, JobStatus } from "@/lib/files-types
 import { inDir } from "./safe";
 
 /**
- * Background work for Files (copy, move across drives, extract, ownership, delete forever). Jobs
- * persist to `file_jobs` so the UI can show them after a reload; live progress fans out on the
- * "files.jobs" topic. At most two run at once; the rest queue.
+ * Jobs persist to `file_jobs` so the UI can show them after a reload. At most two run at once; the
+ * rest queue.
  */
 
 export interface JobContext {
   id: string;
   signal: AbortSignal;
   progress(p: Partial<JobProgress>): void;
-  /** Throw if cancelled. */
   check(): void;
 }
 

@@ -1,9 +1,8 @@
 import type { ChatCapability, ChatServerKind, ChatSettings } from "@/lib/chat-types";
 
 /**
- * What chat apps can do with this server, by what a person notices, mapped from the modules Prosody
- * has loaded (Quark reports the same module names for what it has on). Follows the XMPP Compliance Suites (XEP-0479): the pieces modern apps like
- * Conversations, Monal and Gajim expect. Pure, so it's tested without a chat server.
+ * Mapped from the modules Prosody has loaded (Quark reports the same names), following the XMPP
+ * Compliance Suites (XEP-0479) that apps like Conversations, Monal and Gajim expect.
  */
 
 const HISTORY_WORDS: Record<ChatSettings["history"], string> = {

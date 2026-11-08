@@ -9,9 +9,8 @@ import { userCount } from "./users";
 const FILE = () => path.join(DATA_DIR, "setup-code");
 
 /**
- * First-run protection. Until an admin exists, creating one requires a code that is only visible
- * to someone with access to the server (container log / data volume). Stops a stranger who reaches
- * the public address first from claiming the server.
+ * Until an admin exists, creating one needs a code only someone with access to the server can see
+ * (container log or data volume), so a stranger who reaches the public address first can't claim it.
  */
 export function ensureSetupCode(): string | null {
   if (userCount() > 0) {
@@ -39,7 +38,7 @@ export function ensureSetupCode(): string | null {
 
 const norm = (s: string) => s.replace(/[\s-]/g, "").toUpperCase();
 
-/** The stored code, or null when there is none or it's too short to be one (an empty file matches an empty guess). */
+/** null when it's too short to be one: an empty file would match an empty guess. */
 function readCode(): string | null {
   try {
     const code = fs.readFileSync(FILE(), "utf8").trim();

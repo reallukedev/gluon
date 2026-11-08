@@ -19,9 +19,8 @@ import { PROSODY_IMAGE_RE } from "@/lib/service-kind";
 import type { ChatAccount, ChatConfigFiles, ChatHostSnapshot, ChatInvite, ChatRole, ChatRoom, ChatSettings, ChatSnapshot } from "@/lib/chat-types";
 
 /**
- * Prosody, run by Gluon. Everything goes through `prosodyctl shell` inside the container (one line
- * of Lua in, one line of JSON out), so it works with any Prosody 13 install without extra modules
- * or open ports. Settings are written to gluon.cfg.lua next to the person's own config.
+ * Everything goes through `prosodyctl shell` inside the container, so it works with any Prosody 13
+ * install without extra modules or open ports.
  */
 
 const PROSODY_IMAGE = PROSODY_IMAGE_RE;
@@ -72,7 +71,6 @@ async function putArgs(t: ProsodyTarget, args: unknown): Promise<string> {
   return `/tmp/${name}`;
 }
 
-/** Run Lua inside Prosody and return what it returned. Arguments travel as JSON (see lua.ts). */
 export async function prosodyLua<T>(t: ProsodyTarget, body: string, args: unknown = {}, timeoutMs = 20_000): Promise<T> {
   const nonce = `GLUON${crypto.randomBytes(6).toString("hex")}`;
   const file = await putArgs(t, args);
@@ -91,8 +89,6 @@ export async function prosodyLua<T>(t: ProsodyTarget, body: string, args: unknow
   }
   return res.value as T;
 }
-
-// ---------------------------------------------------------------- snapshot
 
 const SNAPSHOT = `
 local um=require"core.usermanager"; local cm=require"core.configmanager"; local sm=require"core.storagemanager";
@@ -159,17 +155,15 @@ interface RawSnapshot {
   hosts: RawHost[] | Record<string, never>;
 }
 
-/** Where Prosody's config file is on the server, through the container's bind mounts. */
 /** The file people edit by hand in the conf.d layout; Gluon's own settings sit next to it. */
 // Not *.cfg.lua, so the image's conf.d/*.cfg.lua include skips it; gluon.cfg.lua includes it last.
 export const CUSTOM_CONFIG = CUSTOM_FILE;
 const CUSTOM_STARTER = `-- Your own Prosody settings. Prosody reads this last, after its built-in config, the\n-- environment variables in the app's compose file and Gluon's gluon.cfg.lua, so anything here wins.\n\nHost "*"\n\n`;
 
 /**
- * Where Prosody's config is on the server, through the container's bind mounts. Two layouts:
- * "main", the whole config folder mounted (Gluon adds an Include line to the main file), and
- * "confd", the official image's own config with only conf.d mounted (it includes conf.d/*.cfg.lua
- * last, so Gluon's file and the person's custom.cfg.lua live there).
+ * Two layouts: "main", the whole config folder mounted (Gluon adds an Include line to the main file),
+ * and "confd", only conf.d mounted (the image includes conf.d/*.cfg.lua last, so Gluon's file and the
+ * person's custom.lua live there).
  */
 async function configOnHost(t: ProsodyTarget, file: string | undefined): Promise<Omit<ChatSnapshot["config"], "rev">> {
   const none = (reason: string): Omit<ChatSnapshot["config"], "rev"> => ({ file: file ?? null, hostPath: null, writable: false, reason, managed: false, layout: "main" });
@@ -363,8 +357,6 @@ function readOr(p: string): string | null {
   }
 }
 
-// ---------------------------------------------------------------- accounts
-
 export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const ROLE_NAME: Record<"member" | "admin", string> = { member: "prosody:member", admin: "prosody:admin" };
 
@@ -425,8 +417,6 @@ export async function deleteAccount(t: ProsodyTarget, a: { host: string; user: s
   );
 }
 
-// ---------------------------------------------------------------- invites
-
 export async function createInvite(
   t: ProsodyTarget,
   a: { host: string; username: string | null; role: "member" | "admin"; days: number; reusable: boolean },
@@ -479,8 +469,6 @@ export async function peekChatInvite(t: ProsodyTarget, a: { host: string; token:
   return r ? { expires: r.expires * 1000, username: r.jid.includes("@") ? r.jid.split("@")[0]! : null, uri: r.uri } : null;
 }
 
-// ---------------------------------------------------------------- rooms
-
 export async function createRoom(t: ProsodyTarget, a: { service: string; room: string; name: string; description: string | null; public: boolean; membersOnly: boolean; owner: string | null }) {
   return prosodyLua<{ jid: string }>(
     t,
@@ -506,8 +494,6 @@ export async function destroyRoom(t: ProsodyTarget, a: { jid: string; reason: st
     a,
   );
 }
-
-// ---------------------------------------------------------------- settings and config
 
 function hostFile(snap: ConfigPlace): string {
   if (!snap.config.hostPath) throw new AppError("config_unavailable", snap.config.reason ?? "Can't find Prosody's config file.", 409);
@@ -565,8 +551,8 @@ function withRev(placed: Omit<ChatSnapshot["config"], "rev">): ChatSnapshot["con
 type ConfigPlace = Pick<ChatSnapshot, "config">;
 
 /**
- * Where the config is, without needing Prosody's console: prosodyctl reads the whole config before
- * it does anything, so a broken file would otherwise lock the person out of the editor that fixes it.
+ * Found without Prosody's console: prosodyctl reads the whole config first, so a broken file would
+ * lock the person out of the editor that fixes it.
  */
 async function locateConfig(appId: string): Promise<ConfigPlace> {
   try {
@@ -621,10 +607,9 @@ export async function restartProsody(t: ProsodyTarget) {
 }
 
 /**
- * Check a config file Prosody would load, with prosodyctl, without loading it. The candidate gets
- * a name of its own (two checks can't trip over each other) that no include pattern matches. In
- * the conf.d layout it stands in for custom.lua through a copy of gluon.cfg.lua, so a broken file
- * on disk doesn't stop its fix from passing.
+ * The candidate gets a name of its own that no include pattern matches, so two checks can't trip over
+ * each other. In the conf.d layout it stands in for custom.lua through a copy of gluon.cfg.lua, so a
+ * broken file on disk doesn't stop its fix from passing.
  */
 export async function checkConfigText(t: ProsodyTarget, snap: ConfigPlace, text: string): Promise<{ ok: boolean; line: number | null; message: string; output: string }> {
   const main = hostFile(snap);
@@ -681,10 +666,7 @@ export async function saveMainConfig(t: ProsodyTarget, snap: ConfigPlace, text: 
   writeLike(file, text.endsWith("\n") ? text : `${text}\n`, file);
 }
 
-/**
- * What writeSettings may change (gluon.cfg.lua and the main or custom file), as it is now, so a
- * save Prosody can't read can be put back exactly.
- */
+/** Covers everything writeSettings may change, so a save Prosody can't read can be put back exactly. */
 export function settingsBackup(snap: ConfigPlace): () => void {
   const file = hostFile(snap);
   const saved = [path.posix.join(path.posix.dirname(file), GLUON_CONFIG), file].map((f) => ({ f, text: readOr(f) }));
@@ -696,12 +678,11 @@ export function settingsBackup(snap: ConfigPlace): () => void {
   };
 }
 
-/** Have Prosody read its config again without touching modules: throws when it can't (reload_config answers false, or nil with a message). */
+/** Doesn't touch modules. Throws when reload_config answers false, or nil with a message. */
 export async function rereadConfig(t: ProsodyTarget) {
   await prosodyLua<true>(t, `local ok,err=prosody.reload_config(); if ok==false or (ok==nil and err~=nil) then error(err or "Prosody couldn't read its config.") end; return true`);
 }
 
-/** Write gluon.cfg.lua for these settings and make sure the main config includes it. */
 export function writeSettings(snap: ChatSnapshot, host: ChatHostSnapshot, s: ChatSettings) {
   const file = hostFile(snap);
   const dir = path.posix.dirname(file);
@@ -720,14 +701,11 @@ export function writeSettings(snap: ChatSnapshot, host: ChatHostSnapshot, s: Cha
 
 export type { ChatAccount };
 
-// ---------------------------------------------------------------- for Network
-
 const signUpCache = new Map<string, { at: number; value: boolean | null }>();
 
 /**
- * Whether strangers can really make an account on `host`, asked of Prosody itself. The stream
- * features probe can't tell: invite-only servers still advertise registration for invite holders.
- * null when this isn't a Prosody Gluon can reach. Cached for five minutes.
+ * The stream features probe can't tell: invite-only servers still advertise registration for invite
+ * holders. Cached for five minutes.
  */
 export async function openSignUp(appId: string | undefined, host: string): Promise<boolean | null> {
   if (!appId) return null;
@@ -752,8 +730,8 @@ export async function openSignUp(appId: string | undefined, host: string): Promi
 }
 
 /**
- * The installer's conf.d layout, written straight to the app's folder: used before Prosody is up,
- * so a broken earlier attempt can be put right without Prosody's help.
+ * Written straight to the app's folder before Prosody is up, so a broken earlier attempt can be put
+ * right without Prosody's help.
  */
 export function writeConfd(confdOnHost: string, settings: ChatSettings, ctx: { host: string; publicBase: string | null }) {
   const custom = path.posix.join(confdOnHost, CUSTOM_CONFIG);

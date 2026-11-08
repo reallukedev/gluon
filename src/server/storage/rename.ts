@@ -25,12 +25,8 @@ import { cancelUsageUnder } from "./usage";
 import type { RenamePlan } from "@/lib/storage-types";
 
 /**
- * Rename a mount point: /mnt/hdd2 → /mnt/photos, taking every app that uses it along.
- *
- * Plan (read-only): find containers binding folders from the old place, group them by app, find compose
- * files and .env values that spell out the old path, simulate the rewrite with `docker compose config`,
- * and describe the fstab change. Execute: stop apps → unmount → mkdir → fstab → mount → rewrite files →
- * (link) → start apps → verify. Every step records how to undo itself; any failure unwinds in reverse.
+ * Plan is read-only, including a simulated rewrite with `docker compose config`. Every executed step
+ * records how to undo itself, and any failure unwinds in reverse.
  */
 
 export interface RenameInput {
@@ -117,7 +113,6 @@ function gluonRefCounts(from: string) {
   };
 }
 
-/** Move Gluon's own saved paths (folder grants, pins, trash index) along with the mount. */
 function moveGluonRefs(from: string, to: string) {
   const like = `${from}/%`;
   const n = from.length + 1;
@@ -138,8 +133,8 @@ function moveGluonRefs(from: string, to: string) {
 }
 
 /**
- * Write rewritten copies of compose/.env files for `docker compose config` to check. They go next to the
- * originals (hidden, removed right after) so relative env_file/extends paths resolve exactly the same.
+ * Written next to the originals (hidden, removed right after) so relative env_file/extends paths
+ * resolve exactly the same.
  */
 async function writeTempFiles(files: Map<string, string>): Promise<{ paths: Map<string, string>; cleanup: () => void }> {
   const tag = crypto.randomBytes(4).toString("hex");
@@ -349,7 +344,6 @@ export async function planRename(input: RenameInput): Promise<RenameWork> {
     }
   }
 
-  // /etc/fstab.
   const fstabChanges: FstabChange[] = [];
   let fstabPlan: RenamePlan["fstab"] = { action: "none", line: null, before: null, after: null };
   let fstabHasTarget = false;
@@ -455,8 +449,6 @@ export async function planRename(input: RenameInput): Promise<RenameWork> {
       ...m.superOptions.filter((o) => /^(uid|gid|umask|fmask|dmask)=/.test(o) && !m.options.includes(o)),
     ], apps, files, fstabChanges, fstabHasTarget };
 }
-
-// ---------------------------------------------------------------- execute
 
 function composeFailure(e: unknown, verb: string, name: string): AppError {
   if (e instanceof AppError) return e;
@@ -571,7 +563,7 @@ function tsStamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "").replace("T", "-");
 }
 
-/** Start the rename in the background. Returns the job to follow. */
+/** Runs in the background; returns the job to follow. */
 export async function startRename(user: User, input: RenameInput & { planHash: string }, where: Where): Promise<Job> {
   const release = acquireLock(`renaming ${input.target}`);
   let work: RenameWork;

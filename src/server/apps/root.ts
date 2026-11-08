@@ -6,14 +6,9 @@ import { activePlatform } from "../platform";
 import { findUmbrel } from "../platform/umbrel";
 
 /**
- * Where Gluon keeps the apps it runs itself, one folder per app.
- *
- * 1. GLUON_APPS_DIR, when set.
- * 2. A folder that already holds Gluon's apps, so apps never get split across two places.
- * 3. With Umbrel: next to Umbrel's own data (/srv/umbrel → /srv/gluon-apps). That's the disk Umbrel
- *    apps' data is on, so moving one is a copy within one disk, and on this kind of setup the system
- *    disk (where /DATA/AppData usually is) is the small one.
- * 4. /DATA/AppData/gluon-apps where CasaOS's folder exists, else /opt/gluon/apps.
+ * GLUON_APPS_DIR, else a folder that already holds Gluon's apps (so they never split across two
+ * places), else next to Umbrel's data (its disk is the big one, and moves stay on one disk), else
+ * /DATA/AppData/gluon-apps where CasaOS exists, else /opt/gluon/apps.
  */
 
 export interface RootFacts {
@@ -61,7 +56,7 @@ async function umbrelDir(): Promise<string | null> {
   return (await findUmbrel().catch(() => null))?.dataDir ?? null;
 }
 
-/** The apps root (cached a minute) and every root an existing app might be in. */
+/** Root cached a minute. */
 export async function appsRoots(): Promise<{ root: string; roots: string[] }> {
   const c = g.__gluonAppsRoot;
   if (c && Date.now() - c.at < 60_000) return { root: c.value, roots: c.roots };
@@ -77,15 +72,11 @@ export async function appsRoot(): Promise<string> {
   return (await appsRoots()).root;
 }
 
-/** Forget the cached root (after the first app lands in a new one). */
 export function invalidateAppsRoot() {
   g.__gluonAppsRoot = undefined;
 }
 
-/**
- * The folder for app `name`: an existing one whose marker belongs to `owner` (in any root), else
- * a new one in the current root.
- */
+/** An existing folder whose marker belongs to `owner` (in any root), else a new one in the current root. */
 export async function appFolder(name: string, owns: (marker: string) => boolean): Promise<string> {
   const { root, roots } = await appsRoots();
   for (const r of roots) {

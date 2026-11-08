@@ -7,9 +7,8 @@ import { AppError } from "../errors";
 import { findUmbrel, umbrelApps, umbrelAppState, type UmbrelAppState } from "../platform/umbrel";
 
 /**
- * The parts of Umbrel's tRPC API the builder needs, with results it can wait for. (Gluon's shared
- * Umbrel client starts long actions and walks away; publishing needs to know how they ended.)
- * Authentication is the same as umbreld's own CLI: a short-lived JWT signed with Umbrel's secret.
+ * Gluon's shared Umbrel client starts long actions and walks away; publishing needs to know how they
+ * ended. Auth is the same as umbreld's own CLI: a short-lived JWT signed with Umbrel's secret.
  */
 
 function jwt(dataDir: string): string {
@@ -69,8 +68,8 @@ export const removeRepository = (url: string) => trpc<boolean>("appStore.removeR
 export type LongAction = "install" | "update" | "uninstall";
 
 /**
- * Start an install, update or uninstall and keep hold of how it ends. Umbrel's install answers
- * `false` (not an error) when the app fails to come up, so both are reported as a failure.
+ * Umbrel's install answers `false` (not an error) when the app fails to come up, so that's reported
+ * as a failure too.
  */
 export function startAction(appId: string, action: LongAction | "stop" | "start"): Promise<{ ok: boolean; error: string | null }> {
   return trpc<boolean>(`apps.${action}`, { appId }, { mutation: true, timeoutMs: 45 * 60_000 }).then(
@@ -82,8 +81,8 @@ export function startAction(appId: string, action: LongAction | "stop" | "start"
 export { umbrelApps, umbrelAppState, findUmbrel, type UmbrelAppState };
 
 /**
- * The address Umbrel reaches Gluon at. Umbrel in a container: the gateway of its Docker network
- * (the host, where Gluon listens with host networking). umbrelOS on the host: loopback.
+ * Umbrel in a container reaches Gluon at its Docker network's gateway (the host, with host
+ * networking); umbrelOS on the host uses loopback.
  */
 export async function gluonAddressForUmbrel(): Promise<string | null> {
   const ep = await findUmbrel();
@@ -102,9 +101,8 @@ export async function gluonAddressForUmbrel(): Promise<string | null> {
 }
 
 /**
- * Ask Umbrel's own container to fetch a URL, to prove it can reach the store before registering
- * it. Read-only (an HTTP GET with wget). Returns null when the check can't run (no container, no
- * wget), else whether it worked.
+ * Proves Umbrel can reach the store before registering it. null when the check can't run (no
+ * container, no wget).
  */
 export async function umbrelCanFetch(url: string): Promise<{ ok: boolean; detail: string } | null> {
   const ep = await findUmbrel();
@@ -128,8 +126,8 @@ export async function umbrelCanFetch(url: string): Promise<{ ok: boolean; detail
 }
 
 /**
- * What Umbrel logged about an app since a moment, for failed installs (Umbrel only says "false").
- * Container: its Docker log. umbrelOS: the umbrel systemd unit's journal.
+ * Umbrel only says "false" for a failed install, so this reads its Docker log or the umbrel unit's
+ * journal.
  */
 export async function umbrelLog(appId: string, sinceMs: number): Promise<string[]> {
   const ep = await findUmbrel();
@@ -177,8 +175,8 @@ function demux(buf: Buffer): string {
 }
 
 /**
- * The folder Umbrel clones a store into (umbreld's AppRepository.cleanUrl). Umbrel leaves it behind
- * when a store is removed, so Gluon deletes its own store's copy when it unregisters.
+ * Umbrel leaves this folder (umbreld's AppRepository.cleanUrl) behind when a store is removed, so
+ * Gluon deletes its own copy when it unregisters.
  */
 export function umbrelStoreFolder(url: string): string {
   const { hostname, pathname } = new URL(url);
@@ -192,7 +190,6 @@ export function umbrelStoreFolder(url: string): string {
   return clean.toLowerCase().replace(/[^a-zA-Z0-9.-]/g, "");
 }
 
-/** Wait for Umbrel to settle an app after a long action. */
 export async function followState(
   appId: string,
   settled: (s: UmbrelAppState, seen: Set<UmbrelAppState>) => boolean,

@@ -1,8 +1,8 @@
 import "server-only";
 
 /**
- * A tolerant, non-validating XML reader for feeds. It never expands custom entities or fetches DTDs (so no XXE or
- * "billion laughs"), caps depth and node count, and recovers from common feed breakage (unclosed tags, stray &).
+ * Never expands custom entities or fetches DTDs (so no XXE or "billion laughs"), caps depth and node
+ * count, and recovers from common feed breakage.
  */
 
 export interface XmlNode {
@@ -160,8 +160,6 @@ export function parseXml(src: string, limits = { maxNodes: 50_000, maxDepth: 64 
   }
   return root;
 }
-
-// ------------------------------------------------------------------ helpers
 
 export const child = (n: XmlNode | undefined, ...names: string[]) => n?.children.find((c) => names.includes(c.name));
 export const children = (n: XmlNode | undefined, ...names: string[]) => n?.children.filter((c) => names.includes(c.name)) ?? [];

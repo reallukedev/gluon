@@ -1,12 +1,8 @@
 import type { SettingKind, VoiceSetting } from "./types";
 
 /**
- * The Mumble settings Gluon shows, and where each value comes from. Pure: no Ice, no Docker.
- *
- * Mumble reads its config file (which the official image writes from MUMBLE_CONFIG_* variables)
- * as the default for every virtual server, and per-server values saved in its database (what Ice
- * setConf writes) win over it. Clearing a saved value falls back to the file again, so an empty
- * value can't switch off something the compose file turns on (a join password, for one).
+ * Values saved over Ice win over the config file (written from MUMBLE_CONFIG_*), and clearing one
+ * falls back to the file, so an empty value can't switch off something the compose file turns on.
  */
 
 export interface SettingDef {
@@ -95,10 +91,7 @@ export function asBool(v: string): boolean {
   return /^(true|1|yes|on)$/i.test(v.trim());
 }
 
-/**
- * Turn what the person typed into the value Ice stores, or say what's wrong. Numbers arrive in
- * the unit shown (kbit/s, KB) and are stored in Mumble's (bit/s, bytes).
- */
+/** Numbers arrive in the unit shown (kbit/s, KB) and are stored in Mumble's (bit/s, bytes). */
 export function toStored(d: SettingDef, raw: string): { ok: true; value: string } | { ok: false; message: string } {
   if (d.kind === "bool") {
     if (!/^(true|false)$/.test(raw)) return { ok: false, message: "Choose on or off." };
@@ -121,7 +114,6 @@ export function toStored(d: SettingDef, raw: string): { ok: true; value: string 
   return { ok: true, value: raw };
 }
 
-/** The number to show for a stored value (bit/s to kbit/s, bytes to KB). */
 export function toShown(d: Pick<SettingDef, "scale">, stored: string): string {
   const n = Number(stored);
   if (!d.scale || !Number.isFinite(n)) return stored;

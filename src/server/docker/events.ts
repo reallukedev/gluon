@@ -6,10 +6,7 @@ import { publish } from "../events";
 import { systemEvent } from "../audit";
 import { onStart } from "../jobs";
 
-/**
- * Follows `docker events` so Gluon knows about crashes the moment they happen (rather than on the
- * next poll) and can tell a crash loop from a one-off restart.
- */
+/** Knowing about crashes the moment they happen lets Gluon tell a crash loop from a one-off restart. */
 
 export interface DockerEvent {
   t: number;
@@ -44,9 +41,8 @@ const RELOAD_SIGNALS = new Set(["1", "10", "12", "28", "HUP", "SIGHUP", "USR1", 
 export const recentDockerEvents = () => st().recent;
 
 /**
- * How many times a container died on its own in the last `windowMs` and Docker started it again.
- * Stops someone asked for, and containers Docker doesn't restart (restart policy "no", or
- * "on-failure" after a clean exit, such as a one-off job run on a schedule), don't count.
+ * Stops someone asked for, and containers Docker doesn't restart (policy "no", or "on-failure" after
+ * a clean exit), don't count.
  */
 export function recentDies(name: string, windowMs = 15 * 60_000): number {
   const t = Date.now() - windowMs;
@@ -125,7 +121,7 @@ async function countDie(ev: DockerEvent) {
   s.dies.set(ev.name, arr.slice(-50));
 }
 
-/** One line of `docker events`. Exported for tests; resolves once the event is fully counted. */
+/** Exported for tests; resolves once the event is fully counted. */
 export async function handleDockerEvent(line: string): Promise<void> {
   handle(line);
   await pending;
@@ -165,7 +161,7 @@ function handle(line: string) {
     const requested = killedAt !== undefined && ev.t - killedAt >= -5000 && ev.t - killedAt < REQUESTED_STOP_MS;
     s.kills.delete(ev.id);
     if (!requested) pending = countDie(ev).catch(() => undefined);
-    // A non-zero exit that wasn't a requested stop is worth recording (137 after `docker stop` timed out isn't).
+    // Requested stops (137 after `docker stop` timed out included) are skipped above; 143 is a clean exit on SIGTERM.
     if (!requested && ev.exitCode && ev.exitCode !== 143) {
       systemEvent({ action: "container.crashed", target: ev.project ?? ev.name, summary: `${ev.name} ${explainExit(ev.exitCode)}`, outcome: "failed", detail: { exitCode: ev.exitCode } });
     }

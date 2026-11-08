@@ -7,10 +7,9 @@ import * as quark from "./quark";
 import type { ChatConfigView, ChatInvite, ChatServerKind, ChatSnapshot } from "@/lib/chat-types";
 
 /**
- * One way in for every chat screen and route, whichever server the app runs. The app's container
- * image picks the backend: Prosody (Lua through prosodyctl's console) or Quark (JSON through
- * `quark ctl`). Both answer in Gluon's own shapes, so callers only branch where the servers
- * really differ (restarts, config files, the call relay).
+ * The app's container image picks the backend: Prosody (Lua through prosodyctl's console) or Quark
+ * (JSON through `quark ctl`). Both answer in Gluon's shapes, so callers only branch where the servers
+ * really differ.
  */
 
 export type ChatTarget = (prosody.ProsodyTarget & { kind: "prosody" }) | (quark.QuarkTarget & { kind: "quark" });
@@ -32,10 +31,8 @@ export async function chatTarget(appId: string): Promise<ChatTarget> {
   throw new AppError("not_chat", `${app.name} doesn't run a chat server Gluon manages (Prosody or Quark).`, 400);
 }
 
-/** "Prosody" or "Quark", for sentences. */
 export const serverName = (k: ChatServerKind) => (k === "quark" ? "Quark" : "Prosody");
 
-/** Apps that run a chat server Gluon manages, with which one. */
 export async function chatApps(opts: { running?: boolean } = {}): Promise<{ app: AppSummary; kind: ChatServerKind; running: boolean }[]> {
   const apps = await listApps().catch(() => []);
   const out: { app: AppSummary; kind: ChatServerKind; running: boolean }[] = [];
@@ -49,14 +46,10 @@ export async function chatApps(opts: { running?: boolean } = {}): Promise<{ app:
   return out;
 }
 
-// ---------------------------------------------------------------- reading
-
 export async function chatSnapshot(appId: string): Promise<ChatSnapshot> {
   const t = await chatTarget(appId);
   return t.kind === "quark" ? quark.quarkSnapshotOf(t) : prosody.chatSnapshot(appId);
 }
-
-// ---------------------------------------------------------------- accounts, invites, rooms
 
 export const USERNAME_RE = prosody.USERNAME_RE;
 
@@ -95,8 +88,6 @@ export function destroyRoom(t: ChatTarget, a: { jid: string; reason: string | nu
   return t.kind === "quark" ? quark.destroyQuarkRoom(t, a) : prosody.destroyRoom(t, a);
 }
 
-// ---------------------------------------------------------------- config file
-
 export type ConfigCheck = { ok: boolean; line: number | null; message: string; output: string };
 
 export async function readChatConfig(appId: string): Promise<ChatConfigView> {
@@ -120,8 +111,8 @@ export async function checkChatConfig(appId: string, text: string): Promise<Conf
 }
 
 /**
- * Check and save the config, refusing a save from a page that loaded an older file. Prosody then
- * reloads (or restarts, for new hosts and ports); Quark reloads it on its own. Call inside the app's lock.
+ * Refuses a save from a page that loaded an older file. Prosody then reloads (or restarts, for new
+ * hosts and ports); Quark reloads on its own. Call inside the app's lock.
  */
 export async function saveChatConfig(t: ChatTarget, appId: string, a: { text: string; base: string; restart: boolean }): Promise<{ saved: boolean; check: ConfigCheck; restarted: boolean }> {
   if (t.kind === "quark") {
@@ -141,8 +132,6 @@ export async function saveChatConfig(t: ChatTarget, appId: string, a: { text: st
   else await prosody.reloadProsody(t);
   return { saved: true, check, restarted: a.restart };
 }
-
-// ---------------------------------------------------------------- for Network
 
 /** Whether strangers can really make an account on `host`. null when it isn't a chat server Gluon can ask. */
 export async function openSignUp(appId: string | undefined, host: string): Promise<boolean | null> {

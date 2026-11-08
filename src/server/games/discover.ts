@@ -3,9 +3,9 @@ import type Docker from "dockerode";
 import { docker } from "../docker/client";
 
 /**
- * Finding mc-router and Crafty by looking at what's running, not by assuming paths: the routes
- * file is wherever mc-router's ROUTES_CONFIG points, mapped through its mounts to this server's
- * filesystem, and Crafty's servers folder is wherever its /crafty/servers is mounted from.
+ * Found from what's running, not assumed paths: the routes file is wherever mc-router's ROUTES_CONFIG
+ * points, mapped through its mounts, and Crafty's servers folder is wherever /crafty/servers is
+ * mounted from.
  */
 
 export type Listed = Docker.ContainerInfo;
@@ -31,7 +31,6 @@ export const isCrafty = (c: Listed) =>
   // Crafty's layout, whatever the image is called.
   (c.Mounts ?? []).some((m) => m.Destination === "/crafty/servers");
 
-/** A container path through the container's mounts to the path on this server, or null when it isn't mounted. */
 export function hostPathFor(mounts: { Source: string; Destination: string }[], containerPath: string): string | null {
   const m = mounts
     .filter((x) => containerPath === x.Destination || containerPath.startsWith(x.Destination.replace(/\/$/, "") + "/"))
@@ -41,8 +40,8 @@ export function hostPathFor(mounts: { Source: string; Destination: string }[], c
 }
 
 /**
- * mc-router's settings from its environment and command line (flags win, as in mc-router).
- * Flags look like -routes-config=/x, --routes-config /x or -routes-config-watch.
+ * Flags win, as in mc-router. They look like -routes-config=/x, --routes-config /x or
+ * -routes-config-watch.
  */
 export function routerSettings(env: string[], args: string[]): { routesConfig: string | null; watch: boolean; port: number; mapping: string | null; fallback: string | null } {
   const e = new Map(env.map((kv) => [kv.slice(0, kv.indexOf("=")), kv.slice(kv.indexOf("=") + 1)] as [string, string]));
@@ -82,8 +81,8 @@ export async function listContainers(): Promise<Listed[]> {
 }
 
 /**
- * Network aliases (compose's service names, --network-alias) only show when a container is
- * inspected. Done for the ones on mc-router's networks and for Crafty, which is all mc-router can reach.
+ * Aliases (compose service names, --network-alias) only show on inspect, so only containers mc-router
+ * can reach are inspected.
  */
 export async function networkAliases(list: Listed[], networks: string[]): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();

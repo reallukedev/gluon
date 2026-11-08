@@ -9,9 +9,8 @@ import { GLUON_NAME, selfContainerId } from "../docker/self";
 import type { AppRef, ContainerRef } from "@/lib/docker-types";
 
 /**
- * Shared plumbing for the Docker manager: raw Engine API calls (dockerode leaves out some query
- * options), errors in plain words, and one snapshot of "which container is whose" that images,
- * volumes and networks all hang their "used by" on.
+ * Raw Engine API calls (dockerode leaves out some query options), errors in plain words, and one
+ * "which container is whose" snapshot that images, volumes and networks hang their "used by" on.
  */
 
 interface DialOpts {
@@ -24,7 +23,7 @@ interface DialOpts {
   stream?: boolean;
 }
 
-/** Call the Engine API directly (docker-modem), for options dockerode doesn't pass through. */
+/** For options dockerode doesn't pass through. */
 export function dial<T>(o: DialOpts): Promise<T> {
   const modem = docker().modem as unknown as {
     dial: (opts: Record<string, unknown>, cb: (err: unknown, data: unknown) => void) => void;
@@ -70,7 +69,6 @@ export function isDockerDown(e: unknown): boolean {
 
 export const DOCKER_DOWN_MESSAGE = "Can't reach Docker. Check that Docker is running on the server and that Gluon's container has /var/run/docker.sock mounted.";
 
-/** Turn any Docker failure into an AppError whose message a person can act on. */
 export function dockerError(e: unknown, doing: string): AppError {
   if (e instanceof AppError) return e;
   if (isDockerDown(e)) return new AppError("docker_down", DOCKER_DOWN_MESSAGE, 503);
@@ -82,8 +80,6 @@ export function dockerError(e: unknown, doing: string): AppError {
 }
 
 export { selfContainerId };
-
-// ---------------------------------------------------------------- the snapshot
 
 export interface Snapshot {
   containers: Docker.ContainerInfo[];
@@ -115,7 +111,7 @@ export function invalidateSnapshot() {
   snapCache = null;
 }
 
-/** Containers with their apps, who Gluon is, and which platform runs here. Cached 2 s. */
+/** Cached 2 s. */
 export function snapshot(): Promise<Snapshot> {
   if (snapCache && Date.now() - snapCache.at < 2000) return snapCache.value;
   const value = build();

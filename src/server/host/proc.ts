@@ -2,7 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 
-/** Raw readers for /proc and /sys. /proc/stat, meminfo, loadavg are host-wide; net uses PID 1's namespace. */
+/** /proc/stat, meminfo and loadavg are host-wide; net uses PID 1's namespace. */
 
 const read = (p: string) => fs.readFileSync(p, "utf8");
 const tryRead = (p: string) => {
@@ -162,8 +162,6 @@ export function cpuTemperature(sensors = temperatures()): number | null {
     sensors.find((s) => s.chip === "coretemp");
   return pick ? pick.celsius : null;
 }
-
-// ---- cgroup v2 (with cgroup: host) --------------------------------------------------------
 
 function cgroupDir(containerId: string): string | null {
   for (const p of [`/sys/fs/cgroup/system.slice/docker-${containerId}.scope`, `/sys/fs/cgroup/docker/${containerId}`]) {

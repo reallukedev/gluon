@@ -2,10 +2,9 @@ import "server-only";
 import YAML from "yaml";
 
 /**
- * Whether a freshly started app is up. Only running counts (and healthy, for containers with a
- * health check). A container that exits, even cleanly, is a failure unless the compose file says
- * it's a one-off job: another service waits for it with `condition: service_completed_successfully`,
- * or it carries the label `gluon.one-shot: "true"`.
+ * A container that exits, even cleanly, is a failure unless the compose file marks it a one-off job:
+ * another service waits on it with `condition: service_completed_successfully`, or it has the label
+ * `gluon.one-shot: "true"`.
  */
 
 export function oneShotServices(composeText: string): Set<string> {
@@ -43,7 +42,7 @@ export interface Assessment {
   waiting: number;
 }
 
-/** One look at the new app's containers. `firstRestarts` remembers each one's count from the first look. */
+/** `firstRestarts` remembers each container's count from the first look. */
 export function assess(cs: ContainerState[], firstRestarts: Map<string, number>, oneShot: Set<string>): Assessment {
   const bad: Assessment["bad"] = [];
   let waiting = 0;

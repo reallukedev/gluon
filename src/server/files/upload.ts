@@ -19,11 +19,8 @@ import { inDir, openFileIn } from "./safe";
 import { displayPath } from "./list";
 
 /**
- * Resumable chunked uploads: init → PUT chunks at an offset → complete. Chunks land in
- * /data/uploads/<id>/data; a dropped connection loses at most the chunk in flight, and the client
- * asks GET /uploads/<id> where to resume. Completion moves the file into place atomically (rename
- * when the upload area shares the destination's filesystem, else copy + fsync + rename) and gives
- * it to the owner of the destination folder.
+ * Resumable: a dropped connection loses at most the chunk in flight. Completion moves the file into
+ * place atomically (rename on the same filesystem, else copy + fsync + rename).
  */
 
 export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
@@ -159,7 +156,7 @@ export function listUploads(user: User): UploadSession[] {
 
 const locks = new Set<string>();
 
-/** Write one chunk at `offset`. Offsets may repeat already-received data (safe retries). */
+/** Offsets may repeat already-received data (safe retries). */
 export async function putChunk(user: User, id: string, offset: number, body: ReadableStream<Uint8Array> | null): Promise<{ received: number; size: number }> {
   const r = load(user, id);
   if (r.status !== "open") throw new AppError("closed", r.status === "done" ? "That upload has already finished." : "That upload was stopped. Start it again.", 409, { status: r.status });
@@ -231,8 +228,8 @@ export function cancelUpload(user: User, id: string) {
 const finishing = new Map<string, Promise<UploadSession>>();
 
 /**
- * Put the finished upload in place. Resolves with the final session if that takes under ~20 s;
- * otherwise returns status "completing" and the client polls GET /uploads/<id>.
+ * Resolves with the final session if that takes under ~20 s, otherwise returns "completing" and the
+ * client polls.
  */
 export async function completeUpload(user: User, id: string, where: Where): Promise<UploadSession> {
   const r = load(user, id);
@@ -381,7 +378,6 @@ async function finalize(user: User, r: Row, where: Where): Promise<UploadSession
       if (ownStaged) await fs.promises.unlink(d.at(stagedName)).catch(() => {});
       throw e;
     }
-    // Make the new directory entry durable.
     await d.sync();
     fs.rmSync(tempDir(r.id), { recursive: true, force: true });
     const finalPath = path.posix.join(r.dest_dir, name);

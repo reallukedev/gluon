@@ -16,20 +16,13 @@ import { matchScore, splitVerb } from "@/lib/search-match";
 import type { SearchScope } from "@/lib/search-types";
 import type { Places, SearchHit } from "@/lib/files-types";
 
-/**
- * Search sources that belong to search itself rather than to one feature module: things inside
- * connected apps, files by name, problems that need someone, the activity log and a few commands.
- * Built per request because what they cover depends on who is asking.
- */
-
-// ------------------------------------------------------------------ connected apps
+/** Built per request because what they cover depends on who is asking. */
 
 const LOOPBACK = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\]|0\.0\.0\.0)$/i;
 
 /**
- * Where the person's browser can reach the app. The integration's own address is often 127.0.0.1
- * (from Gluon's point of view), so prefer the linked app's address for where they are, else swap a
- * loopback host for the server's LAN address.
+ * The integration's own address is often 127.0.0.1 from Gluon's side, so prefer the linked app's
+ * address for where the person is, else swap loopback for the LAN address.
  */
 export async function webBase(rec: Pick<IntegrationRecord, "baseUrl" | "appId">, apps: AppSummary[], zone: "home" | "away"): Promise<string | null> {
   const app = rec.appId ? apps.find((a) => a.id === rec.appId) : undefined;
@@ -70,13 +63,11 @@ export function hitToItem(rec: Pick<IntegrationRecord, "id" | "baseUrl">, hit: K
 }
 
 /**
- * Kinds whose key sees one person's private library (Immich: the owner's every photo). Sharing the
- * connection for a widget doesn't make that library searchable by the household, so members never
- * search inside these.
+ * Sharing an Immich connection for a widget doesn't make the owner's private library searchable by
+ * the household.
  */
 const PERSONAL_KINDS = new Set<string>(["immich"]);
 
-/** The connected apps this person may search inside: their usable integrations whose kind can search. */
 async function searchableRecords(user: User): Promise<IntegrationRecord[]> {
   const recs = usableRecords(user).filter((r) => KINDS[r.kind]?.search && (user.role === "admin" || !PERSONAL_KINDS.has(r.kind)));
   if (user.role === "admin" || !recs.some((r) => r.appId)) return recs;
@@ -106,12 +97,10 @@ async function appProviders(recs: IntegrationRecord[]): Promise<ProviderDef[]> {
   }));
 }
 
-// ------------------------------------------------------------------ files
-
 type GP = typeof globalThis & { __gluonSearchPlaces?: Map<string, { at: number; value: Promise<Places> }> };
 const placeCache: Map<string, { at: number; value: Promise<Places> }> = ((globalThis as GP).__gluonSearchPlaces ??= new Map());
 
-/** The folders a person may use, cached for a minute (working them out touches Docker and every drive). */
+/** Cached for a minute: working them out touches Docker and every drive. */
 function placesFor(user: User, grants: string): Promise<Places> {
   // Keyed by the grants fingerprint too, so a folder that stops being shared drops out at once.
   const key = `${user.id}:${user.role}:${grants}`;
@@ -123,7 +112,7 @@ function placesFor(user: User, grants: string): Promise<Places> {
   return value;
 }
 
-/** The word to hand to the name search: the longest one typed, as typed (names match accents literally). */
+/** Names match accents literally, so it's the longest word as typed. */
 export function findWord(q: string): string {
   const ws = q.trim().split(/\s+/).filter(Boolean);
   return ws.sort((a, b) => b.length - a.length)[0] ?? "";
@@ -197,8 +186,6 @@ const filesProvider: ProviderDef = {
     return { name: "Files", items };
   },
 };
-
-// ------------------------------------------------------------------ problems, activity, commands
 
 const findingsProvider: ProviderDef = {
   key: "findings",
@@ -301,11 +288,7 @@ const commandsProvider: ProviderDef = {
   },
 };
 
-/**
- * A fingerprint of what this person may see: their role, the apps and folders shared with them, and
- * which connections are shared. Part of every cache key in search, so a revoked share or a changed
- * role is never answered from a cache. A few small indexed reads.
- */
+/** Part of every cache key in search, so a revoked share or a changed role is never answered from a cache. */
 export function grantsKey(user: User): string {
   if (user.role === "admin") return "admin";
   const parts = [
@@ -317,10 +300,7 @@ export function grantsKey(user: User): string {
   return `member:${createHash("sha1").update(JSON.stringify(parts)).digest("base64url")}`;
 }
 
-/**
- * Everything a search request needs, worked out once: whether the scope is one this person has,
- * the per-request sources, and the grants fingerprint for the caches. null when the scope isn't theirs.
- */
+/** null when the scope isn't theirs. */
 export async function searchSetup(user: User, scope: string): Promise<{ extra: ProviderDef[]; grants: string } | null> {
   const grants = grantsKey(user);
   const base = [filesProvider, findingsProvider, activityProvider, commandsProvider];

@@ -4,12 +4,9 @@ import https from "node:https";
 import { one, run, now } from "../db";
 
 /**
- * "Does this app have a login of its own?": a heuristic look at the backend's home page.
- * 401/WWW-Authenticate, a redirect to /login, a password field, or a recognised app that always asks
- * for a login → "login". A plain page that opened without any of that → "none". Anything else
- * (APIs, apps that build their page in the browser, errors) → "unknown".
- *
- * Results are stored in `login_probes` (see integration request) and fall back to memory.
+ * A heuristic look at the backend's home page. 401, a redirect to /login, a password field or a known
+ * app that always asks means "login"; a plain page means "none"; anything else (APIs, apps built in
+ * the browser, errors) is "unknown".
  */
 
 export interface LoginProbe {
@@ -104,9 +101,8 @@ function fetchOnce(url: URL, timeoutMs: number): Promise<Fetched> {
 const IDENTITY_META = /\b(?:name|property)\s*=\s*["']?(?:application-name|apple-mobile-web-app-title|generator|author|og:site_name)["'\s>]/i;
 
 /**
- * What the page says it is: its title, the meta tags that name the app, and the server's headers.
- * Not the rest of the page: a dashboard that links to Jellyfin and Plex isn't either of them, and
- * calling it one would report a page anyone can open as having a login.
+ * Only what the page says it is (title, naming meta tags, headers): a dashboard that links to
+ * Jellyfin isn't Jellyfin, and calling it one would report an open page as having a login.
  */
 function fingerprint(f: Fetched): Fingerprint | null {
   const title = f.body.match(/<title[^>]*>([^<]{0,200})<\/title>/i)?.[0] ?? "";
@@ -167,8 +163,6 @@ export async function probeLogin(host: string, port: number, tlsFirst = false): 
   const why = lastErr === "ECONNREFUSED" ? "Nothing is listening there." : lastErr === "ETIMEDOUT" ? "It didn't answer in time." : "It doesn't look like a web page.";
   return { result: "unknown", evidence: why, fingerprint: null, admin: false };
 }
-
-// ---------------------------------------------------------------- storage
 
 const mem = new Map<string, LoginProbe>();
 let tableOk: boolean | null = null;

@@ -5,10 +5,9 @@ type G = typeof globalThis & { __gluonSelfCtr?: string | null };
 const g = globalThis as G;
 
 /**
- * The container Gluon itself runs in. With a host cgroup namespace (how Gluon is deployed) the
- * cgroup path carries the container id; otherwise the mount table names Docker's per-container
- * files (hostname, resolv.conf) by id. Falls back to HOSTNAME when that is a container id (Gluon
- * on a Docker network rather than the host's).
+ * With a host cgroup namespace (how Gluon is deployed) the cgroup path carries the id; otherwise the
+ * mount table names Docker's per-container files by id. Falls back to HOSTNAME when that is a
+ * container id.
  */
 export function selfContainerId(): string | null {
   if (g.__gluonSelfCtr !== undefined) return g.__gluonSelfCtr;
@@ -32,7 +31,6 @@ export function selfContainerId(): string | null {
   return id;
 }
 
-/** Whether a container (full or short id) is the one Gluon runs in. */
 export function isSelfContainer(id: string): boolean {
   const self = selfContainerId();
   return !!self && !!id && (self.startsWith(id) || id.startsWith(self));

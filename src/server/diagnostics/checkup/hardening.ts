@@ -52,15 +52,10 @@ import {
   type UpnpMapping,
 } from "./hardening-parse";
 
-/**
- * The deeper security checks: firewall, IPv6, UPnP, SSH keys and crypto, host accounts, sudo,
- * kernel settings, confinement, container privileges and automatic updates. All read-only.
- */
-
 const DAY = 86_400_000;
 const TERMINAL = go("Open a terminal", "/terminal");
 
-/** Run a host program; null when it isn't installed. Other failures keep whatever it printed. */
+/** null when it isn't installed. Other failures keep whatever it printed. */
 async function tryHost(cmd: string, args: string[], opts: { timeoutMs?: number; okCodes?: number[]; maxBuffer?: number } = {}): Promise<string | null> {
   try {
     return (await host(cmd, args, { timeoutMs: opts.timeoutMs ?? 8000, okCodes: opts.okCodes, maxBuffer: opts.maxBuffer })).stdout;
@@ -88,8 +83,6 @@ const sshdT = (ctx: CheckCtx) => ctx.memo("hard:sshdT", async () => {
 const sshdLite = (ctx: CheckCtx) => ctx.memo("sshd", sshdConfig);
 
 const sysctl = (key: string) => readHostFileOr(`/proc/sys/${key}`, "").trim() || null;
-
-// ---------------------------------------------------------------- firewall
 
 interface Firewall {
   manager: string | null;
@@ -187,8 +180,6 @@ export async function riskyServicesOutcome(ctx: CheckCtx): Promise<Outcome> {
   });
 }
 
-// ---------------------------------------------------------------- UPnP on the router
-
 async function ssdpGateways(signal: AbortSignal): Promise<{ location: string; from: string }[]> {
   return new Promise((resolve) => {
     const found = new Map<string, { location: string; from: string }>();
@@ -275,8 +266,6 @@ export async function upnpOutcome(ctx: CheckCtx): Promise<Outcome> {
     evidence,
   });
 }
-
-// ---------------------------------------------------------------- SSH
 
 export async function sshSettingsOutcome(ctx: CheckCtx): Promise<Outcome> {
   const c = await sshdT(ctx);
@@ -382,8 +371,6 @@ export async function sshAwaySignInsOutcome(): Promise<Outcome> {
     fix: go("See sign-ins", "/system?tab=sign-ins"),
   });
 }
-
-// ---------------------------------------------------------------- the server itself
 
 export async function autoUpdatesOutcome(): Promise<Outcome> {
   if (hostExists("/etc/apt/apt.conf.d")) {
@@ -549,8 +536,6 @@ export async function confinementOutcome(): Promise<Outcome> {
   return warn("Programs and containers run without AppArmor or SELinux", { detail: "These limit what a program can do even after it's broken into. Debian and Ubuntu ship AppArmor; it's usually just switched off at boot.", evidence, fix: TERMINAL });
 }
 
-// ---------------------------------------------------------------- containers
-
 interface Inspected {
   name: string;
   risks: ReturnType<typeof containerRisks>;
@@ -645,8 +630,6 @@ export async function containerPowersOutcome(ctx: CheckCtx): Promise<Outcome> {
     fix: go("Open apps", "/apps"),
   });
 }
-
-// ---------------------------------------------------------------- Gluon accounts
 
 export function staleAdminsOutcome(): Outcome {
   const t = Date.now();

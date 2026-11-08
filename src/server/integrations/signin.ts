@@ -6,8 +6,8 @@ import { badRequest } from "../errors";
 import type { SignInKind } from "@/lib/widgets-types";
 
 /**
- * "Sign in with your <App> account": Gluon signs in once with the person's username and password, asks the app
- * to make an API key named "Gluon", signs out again and keeps only the key. The password is never stored or logged.
+ * Gluon signs in once with the person's username and password, has the app make an API key named
+ * "Gluon", signs out and keeps only the key. The password is never stored or logged.
  */
 
 export const KEY_NAME = "Gluon";
@@ -38,8 +38,6 @@ function parse(body: Buffer): Record<string, unknown> {
     return {};
   }
 }
-
-// ------------------------------------------------------------------ Jellyfin
 
 async function jellyfin(baseUrl: string, username: string, password: string, allowSelfSigned: boolean): Promise<Minted> {
   const ctx = ctxFor("jellyfin", baseUrl, allowSelfSigned);
@@ -105,8 +103,6 @@ async function jellyfin(baseUrl: string, username: string, password: string, all
       .catch(() => undefined);
   }
 }
-
-// ------------------------------------------------------------------ Immich
 
 async function immich(baseUrl: string, email: string, password: string, allowSelfSigned: boolean): Promise<Minted> {
   if (!email.includes("@")) throw badRequest("Immich signs in with an email address. Enter the email you use for Immich.", { field: "username" });

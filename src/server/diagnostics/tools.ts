@@ -11,9 +11,7 @@ import { explainConnectError } from "../network/probes";
 import { resolverAddress } from "./validate";
 import type { DnsToolResult, HttpHop, HttpToolResult, PingToolResult, PortToolResult, TracerouteToolResult } from "@/lib/diagnostics-types";
 
-/** Network tools run from the server. Inputs arrive validated (./validate); every call has a timeout. */
-
-// ---------------------------------------------------------------- DNS lookup (dig)
+/** Inputs arrive validated (./validate); every call has a timeout. */
 
 /** The program itself isn't there: spawn says ENOENT, a shell says 127. */
 const missing = (e: CommandError) => e.code === 127 || (e.code === null && /\bENOENT\b/.test(e.message));
@@ -62,8 +60,6 @@ export async function dnsLookup(name: string, type: (typeof DNS_TYPES)[number], 
   return { name, type, resolver: server ?? "system", status, answers, queryMs: Number.isFinite(queryMs) ? queryMs : null, server: srv, message };
 }
 
-// ---------------------------------------------------------------- ping
-
 export async function ping(target: string, count: number, family?: 4 | 6): Promise<PingToolResult> {
   const args = ["-n", "-c", String(count), "-W", "2", "-i", "0.5", "-w", String(count + 3)];
   if (family) args.unshift(`-${family}`);
@@ -95,8 +91,6 @@ export async function ping(target: string, count: number, family?: 4 | 6): Promi
   const message = rx === 0 ? `No replies from ${target}. It may be down, or it ignores ping.` : loss > 0 ? `${rx} of ${tx} replies, ${loss}% lost, average ${rtt?.avg ?? "?"} ms.` : `All ${rx} replies came back, average ${rtt?.avg ?? "?"} ms.`;
   return { host: target, address, transmitted: tx, received: rx, lossPct: loss, rtt, replies, message };
 }
-
-// ---------------------------------------------------------------- TCP port check
 
 export async function portCheck(target: string, port: number, timeoutMs = 4000): Promise<PortToolResult> {
   let address: string | null = null;
@@ -133,8 +127,6 @@ export async function portCheck(target: string, port: number, timeoutMs = 4000):
     message: r.ok ? `Port ${port} on ${target} accepts connections (${ms} ms).` : `Port ${port} on ${target} is closed: ${explainConnectError(r.code)}.`,
   };
 }
-
-// ---------------------------------------------------------------- HTTP request
 
 const BODY_LIMIT = 4096;
 
@@ -290,8 +282,6 @@ export async function httpRequest(rawUrl: string, method: "GET" | "HEAD", follow
   }
   return { hops, final, body: last?.body ?? null, tls: last?.tls ?? firstTls, message };
 }
-
-// ---------------------------------------------------------------- traceroute
 
 async function traceTool(): Promise<{ tool: "traceroute" | "tracepath"; path: string } | null> {
   for (const p of ["/usr/bin/traceroute", "/usr/sbin/traceroute", "/bin/traceroute"]) if (hostExists(p)) return { tool: "traceroute", path: p };

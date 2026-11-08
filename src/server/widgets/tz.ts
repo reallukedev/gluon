@@ -1,6 +1,6 @@
 import "server-only";
 
-/** A time zone: an IANA name (via Intl) or a fixed offset (for calendars with unknown custom zones). */
+/** Fixed offsets are for calendars with unknown custom zones. */
 export type Zone = { kind: "iana"; name: string } | { kind: "fixed"; offsetMs: number };
 
 export const UTC: Zone = { kind: "iana", name: "UTC" };
@@ -57,7 +57,7 @@ function offsetAt(ms: number, zone: Zone): number {
   return wallMs(ianaParts(floored, zone.name)) - floored;
 }
 
-/** Wall-clock time in a zone → UTC instant. Times in a DST gap move forward; ambiguous ones take the first. */
+/** Times in a DST gap move forward; ambiguous ones take the first. */
 export function zonedToUtc(w: Wall, zone: Zone): number {
   const wall = wallMs(w);
   const off1 = offsetAt(wall, zone);

@@ -8,10 +8,7 @@ import { AppError, conflict } from "../errors";
 import { unescapeOctal } from "./mounts";
 import type { FstabBackup, FstabSourceKind } from "@/lib/storage-types";
 
-/**
- * /etc/fstab: a parser/serializer that keeps every comment, blank and unknown line exactly as it was,
- * plus the one safe way to write it (backup → temp file → findmnt --verify → atomic rename).
- */
+/** Keeps every comment, blank and unknown line exactly as it was. */
 
 export const FSTAB = "/etc/fstab";
 const BACKUP_PREFIX = "fstab.gluon-";
@@ -95,8 +92,6 @@ export function readFstab(): { text: string; parsed: ParsedFstab } {
   return { text, parsed: parseFstab(text) };
 }
 
-// ---------------------------------------------------------------- sources
-
 export interface SourceRef {
   kind: FstabSourceKind;
   value: string;
@@ -178,15 +173,13 @@ export function matchesVolume(e: FstabEntry, v: VolumeIdentity): FstabSourceKind
 export const isSwapEntry = (e: FstabEntry) => e.vfstype === "swap";
 export const isBindEntry = (e: FstabEntry) => e.mntops.includes("bind") || e.mntops.includes("rbind");
 
-// ---------------------------------------------------------------- changes
-
 export type FstabChange =
   | { kind: "add"; entry: FstabEntry; comment?: string }
   | { kind: "replace"; index: number; expectRaw: string; entry: FstabEntry }
   | { kind: "remove"; index: number; expectRaw: string }
   | { kind: "comment-out"; index: number; expectRaw: string; note: string };
 
-/** Apply changes to the current text. Refuses if a line changed since the plan was made. */
+/** Refuses if a line changed since the plan was made. */
 export function applyChanges(text: string, changes: FstabChange[]): string {
   const p = parseFstab(text);
   const byIndex = new Map(p.lines.map((l) => [l.index, l]));
@@ -225,8 +218,6 @@ export function applyChanges(text: string, changes: FstabChange[]): string {
 export function gluonComment(what: string): string {
   return `Added by Gluon on ${new Date().toISOString().slice(0, 10)}: ${what}`;
 }
-
-// ---------------------------------------------------------------- verify
 
 export interface VerifyResult {
   ok: boolean;
@@ -276,8 +267,6 @@ export function parseVerify(stdout: string, stderr: string, code: number | null)
   const crashed = code === null || code > 1 || unexplained;
   return { ok: !crashed && errors.length === 0 && parseErrors === 0, errors, warnings, parseErrors, crashed, output: `${stdout}${stderr}`.slice(0, 4000) };
 }
-
-// ---------------------------------------------------------------- write
 
 function stamp(d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, "0");
@@ -343,12 +332,10 @@ export interface FstabWrite {
 }
 
 /**
- * Replace /etc/fstab with `next`.
- * 1. Refuse if the file changed since `expectCurrent` was read (someone edited it by hand).
- * 2. Copy the current file to /etc/fstab.gluon-YYYYMMDD-HHMMSS (UTC); keep the newest 10.
- * 3. Write the new text to a temp file next to it and check it with `findmnt --verify`.
- *    Problems that already existed in the current file are tolerated; new ones abort.
- * 4. Atomically rename the temp file over /etc/fstab, then re-read it to confirm. If that fails, restore the backup.
+ * Refuses if the file changed since `expectCurrent` was read, backs up to /etc/fstab.gluon-<UTC
+ * stamp> (newest 10 kept), and checks a temp copy with `findmnt --verify`: problems already in the
+ * current file are tolerated, new ones abort. Then an atomic rename, re-read to confirm, and the
+ * backup goes back if that fails.
  */
 export async function writeFstab(next: string, expectCurrent: string): Promise<FstabWrite> {
   const live = hostPath(FSTAB);
@@ -363,7 +350,6 @@ export async function writeFstab(next: string, expectCurrent: string): Promise<F
   if (current !== expectCurrent) throw conflict("/etc/fstab was changed by someone else just now. Review the change again.");
   if (current === next) return { backup: "", before: current, after: next };
 
-  // Backup.
   let backupName = `${BACKUP_PREFIX}${stamp()}`;
   for (let i = 2; fs.existsSync(hostPath(`/etc/${backupName}`)); i++) backupName = `${BACKUP_PREFIX}${stamp()}-${i}`;
   const backup = `/etc/${backupName}`;
@@ -374,7 +360,6 @@ export async function writeFstab(next: string, expectCurrent: string): Promise<F
     throw new AppError("fstab_backup", `Couldn't back up /etc/fstab, so it wasn't changed: ${(e as Error).message}`, 500);
   }
 
-  // Temp file + verification.
   const tmp = `/etc/.fstab.gluon-new-${crypto.randomBytes(4).toString("hex")}`;
   try {
     writeFileDurable(hostPath(tmp), next, st.mode & 0o7777);
@@ -410,7 +395,6 @@ export async function writeFstab(next: string, expectCurrent: string): Promise<F
     throw e;
   }
 
-  // Confirm.
   const after = fs.readFileSync(live, "utf8");
   if (after !== next) {
     await restoreFstab(backup);
@@ -421,7 +405,6 @@ export async function writeFstab(next: string, expectCurrent: string): Promise<F
   return { backup, before: current, after: next };
 }
 
-/** Put a backup back in place (atomically). */
 export async function restoreFstab(backup: string): Promise<void> {
   if (!backup) return;
   if (!/^\/etc\/fstab\.gluon-\d{8}-\d{6}(-\d+)?$/.test(backup)) throw new AppError("invalid", "That isn't a Gluon fstab backup.");
@@ -435,7 +418,7 @@ export async function restoreFstab(backup: string): Promise<void> {
   await daemonReload();
 }
 
-/** Let systemd regenerate its mount units from fstab. Failure is logged, not fatal. */
+/** Failure is logged, not fatal. */
 export async function daemonReload(): Promise<boolean> {
   try {
     await host("systemctl", ["daemon-reload"], { timeoutMs: 60_000 });
@@ -445,8 +428,6 @@ export async function daemonReload(): Promise<boolean> {
     return false;
   }
 }
-
-// ---------------------------------------------------------------- systemd mount units
 
 export interface MountUnit {
   file: string;

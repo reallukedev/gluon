@@ -3,11 +3,8 @@ import type { ChatServerKind, ChatSettings } from "@/lib/chat-types";
 import { isStandardPorts, QUARK_CONTAINER_PORTS, QUARK_PORTS, type QuarkPorts } from "@/lib/chat-ports";
 
 /**
- * A new Prosody, the way Gluon sets it up: the official image (pinned to its 13.0 series) with its
- * own environment-driven config, and only conf.d, certs and the data folder mounted. Gluon's
- * settings (gluon.cfg.lua, picked up by the image's conf.d/*.cfg.lua include) and the person's
- * custom.lua (included by Gluon's file, last) live in conf.d, so updating the image never fights
- * with them. Pure: answers in, builder spec out.
+ * Gluon's gluon.cfg.lua (picked up by the image's conf.d/*.cfg.lua include) and the person's
+ * custom.lua live in conf.d, so updating the pinned image never fights with them.
  */
 
 export const PROSODY_IMAGE = "prosodyim/prosody:13.0";
@@ -94,9 +91,8 @@ services:
 }
 
 /**
- * A new Quark: one container with its own call relay. It writes its config (quark.toml) on first
- * start from the environment; Gluon then applies the settings and makes the first account through
- * its admin console, so nothing here holds a setting Gluon manages.
+ * Quark writes quark.toml from the environment on first start; Gluon applies the settings through its
+ * admin console after, so nothing here holds a setting Gluon manages.
  */
 export function quarkRecipe(a: ChatInstall): AppSpec {
   const p = a.ports ?? QUARK_PORTS;
@@ -168,5 +164,4 @@ export function checkableCompose(compose: string): string {
   });
 }
 
-/** The recipe for the server the person picked. */
 export const chatRecipe = (a: ChatInstall): AppSpec => (a.server === "quark" ? quarkRecipe(a) : prosodyRecipe(a));

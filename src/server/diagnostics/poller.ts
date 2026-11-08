@@ -1,8 +1,8 @@
 import "server-only";
 
 /**
- * One sampler per kind of live data, shared by every open SSE stream: it runs while at least one
- * client is subscribed and stops when the last one leaves. Runs never overlap.
+ * One sampler per kind, shared by every open SSE stream: it runs while at least one client is
+ * subscribed. Runs never overlap.
  */
 
 interface Poll<T> {

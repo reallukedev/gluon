@@ -25,16 +25,12 @@ import { DeliveryError } from "./transports";
 import { xmppText, splitServer, XMPP_SENDER as SENDER, type XmppOut } from "./xmpp-format";
 
 /**
- * XMPP channels. Two ways to send:
- *  - server: through a Prosody or Quark that Gluon runs, from gluon@<domain>, injected with its admin
- *    console. No password; the account is created on first use with a random one nobody needs.
- *  - account: sign in to any XMPP account with xmpp.js, send, sign out. TLS is required; an
- *    untrusted certificate is refused unless the channel says to accept it.
+ * "server" sends through a Prosody or Quark Gluon runs, from gluon@<domain>, through its admin
+ * console, so no password is needed. "account" signs in to any XMPP account with TLS required; an
+ * untrusted certificate is refused unless the channel says to accept it.
  */
 
 const TIMEOUT_MS = 20_000;
-
-// ---------------------------------------------------------------- through this server's Prosody
 
 const SEND_LUA = `local um=require"core.usermanager"; local st=require"util.stanza"; local id=require"util.id";
 local host=prosody.hosts[A.domain]; if not host or host.type~="local" then error("NOHOST") end;
@@ -59,9 +55,8 @@ for _,r in ipairs(A.rooms) do local h=r:match("@([^/]+)$"); local mh=h and proso
 return {created=created, missing=missing}`;
 
 /**
- * Through Quark's `message.send`, from gluon@<domain>/notify, one message per address. The sender
- * account is made once (so people can add it as a contact); group chats get the message from
- * <room>/<nick>, the same as Prosody broadcasts it.
+ * The sender account is made once so people can add it as a contact; group chats get the message from
+ * <room>/<nick>, as Prosody broadcasts it.
  */
 async function sendThroughQuark(c: XmppConfig & { app: string; domain: string }, text: string): Promise<void> {
   let t: QuarkTarget;
@@ -133,7 +128,6 @@ async function sendThroughServer(c: XmppConfig, text: string): Promise<void> {
   }
 }
 
-/** Chat servers Gluon runs, with their domains, accounts and group chats, for the channel form. */
 export async function xmppServers(): Promise<XmppServersResponse> {
   const apps = await chatApps();
   const servers = await Promise.all(
@@ -160,8 +154,6 @@ export async function xmppServers(): Promise<XmppServersResponse> {
   return { servers };
 }
 
-// ---------------------------------------------------------------- any account (xmpp.js)
-
 const NS_TLS = "urn:ietf:params:xml:ns:xmpp-tls";
 const NS_SASL = "urn:ietf:params:xml:ns:xmpp-sasl";
 const NS_MUC = "http://jabber.org/protocol/muc";
@@ -169,7 +161,7 @@ const NS_DISCO = "http://jabber.org/protocol/disco#info";
 
 const CERT_CODES = /SELF_SIGNED|UNABLE_TO_VERIFY|UNABLE_TO_GET_ISSUER|CERT_HAS_EXPIRED|CERT_NOT_YET_VALID|ALTNAME|CERT_UNTRUSTED|CERT_REJECTED|ERR_TLS_CERT/;
 
-/** Turn whatever went wrong into a sentence a person can act on. Exported for tests. */
+/** Exported for tests. */
 export function describeXmppError(e: unknown, where: string, jid: string): DeliveryError {
   const err = e as { code?: string; condition?: string; name?: string; message?: string };
   const code = err.code ?? "";
@@ -319,8 +311,6 @@ async function sendFromAccount(c: XmppConfig, text: string): Promise<void> {
     (entity.socket as unknown as { destroy?: () => void } | null)?.destroy?.();
   }
 }
-
-// ---------------------------------------------------------------- entry point
 
 export async function sendXmpp(c: XmppConfig, m: XmppOut): Promise<void> {
   const text = xmppText(m);

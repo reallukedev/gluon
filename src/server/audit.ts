@@ -57,7 +57,7 @@ export interface AuditInput {
   outcome?: "ok" | "failed";
 }
 
-/** Record something a person did. `summary` is a plain sentence: "Restarted Jellyfin". */
+/** `summary` is a plain sentence: "Restarted Jellyfin". */
 export function audit(user: Pick<User, "id" | "username"> | null, input: AuditInput, where?: { ip?: string; zone?: string }) {
   const info = run(
     `INSERT INTO audit_log (at, user_id, username, kind, action, target, summary, detail, ip, zone, outcome)
@@ -76,7 +76,7 @@ export function audit(user: Pick<User, "id" | "username"> | null, input: AuditIn
   publish("activity", { id: Number(info.lastInsertRowid) });
 }
 
-/** Record something the server noticed or did on its own: "Jellyfin restarted after crashing". */
+/** Things the server noticed or did on its own: "Jellyfin restarted after crashing". */
 export function systemEvent(input: AuditInput) {
   const info = run(
     `INSERT INTO audit_log (at, kind, action, target, summary, detail, outcome) VALUES (?, 'system', ?, ?, ?, ?, ?)`,
@@ -106,7 +106,7 @@ export function listActivity(opts: { before?: number; limit?: number; kind?: "us
   ).map(toEntry);
 }
 
-/** One page of activity as GET /api/activity answers it: `next` is the id to pass as `before` for the page after. */
+/** `next` is the id to pass as `before` for the page after. */
 export function activityPage(opts: Parameters<typeof listActivity>[0] & { limit: number }): ActivityPage {
   const items = listActivity({ ...opts, limit: opts.limit + 1 });
   const more = items.length > opts.limit;

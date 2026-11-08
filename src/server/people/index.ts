@@ -6,8 +6,6 @@ import { peopleHref } from "@/lib/settings-links";
 import { all } from "../db";
 import { pruneAnnouncements } from "./household";
 
-/** Side-effect module: people search (admins) and announcement pruning. */
-
 onStart("people", () => {
   every(24 * 60 * 60_000, () => pruneAnnouncements(), { immediate: true });
 });

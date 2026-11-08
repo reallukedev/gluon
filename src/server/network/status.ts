@@ -25,8 +25,7 @@ import type { DnsResult, HttpsModeT, NetworkStatus, ProbeState, PublicReach, Rea
 export { xmppVerdict };
 
 /**
- * Health of every public address: DNS (public resolvers), certificate (TLS handshake with Caddy
- * using the route's SNI), HTTP status through Caddy, and whether the backend port answers.
+ * DNS, certificate, HTTP through Caddy and whether the backend answers, for every public address.
  * Cached ~30 s; concurrent callers share one run.
  */
 
@@ -43,9 +42,8 @@ export const NOT_CONFIGURED = () =>
 const IFA_SKIP = 0x01 | 0x08 | 0x20 | 0x40;
 
 /**
- * The host's IPv6 addresses people on the internet can reach (not docker/veth), from the text of
- * /proc/net/if_inet6. Unique local addresses (fc00::/7) only work at home, and privacy addresses
- * change every few hours, so neither belongs in DNS.
+ * Unique local addresses (fc00::/7) only work at home and privacy addresses change every few hours,
+ * so neither belongs in DNS.
  */
 export function parseIfInet6(text: string): string[] {
   const out: string[] = [];
@@ -139,8 +137,8 @@ function evaluate(s: Omit<RouteStatus, "state" | "summary">, redirect: boolean, 
 }
 
 /**
- * Caddy's view of a certificate the person supplied: Gluon can't renew it, so it speaks up three
- * weeks ahead, and "no certificate yet" means Caddy isn't using the file, not that one is coming.
+ * Gluon can't renew a supplied certificate, so it speaks up three weeks ahead, and "no certificate
+ * yet" means Caddy isn't using the file, not that one is coming.
  */
 function ownCertTls(t: TlsResult, host: string): TlsResult {
   const base = { ...t, issueError: null };
@@ -370,7 +368,6 @@ async function build(force = false): Promise<NetworkStatus> {
   return { checkedAt: Date.now(), baseDomain: base, publicIp, wildcard, base: baseDns, routes, caddyRunning: running, counts };
 }
 
-/** Status of every public address; reuses a result younger than `maxAgeMs` unless forced. */
 export async function networkStatus(opts: { force?: boolean; maxAgeMs?: number } = {}): Promise<NetworkStatus> {
   const s = st();
   const maxAge = opts.maxAgeMs ?? 30_000;
@@ -394,7 +391,6 @@ export function lastStatus(): NetworkStatus | null {
   return st().value;
 }
 
-/** How long a host has been waiting for a certificate (ms), or null. */
 export function pendingFor(host: string): number | null {
   const t = st().pendingSince.get(host);
   return t ? Date.now() - t : null;

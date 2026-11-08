@@ -8,8 +8,6 @@ import { loadSmartCache, refreshSmart, pruneSmart, SMART_INTERVAL_MS } from "./s
 import { markInterrupted, pruneJobs } from "./oplog";
 import "./checks";
 
-/** Storage: background SMART reads, recovery of interrupted operations, checks, remedies and search. */
-
 async function smartPass() {
   const s = await getInventoryState();
   await refreshSmart(s.smartTargets);

@@ -2,7 +2,7 @@ import "server-only";
 import { all, db, now, one, run, tx } from "../db";
 import { decryptJson, encryptJson } from "../crypto";
 
-/** The router's Device Access Code, kept encrypted, and the custom services Gluon made with it. */
+/** The Device Access Code is kept encrypted. */
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS router_access (
@@ -25,8 +25,8 @@ function ensure() {
 }
 
 /**
- * After the router refuses the stored code, Gluon stops signing in with it (a gateway can lock
- * sign-ins after repeated failures) until the code is entered again, or this long has passed.
+ * A gateway can lock sign-ins after repeated failures, so a refused code isn't used again until it's
+ * re-entered or this long has passed.
  */
 export const REJECTED_PAUSE_MS = 6 * 3_600_000;
 
@@ -54,7 +54,7 @@ export function access(gateway: string): Access | null {
   }
 }
 
-/** Keep a newly entered (and proven) code. Clears any earlier refusal; keeps the services Gluon made. */
+/** Clears any earlier refusal; keeps the services Gluon made. */
 export function remember(gateway: string, model: string | null, code: string, by: string) {
   ensure();
   run(
@@ -69,8 +69,8 @@ export function remember(gateway: string, model: string | null, code: string, by
 }
 
 /**
- * Change only the list of services Gluon made, read and written in one step, so a code entered
- * meanwhile (or a forget) is never undone by a slow router job finishing.
+ * Read and written in one step, so a code entered meanwhile (or a forget) is never undone by a slow
+ * router job finishing.
  */
 export function updateCreated(gateway: string, change: (list: string[]) => string[]) {
   ensure();
@@ -82,13 +82,12 @@ export function updateCreated(gateway: string, change: (list: string[]) => strin
   });
 }
 
-/** The router refused the stored code. Only that code: a new one entered since isn't touched. */
+/** Only that code: a new one entered since isn't touched. */
 export function markRejected(gateway: string, code: string) {
   const a = access(gateway);
   if (a && a.code === code) run("UPDATE router_access SET rejected_at = ? WHERE gateway = ?", now(), gateway);
 }
 
-/** Should Gluon hold off signing in with the stored code? */
 export const codeOnHold = (a: Access, at = now()) => a.rejectedAt !== null && at - a.rejectedAt < REJECTED_PAUSE_MS;
 
 export function forget(gateway: string) {
@@ -96,7 +95,6 @@ export function forget(gateway: string) {
   run("DELETE FROM router_access WHERE gateway = ?", gateway);
 }
 
-/** Every router Gluon holds a code for. */
 export function storedGateways(): string[] {
   ensure();
   return all<{ gateway: string }>("SELECT gateway FROM router_access").map((r) => r.gateway);

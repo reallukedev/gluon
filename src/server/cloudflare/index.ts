@@ -7,7 +7,6 @@ import { scheduleSync, sync } from "./service";
 type G = typeof globalThis & { __gluonDdnsSeen?: boolean | null };
 const g = globalThis as G;
 
-/** Gluon's own dynamic DNS: every 5 minutes, and soon after start-up. */
 onStart("cloudflare", () => {
   const run = () => (getSetting("cloudflare") ? sync() : undefined);
   setTimeout(() => void Promise.resolve(run()).catch(() => undefined), 20_000).unref?.();

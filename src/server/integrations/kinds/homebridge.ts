@@ -12,8 +12,8 @@ const schema = z.object({
 type Config = z.infer<typeof schema>;
 
 /**
- * Homebridge UI (homebridge-config-ui-x) issues JWTs from /api/auth/login. Tokens are kept in memory per
- * integration version and renewed a minute before they expire, or after a 401.
+ * Tokens from /api/auth/login are kept in memory per integration version and renewed a minute before
+ * they expire, or after a 401.
  */
 type G = typeof globalThis & { __gluonHbTokens?: Map<string, { token: string; exp: number }> };
 const g = globalThis as G;
@@ -192,8 +192,6 @@ async function accessories(ctx: KindContext<Config>, params: Record<string, unkn
   return { instance: str(obj(obj(settings).env).homebridgeInstanceName), accessories: items, rooms };
 }
 
-// ------------------------------------------------------------------ universal search
-
 const KIND_WORD: Record<AccessoryKind, string> = {
   light: "Light",
   switch: "Switch",
@@ -224,7 +222,6 @@ export function stateWords(a: HomebridgeAccessory): string | null {
   return null;
 }
 
-/** Accessories by name, room or kind ("kitchen", "lights", "front door"), linking to Homebridge's page. */
 async function search(ctx: KindContext<Config>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]> {
   const data = await accessories(ctx, {}, opts.signal);
   if (opts.signal.aborted) return [];

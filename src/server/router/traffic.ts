@@ -1,9 +1,6 @@
 import type { RatePointT } from "@/lib/router-types";
 
-/**
- * Throughput from the router's byte counters, and what changed between two readings. Pure, so
- * the maths is tested without a router.
- */
+/** Pure, so the maths is tested without a router. */
 
 export interface Sample {
   t: number;
@@ -21,8 +18,8 @@ export const MAX_GAP_MS = 10 * 60_000;
 export const sameBoot = (a: number | null, b: number | null) => a === null || b === null || Math.abs(a - b) < SAME_BOOT_MS;
 
 /**
- * Bytes per second between consecutive samples. A restart or a cleared counter (the counters go
- * backwards) or a long gap gives a null point rather than a nonsense spike.
+ * A restart, a cleared counter (going backwards) or a long gap gives a null point rather than a
+ * nonsense spike.
  */
 export function rates(samples: Sample[]): RatePointT[] {
   const out: RatePointT[] = [];
@@ -47,9 +44,8 @@ export function current(samples: Sample[], at: number, freshMs = 3 * 60_000): { 
 }
 
 /**
- * Average throughput per fixed time bucket (bytes moved over time measured), so a day read every
- * 15 seconds at some times and every 2 minutes at others draws as one even line. A bucket with no
- * usable interval (a restart, a gap, nothing read) is null.
+ * Bytes moved over time measured, so a day read every 15 s at some times and every 2 min at others
+ * draws as one even line.
  */
 export function buckets(samples: Sample[], from: number, to: number, step: number): RatePointT[] {
   const n = Math.max(0, Math.ceil((to - from) / step));
@@ -67,8 +63,6 @@ export function buckets(samples: Sample[], from: number, to: number, step: numbe
   return acc.map((x, k) => ({ t: from + (k + 1) * step, rx: x.s ? x.rx / x.s : null, tx: x.s ? x.tx / x.s : null }));
 }
 
-// ---------------------------------------------------------------- what changed
-
 export interface Reading {
   at: number;
   boot: number | null;
@@ -76,7 +70,6 @@ export interface Reading {
 }
 
 export interface Seen {
-  /** The router's boot time Gluon last saw. */
   boot: number | null;
   /** Broadband as of the last reading that settled it, and since when. */
   broadband: boolean | null;
@@ -90,7 +83,6 @@ export interface Seen {
 
 export type Change = { kind: "restarted"; at: number; upFor: number | null } | { kind: "broadband-down"; at: number } | { kind: "broadband-up"; at: number; downFor: number | null };
 
-/** Compare a new reading with what Gluon saw before; return the new state and what happened. */
 export function compare(seen: Seen | null, r: Reading): { seen: Seen; changes: Change[] } {
   const prev: Seen = seen ?? { boot: null, broadband: null, since: null, downReads: 0, firstDownAt: null };
   const next: Seen = { ...prev, boot: prev.boot ?? r.boot, newBoot: null };

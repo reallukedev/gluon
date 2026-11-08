@@ -6,7 +6,6 @@ import { filesystems, latestHost, type FsUsage } from "./metrics/sampler";
 import { listActivity, type ActivityEntry } from "./audit";
 import type { User } from "./auth/users";
 import { listJoin } from "@/lib/format";
-import { all, now } from "./db";
 
 export interface StatusApp {
   id: string;

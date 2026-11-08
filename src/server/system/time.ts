@@ -6,8 +6,6 @@ import { AppError, badRequest } from "../errors";
 import type { TimeStatus } from "@/lib/system-types";
 import { parseShow } from "./units";
 
-/** Clock, timezone, NTP and hostname: small settings that change the host. */
-
 export async function timeStatus(): Promise<TimeStatus> {
   // Both at once: asking for the time server costs nothing when NTP turns out to be off, and saves a round.
   const [r, synced] = await Promise.all([
@@ -86,8 +84,6 @@ export async function setNtp(enabled: boolean): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------- hostname
-
 const LABEL = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /** RFC 1123 hostname (letters, digits, hyphens; dot-separated labels ≤ 63; total ≤ 253). */
@@ -116,9 +112,8 @@ export async function currentHostname(): Promise<string> {
 }
 
 /**
- * Rewrite /etc/hosts so the new name resolves locally (Debian maps it on the 127.0.1.1 line;
- * without that `sudo` complains "unable to resolve host"). Returns the previous contents so the
- * caller can roll back, or null when nothing changed.
+ * Debian maps the hostname on the 127.0.1.1 line; without it `sudo` complains "unable to resolve
+ * host". Returns the previous contents for rollback, or null when nothing changed.
  */
 function updateEtcHosts(oldName: string, newName: string): string | null {
   const file = hostPath("/etc/hosts");

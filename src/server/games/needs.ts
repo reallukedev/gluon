@@ -17,7 +17,6 @@ export function shortLabel(name: string): string {
   return (word >= 6 ? cut.slice(0, word) : n.slice(0, LABEL_MAX)).trim();
 }
 
-/** Pure: what the router must forward for mc-router and for each game port. */
 export function needsFor(java: { hostPort: number; addresses: number } | null, ports: GamePortRow[]): PortNeed[] {
   const out: PortNeed[] = [];
   if (java)
@@ -36,7 +35,6 @@ export function needsFor(java: { hostPort: number; addresses: number } | null, p
   return out;
 }
 
-/** Router ports that game servers published in Gluon need from the internet. */
 export async function gamePortNeeds(): Promise<PortNeed[]> {
   // Loaded on use so needsFor stays importable without Docker and the database.
   const { javaNeed } = await import("./service");

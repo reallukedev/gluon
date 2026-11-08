@@ -1,5 +1,4 @@
-// Home Assistant: turning REST state objects into the shapes Home widgets draw, and deciding who may press what.
-// Pure (no I/O) so the mapping and the permission rules can be tested against recorded responses.
+// Pure, so the mapping and the permission rules can be tested against recorded responses.
 import type { HaAction, HaControl, HaIcon, HomeAssistantEntity, HomeAssistantPerson, HomeAssistantPickable } from "@/lib/widgets-types";
 import { HA_ACTIONS, HA_ENTITY_ID } from "@/lib/widgets-types";
 
@@ -83,7 +82,6 @@ const ts = (v: unknown): number | null => {
   return Number.isFinite(t) ? t : null;
 };
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-/** "armed_home" → "Armed home". */
 const words = (s: string) => cap(s.replace(/_/g, " "));
 
 const UNAVAILABLE = new Set(["unavailable", "unknown"]);
@@ -402,8 +400,6 @@ export function shownStates(list: unknown): HaState[] {
   });
 }
 
-// ------------------------------------------------------------------ people
-
 /** Person pictures Home Assistant serves itself: uploaded (`/api/image/serve/…`) or from its `www` folder (`/local/…`). */
 export const PERSON_PICTURE = /^\/(api\/image\/serve\/[a-f0-9]{16,64}\/\d{2,4}x\d{2,4}|local\/[A-Za-z0-9_\-./]{1,200}\.(png|jpe?g|webp|gif))$/;
 
@@ -433,11 +429,9 @@ export function sortPeople(people: HomeAssistantPerson[]): HomeAssistantPerson[]
   return people.toSorted((x, y) => rank[x.where] - rank[y.where] || x.name.localeCompare(y.name));
 }
 
-// ------------------------------------------------------------------ areas
-
 /**
- * The template Gluon renders to learn rooms (REST has no area endpoint). Every function in it is documented
- * template API (`areas`, `area_name`, `area_entities`); rendering templates needs an administrator's token.
+ * REST has no area endpoint, so rooms come from a template using only documented template API.
+ * Rendering templates needs an administrator's token.
  */
 export const AREAS_TEMPLATE =
   '{%- set ns = namespace(out=[]) -%}{%- for a in areas() -%}{%- set ns.out = ns.out + [{"id": a, "name": area_name(a), "entities": area_entities(a)}] -%}{%- endfor -%}{{ ns.out | tojson }}';
@@ -475,14 +469,11 @@ export function parseAreas(text: string): AreaMap {
   return { areas: areas.toSorted((x, y) => x.name.localeCompare(y.name)), byEntity };
 }
 
-// ------------------------------------------------------------------ who may press what
-
 export type ControlPlan = { ok: true; domain: string; service: string; verb: string } | { ok: false; status: 403 | 400; message: string };
 
 /**
- * Whether this person may do `action` to an entity, and which Home Assistant service does it.
- * Admins may use any control Gluon offers; household members only the ones an admin allowed for the household.
- * Locks, alarms and anything else without a control are refused for everyone.
+ * Admins may use any control Gluon offers; household members only the ones an admin allowed. Locks,
+ * alarms and anything else without a control are refused for everyone.
  */
 export function planControl(input: {
   role: "admin" | "member";
@@ -545,9 +536,8 @@ export function controlRefusal(input: {
 }
 
 /**
- * Apply an admin's allow/deny edits to one household list: deny wins, ids stay valid, order is stable.
- * The "see" list takes anything Gluon shows; the "press" list only things members may press (`lookOnly` says which
- * aren't, from their device class).
+ * Deny wins, ids stay valid, order is stable. The "press" list only takes things members may press
+ * (`lookOnly` says which aren't).
  */
 export function editHousehold(
   list: "see" | "press",
@@ -567,12 +557,9 @@ export function editHousehold(
   return out.slice(0, max);
 }
 
-// ------------------------------------------------------------------ what a viewer gets
-
 /**
- * The picked entities as one viewer may see them. Admins get every picked thing that exists. Members (and an
- * unknown viewer) only get what an admin shared with the household: anything else lands in `notShared`, whether or
- * not it exists, so asking reveals nothing about it.
+ * Members (and an unknown viewer) only get what an admin shared; anything else lands in `notShared`
+ * whether or not it exists, so asking reveals nothing about it.
  */
 export function entitiesFor(input: {
   states: HaState[];
@@ -599,8 +586,6 @@ export function entitiesFor(input: {
   }
   return { entities, missing, notShared };
 }
-
-// ------------------------------------------------------------------ search
 
 /** Rank things whose name or id contain every word of the query: name starts first, then name contains, then id. */
 export function matchStates(states: HaState[], q: string, areaOf: (id: string) => string | null): { s: HaState; score: number }[] {

@@ -20,7 +20,6 @@ const STAT_CONCURRENCY = 64;
 
 export const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
-/** Run `fn` over items with bounded concurrency. */
 export async function pool<T, R>(items: T[], n: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
   const out = new Array<R>(items.length);
   let next = 0;
@@ -33,8 +32,6 @@ export async function pool<T, R>(items: T[], n: number, fn: (item: T, i: number)
   await Promise.all(workers);
   return out;
 }
-
-// ---------------------------------------------------------------- entries
 
 export interface EntryContext {
   scope: Scope;
@@ -66,8 +63,8 @@ export function cachedSizes(reals: string[]): Map<string, { bytes: number; compu
 }
 
 /**
- * Build the client view of one entry. `logical` is the path the person sees; `real` is where it
- * physically is (its parent resolved), and `st` is lstat of `real`.
+ * `logical` is the path the person sees; `real` is where it physically is (its parent resolved), and
+ * `st` is lstat of `real`.
  */
 export async function toEntry(ctx: EntryContext, logical: string, real: string, st: fs.Stats): Promise<FileEntry> {
   const name = path.posix.basename(logical) || "/";
@@ -129,8 +126,6 @@ export async function toEntry(ctx: EntryContext, logical: string, real: string, 
     pinned,
   };
 }
-
-// ---------------------------------------------------------------- listing
 
 interface Raw {
   name: string;
@@ -400,7 +395,6 @@ async function listHeld(user: User, o: ListOptions, t: Target, held: Dir): Promi
   };
 }
 
-/** Details for a single file or folder. */
 export async function statPath(user: User, p: string): Promise<FileEntry & { real: string; access: Listing["access"]; fs: Listing["fs"]; protectedReason: string | null }> {
   // Don't follow the last link: show the link itself (with its target) like a listing does.
   const t = await authorize(user, p, "read", { followLast: false });
@@ -409,8 +403,6 @@ export async function statPath(user: User, p: string): Promise<FileEntry & { rea
   const e = await toEntry(ctx, shown, t.real, t.stat!);
   return { ...e, real: t.real, access: t.access, fs: fsInfo(t.real), protectedReason: t.access === "write" ? await protectionReason(t.real) : null };
 }
-
-// ---------------------------------------------------------------- recents
 
 const lastVisit = new Map<string, number>();
 

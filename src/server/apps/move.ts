@@ -36,7 +36,6 @@ import { parseEnvFile } from "./vars";
 
 type Where = { ip?: string; zone?: string };
 
-/** What running a plan needs beyond what the person reviewed. */
 interface Prepared {
   plan: MovePlan;
   envText: string | null;
@@ -46,8 +45,6 @@ interface Prepared {
   /** `docker compose` arguments that address the old project (when it's stopped through Compose). */
   oldCompose: string[] | null;
 }
-
-// ---------------------------------------------------------------- planning
 
 const UMBREL_ROOT_RE = (id: string) => new RegExp(`^(.*)/app-data/${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/|$)`);
 
@@ -235,8 +232,6 @@ export async function movePlan(id: string): Promise<MovePlan> {
   return (await prepare(id)).plan;
 }
 
-// ---------------------------------------------------------------- jobs
-
 interface Job extends MoveJob {
   listeners: Set<(e: MoveEvent) => void>;
 }
@@ -262,7 +257,6 @@ export function followMove(appId: string, onEvent: (e: MoveEvent) => void): (() 
   return () => j.listeners.delete(onEvent);
 }
 
-/** Ids of apps a running move involves: each original and the copy it's making. */
 export function movingApps(): Set<string> {
   const out = new Set<string>();
   for (const j of jobs.values()) if (!j.finishedAt) out.add(j.appId).add(j.newId);
@@ -275,8 +269,8 @@ export const moveRunning = (appId: string) => {
 };
 
 /**
- * Start a move. It runs to the end on its own even if the browser goes away (stopping halfway
- * would be worse than either outcome); the page can follow it again with `followMove`.
+ * Runs to the end even if the browser goes away, since stopping halfway would be worse than either
+ * outcome.
  */
 export async function startMove(appId: string, planId: string, user: User, where: Where): Promise<void> {
   // Taken before the slow planning, so a second request can't plan the same move alongside.
@@ -311,14 +305,12 @@ export async function startMove(appId: string, planId: string, user: User, where
     });
 }
 
-// ---------------------------------------------------------------- running
-
 const MIN = 60_000;
 const ignore304 = (e: { statusCode?: number }) => {
   if (e?.statusCode !== 304) throw e;
 };
 
-/** A host command whose output goes into the move's log. The move itself never stops on a closed tab. */
+/** The move itself never stops on a closed tab. */
 const spawnLines = (cmd: string, args: string[], emit: (e: MoveEvent) => void, timeoutMs: number): Promise<number> =>
   runLines(cmd, args, (text, stream) => emit({ type: "line", text, stream }), { timeoutMs }).then((r) => r.code);
 
@@ -403,10 +395,7 @@ const projectArgs = (dir: string, project: string) => ["compose", "-p", project,
 
 type Health = { ok: true } | { ok: false; why: string; containers: string[] };
 
-/**
- * Wait for every container of the new project to be running (and healthy, if it has a check) and
- * to stay that way for a few checks in a row. See health.ts for what counts.
- */
+/** Running (and healthy, if it has a check) for a few checks in a row. See health.ts for what counts. */
 async function waitHealthy(project: string, compose: string, emit: (e: MoveEvent) => void): Promise<Health> {
   const start = Date.now();
   let limit = 3 * MIN;
@@ -448,9 +437,8 @@ async function tailLogs(project: string, names: string[], emit: (e: MoveEvent) =
 }
 
 /**
- * Hand everything stored under the old id to the new one. Runs only after the copy is up and
- * healthy; the database part is one transaction. A failure here doesn't undo a working move, so it
- * comes back as a sentence for the result instead.
+ * Runs only after the copy is up and healthy; the database part is one transaction. A failure here
+ * doesn't undo a working move, so it comes back as a sentence instead.
  */
 async function carryOver(from: string, to: string, movedAt: number, user: User, where: Where, emit: (e: MoveEvent) => void): Promise<string | null> {
   const t = Date.now();
