@@ -3,7 +3,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { listCustomApps, storeStatus } from "@/server/appstore/service";
 import { CustomAppsView } from "@/components/builder/CustomAppsView";
 import type { CustomAppsResponse } from "@/lib/builder-types";
-import AppsTabLoading from "../loading";
+import { AppsTabLoading } from "@/components/apps/AppsTabLoading";
 import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Custom apps" };

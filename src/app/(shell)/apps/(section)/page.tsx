@@ -3,7 +3,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { listApps } from "@/server/docker/apps";
 import { activePlatform } from "@/server/platform";
 import { AppsView } from "@/components/apps/AppsView";
-import AppsTabLoading from "./loading";
+import { AppsTabLoading } from "@/components/apps/AppsTabLoading";
 import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Apps" };

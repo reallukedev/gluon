@@ -3,7 +3,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { listImages } from "@/server/dockerx/images";
 import { AppError } from "@/server/errors";
 import { ImagesView } from "@/components/docker/ImagesView";
-import AppsTabLoading from "../loading";
+import { AppsTabLoading } from "@/components/apps/AppsTabLoading";
 import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Docker images" };
