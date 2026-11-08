@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 [ -f deploy/.env ] && . deploy/.env
 : "${GLUON_HOST:?Set GLUON_HOST (user@server) in deploy/.env}"
 HOST=$GLUON_HOST
-REPO=${GLUON_REPO:-reallukedev/gluon}
+REPO=${GLUON_REPO:-slukedev/gluon}
 : "${GLUON_DEPLOY_DIR:?Set GLUON_DEPLOY_DIR (the install folder on the server, absolute) in deploy/.env}"
 DIR=$GLUON_DEPLOY_DIR
 

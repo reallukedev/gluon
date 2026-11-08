@@ -10,7 +10,7 @@ import pkg from "../../../package.json";
  * needs to know which container is its own and who manages it.
  */
 
-export const REPO = process.env.GLUON_REPO && /^[\w.-]+\/[\w.-]+$/.test(process.env.GLUON_REPO) ? process.env.GLUON_REPO : "reallukedev/gluon";
+export const REPO = process.env.GLUON_REPO && /^[\w.-]+\/[\w.-]+$/.test(process.env.GLUON_REPO) ? process.env.GLUON_REPO : "slukedev/gluon";
 
 const startedAt = Date.now();
 
