@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { mfaAlways, mfaRequired, passwordProblem, type MfaPolicy } from "./policy";
+import { mfaAlways, mfaRequired, passwordProblem, sessionEndsAt, type MfaPolicy } from "./policy";
 
 describe("who needs two-step sign-in", () => {
   // [policy, admin home, admin away, member home, member away]
@@ -38,5 +38,24 @@ describe("password rules", () => {
     const problem = passwordProblem(pw, "maya1234", policy);
     if (expected === null) expect(problem).toBeNull();
     else expect(problem).toMatch(expected);
+  });
+});
+
+describe("when a session ends", () => {
+  const DAY = 86_400_000;
+  const T = 1_700_000_000_000;
+
+  test("a session idle longer than the away limit ends when it comes back from away", () => {
+    const row = { expires_at: T + 30 * DAY, last_seen_at: T, mfa_pending: 0 };
+    expect(sessionEndsAt(row, 7 * DAY)).toBe(T + 7 * DAY);
+    expect(sessionEndsAt(row, 30 * DAY)).toBe(T + 30 * DAY);
+  });
+
+  test("a longer limit never stretches past the stored expiry", () => {
+    expect(sessionEndsAt({ expires_at: T + DAY, last_seen_at: T, mfa_pending: 0 }, 90 * DAY)).toBe(T + DAY);
+  });
+
+  test("a half-finished sign-in keeps its own short expiry", () => {
+    expect(sessionEndsAt({ expires_at: T + 600_000, last_seen_at: T - 5 * DAY, mfa_pending: 1 }, 7 * DAY)).toBe(T + 600_000);
   });
 });

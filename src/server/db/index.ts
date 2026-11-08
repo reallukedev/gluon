@@ -26,7 +26,9 @@ function adoptLegacyDatabase() {
   const legacy = path.join(DATA_DIR, "tend.db");
   const current = path.join(DATA_DIR, "gluon.db");
   if (fs.existsSync(/*turbopackIgnore: true*/ current) || !fs.existsSync(/*turbopackIgnore: true*/ legacy)) return;
-  for (const ext of ["", "-wal", "-shm"]) {
+  // The main file last: if this stops halfway, the next start still sees tend.db and finishes the move
+  // instead of opening gluon.db without its WAL (and losing what was in it).
+  for (const ext of ["-wal", "-shm", ""]) {
     if (fs.existsSync(/*turbopackIgnore: true*/ legacy + ext)) fs.renameSync(/*turbopackIgnore: true*/ legacy + ext, current + ext);
   }
 }

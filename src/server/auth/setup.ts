@@ -22,27 +22,36 @@ export function ensureSetupCode(): string | null {
     }
     return null;
   }
-  let code: string;
-  try {
-    code = fs.readFileSync(FILE(), "utf8").trim();
-  } catch {
+  let code = readCode();
+  if (!code) {
     const raw = crypto.randomBytes(6).toString("hex").toUpperCase();
     code = `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8)}`;
     fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(FILE(), code, { mode: 0o600 });
+    // Written whole or not at all: a half-written (empty) file must never become the code.
+    const tmp = `${FILE()}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, code, { mode: 0o600 });
+    fs.renameSync(tmp, FILE());
   }
   const line = "─".repeat(52);
   console.log(`\n${line}\n  Gluon is ready for first-time setup.\n  Setup code: ${code}\n  Open Gluon in a browser and enter this code to\n  create the first admin account.\n${line}\n`);
   return code;
 }
 
-export function checkSetupCode(input: string): boolean {
+const norm = (s: string) => s.replace(/[\s-]/g, "").toUpperCase();
+
+/** The stored code, or null when there is none or it's too short to be one (an empty file matches an empty guess). */
+function readCode(): string | null {
   try {
     const code = fs.readFileSync(FILE(), "utf8").trim();
-    return safeEqual(code.replace(/-/g, "").toUpperCase(), input.replace(/[\s-]/g, "").toUpperCase());
+    return norm(code).length >= 12 ? code : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function checkSetupCode(input: string): boolean {
+  const code = readCode();
+  return !!code && safeEqual(norm(code), norm(input));
 }
 
 export function clearSetupCode() {

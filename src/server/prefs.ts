@@ -6,7 +6,13 @@ import { now, one, run } from "./db";
 export function getPrefs(userId: string): Prefs {
   const row = one<{ json: string }>("SELECT json FROM user_prefs WHERE user_id = ?", userId);
   if (!row) return defaultPrefs;
-  const parsed = prefsSchema.safeParse({ ...defaultPrefs, ...JSON.parse(row.json) });
+  let stored: unknown;
+  try {
+    stored = JSON.parse(row.json);
+  } catch {
+    return defaultPrefs; // a damaged row must not break every page for this person
+  }
+  const parsed = prefsSchema.safeParse({ ...defaultPrefs, ...(stored && typeof stored === "object" ? stored : {}) });
   return parsed.success ? parsed.data : defaultPrefs;
 }
 

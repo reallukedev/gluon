@@ -8,7 +8,8 @@ import { clientInfo, isHttpsRequest, type Zone } from "../net-zone";
 import { getSetting } from "../settings";
 import { findById, toUser, type User } from "./users";
 import { DEVICE_COOKIE, DEVICE_COOKIE_SECURE, DEVICE_MAX_AGE_S, deviceHash, newDeviceToken, pruneDeviceFindings, sessionDevices } from "./devices";
-import { mfaRequired } from "./policy";
+import { mfaRequired, sessionEndsAt } from "./policy";
+import { AppError } from "../errors";
 
 /**
  * Session cookies. Over HTTPS (the public address, behind Caddy) the cookie is `__Host-` prefixed:
@@ -149,8 +150,8 @@ export async function completeMfa(idHash: string): Promise<string> {
   const expires = t + lifetimeMs(zone);
   const raw = token(32);
   const next = sha256(raw);
-  run(
-    "UPDATE sessions SET id_hash = ?, mfa_pending = 0, expires_at = ?, recent_auth_at = ?, last_seen_at = ?, ip = ?, zone = ? WHERE id_hash = ?",
+  const changed = run(
+    "UPDATE sessions SET id_hash = ?, mfa_pending = 0, expires_at = ?, recent_auth_at = ?, last_seen_at = ?, ip = ?, zone = ? WHERE id_hash = ? AND mfa_pending != 0",
     next,
     expires,
     t,
@@ -158,7 +159,10 @@ export async function completeMfa(idHash: string): Promise<string> {
     ip,
     zone,
     idHash,
-  );
+  ).changes;
+  // Gone (timed out, signed out, or a second request with another code got there first): never
+  // hand out a cookie for a session that doesn't exist.
+  if (!changed) throw new AppError("no_pending", "Your sign-in timed out. Enter your password again.", 410);
   await writeCookie(raw, expires);
   return next;
 }
@@ -176,20 +180,28 @@ async function readSession(): Promise<{ session: Session; user: User } | null> {
   const row = one<SessionRow>("SELECT * FROM sessions WHERE id_hash = ?", idHash);
   if (!row) return null;
   const t = now();
-  if (row.expires_at < t) {
+  // Refresh the zone from the current request so "away" policies follow the device.
+  const { ip, zone } = await requestInfo();
+  if (sessionEndsAt(row, lifetimeMs(zone)) < t) {
     run("DELETE FROM sessions WHERE id_hash = ?", idHash);
     return null;
   }
   const userRow = findById(row.user_id);
   if (!userRow || userRow.disabled) return null;
   const session = toSession(row);
-  // Refresh the zone from the current request so "away" policies follow the device.
-  const { ip, zone } = await requestInfo();
   session.zone = zone;
   session.ip = ip;
   if (t - row.last_seen_at > TOUCH_EVERY_MS && !row.mfa_pending) {
     // Rolling expiry: active sessions stay signed in (for less long while away).
-    run("UPDATE sessions SET last_seen_at = ?, expires_at = ?, ip = ?, zone = ? WHERE id_hash = ?", t, t + lifetimeMs(zone), ip, zone, idHash);
+    const expires = t + lifetimeMs(zone);
+    run("UPDATE sessions SET last_seen_at = ?, expires_at = ?, ip = ?, zone = ? WHERE id_hash = ?", t, expires, ip, zone, idHash);
+    // The browser's copy too, or it drops the cookie at the first expiry however active the session is.
+    // Pages can't set cookies while rendering; the next API call does it.
+    try {
+      await writeCookie(raw, expires);
+    } catch {
+      /* read-only cookies (page render) */
+    }
   }
   return { session, user: toUser(userRow) };
 }

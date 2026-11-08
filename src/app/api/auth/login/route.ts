@@ -2,7 +2,7 @@ import { z } from "zod";
 import { route } from "@/server/api";
 import { AppError } from "@/server/errors";
 import { findByUsername, verifyPassword, type UserRow } from "@/server/auth/users";
-import { guard, recordAttempt } from "@/server/auth/ratelimit";
+import { guard, oneAtATime, recordAttempt } from "@/server/auth/ratelimit";
 import { createSession, currentDevice } from "@/server/auth/session";
 import { noteSignIn } from "@/server/auth/devices";
 import { audit } from "@/server/audit";
@@ -35,11 +35,14 @@ function noteThrottle(row: UserRow, failures: number, ip: string, zone: Zone) {
  * Unknown usernames, wrong passwords and disabled accounts all get the same answer, after the same
  * amount of work.
  */
-export const POST = route({ auth: "public", body, burst: { limit: 20, windowMs: 60_000 } }, async ({ body, ip, zone, req }) => {
-  const username = body.username;
+export const POST = route({ auth: "public", body, burst: { limit: 20, windowMs: 60_000 } }, ({ body, ip, zone, req }) =>
+  oneAtATime(`login:${body.username}`, zone, () => signIn(body.username, body.password, ip, zone, req.headers.get("user-agent"))),
+);
+
+async function signIn(username: string, password: string, ip: string, zone: Zone, userAgent: string | null) {
   guard(`login:${username}`, ip, zone);
   const row = findByUsername(username);
-  const ok = await verifyPassword(row, body.password);
+  const ok = await verifyPassword(row, password);
   const usable = !!row && !row.disabled;
 
   // An admin without two-step, from outside home: a password alone is never enough here. Only
@@ -70,7 +73,7 @@ export const POST = route({ auth: "public", body, burst: { limit: 20, windowMs: 
   if (!needsMfa) {
     run("UPDATE users SET last_login_at = ? WHERE id = ?", now(), row.id);
     audit({ id: row.id, username: row.username }, { action: "auth.login", summary: "Signed in" }, { ip, zone });
-    noteSignIn(row, idHash, await currentDevice(), { ip, zone, userAgent: req.headers.get("user-agent") });
+    noteSignIn(row, idHash, await currentDevice(), { ip, zone, userAgent });
   }
   return { next: needsMfa ? "mfa" : "done" };
-});
+}
