@@ -71,6 +71,29 @@ export function guard(subject: string, ip: string, zone: Zone, what = "attempts"
   }
 }
 
+type L = typeof globalThis & { __gluonAttemptLocks?: Set<string> };
+const locks = () => ((globalThis as L).__gluonAttemptLocks ??= new Set<string>());
+
+/**
+ * Run a guarded check that awaits (a password hash) one at a time per subject and zone. Otherwise
+ * many requests sent at once all pass `guard()` before the first failure is recorded, and the
+ * throttle allows a burst of guesses instead of one. Per zone, so tries from outside never hold up
+ * someone at home.
+ */
+export async function oneAtATime<T>(subject: string, zone: Zone, fn: () => Promise<T>): Promise<T> {
+  const key = acctKey(subject, zone);
+  const held = locks();
+  if (held.has(key)) {
+    throw new AppError("rate_limited", "Another sign-in to this account is being checked. Try again in a moment.", 429, { retryAfter: 1 });
+  }
+  held.add(key);
+  try {
+    return await fn();
+  } finally {
+    held.delete(key);
+  }
+}
+
 /**
  * Record the outcome. A success clears the subject's failures in both zones (the secret is proven).
  * Returns the subject's failure count in this zone's window after a failure, and whether this failure

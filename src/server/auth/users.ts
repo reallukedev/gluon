@@ -119,20 +119,27 @@ export async function createUser(input: { username: string; displayName: string;
   }
   if (findByUsername(username)) throw conflict("That username is taken.");
   validatePassword(input.password, username);
+  const passwordHash = await hashPassword(input.password);
   const t = now();
   const id = newId();
-  run(
-    `INSERT INTO users (id, username, display_name, role, password_hash, created_at, updated_at, password_changed_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    id,
-    username,
-    input.displayName.trim() || username,
-    input.role,
-    await hashPassword(input.password),
-    t,
-    t,
-    t,
-  );
+  try {
+    run(
+      `INSERT INTO users (id, username, display_name, role, password_hash, created_at, updated_at, password_changed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      username,
+      input.displayName.trim() || username,
+      input.role,
+      passwordHash,
+      t,
+      t,
+      t,
+    );
+  } catch (e) {
+    // Someone else took the name while the password was being hashed.
+    if ((e as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE") throw conflict("That username is taken.");
+    throw e;
+  }
   // New accounts get the whole sidebar their role allows, and a first run at /welcome.
   updatePrefs(id, { onboarding: "pending" });
   return toUser(findById(id)!);
@@ -149,7 +156,8 @@ export async function setPassword(userId: string, password: string) {
 export function updateProfile(userId: string, patch: { displayName?: string; role?: Role; disabled?: boolean }) {
   const row = findById(userId);
   if (!row) throw notFound("That person");
-  if ((patch.role === "member" || patch.disabled) && row.role === "admin" && adminCount() <= 1) {
+  // Only an admin who can sign in counts: a turned-off admin can be demoted while another remains.
+  if ((patch.role === "member" || patch.disabled) && row.role === "admin" && !row.disabled && adminCount() <= 1) {
     throw new AppError("last_admin", "There has to be at least one admin. Make someone else an admin first.", 409);
   }
   run(
@@ -166,7 +174,7 @@ export function updateProfile(userId: string, patch: { displayName?: string; rol
 export function deleteUser(userId: string) {
   const row = findById(userId);
   if (!row) throw notFound("That person");
-  if (row.role === "admin" && adminCount() <= 1) {
+  if (row.role === "admin" && !row.disabled && adminCount() <= 1) {
     throw new AppError("last_admin", "You can't remove the last admin.", 409);
   }
   run("DELETE FROM users WHERE id = ?", userId);

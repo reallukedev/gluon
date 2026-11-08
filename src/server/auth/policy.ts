@@ -42,6 +42,16 @@ export function mfaRequiredMessage(role: "admin" | "member", policy: MfaPolicy =
     : `${who} need two-step sign-in to use Gluon from outside home. Turn it on in Settings → Security, or come back on your home network.`;
 }
 
+/**
+ * When a session stops working. A full session also ends once it has sat unused for longer than
+ * today's limit for where it is used now: one last used at home 10 days ago must not carry on from
+ * away when away sessions last 7 days, and shortening the setting applies to sessions already open.
+ */
+export function sessionEndsAt(row: { expires_at: number; last_seen_at: number; mfa_pending: number }, lifetimeMs: number): number {
+  if (row.mfa_pending) return row.expires_at;
+  return Math.min(row.expires_at, row.last_seen_at + lifetimeMs);
+}
+
 export interface PasswordPolicy {
   minLength: number;
   notUsername: boolean;

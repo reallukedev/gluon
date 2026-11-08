@@ -33,6 +33,7 @@ export const POST = route({ auth: "public", body, burst: { limit: 10, windowMs: 
   guard("setup", ip, zone);
   if (!checkSetupCode(body.code)) {
     recordAttempt("setup", ip, false, zone);
+    audit(null, { action: "auth.setup", summary: "Wrong setup code", outcome: "failed" }, { ip, zone });
     throw new AppError("bad_code", "That setup code doesn't match. Copy it again from the server log.", 400, { field: "code" });
   }
   if (g.__gluonSetupBusy) throw new AppError("busy", "Setup is already in progress in another window.", 409);
