@@ -257,8 +257,13 @@ export function sse(req: NextRequest, start: (send: (event: string, data: unknow
           }
         }
       }, 20_000);
+      if (req.signal.aborted) close();
       try {
-        cleanup = await start(send, close);
+        const done = await start(send, close);
+        // The client may have left while `start` was still setting up; close() ran with no
+        // cleanup to call, so run it now or the watchers it opened would leak.
+        if (closed) done?.();
+        else cleanup = done;
       } catch (e) {
         send("error", { message: e instanceof AppError ? e.message : "The live stream stopped." });
         close();
