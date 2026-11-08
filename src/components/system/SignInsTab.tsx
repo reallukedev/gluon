@@ -538,7 +538,7 @@ function PosturePanel({ posture }: { posture: SshPosture }) {
 
 // ---------------------------------------------------------------- skeleton
 
-function SignInsSkeleton() {
+export function SignInsSkeleton() {
   return (
     <div className={s.stack} aria-busy>
       <Panel title="Connected now">

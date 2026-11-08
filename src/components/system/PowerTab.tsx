@@ -19,6 +19,19 @@ import pw from "./power.module.css";
 
 type Action = "restart" | "shutdown";
 
+export function PowerSkeleton() {
+  return (
+    <div className={s.grid} aria-busy>
+      <Panel title="Restart or shut down">
+        <div className={s.skelRows}>
+          <Skeleton height={18} width="60%" />
+          <Skeleton height={18} width="70%" />
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
 export function PowerTab({ initial }: { initial?: PowerStatus }) {
   const { viewer } = usePrefs();
   const fmt = useFormat();
@@ -43,16 +56,7 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
         </Notice>
       );
     }
-    return (
-      <div className={s.grid} aria-busy>
-        <Panel title="Restart or shut down">
-          <div className={s.skelRows}>
-            <Skeleton height={18} width="60%" />
-            <Skeleton height={18} width="70%" />
-          </div>
-        </Panel>
-      </div>
-    );
+    return <PowerSkeleton />;
   }
 
   const tz = time.data?.timezone;

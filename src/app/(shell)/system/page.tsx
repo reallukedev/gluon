@@ -16,15 +16,15 @@ export default async function SystemPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const tab: SystemTab = TABS.includes(sp.tab as SystemTab) ? (sp.tab as SystemTab) : "overview";
   // Each is best effort: a slow or failing host command shouldn't blank the page; the client retries.
+  // Nothing is awaited here, so the title and tabs go out at once and each part fills in as its read answers.
   const soft = <T,>(p: Promise<T>) => p.catch(() => undefined);
-  const [updates, services, overview, memory, power, logins] = await Promise.all([
-    soft(updatesStatus()),
-    soft(listServices().then((list) => ({ services: list }))),
-    tab === "overview" ? soft(systemOverview()) : undefined,
-    tab === "overview" ? soft(memoryBreakdown()) : undefined,
-    tab === "power" ? soft(powerStatus()) : undefined,
-    tab === "sign-ins" ? soft(liveLogins()) : undefined,
-  ]);
-  const initial: SystemInitial = { updates, services, overview, memory, power, logins };
+  const initial: SystemInitial = {
+    updates: soft(updatesStatus()),
+    services: soft(listServices().then((list) => ({ services: list }))),
+    overview: tab === "overview" ? soft(systemOverview()) : undefined,
+    memory: tab === "overview" ? soft(memoryBreakdown()) : undefined,
+    power: tab === "power" ? soft(powerStatus()) : undefined,
+    logins: tab === "sign-ins" ? soft(liveLogins()) : undefined,
+  };
   return <SystemView tab={tab} unit={typeof sp.unit === "string" ? sp.unit : null} initial={initial} />;
 }

@@ -347,7 +347,7 @@ function RestartNotice({ overview, restart, onRestarted }: { overview: SystemOve
   );
 }
 
-function OverviewSkeleton() {
+export function OverviewSkeleton() {
   return (
     <div className={s.stack} aria-busy>
       <div className={s.identity}>
