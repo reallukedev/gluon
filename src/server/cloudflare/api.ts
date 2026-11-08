@@ -72,10 +72,12 @@ export class Cloudflare {
     const join = path.includes("?") ? "&" : "?";
     for (let page = 1; page <= 50; page++) {
       const r = await this.call<T[]>("GET", `${path}${join}per_page=${per}&page=${page}`);
+      if (!Array.isArray(r.result)) throw new CloudflareError("Cloudflare sent a list Gluon couldn't read.", 200);
       out.push(...r.result);
-      if (!r.result_info || page >= r.result_info.total_pages) break;
+      if (!r.result_info || page >= r.result_info.total_pages || !r.result.length) return out;
     }
-    return out;
+    // Planning from part of a zone would make records that already exist, so stop instead.
+    throw new CloudflareError("Cloudflare listed more than Gluon reads at once, so it changed nothing.", 200);
   }
 
   async zones(): Promise<CloudflareZoneT[]> {

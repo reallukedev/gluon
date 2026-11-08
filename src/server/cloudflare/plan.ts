@@ -82,12 +82,14 @@ export function proxiedName(input: Pick<PlanInput, "zone" | "proxy">, host: stri
   return input.proxy && web && !direct && edgeCovered(host, norm(input.zone));
 }
 
-export function wanted(input: PlanInput): { wants: Want[]; held: string[]; problems: string[] } {
+export function wanted(input: PlanInput): { wants: Want[]; held: string[]; problems: string[]; covered: { name: string; why: string }[] } {
   const zone = norm(input.zone);
   const base = norm(input.baseDomain);
   const out = new Map<string, Want>();
   // Names Gluon would write but can't (no address to point at): their records stay as they are.
   const held = new Set<string>();
+  // Names left to the wildcard, which plan() still checks for records of their own.
+  const covered: { name: string; why: string }[] = [];
 
   const add = (name: string, why: string, proxied: boolean) => {
     if (!inZone(name, zone) || out.has(name)) return;
@@ -113,11 +115,14 @@ export function wanted(input: PlanInput): { wants: Want[]; held: string[]; probl
     if (!r.enabled || !inZone(host, zone) || host === base) continue;
     const proxied = proxiedName(input, host, r.web, r.direct);
     // The wildcard already says the same thing for this name.
-    if (underWildcard(host, base) && proxied === wildcardProxied) continue;
+    if (underWildcard(host, base) && proxied === wildcardProxied) {
+      if (!covered.some((c) => c.name === host)) covered.push({ name: host, why: r.name });
+      continue;
+    }
     add(host, r.name, proxied);
   }
   const problems = held.size ? ["Couldn't find this network's internet address, so its records were left as they are."] : [];
-  return { wants: [...out.values()], held: [...held], problems };
+  return { wants: [...out.values()], held: [...held], problems, covered: held.size ? [] : covered };
 }
 
 const same = (a: Pick<DnsRecordT, "content" | "proxied"> & { type: string }, b: DnsRecordT) => a.type === b.type && a.proxied === b.proxied && norm(a.content) === norm(b.content);
@@ -132,7 +137,7 @@ const strip = (r: ExistingRecord): DnsRecordT => ({ type: r.type as DnsType, con
  * skipped for want of an address.
  */
 export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iterable<string> = []): Plan {
-  const { wants, held, problems } = wanted(input);
+  const { wants, held, problems, covered } = wanted(input);
   const taken = new Set([...adopted].map(norm));
   const byName = new Map<string, ExistingRecord[]>();
   for (const r of existing) {
@@ -142,6 +147,12 @@ export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iter
   }
   for (const n of held) byName.delete(n);
   const mine = (r: ExistingRecord) => r.comment === MARK || taken.has(norm(r.name));
+  // A name's own records beat the wildcard. Gluon's own there are only leftovers (removed below),
+  // but anyone else's would quietly send that address somewhere else, so it's planned like any name.
+  const wildcard = wants.find((w) => w.name === `*.${norm(input.baseDomain)}`);
+  for (const c of covered) {
+    if (wildcard && !wants.some((w) => w.name === c.name) && (byName.get(c.name) ?? []).some((r) => r.comment !== MARK)) wants.push({ name: c.name, why: c.why, records: wildcard.records });
+  }
   const names: NamePlan[] = [];
 
   for (const w of wants) {

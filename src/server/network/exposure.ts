@@ -8,7 +8,7 @@ import { loginProbe, type LoginProbe } from "./login-probe";
 import { routeApps, routeUrls, FALLBACK_ID, isSite } from "./routes-meta";
 import { ddnsStatus } from "./ddns";
 import { localBackendHost, isLocalBackend, listenProbeHost } from "./probes";
-import { NOT_CONFIGURED } from "./status";
+import { lastStatus, NOT_CONFIGURED } from "./status";
 import { mumblePorts } from "./voice-servers";
 import { plural, listJoin } from "@/lib/format";
 import type { ExposureFlag, ExposureReport, InternetExposure, LanExposure, ListenScope, LoginInfo, RouteAppRef } from "@/lib/network-types";
@@ -210,6 +210,11 @@ async function build(force: boolean): Promise<ExposureReport> {
 
   // ---- Internet
   const proxiedNames = new Set(ddns?.config.proxiedDomains ?? []);
+  // What public DNS answered on the last status check beats the old updater's settings: with
+  // Gluon's own Cloudflare connection there's no updater to ask at all.
+  const resolved = new Map<string, boolean | null>();
+  for (const r of lastStatus()?.routes ?? []) if (r.dns) resolved.set(r.host, r.dns.proxied);
+  const viaCloudflare = (host: string) => resolved.get(host) ?? proxiedNames.has(host);
   const entries: { id: string; name: string; type: InternetExposure["type"]; host: string; backend: { host: string; port: number; tls: boolean }; onlyPaths: string[] | null; chat: boolean; voice: boolean }[] = [
     { id: FALLBACK_ID, name: cfg.fallback.name, type: "fallback", host: cfg.base_domain, backend: cfg.fallback.backend, onlyPaths: null, chat: false, voice: false },
   ];
@@ -257,7 +262,7 @@ async function build(force: boolean): Promise<ExposureReport> {
           app,
           listener: listener ? { process: listener.process, container: listenerOwner?.kind === "container" ? listenerOwner.name : null } : null,
           backendListening: local ? !!listener : null,
-          viaCloudflare: proxiedNames.has(e.host),
+          viaCloudflare: viaCloudflare(e.host),
           adminUi,
           login,
         };

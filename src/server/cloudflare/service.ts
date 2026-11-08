@@ -30,6 +30,8 @@ interface Where {
 
 const hint = (token: string) => (token.length > 8 ? `••••${token.slice(-4)}` : null);
 const norm = (n: string) => n.trim().toLowerCase().replace(/\.$/, "");
+/** A DNS name as Cloudflare lists it, optionally a wildcard. */
+const DNS_NAME = /^(\*\.)?([a-z0-9_]([a-z0-9_-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
 type G = typeof globalThis & {
   __gluonCf?: {
@@ -155,7 +157,7 @@ export async function setOptions(user: User, where: Where, o: { ipv6?: boolean; 
 export async function adopt(user: User, where: Where, names: string[]): Promise<CloudflareStatus> {
   await serial(async () => {
     const c = needConnection();
-    const clean = [...new Set(names.map(norm))].filter((n) => inZone(n.replace(/^\*\./, ""), c.zone.name));
+    const clean = [...new Set(names.map(norm))].filter((n) => DNS_NAME.test(n) && inZone(n.replace(/^\*\./, ""), c.zone.name));
     if (!clean.length) return;
     setSetting("cloudflare", { ...c, adopted: [...new Set([...c.adopted, ...clean])].slice(-500) });
     audit(user, { action: "cloudflare.adopt", summary: `Let Gluon manage ${clean.length === 1 ? clean[0] : `${clean.length} names`} in Cloudflare`, target: c.zone.name, detail: { names: clean } }, where);

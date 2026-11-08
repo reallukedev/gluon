@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 
 /**
@@ -112,6 +113,7 @@ export function parseBackend(input: string): { ok: true; host: string; port: num
   const port = Number(m[2]);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return { ok: false, message: "The port should be between 1 and 65535." };
   const host = m[1]!;
+  if (s.startsWith("[") && !net.isIPv6(host)) return { ok: false, message: "That isn't a valid IPv6 address. Write it like [2001:db8::5]:25565." };
   if (!s.startsWith("[") && !/^[A-Za-z0-9]([A-Za-z0-9_.-]{0,252})$/.test(host)) return { ok: false, message: "The host should be a container name, a host name or an IP address." };
   return { ok: true, host, port, value: s.startsWith("[") ? `[${host}]:${port}` : `${host}:${port}` };
 }

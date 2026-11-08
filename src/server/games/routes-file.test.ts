@@ -106,7 +106,7 @@ describe("addresses and servers", () => {
   it("reads host:port servers", () => {
     expect(parseBackend(" crafty_container:25566 ")).toEqual({ ok: true, host: "crafty_container", port: 25566, value: "crafty_container:25566" });
     expect(parseBackend("[fd00::5]:25565")).toMatchObject({ ok: true, host: "fd00::5", value: "[fd00::5]:25565" });
-    for (const bad of ["crafty_container", "crafty_container:0", "crafty_container:70000", "a b:1", ":25565"]) expect(parseBackend(bad).ok).toBe(false);
+    for (const bad of ["crafty_container", "crafty_container:0", "crafty_container:70000", "a b:1", ":25565", "[:::]:25565", "[1.2.3.4]:25565"]) expect(parseBackend(bad).ok).toBe(false);
   });
 });
 

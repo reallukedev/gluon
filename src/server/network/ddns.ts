@@ -139,9 +139,9 @@ export function parseDdnsLog(lines: string[]) {
 
   for (const [idx, p] of parsed.entries()) {
     const t = p.text.trim();
-    const v4 = t.match(/Detected IPv4 address:?\s*([0-9.]+)/i);
+    const v4 = t.match(/Detected (?:the )?IPv4 address:?\s*(\d{1,3}(?:\.\d{1,3}){3})\b/i);
     if (v4) ipv4 = { address: v4[1]!, at: p.at };
-    const v6 = t.match(/Detected (?:\d+ )?IPv6 address(?:es)?:?\s*(.+)$/i);
+    const v6 = t.match(/Detected (?:the |\d+ )?IPv6 address(?:es)?:?\s*(.+)$/i);
     if (v6) ipv6 = { addresses: v6[1]!.split(/,\s*/).map((a) => a.replace(/\/\d+$/, "").trim()).filter(Boolean), at: p.at };
     if (/^🌐|^🤷|^🐣|^📡|^🗑/.test(t)) lastCheckAt = p.at ?? lastCheckAt;
     if (UPDATE_EMOJI.some((e) => t.startsWith(e))) lastChange = { at: p.at, message: stripEmoji(t) };

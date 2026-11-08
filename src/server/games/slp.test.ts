@@ -88,6 +88,25 @@ describe("replies decoded directly", () => {
     expect(decodeResponse(Buffer.from([0x02, 0x05, 0x00]))).toMatchObject({ kind: "error" });
   });
 
+  it("doesn't mistake a modern reply whose length starts with 0xFF for a pre-1.7 kick", () => {
+    const status = (n: number) => {
+      const head = '{"version":{"name":"Paper 1.21.10","protocol":773},"description":"';
+      const json = Buffer.from(head + "x".repeat(n - head.length - 2) + '"}', "utf8");
+      const inner = Buffer.concat([Buffer.from([0x00]), encodeVarInt(json.length), json]);
+      return Buffer.concat([encodeVarInt(inner.length), inner]);
+    };
+    for (const n of [252, 380, 2044]) {
+      const buf = status(n);
+      expect(buf[0]).toBe(0xff);
+      expect(decodeResponse(buf.subarray(0, 10))).toEqual({ kind: "incomplete" });
+      expect(decodeResponse(buf)).toMatchObject({ kind: "status", status: { version: "Paper 1.21.10", protocol: 773 } });
+    }
+    // A real kick still reads as one.
+    const text = "§1\u000078\u00001.6.4\u0000Old\u00001\u00008";
+    const kick = Buffer.concat([Buffer.from([0xff, 0x00, text.length]), Buffer.from(text, "utf16le").swap16()]);
+    expect(decodeResponse(kick)).toEqual({ kind: "legacy-kick", text });
+  });
+
   it("reads the Beta 1.8 to 1.3 reply, which has no version", () => {
     expect(parseLegacyText("A §lclassic§r server§2§10")).toMatchObject({ version: null, motd: "A classic server", online: 2, max: 10 });
     expect(parseLegacyText("Outdated client!")).toBeNull();

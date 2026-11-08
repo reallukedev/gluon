@@ -319,6 +319,8 @@ export function renderCaddyfile(cfg: RoutesConfig, mount = caddyMount): string {
     ...tileMap,
     "",
   );
+  // Caddy refuses a site that defines one matcher name twice, and /a-b and /a.b both become @route_a_b.
+  const matchers = new Set<string>();
   for (const r of paths) {
     const p = r.path;
     out.push(`\t# ${commentSafe(r.name)}`, ...noteLines(r, "\t"));
@@ -327,7 +329,10 @@ export function renderCaddyfile(cfg: RoutesConfig, mount = caddyMount): string {
     } else if (r.strip_prefix) {
       out.push(`\t# App has no base-URL setting: ${p} is stripped before proxying`, `\tredir ${p} ${p}/ 308`, `\thandle_path ${p}/* {`, ...backendLines(r.backend, 2), "\t}");
     } else {
-      const m = "@route_" + p.replace(/^\/+|\/+$/g, "").replace(/[^A-Za-z0-9]/g, "_");
+      const want = "@route_" + p.replace(/^\/+|\/+$/g, "").replace(/[^A-Za-z0-9]/g, "_");
+      let m = want;
+      for (let i = 2; matchers.has(m); i++) m = `${want}_${i}`;
+      matchers.add(m);
       out.push(`\t# App's base-URL setting must be ${p}`, `\t${m} path ${p} ${p}/*`, `\thandle ${m} {`, ...backendLines(r.backend, 2), "\t}");
     }
     out.push("");
@@ -785,7 +790,14 @@ function ownLike(p: string) {
 function atomicWrite(file: string, text: string) {
   const tmp = `${file}.tmp-${process.pid}`;
   try {
-    fs.writeFileSync(tmp, text, { mode: 0o644 });
+    // On disk before the rename, so a power cut can't leave an empty routes file behind.
+    const fd = fs.openSync(tmp, "w", 0o644);
+    try {
+      fs.writeFileSync(fd, text);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     fs.chmodSync(tmp, 0o644);
     ownLike(tmp);
     fs.renameSync(tmp, file);
@@ -827,22 +839,61 @@ export function caddyfileDrift(cfg: RoutesConfig): boolean {
 /** Push to Caddy first; persist only after Caddy accepted. Roll Caddy back if persisting fails. */
 export async function applyConfig(cfg: RoutesConfig, reason: string, opts: { force?: boolean } = {}): Promise<RoutesConfig> {
   const text = renderCaddyfile(cfg);
-  await caddyLoad(text, opts.force);
+  const readIf = (f: string) => {
+    try {
+      return fs.readFileSync(/*turbopackIgnore: true*/ f, "utf8");
+    } catch {
+      return null;
+    }
+  };
+  const prevRoutes = readIf(ROUTES_FILE);
+  const prevCaddyfile = readIf(CADDYFILE);
+  try {
+    await caddyLoad(text, opts.force);
+  } catch (e) {
+    // No answer in time: Caddy may be running the new config, so put the last saved one back.
+    if (!(e instanceof CaddyUnreachable) || !/timeout/.test(e.message) || prevCaddyfile === null) throw e;
+    const back = await caddyLoad(prevCaddyfile).then(
+      () => true,
+      () => false,
+    );
+    throw new AppError(
+      "caddy_timeout",
+      back ? "Caddy didn't confirm the change in time, so Gluon put the last saved addresses back. Nothing changed; try again." : "Caddy didn't confirm the change in time, and didn't answer when Gluon tried to put the last saved addresses back. Check that the proxy is running, then save again.",
+      504,
+    );
+  }
   let snap: string | null = null;
+  let routesWritten = false;
   try {
     snap = snapshot(reason);
     const saved = { ...cfg, updated: new Date().toISOString().slice(0, 19) + "Z" };
     atomicWrite(ROUTES_FILE, JSON.stringify(saved, null, 2) + "\n");
+    routesWritten = true;
     atomicWrite(CADDYFILE, text);
     return saved;
   } catch (e) {
-    try {
-      await caddyLoad(fs.readFileSync(CADDYFILE, "utf8"));
-    } catch {
-      /* best effort */
+    // Put routes.json and Caddy back to the last saved state, so the files and Caddy agree again.
+    let filesBack = true;
+    if (routesWritten) {
+      try {
+        if (prevRoutes !== null) atomicWrite(ROUTES_FILE, prevRoutes);
+        else fs.rmSync(ROUTES_FILE, { force: true });
+      } catch {
+        filesBack = false;
+      }
+    }
+    let caddyBack = false;
+    if (prevCaddyfile !== null) {
+      caddyBack = await caddyLoad(prevCaddyfile).then(
+        () => true,
+        () => false,
+      );
     }
     if (snap) fs.rmSync(snap, { recursive: true, force: true });
-    throw new AppError("persist_failed", `Couldn't save the routes file: ${(e as Error).message}. Nothing changed.`, 500);
+    const why = (e as Error).message;
+    if (filesBack && caddyBack) throw new AppError("persist_failed", `Couldn't save the routes file: ${why}. Nothing changed.`, 500);
+    throw new AppError("persist_failed", `Couldn't save the routes file: ${why}. Caddy may be serving the new addresses while the saved files still hold the old ones. Fix the problem, then save again.`, 500);
   }
 }
 

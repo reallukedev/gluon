@@ -88,6 +88,18 @@ describe("plan", () => {
     expect(p.actions).toEqual([{ op: "delete", name: "old.deep.example.com", id: expect.any(String), record: A(false) }]);
   });
 
+  it("doesn't let someone else's record at a name the wildcard covers go unseen, since it beats the wildcard", () => {
+    const base = [rec("example.com", "A", "203.0.113.7", true), rec("*.example.com", "A", "203.0.113.7", true)];
+    const stale = rec("photos.example.com", "A", "198.51.100.1", false, null);
+    const p = plan(input({ routes: [route("photos.example.com")] }), [...base, stale]);
+    expect(p.names.find((x) => x.name === "photos.example.com")).toMatchObject({ state: "conflict", want: [A(true)] });
+    expect(p.actions).toEqual([]);
+    // Handed over, it's brought in line with the wildcard; Gluon's own leftover there is just removed.
+    expect(plan(input({ routes: [route("photos.example.com")] }), [...base, stale], ["photos.example.com"]).actions).toEqual([{ op: "update", name: "photos.example.com", id: stale.id, record: A(true) }]);
+    const mine = rec("photos.example.com", "A", "203.0.113.7", true);
+    expect(plan(input({ routes: [route("photos.example.com")] }), [...base, mine]).actions).toEqual([{ op: "delete", name: "photos.example.com", id: mine.id, record: A(true) }]);
+  });
+
   it("treats a trailing dot and capitals in Cloudflare's names as the same name", () => {
     const p = plan(input(), [rec("Example.COM.", "A", "203.0.113.7", true), rec("*.example.com", "A", "203.0.113.7", true)]);
     expect(p.actions).toEqual([]);
