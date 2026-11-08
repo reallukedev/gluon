@@ -106,13 +106,16 @@ const FOCUS_STALE = 15_000;
  */
 type FocusWatch = { stale: number; revalidate: () => void };
 const focusKeys = new Map<string, FocusWatch[]>();
+/** Focus and visibilitychange both fire on the way back: ask once. Only an answer counts as fresh. */
+const focusAskedAt = new Map<string, number>();
 
 function onFocus() {
   if (document.visibilityState !== "visible") return;
   const now = Date.now();
   for (const [key, watches] of focusKeys) {
     if (now - (answeredAt.get(key) ?? 0) < Math.min(...watches.map((w) => w.stale))) continue;
-    answeredAt.set(key, now);
+    if (now - (focusAskedAt.get(key) ?? 0) < 1000) continue;
+    focusAskedAt.set(key, now);
     watches[0]!.revalidate();
   }
 }
@@ -127,7 +130,10 @@ function watchFocus(key: string, watch: FocusWatch) {
   focusKeys.set(key, watches);
   return () => {
     watches.splice(watches.indexOf(watch), 1);
-    if (!watches.length) focusKeys.delete(key);
+    if (!watches.length) {
+      focusKeys.delete(key);
+      focusAskedAt.delete(key);
+    }
     if (!focusKeys.size) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
