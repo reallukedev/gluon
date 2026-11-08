@@ -1,6 +1,7 @@
 import "server-only";
 import { findContainer, containerLogLines } from "../diagnostics/docker-logs";
 import { getSetting } from "../settings";
+import { docker } from "../docker/client";
 import type { DdnsLogLine, DdnsStatus } from "@/lib/network-types";
 
 /**
@@ -120,10 +121,21 @@ export function evalProxied(expr: string, domain: string): boolean | null {
   }
 }
 
-/** Whether the updater is running right now, without reading its log. null: not on this server. */
-export async function ddnsRunning(): Promise<boolean | null> {
+/** Docker answers. Looking a container up swallows errors, so "not found" alone can't tell. */
+export async function dockerUp(): Promise<boolean> {
+  try {
+    await docker().ping();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the updater is running right now, without reading its log. null: not on this server; undefined: Docker didn't answer. */
+export async function ddnsRunning(): Promise<boolean | null | undefined> {
   const found = await findContainer(CONTAINER, (c) => /cloudflare-ddns/.test(c.Image));
-  return found ? found.running : null;
+  if (found) return found.running;
+  return (await dockerUp()) ? null : undefined;
 }
 
 // ---------------------------------------------------------------- status
@@ -225,7 +237,7 @@ async function build(): Promise<DdnsStatus> {
   const v4 = log.ipv4;
   if (!running && getSetting("cloudflare")) {
     state = "unknown";
-    summary = `${found.name} is stopped. Gluon's Cloudflare connection keeps DNS pointed here instead.`;
+    summary = `${found.name} is stopped. Gluon's Cloudflare connection updates DNS.`;
   } else if (!running) {
     state = "fault";
     summary = `The dynamic DNS updater (${found.name}) isn't running, so DNS won't follow if your internet address changes.`;

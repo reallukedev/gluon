@@ -227,8 +227,9 @@ function dnsFix(host: string, status: Awaited<ReturnType<typeof networkStatus>>)
 registerCheck("network-ddns", 300_000, async () => {
   const d = await ddnsStatus(true);
   const open = new Set<string>();
-  // With Gluon's own Cloudflare connection, a stopped cloudflare-ddns is the plan, not a fault.
-  const replaced = !!getSetting("cloudflare") && !d.container.running;
+  // With Gluon's own Cloudflare connection, a stopped cloudflare-ddns is the plan, not a fault,
+  // but only once Gluon keeps every name it did.
+  const replaced = !!getSetting("cloudflare") && !d.container.running && !!(await import("../cloudflare/service").then((m) => m.status()).catch(() => null))?.handoff?.safe;
   if (d.container.exists && !replaced && (!d.container.running || d.errors.length)) {
     open.add("net.ddns");
     raise({

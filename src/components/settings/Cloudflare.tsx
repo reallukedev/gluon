@@ -165,7 +165,7 @@ export function CloudflarePanel() {
     if (h.running) return void go();
     confirm({
       title: `Take over from ${h.container}?`,
-      consequences: [`Gluon starts updating ${h.names.length === 1 ? h.names[0]!.name : `its ${h.names.length} names`} now.`, ...(h.ipv6Differs ? ["Their IPv6 records are removed, since Gluon doesn't publish IPv6."] : [])],
+      consequences: [`Gluon starts updating ${h.names.length === 1 ? h.names[0]!.name : `its ${h.names.length} names`} now, and brings their records in line with its own settings.`],
       confirmLabel: "Take over",
       onConfirm: go,
     });
@@ -333,28 +333,49 @@ export function CloudflarePanel() {
 
 // ================================================================= cloudflare-ddns
 
-const REASON: Record<HandoffReason, string> = {
+const REASON: Record<Exclude<HandoffReason, "differs">, string> = {
   "not-kept": "Gluon doesn't keep it yet",
   foreign: "Its records aren't Gluon's yet",
   outside: "Gluon's token can't see this domain",
+  "read-only": "Gluon's token can't change this domain's DNS",
   error: "Cloudflare refused Gluon's last change",
 };
 
 /** What stands between cloudflare-ddns and its removal; "can be stopped" only when nothing does. */
 function Handoff({ h, busy, onTakeOver }: { h: DdnsHandoff; busy: boolean; onTakeOver: () => void }) {
-  const waiting = h.names.filter((n) => n.reason);
+  const waiting = h.names.filter((n) => n.reason && n.reason !== "differs");
+  const differs = h.names.filter((n) => n.reason === "differs");
   const where = h.project ? `the ${h.project} compose project` : "its compose file";
-  const v6 = h.ipv6Differs ? " It also publishes IPv6 addresses; Gluon drops those unless IPv6 is on below." : "";
   if (h.safe) {
     return (
       <div className={c.pad}>
         {h.running ? (
           <Notice title={`${h.container} can be stopped`}>
-            Gluon keeps {h.names.length === 1 ? h.names[0]!.name : `all ${h.names.length} names it updates`} and takes over within a minute of it stopping. Remove it from {where}, or stop it from Apps.{v6}
+            Gluon keeps {h.names.length === 1 ? h.names[0]!.name : `all ${h.names.length} names it updates`}, with the same records, and takes over within a minute of it stopping. Remove it from {where}, or stop it from Apps.
           </Notice>
         ) : (
           <Notice title={`${h.container} is stopped`}>Gluon keeps {h.names.length === 1 ? h.names[0]!.name : `every name ${h.container} updated`}, so it can be removed from {where}.</Notice>
         )}
+      </div>
+    );
+  }
+  // Only differences left: stopping it works, but changes these records, so say what changes.
+  if (!waiting.length && !h.deleteOnStop && !h.blocked) {
+    return (
+      <div className={c.pad}>
+        <Notice title={`Stopping ${h.container} changes ${differs.length === 1 ? "a record" : `${differs.length} names`}`}>
+          <ul className={c.handoff}>
+            {differs.map((n) => (
+              <li key={n.name}>
+                <span className="mono">{n.name}</span>
+                <span className={c.reason}>
+                  {describe(n.have)} becomes {describe(n.want)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {h.ipv6Differs && <p className={c.after}>Turn on IPv6 below to keep the IPv6 records.</p>}
+        </Notice>
       </div>
     );
   }
@@ -376,7 +397,7 @@ function Handoff({ h, busy, onTakeOver }: { h: DdnsHandoff; busy: boolean; onTak
           {waiting.map((n) => (
             <li key={n.name}>
               <span className="mono">{n.name}</span>
-              <span className={c.why}>{REASON[n.reason!]}</span>
+              <span className={c.reason}>{REASON[n.reason as Exclude<HandoffReason, "differs">]}</span>
             </li>
           ))}
           {h.deleteOnStop && (

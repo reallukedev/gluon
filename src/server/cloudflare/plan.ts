@@ -137,10 +137,15 @@ export function wanted(input: PlanInput): { wants: Want[]; held: string[]; probl
       records: [{ type: "A", content: input.ipv4, proxied }, ...(input.ipv6 ? [{ type: "AAAA" as const, content: input.ipv6, proxied }] : [])],
     });
   };
+  const kept = (input.kept ?? []).map((k) => ({ name: norm(k.name), proxied: k.proxied && edgeCovered(norm(k.name).replace(/^\*\./, "x."), zone) }));
+  // Every name Gluon may write. A wildcard doesn't answer for a name with anything beneath it, so
+  // such a name (mc.example.com, with *.mc.example.com kept) always needs a record of its own.
+  const everyName = [...kept.map((k) => k.name), ...input.routes.filter((r) => r.enabled).map((r) => norm(r.host)), ...(input.games ?? []).map((x) => norm(x.host))];
+  const hasBelow = (host: string) => everyName.some((n) => n.endsWith(`.${host}`));
   /** Added, unless a wildcard Gluon keeps already says the same thing for it. */
   const addCoverable = (host: string, why: string, proxied: boolean) => {
     const w = wildcardOf(host);
-    if (w && !out.has(host) && wilds.get(w) === proxied) {
+    if (w && !out.has(host) && wilds.get(w) === proxied && !hasBelow(host)) {
       if (!covered.some((c) => c.name === host)) covered.push({ name: host, why, wildcard: w });
       return;
     }
@@ -152,7 +157,6 @@ export function wanted(input: PlanInput): { wants: Want[]; held: string[]; probl
     add(base, "Base domain", edgeCovered(base, zone));
     add(`*.${base}`, `Every name under ${base}`, proxiedName(input, `x.${base}`));
   }
-  const kept = (input.kept ?? []).map((k) => ({ name: norm(k.name), proxied: k.proxied && edgeCovered(norm(k.name).replace(/^\*\./, "x."), zone) }));
   // Kept wildcards first, so the addresses under them can lean on them.
   for (const k of kept) if (k.name.startsWith("*.")) add(k.name, "Other name", k.proxied);
   for (const r of input.routes) {
@@ -164,7 +168,8 @@ export function wanted(input: PlanInput): { wants: Want[]; held: string[]; probl
     const host = norm(gm.host);
     if (inZone(host, zone) && host !== base) addCoverable(host, gm.why, false);
   }
-  for (const k of kept) if (!k.name.startsWith("*.")) add(k.name, "Other name", k.proxied);
+  // A kept name that's also an address follows the address (a web address stays proxied).
+  for (const k of kept) if (!k.name.startsWith("*.") && !covered.some((c) => c.name === k.name)) add(k.name, "Other name", k.proxied);
   const problems = held.size ? ["Couldn't find this network's internet address, so its records were left as they are."] : [];
   return { wants: [...out.values()], held: [...held], problems, covered: held.size ? [] : covered };
 }
@@ -191,15 +196,17 @@ export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iter
     byName.set(n, [...(byName.get(n) ?? []), r]);
   }
   for (const n of held) byName.delete(n);
-  // Another updater's names: never cleaned up from here either.
-  for (const n of deferred) if (!wants.some((w) => w.name === n)) byName.delete(n);
   const mine = (r: ExistingRecord) => r.comment === MARK || taken.has(norm(r.name));
+  const below = (host: string) => existing.some((r) => norm(r.name).endsWith(`.${host}`));
   // A name's own records beat the wildcard. Gluon's own there are only leftovers (removed below),
   // but anyone else's would quietly send that address somewhere else, so it's planned like any name.
+  // So is a name with any record beneath it, which the wildcard no longer answers for.
   for (const c of covered) {
     const wildcard = wants.find((w) => w.name === c.wildcard);
-    if (wildcard && !wants.some((w) => w.name === c.name) && (byName.get(c.name) ?? []).some((r) => r.comment !== MARK)) wants.push({ name: c.name, why: c.why, records: wildcard.records });
+    if (wildcard && !wants.some((w) => w.name === c.name) && ((byName.get(c.name) ?? []).some((r) => r.comment !== MARK) || below(c.name))) wants.push({ name: c.name, why: c.why, records: wildcard.records });
   }
+  // Another updater's names: never cleaned up from here either.
+  for (const n of deferred) if (!wants.some((w) => w.name === n)) byName.delete(n);
   const names: NamePlan[] = [];
 
   for (const w of wants) {

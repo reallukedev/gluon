@@ -75,6 +75,8 @@ export interface CloudflareStatus {
     names: ManagedName[];
     /** Names a wildcard Gluon keeps already answers for, so they need no record of their own. */
     covered: string[];
+    /** Domains the token can read but not change, where Gluon keeps names it can't write yet. */
+    readOnly: string[];
     /** Problems that aren't about one name (no internet address, token revoked). */
     problems: string[];
   };
@@ -92,26 +94,28 @@ export interface KeptName {
 
 /**
  * Why Gluon isn't ready to keep one of cloudflare-ddns's names. not-kept: Gluon doesn't keep it.
- * foreign: its records weren't handed to Gluon. outside: the token can't see its domain. error:
- * Cloudflare refused Gluon's last change there.
+ * foreign: its records weren't handed to Gluon. outside: the token can't see its domain.
+ * read-only: the token can't change that domain's DNS. error: Cloudflare refused Gluon's last
+ * change there. differs: Gluon would write something else there (no IPv6, another proxy setting).
  */
-export type HandoffReason = "not-kept" | "foreign" | "outside" | "error";
+export type HandoffReason = "not-kept" | "foreign" | "outside" | "read-only" | "error" | "differs";
 
 export interface DdnsHandoff {
   container: string;
   running: boolean;
   /** The Compose project it's part of. */
   project: string | null;
-  names: { name: string; proxied: boolean; reason: HandoffReason | null }[];
+  /** For "differs": what's there now and what Gluon would write. */
+  names: { name: string; proxied: boolean; reason: HandoffReason | null; have: DnsRecordT[]; want: DnsRecordT[] }[];
   /** DELETE_ON_STOP is set, so stopping it removes the records it keeps. */
   deleteOnStop: boolean;
   /** A problem with Gluon's own last check, which has to clear first. */
   blocked: string | null;
-  /** It publishes IPv6 addresses and Gluon doesn't, so those go once Gluon takes over. */
+  /** Some of its names have IPv6 records Gluon wouldn't write, so those go once Gluon takes over. */
   ipv6Differs: boolean;
   /** Take over fixes every name that isn't ready. */
   canTakeOver: boolean;
-  /** Stopping it now changes nothing anyone would notice: Gluon keeps every name it did. */
+  /** Stopping it now changes nothing: Gluon keeps every name it did, with the same records. */
   safe: boolean;
 }
 
