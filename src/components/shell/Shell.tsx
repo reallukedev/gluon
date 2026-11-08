@@ -15,14 +15,16 @@ import { Menu } from "@/components/ui/Menu";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useMediaQuery } from "@/lib/client/motion";
 import { NavIcon, HostMark } from "./NavIcon";
-import { CommandPalette } from "./CommandPalette";
 import { ReauthDialog } from "./ReauthDialog";
-import { ForcePasswordChange } from "./ForcePasswordChange";
-import { ForceMfaSetup } from "./ForceMfaSetup";
 import type { Pin as PinT } from "@/server/pins";
 import s from "./shell.module.css";
 
 const UploadsElsewhere = dynamic(() => import("@/components/files/UploadsElsewhere"), { ssr: false });
+// Closed until asked for, so it loads after the page instead of with it.
+const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), { ssr: false });
+// Shown to few people, rarely; still rendered on the server so nothing appears behind them first.
+const ForcePasswordChange = dynamic(() => import("./ForcePasswordChange").then((m) => m.ForcePasswordChange));
+const ForceMfaSetup = dynamic(() => import("./ForceMfaSetup").then((m) => m.ForceMfaSetup));
 
 interface ShellData {
   fault: number;
