@@ -153,6 +153,7 @@ Most settings live in the app. A few are environment variables in
 | `PORT` | `8130` | The port Gluon listens on. |
 | `TZ` | the container's | Time zone for schedules and times in logs, e.g. `Europe/London`. |
 | `GLUON_DATA` | `/data` | Where Gluon keeps its database and settings (the `gluon-data` volume). |
+| `GLUON_SECRET_KEY_FILE` | `$GLUON_DATA/secret.key` | The key that encrypts saved passwords and tokens. Put it on a separate volume or a Docker secret so a backup of the data volume can't be read on its own. An existing key moves there on the next start. Back it up separately: without it, saved credentials have to be entered again. |
 | `GLUON_CADDY_DIR` | `/proxy-caddy` | Caddy's config folder, for public addresses. |
 | `GLUON_CADDY_SOCKET` | `/run/caddy/admin.sock` | Caddy's admin socket. |
 | `GLUON_CADDY_CONTAINER` | `caddy` | The name of the Caddy container. |

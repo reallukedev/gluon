@@ -339,3 +339,22 @@ describe("addresses marked direct (skipping Cloudflare's proxy)", () => {
     expect(renderCaddyfile(cfg)).toContain("trusted_proxies static 173.245.48.0/20");
   });
 });
+
+describe("Gluon on the main address", () => {
+  const gluon = { host: "host.docker.internal", port: 8130, tls: false };
+  const photos = { id: "photos", type: "path", name: "Photos", enabled: true, path: "/photos", backend: { host: "host.docker.internal", port: 2283, tls: false } };
+  const onBase: RoutesConfig = { ...base, fallback: { name: "Gluon", backend: gluon } };
+
+  test("refuses apps on its paths, which would share Gluon's sign-in", () => {
+    expect(() => cleanConfig({ routes: [photos] }, onBase)).toThrow(expect.objectContaining({ details: expect.objectContaining({ route: "photos", field: "path" }) }));
+    const gluonPath = { id: "g", type: "path", name: "Gluon", enabled: true, path: "/gluon", backend: gluon };
+    expect(() => cleanConfig({ routes: [gluonPath, photos] }, base)).toThrow(/share Gluon's sign-in/);
+  });
+
+  test("still allows redirects, disabled paths, subdomains, and paths when Gluon lives elsewhere", () => {
+    const redirect = { id: "r", type: "redirect", name: "Old", enabled: true, path: "/old", target: "https://photos.example.test" };
+    const sub = { id: "s", type: "subdomain", name: "Photos", enabled: true, host: "photos.example.test", backend: photos.backend };
+    expect(cleanConfig({ routes: [redirect, sub, { ...photos, enabled: false }] }, onBase).routes).toHaveLength(3);
+    expect(cleanConfig({ routes: [photos] }, base).routes).toHaveLength(1);
+  });
+});

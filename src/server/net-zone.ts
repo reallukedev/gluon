@@ -98,6 +98,72 @@ export function resetZoneCache() {
   cache = null;
 }
 
+/**
+ * Containers' own addresses. Apps run in containers on Docker's bridge networks, which sit inside the
+ * private ranges above, so without this every container (including one an app store image
+ * compromised) would count as home. Each network's gateway is this machine itself and stays home;
+ * macvlan and ipvlan networks hand out addresses on the real LAN and are left alone.
+ */
+interface DockerNets {
+  at: number;
+  list: net.BlockList;
+  gateways: Set<string>;
+}
+type DG = typeof globalThis & { __gluonZoneDockerNets?: DockerNets; __gluonZoneDockerBusy?: boolean };
+const dg = globalThis as DG;
+
+export interface DockerNetworkInfo {
+  Driver?: string;
+  IPAM?: { Config?: Array<{ Subnet?: string; Gateway?: string }> | null } | null;
+}
+
+export function noteDockerNetworks(networks: DockerNetworkInfo[]) {
+  const list = new net.BlockList();
+  const gateways = new Set<string>();
+  for (const n of networks) {
+    if (n.Driver !== "bridge" && n.Driver !== "overlay") continue;
+    for (const cfg of n.IPAM?.Config ?? []) {
+      const [addr, bits] = String(cfg.Subnet ?? "").split("/");
+      const type = family(addr ?? "");
+      if (!addr || !type || !bits) continue;
+      try {
+        list.addSubnet(addr, Number(bits), type);
+      } catch {
+        continue;
+      }
+      const gw = parseAddr(cfg.Gateway);
+      if (gw) gateways.add(gw);
+      // Docker's default when a network doesn't say: the first address.
+      else if (type === "ipv4") {
+        const o = addr.split(".").map(Number);
+        gateways.add(`${o[0]}.${o[1]}.${o[2]}.${(o[3] ?? 0) + 1}`);
+      }
+    }
+  }
+  dg.__gluonZoneDockerNets = { at: Date.now(), list, gateways };
+}
+
+/** Asks Docker again at most once a minute, in the background; the answer is used from then on. */
+export async function refreshDockerNetworks(): Promise<void> {
+  if (dg.__gluonZoneDockerBusy) return;
+  dg.__gluonZoneDockerBusy = true;
+  try {
+    const { docker } = await import("./docker/client");
+    noteDockerNetworks((await docker().listNetworks()) as DockerNetworkInfo[]);
+  } catch {
+    // Docker unreachable: keep what was known before.
+  } finally {
+    dg.__gluonZoneDockerBusy = false;
+  }
+}
+
+function isContainer(a: string): boolean {
+  const d = dg.__gluonZoneDockerNets;
+  if (!d || Date.now() - d.at > 60_000) void refreshDockerNetworks();
+  if (!d || d.gateways.has(a)) return false;
+  return d.list.check(a, family(a)!);
+}
+
 const family = (a: string) => (net.isIPv4(a) ? "ipv4" : net.isIPv6(a) ? "ipv6" : null);
 
 /** "1.2.3.4", "1.2.3.4:5678", "[::1]:80", "::ffff:1.2.3.4" → a bare, valid address, or null. */
@@ -183,7 +249,7 @@ export function clientInfo(headers: Headers): { ip: string; zone: Zone } {
     const viaPublicName = !!host && host === getSetting("publicHost").toLowerCase();
     return { ip: "unknown", zone: viaPublicName ? "away" : "home" };
   }
-  const home = isHomeIp(ip);
+  const home = isHomeIp(ip) && !isContainer(parseAddr(ip) ?? ip);
   // A visit that crossed Cloudflare's network came from the internet, whatever the chain says. Through
   // a Cloudflare Tunnel the last hop is cloudflared on this machine, so a chain that lost the visitor's
   // address would otherwise end at loopback and read as home. These headers can only make a request

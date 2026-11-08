@@ -12,7 +12,7 @@ import { findById, toUser } from "../auth/users";
 import type { User } from "../auth/users";
 import type { ConflictPolicy, UploadSession } from "@/lib/files-types";
 import { formatBytes } from "@/lib/format";
-import { assertMutable, assertRemovable, authorize, cleanName, freeName } from "./paths";
+import { assertMemberMayCreate, assertMutable, assertRemovable, authorize, cleanName, freeName } from "./paths";
 import { containerToHost, freeBytes, localFreeBytes, mountOf } from "./mounts";
 import { moveToTrash } from "./trash";
 import { inDir, openFileIn } from "./safe";
@@ -28,6 +28,7 @@ export const CHUNK_SIZE = 8 * 1024 * 1024;
 const MAX_CHUNK = 64 * 1024 * 1024;
 const MAX_SIZE = 1024 ** 5; // 1 PiB: effectively "whatever fits"
 const EXPIRE_MS = 48 * 3600_000;
+const IDLE_MS = 2 * 3600_000;
 
 type Where = { ip: string; zone: string };
 
@@ -79,9 +80,28 @@ function update(id: string, patch: Partial<Pick<Row, "received" | "status" | "fi
   if (r) publish("files.uploads", { userId: r.user_id, upload: toSession(r) });
 }
 
-/** Bytes still expected by open uploads (reserved space in the upload area). */
+/**
+ * Bytes still expected by uploads in progress (reserved space in the upload area). An upload that has
+ * gone quiet stops holding space, so one that's started and never sent can't block everyone else's.
+ */
 function reserved(): number {
-  return one<{ n: number | null }>("SELECT SUM(size - received) AS n FROM uploads WHERE status IN ('open', 'completing')")?.n ?? 0;
+  return (
+    one<{ n: number | null }>("SELECT SUM(size - received) AS n FROM uploads WHERE status IN ('open', 'completing') AND updated_at > ?", now() - IDLE_MS)?.n ?? 0
+  );
+}
+
+/**
+ * Always left free on the drive that holds Gluon's data (often the system drive): 5% of it, between
+ * 1 and 10 GB, so uploads never leave the database or the system without room to write.
+ */
+function keepFree(): number {
+  const GB = 1024 ** 3;
+  try {
+    const s = fs.statfsSync(UPLOAD_DIR);
+    return Math.min(10 * GB, Math.max(GB, s.blocks * s.bsize * 0.05));
+  } catch {
+    return GB;
+  }
 }
 
 export async function initUpload(
@@ -93,6 +113,7 @@ export async function initUpload(
   const dir = await authorize(user, input.dir, "write");
   if (!dir.stat?.isDirectory()) throw new AppError("not_a_folder", "Choose a folder to upload into.", 400);
   await assertMutable(dir.real, "upload into");
+  assertMemberMayCreate(dir, name);
   const target = path.posix.join(dir.real, name);
   let exists: fs.Stats | null = null;
   try {
@@ -108,8 +129,9 @@ export async function initUpload(
   }
   fs.mkdirSync(UPLOAD_DIR, { recursive: true, mode: 0o700 });
   const localFree = localFreeBytes(UPLOAD_DIR);
-  if (localFree !== null && input.size + reserved() > localFree) {
-    throw new AppError("no_space", `Gluon's upload area only has ${formatBytes(Math.max(0, localFree - reserved()))} free, and ${name} is ${formatBytes(input.size)}. Free up space on the drive that holds Gluon's data, or upload fewer files at once.`, 507);
+  const usable = localFree === null ? null : Math.max(0, localFree - keepFree() - reserved());
+  if (usable !== null && input.size > usable) {
+    throw new AppError("no_space", `Gluon's upload area only has ${formatBytes(usable)} free, and ${name} is ${formatBytes(input.size)}. Free up space on the drive that holds Gluon's data, or upload fewer files at once.`, 507);
   }
 
   const id = newId(12);
@@ -172,6 +194,11 @@ export async function putChunk(user: User, id: string, offset: number, body: Rea
   }
   const received = Math.min(r.received, onDisk);
   if (offset > received) throw new AppError("offset", `Expected data from byte ${received}.`, 409, { received });
+  // Other uploads and the system share this drive: stop before it fills, and let this one resume later.
+  const localFree = localFreeBytes(UPLOAD_DIR);
+  if (localFree !== null && localFree < keepFree()) {
+    throw new AppError("no_space", "The drive that holds Gluon's data is nearly full. Free up some space there, then resume the upload.", 507);
+  }
 
   locks.add(id);
   let written = 0;
@@ -276,6 +303,7 @@ async function finalize(user: User, r: Row, where: Where): Promise<UploadSession
   const dir = await authorize(user, r.dest_dir, "write");
   if (!dir.stat?.isDirectory()) throw new AppError("not_a_folder", `${r.dest_dir} isn't a folder any more.`, 409);
   await assertMutable(dir.real, "upload into");
+  assertMemberMayCreate(dir, r.name);
   const owner = dir.stat;
   // Everything below happens inside the destination opened without following links (and checked
   // to be the folder that was authorised), so a folder on the way swapped for a link can't redirect it.

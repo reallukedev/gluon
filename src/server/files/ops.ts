@@ -10,7 +10,7 @@ import { hostPath, isWithin } from "../host/paths";
 import type { User } from "../auth/users";
 import type { ConflictPolicy, FileEntry, FileJob } from "@/lib/files-types";
 import { formatBytes, plural } from "@/lib/format";
-import { assertMutable, assertRemovable, authorize, cleanName, freeName, logicalChild, scopeFor, type Target } from "./paths";
+import { assertMemberMayCreate, assertMutable, assertRemovable, authorize, cleanName, freeName, logicalChild, scopeFor, type Target } from "./paths";
 import { freeBytes, mountOf } from "./mounts";
 import { Cancelled, humanError, startJob, type JobContext } from "./jobs";
 import { moveToTrash } from "./trash";
@@ -63,6 +63,7 @@ export async function makeFolder(user: User, parent: string, rawName: string, wh
   const dir = await authorize(user, parent, "write");
   if (!dir.stat?.isDirectory()) throw new AppError("not_a_folder", "Choose a folder to create it in.", 400);
   await assertMutable(dir.real, "create folders in");
+  assertMemberMayCreate(dir, name);
   const real = path.posix.join(dir.real, name);
   const owner = dir.stat;
   await inDir(dir.real, dir.stat, async (d) => {
@@ -88,6 +89,7 @@ export async function renamePath(user: User, p: string, rawName: string, where: 
   const oldName = path.posix.basename(t.real);
   if (name === oldName) return entryOf(user, t, t.path, t.real);
   const parent = path.posix.dirname(t.real);
+  assertMemberMayCreate({ real: parent, scope: t.scope }, name);
   const dest = path.posix.join(parent, name);
   await inParent(t.real, async (d, from) => {
     const existing = await fs.promises.lstat(d.at(name)).catch(() => null);
@@ -279,6 +281,7 @@ async function plan(user: User, sources: string[], dest: string, policy: Conflic
     if (names.has(name)) throw badRequest(`Two of the selected items are called ${name}. Rename one first.`);
     names.add(name);
     if (isWithin(d.real, src.real)) throw badRequest(`You can't ${mode} ${name} into itself.`);
+    assertMemberMayCreate(d, name);
     const target = path.posix.join(d.real, name);
     const exists = await lexists(target);
     let finalName: string | null = name;

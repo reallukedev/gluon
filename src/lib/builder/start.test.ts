@@ -182,3 +182,25 @@ describe("one-click fixes", () => {
     expect(ids).toEqual(expect.arrayContaining(["cpus-app", "health-interval-app", "health-retries-app"]));
   });
 });
+
+describe("container escape settings", () => {
+  const ctx = { source: "compose" as const, target: "compose" as const, web: { service: null, containerPort: null, port: null, path: "", umbrelAuth: true }, secrets: {} };
+  const svc = (extra: string) => `services:\n  app:\n    image: nginx:1.27\n${extra}`;
+  const escape = (text: string) => analyze(text, ctx).issues.find((i) => i.id === "escape-app");
+
+  it("warns about each way out of the sandbox, named plainly", () => {
+    const i = escape(svc("    cap_add: [SYS_ADMIN, NET_BIND_SERVICE]\n    pid: host\n    security_opt:\n      - apparmor:unconfined\n    devices:\n      - /dev/sda:/dev/sda\n      - /dev/dri:/dev/dri\n"));
+    expect(i?.level).toBe("warning");
+    expect(i?.message).toContain("SYS_ADMIN capability");
+    expect(i?.message).toContain("pid: host");
+    expect(i?.message).toContain("security profile turned off");
+    expect(i?.message).toContain("/dev/sda");
+    expect(i?.message).not.toContain("NET_BIND_SERVICE");
+    expect(i?.message).not.toContain("/dev/dri");
+  });
+
+  it("stays quiet for harmless settings, and for privileged services that already warn", () => {
+    expect(escape(svc("    cap_add: [NET_ADMIN]\n    devices: [/dev/dri]\n    security_opt: [no-new-privileges:true]\n"))).toBeUndefined();
+    expect(escape(svc("    privileged: true\n    pid: host\n"))).toBeUndefined();
+  });
+});

@@ -7,6 +7,7 @@ import { findById } from "../auth/users";
 import { getApp, listApps, setAppPrefs } from "../docker/apps";
 import { host } from "../host/exec";
 import { hostPath, isWithin, normalizeHostPath } from "../host/paths";
+import { SECRET_DIRS } from "../files/paths";
 import type { AppVisibility, FolderGrant, VisibilityResponse } from "@/lib/people-types";
 
 async function appsOrExplain() {
@@ -124,8 +125,6 @@ export function getGrant(id: string): FolderGrant | null {
 const SYSTEM = ["/proc", "/sys", "/dev", "/run", "/boot", "/etc", "/root", "/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/var/lib", "/var/log", "/var/cache", "/var/spool", "/snap", "/lost+found", "/tmp"];
 /** App internals (databases, configs with tokens, Docker's storage): not for browsing. */
 const APP_DATA = ["/DATA/AppData", "/srv/docker", "/srv/containerd", "/var/lib/docker", "/var/lib/casaos"];
-/** Folders holding keys/credentials; a grant may not contain one. */
-const SECRET_DIRS = [".ssh", ".gnupg", ".docker", ".kube", ".aws", ".password-store"];
 
 /** Canonical host path (symlinks resolved on the host) of an existing directory, or a clear refusal. */
 export async function validateGrantPath(input: string): Promise<string> {

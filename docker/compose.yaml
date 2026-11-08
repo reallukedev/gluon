@@ -23,6 +23,8 @@ services:
     environment:
       PORT: "8130"
       GLUON_DATA: /data
+      # Keep the encryption key out of the data volume (and its backups):
+      # GLUON_SECRET_KEY_FILE: /keys/secret.key   (and mount a volume at /keys)
       # TZ: Europe/London
       # For Network → public addresses, mount your Caddy stack (see README):
       # GLUON_CADDY_DIR: /proxy-caddy

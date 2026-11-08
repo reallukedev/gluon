@@ -85,21 +85,20 @@ export async function toEntry(ctx: EntryContext, logical: string, real: string, 
     let outside = false;
     try {
       const r = await resolveHost(real);
-      if (r.exists && r.stat) {
+      // A link out of a member's folders shows what it says, but nothing about what's there,
+      // not even whether it exists.
+      outside = !canSee(ctx.scope, r.real);
+      if (!outside && r.exists && r.stat) {
         resolved = r.real;
-        outside = !canSee(ctx.scope, r.real);
-        // A link out of a member's folders shows where it points, but nothing about what's there.
-        if (!outside) {
-          ltype = r.stat.isDirectory() ? "dir" : r.stat.isFile() ? "file" : "other";
-          if (r.stat.isFile()) size = r.stat.size;
-          targetIsDir = r.stat.isDirectory();
-          targetReal = r.real;
-        }
+        ltype = r.stat.isDirectory() ? "dir" : r.stat.isFile() ? "file" : "other";
+        if (r.stat.isFile()) size = r.stat.size;
+        targetIsDir = r.stat.isDirectory();
+        targetReal = r.real;
       }
     } catch {
       /* loop or permission: broken */
     }
-    link = { target, resolved, type: ltype, broken: !resolved, outside };
+    link = { target, resolved, type: ltype, broken: !resolved && !outside, outside };
     type = "symlink";
   }
   const isDir = st.isDirectory() || targetIsDir;

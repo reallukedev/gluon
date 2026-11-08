@@ -40,6 +40,7 @@ for (const d of [
 ]) {
   mkdir(d);
 }
+touch("etc/passwd", "root:x:0:0:root:/root:/bin/bash\nkid:x:1001:1001::/srv/share/kids:/bin/bash\nsvc:x:999:999::/:/usr/sbin/nologin\n");
 touch("share/photos/a.jpg");
 touch("share/photos/2026/b.jpg");
 touch("other/secret", "top secret");
@@ -330,6 +331,25 @@ describe("authorize", () => {
       access: "read",
       root: { id: "share" },
     });
+  });
+
+  it("keeps members out of sign-in files in home folders and key folders anywhere", async () => {
+    const scope: Scope = { admin: false, roots: [mkRoot("alice", "/home/alice", "write"), mkRoot("kids", "/srv/share/kids", "write"), mkRoot("photos", "/share/photos", "write")] };
+    await expect(P.authorize(member, "/home/alice/docs", "write", { scope })).resolves.toMatchObject({ access: "write" });
+    for (const raw of ["/home/alice/.bashrc", "/home/alice/.ssh/authorized_keys", "/home/alice/.config/autostart/x.desktop", "/srv/share/kids/.profile", "/share/photos/.ssh/x"]) {
+      expect(await caught(P.authorize(member, raw, "write", { scope, mustExist: false }))).toMatchObject({ code: "forbidden", status: 403 });
+    }
+    // Reading is still fine, and so are dot files below the top of a home folder.
+    await expect(P.authorize(member, "/home/alice/.bashrc", "read", { scope, mustExist: false })).resolves.toMatchObject({ access: "write" });
+    await expect(P.authorize(member, "/home/alice/docs/.notes", "write", { scope, mustExist: false })).resolves.toBeTruthy();
+    const alice = { real: "/home/alice", scope };
+    expect(() => P.assertMemberMayCreate(alice, ".ssh")).toThrow(/sign-in keys/);
+    expect(() => P.assertMemberMayCreate(alice, ".zshrc")).toThrow(/home folder/);
+    expect(() => P.assertMemberMayCreate({ real: "/srv/share/kids", scope }, ".bash_profile")).toThrow(/home folder/);
+    expect(() => P.assertMemberMayCreate(alice, "notes.txt")).not.toThrow();
+    expect(() => P.assertMemberMayCreate({ real: "/share/photos", scope }, ".hidden")).not.toThrow();
+    const admin: Scope = { admin: true, roots: [] };
+    expect(() => P.assertMemberMayCreate({ real: "/home/alice", scope: admin }, ".ssh")).not.toThrow();
   });
 
   it("follows a link that stays inside the share", async () => {

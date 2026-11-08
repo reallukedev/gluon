@@ -216,8 +216,67 @@ export async function authorize(
   if (need === "write" && acc.access !== "write") {
     throw forbidden(`You can open ${acc.root.label} but not change it. Ask an admin for write access.`);
   }
+  if (need === "write") {
+    const why = memberWriteProblem(scope, r.real);
+    if (why) throw forbidden(why);
+  }
   if ((opts.mustExist ?? true) && !r.exists) throw notFound(path.posix.basename(p) || p);
   return { path: p, real: r.real, fsPath: hostPath(r.real), exists: r.exists, stat: r.stat, access: acc.access, root: acc.root, scope };
+}
+
+/** Folders that hold sign-in keys. Members never create one, rename something into one, or write inside one. */
+export const SECRET_DIRS = [".ssh", ".gnupg", ".docker", ".kube", ".aws", ".password-store"];
+
+let homeCache: { at: number; list: string[] } | null = null;
+
+/** Every account's home folder on the host, from /etc/passwd. */
+function homeFolders(): string[] {
+  if (homeCache && Date.now() - homeCache.at < 60_000) return homeCache.list;
+  const list = new Set<string>(["/root"]);
+  try {
+    for (const line of fs.readFileSync(hostPath("/etc/passwd"), "utf8").split("\n")) {
+      const home = line.split(":")[5];
+      if (!home || !home.startsWith("/")) continue;
+      try {
+        const h = normalizeHostPath(home);
+        if (h !== "/" && h !== "/nonexistent") list.add(h);
+      } catch {
+        /* malformed */
+      }
+    }
+  } catch {
+    /* unreadable: fall back to the usual place below */
+  }
+  homeCache = { at: Date.now(), list: [...list] };
+  return homeCache.list;
+}
+
+/**
+ * Why a household member may not write at `real`, or null. Dot files and folders at the top of a
+ * home folder (.ssh, .bashrc, .profile, .config) decide how that person signs in and what runs when
+ * they do, so writing one is a way into their account, and from there often to root.
+ */
+export function memberWriteProblem(scope: Scope, real: string): string | null {
+  if (scope.admin) return null;
+  const segs = real.split("/").filter(Boolean);
+  const secret = segs.find((s) => SECRET_DIRS.includes(s));
+  if (secret) return `${secret} folders hold sign-in keys, so only admins can change them.`;
+  for (const home of homeFolders()) {
+    if (real === home || !isWithin(real, home)) continue;
+    const first = real.slice(home.length + 1).split("/")[0] ?? "";
+    if (first.startsWith(".")) return `Hidden files at the top of a home folder control how that person signs in, so only admins can change ${first}.`;
+  }
+  // Homes not listed in /etc/passwd (a container's view, or accounts from a directory service).
+  if (segs[0] === "home" && segs.length > 2 && segs[2]!.startsWith(".")) {
+    return `Hidden files at the top of a home folder control how that person signs in, so only admins can change ${segs[2]}.`;
+  }
+  return null;
+}
+
+/** For something new called `name` inside `dir`. */
+export function assertMemberMayCreate(dir: Pick<Target, "real" | "scope">, name: string) {
+  const why = memberWriteProblem(dir.scope, path.posix.join(dir.real, name));
+  if (why) throw forbidden(why);
 }
 
 function isWithinAnyLogical(scope: Scope, p: string) {

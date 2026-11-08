@@ -30,6 +30,10 @@ export function setCaddyMount(p: string) {
 }
 export const currentCaddyMount = () => caddyMount;
 export const THIS_SERVER = "host.docker.internal";
+export const GLUON_PORT = Number(process.env.PORT ?? "8130");
+const LOCAL_HOSTS = new Set([THIS_SERVER, "localhost", "127.0.0.1", "::1"]);
+/** A backend that is Gluon itself. */
+export const isGluonBackend = (b: Backend) => LOCAL_HOSTS.has(b.host) && b.port === GLUON_PORT;
 
 export interface Backend {
   host: string;
@@ -749,7 +753,26 @@ export function cleanConfig(raw: { routes: unknown[]; fallback?: RoutesConfig["f
     } else invalid("Unknown address type.", rid);
     cfg.routes.push(out as unknown as Route);
   }
+  assertGluonOwnOrigin(cfg);
   return cfg;
+}
+
+/**
+ * Paths of the main address all share one origin. When Gluon is served there too, the browser sends
+ * Gluon's sign-in cookie to every app on a path and treats their pages as Gluon's own, so any app
+ * that serves someone else's script could act as the admin viewing it.
+ */
+function assertGluonOwnOrigin(cfg: RoutesConfig) {
+  const live = cfg.routes.filter((r): r is PathRoute => r.enabled && r.type === "path");
+  const gluonHere = isGluonBackend(cfg.fallback.backend) || live.some((r) => isGluonBackend(r.backend));
+  if (!gluonHere) return;
+  const shared = live.filter((r) => !isGluonBackend(r.backend));
+  if (!shared.length) return;
+  invalid(
+    `Gluon is on ${cfg.base_domain}, so apps on its paths would share Gluon's sign-in. Give Gluon its own subdomain, or turn ${shared.map((r) => r.path).join(", ")} into redirects or subdomains.`,
+    shared[0]!.id,
+    "path",
+  );
 }
 
 export class CaddyUnreachable extends AppError {

@@ -8,7 +8,7 @@ import { local } from "../host/exec";
 import type { User } from "../auth/users";
 import type { FileJob } from "@/lib/files-types";
 import { formatBytes, plural } from "@/lib/format";
-import { assertMutable, authorize, canSee, freeName, resolveHost, splitName, type Scope } from "./paths";
+import { assertMemberMayCreate, assertMutable, authorize, canSee, freeName, resolveHost, splitName, type Scope } from "./paths";
 import { inDir, inParent, openDir, openFileIn } from "./safe";
 import { freeBytes } from "./mounts";
 import { Cancelled, startJob, type JobContext } from "./jobs";
@@ -148,8 +148,11 @@ export async function settle(temp: string, rootRel: string, finalReal: string, u
           const rel = path.posix.relative(path.posix.join(temp, rootRel), cur);
           const finalDir = rel.startsWith("..") ? finalReal : path.posix.join(finalReal, rel);
           const target = await fs.promises.readlink(dir.at(name));
-          const points = target.startsWith("/") ? target : path.posix.join(finalDir, target);
-          const r = await resolveHost(points).catch(() => null);
+          // Only plain links within the extraction survive. Absolute and ".." targets can't be
+          // checked here (the folder isn't in place yet, and links can chain through each other),
+          // and anything else that reads the share (Samba, other apps) would follow them.
+          const escapes = target.startsWith("/") || target.split("/").includes("..");
+          const r = escapes ? null : await resolveHost(path.posix.join(finalDir, target)).catch(() => null);
           if (!r || !canSee(scope, r.real)) {
             await fs.promises.unlink(dir.at(name)).catch(() => {});
             dropped++;
@@ -288,6 +291,7 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
         const top = await fs.promises.readdir(into.here);
         const hoist = top.length === 1 && ((await fs.promises.lstat(into.at(top[0]!))).isDirectory() || fmt.kind === "single");
         const finalName = await freeName(parent.real, hoist ? top[0]! : splitName(name).stem);
+        assertMemberMayCreate(parent, finalName);
         const dropped = await settle(temp, hoist ? top[0]! : "", path.posix.join(parent.real, finalName), parent.stat!.uid, parent.stat!.gid, parent.scope, ctx);
         await into.chmod(0o755).catch(() => {});
         await inDir(parent.real, parent.stat, async (d) => {

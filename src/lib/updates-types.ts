@@ -53,7 +53,10 @@ export interface GithubTarget {
   /** A tag ("v1.2.0") or a commit sha: what gets downloaded. */
   ref: string;
   version: string;
+  /** Short, for display. */
   commit: string;
+  /** The full commit the check saw: what the update downloads, so a moved tag can't change it. */
+  sha: string;
   title: string;
   notes: string;
   url: string;

@@ -90,14 +90,17 @@ describe("settle (after extracting)", () => {
   const member = { admin: false, roots: [{ id: "g", label: "share", path: "/share", real: "/share", access: "write" as const, missing: false }] };
   const ctx = { check() {}, progress() {} } as unknown as Parameters<typeof settle>[6];
 
-  it("drops links a member's archive made that point outside their folders, and keeps the rest", async () => {
+  it("drops links a member's archive made that leave the extraction, even chained ones, and keeps the rest", async () => {
     fs.mkdirSync(host("share/.gluon-extract-1/Album"), { recursive: true });
     fs.writeFileSync(host("share/.gluon-extract-1/Album/one.jpg"), "1");
     fs.symlinkSync("/etc/shadow", host("share/.gluon-extract-1/Album/abs"));
     fs.symlinkSync("../../../etc", host("share/.gluon-extract-1/Album/up"));
     fs.symlinkSync("one.jpg", host("share/.gluon-extract-1/Album/same"));
+    // Chained: each looks like it stays in /share on its own, but together a -> /etc.
+    fs.symlinkSync("..", host("share/.gluon-extract-1/Album/c"));
+    fs.symlinkSync("c/../../../etc", host("share/.gluon-extract-1/Album/a"));
     const dropped = await settle("/share/.gluon-extract-1", "Album", "/share/Album", process.getuid?.() ?? 0, process.getgid?.() ?? 0, member, ctx);
-    expect(dropped).toBe(2);
+    expect(dropped).toBe(4);
     expect(fs.readdirSync(host("share/.gluon-extract-1/Album")).sort()).toEqual(["one.jpg", "same"]);
   });
 

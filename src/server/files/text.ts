@@ -10,7 +10,7 @@ import { docker } from "../docker/client";
 import type { User } from "../auth/users";
 import type { TextFile } from "@/lib/files-types";
 import { formatBytes } from "@/lib/format";
-import { assertMutable, authorize, cleanName, protectionReason } from "./paths";
+import { assertMemberMayCreate, assertMutable, authorize, cleanName, protectionReason } from "./paths";
 import { languageOf } from "./kinds";
 
 export const TEXT_LIMIT = 1024 * 1024;
@@ -123,6 +123,7 @@ export async function saveText(
     const dir = await authorize(user, parentPath, "write");
     if (!dir.stat?.isDirectory()) throw new AppError("not_a_folder", "Choose a folder to create the file in.", 400);
     await assertMutable(dir.real, "create files in");
+    assertMemberMayCreate(dir, name);
     const real = path.posix.join(dir.real, name);
     const owner = dir.stat;
     const st = await inDir(dir.real, dir.stat, async (d) => {

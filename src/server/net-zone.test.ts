@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./settings", () => ({ getSetting: (k: string) => (k === "homeNetworks" ? [] : "") }));
-const { clientInfo, PEER_HEADER } = await import("./net-zone");
+vi.mock("./docker/client", () => ({ docker: () => ({ listNetworks: async () => [] }) }));
+const { clientInfo, noteDockerNetworks, PEER_HEADER } = await import("./net-zone");
 
 const h = (o: Record<string, string>) => new Headers(o);
 
@@ -45,5 +46,28 @@ describe("clientInfo and forged forwarding headers", () => {
     } finally {
       delete process.env.GLUON_PEER_HEADER;
     }
+  });
+});
+
+describe("clientInfo and containers on this machine", () => {
+  noteDockerNetworks([
+    { Driver: "bridge", IPAM: { Config: [{ Subnet: "172.18.0.0/16", Gateway: "172.18.0.1" }] } },
+    { Driver: "bridge", IPAM: { Config: [{ Subnet: "172.17.0.0/16" }] } },
+    // A macvlan network hands out addresses on the real LAN, so it says nothing about who's a container.
+    { Driver: "macvlan", IPAM: { Config: [{ Subnet: "192.168.1.0/24", Gateway: "192.168.1.1" }] } },
+  ]);
+
+  it("a container calling Gluon directly is away", () => {
+    expect(clientInfo(h({ [PEER_HEADER]: "172.18.0.9", "x-forwarded-for": "172.18.0.9" }))).toEqual({ ip: "172.18.0.9", zone: "away" });
+  });
+
+  it("a container going through Caddy is away too", () => {
+    expect(clientInfo(h({ [PEER_HEADER]: "172.18.0.5", "x-forwarded-for": "172.17.0.4" }))).toEqual({ ip: "172.17.0.4", zone: "away" });
+  });
+
+  it("Caddy passing on someone at home keeps them home, as does this machine via a network's gateway", () => {
+    expect(clientInfo(h({ [PEER_HEADER]: "172.18.0.5", "x-forwarded-for": "192.168.1.30" }))).toEqual({ ip: "192.168.1.30", zone: "home" });
+    expect(clientInfo(h({ [PEER_HEADER]: "172.18.0.5", "x-forwarded-for": "172.18.0.1" }))).toEqual({ ip: "172.18.0.1", zone: "home" });
+    expect(clientInfo(h({ [PEER_HEADER]: "172.18.0.5", "x-forwarded-for": "172.17.0.1" }))).toEqual({ ip: "172.17.0.1", zone: "home" });
   });
 });

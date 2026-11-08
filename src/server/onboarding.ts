@@ -6,7 +6,7 @@ import { findById, type User } from "./auth/users";
 import { listApps } from "./docker/apps";
 import { activePlatform, PLATFORM_NAME } from "./platform";
 import { getInventory } from "./storage/inventory";
-import { tryReadConfig, routeUrl, isRedirect, THIS_SERVER, type Backend, type RoutesConfig } from "./caddy/routes";
+import { tryReadConfig, routeUrl, isRedirect, isGluonBackend, type RoutesConfig } from "./caddy/routes";
 import { counts, listOpen } from "./findings";
 import { listSubscriptions } from "./notify/subscriptions";
 import { NAV } from "@/lib/nav";
@@ -32,8 +32,6 @@ import { mfaRequired } from "./auth/policy";
  * Gluon is on the internet or this admin is away without two-step.
  */
 
-const GLUON_PORT = Number(process.env.PORT ?? "8130");
-
 /**
  * The public name in Settings, else a route pointing at Gluon. Pass the routes when they've just been
  * read.
@@ -43,11 +41,9 @@ export function gluonPublicAddress(routes?: RoutesConfig | null): string | null 
   if (host) return host;
   const cfg = routes === undefined ? tryReadConfig() : routes;
   if (!cfg) return null;
-  const local = new Set([THIS_SERVER, "localhost", "127.0.0.1", "::1"]);
-  const isGluon = (b: Backend) => local.has(b.host) && b.port === GLUON_PORT;
-  const r = cfg.routes.find((x) => x.enabled && !isRedirect(x) && isGluon(x.backend));
+  const r = cfg.routes.find((x) => x.enabled && !isRedirect(x) && isGluonBackend(x.backend));
   if (r) return routeUrl(cfg, r).replace(/^https?:\/\//, "");
-  return isGluon(cfg.fallback.backend) ? cfg.base_domain : null;
+  return isGluonBackend(cfg.fallback.backend) ? cfg.base_domain : null;
 }
 
 const updatesTouched = () => !!one<{ key: string }>("SELECT key FROM settings WHERE key = 'updates'");

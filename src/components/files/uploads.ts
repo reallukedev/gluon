@@ -245,9 +245,11 @@ async function run(key: string) {
         if (err.status === 0 || err.status >= 500 || err.code === "interrupted" || err.code === "busy") {
           // Connection trouble: wait (and for the network to come back), then ask where to resume.
           attempt++;
-          patch(key, { status: "waiting", speed: 0, error: navigator.onLine ? "Connection lost. Retrying…" : "You're offline. Waiting for the connection…" });
+          const full = err.code === "no_space";
+          patch(key, { status: "waiting", speed: 0, error: full ? err.message : navigator.onLine ? "Connection lost. Retrying…" : "You're offline. Waiting for the connection…" });
           await waitOnline();
-          await sleep(Math.min(30_000, 1000 * 2 ** Math.min(attempt, 5)));
+          // A full drive takes a person to fix, so check back less often.
+          await sleep(full ? 60_000 : Math.min(30_000, 1000 * 2 ** Math.min(attempt, 5)));
           if (stopped(key)) return;
           try {
             const s = await api.get<UploadSession>(`/api/files/uploads/${it.id}`);

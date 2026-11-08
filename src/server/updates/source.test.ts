@@ -12,6 +12,7 @@ const target = (version: string, commit: string, channel: "stable" | "nightly" =
   ref: channel === "stable" ? `v${version}` : commit,
   version,
   commit,
+  sha: commit.padEnd(40, "0"),
   title: `Gluon ${version}`,
   notes: "",
   url: "https://github.example.com/gluon/releases",

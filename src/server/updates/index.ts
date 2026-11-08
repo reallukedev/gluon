@@ -363,8 +363,8 @@ async function startUpdateClaimed(opts: Parameters<typeof startUpdate>[0]): Prom
       if (opts.method === "github") {
         const t = target!;
         // Download the exact commit that was checked, not whatever the tag points at by now.
-        const pinned = /^[0-9a-f]{40}$/.test(t.commit) ? t.commit : t.ref;
-        args = ["github", REPO, pinned, t.version, t.commit, ...modeArgs()];
+        if (!/^[0-9a-f]{40}$/.test(t.sha)) throw new AppError("bad_target", "GitHub didn't say which commit this version is. Check for updates again.", 409);
+        args = ["github", REPO, t.sha, t.version, t.commit, ...modeArgs()];
       } else {
         args = ["pull", ...modeArgs()];
       }

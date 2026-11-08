@@ -70,6 +70,27 @@ const UMBREL_VARS = new Set([
 ]);
 const COMPOSE_VARS = new Set(["APP_DATA_DIR", "APP_ID"]);
 
+/** Capabilities that each, on their own, let a container take over this server. */
+const ROOT_CAPS = new Set(["ALL", "SYS_ADMIN", "SYS_MODULE", "SYS_PTRACE", "SYS_RAWIO", "SYS_BOOT", "DAC_READ_SEARCH", "BPF"]);
+/** Disks and raw memory: reading or writing these gets around every file permission. */
+const RAW_DEVICE = /^\/dev\/(sd[a-z]|nvme|vd[a-z]|hd[a-z]|mmcblk|md\d|dm-|loop|mapper\/|disk\/|mem$|kmem$|port$)/;
+
+/** Settings that break a container out of its sandbox, as plain words. Skipped when it's privileged anyway. */
+function escapeHatches(svc: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x)) : typeof v === "string" ? [v] : []);
+  const caps = list(svc.cap_add).map((c) => c.trim().toUpperCase().replace(/^CAP_/, "")).filter((c) => ROOT_CAPS.has(c));
+  if (caps.length) out.push(caps.includes("ALL") ? "every Linux capability" : `the ${caps.join(", ")} capabilit${caps.length === 1 ? "y" : "ies"}`);
+  for (const k of ["pid", "ipc", "userns_mode", "cgroup", "uts"] as const) {
+    if (String(svc[k] ?? "").trim() === "host") out.push(`${k}: host`);
+  }
+  const sec = list(svc.security_opt).map((s) => s.replace(/\s+/g, "").toLowerCase());
+  if (sec.some((s) => /unconfined/.test(s) || s === "label:disable" || s === "label=disable")) out.push("its security profile turned off");
+  const devs = list(svc.devices).map((d) => d.split(":")[0]!.trim()).filter((d) => RAW_DEVICE.test(d));
+  if (devs.length) out.push(`raw access to ${devs.join(", ")}`);
+  return out;
+}
+
 const SENSITIVE_HOST = [/^\/$/, /^\/etc(\/|$)/, /^\/root(\/|$)/, /^\/boot(\/|$)/, /^\/proc(\/|$)/, /^\/sys(\/|$)/, /^\/dev\/?$/];
 
 function lineAt(text: string, needle: string): number | undefined {
@@ -160,6 +181,13 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
     if (node.has("networks") && umbrel && !f.hostNetwork) issues.push({ id: `svc-networks-${f.name}`, level: "warning", message: `“${f.name}” joins custom networks. On Umbrel every app shares its own network.`, line: at("networks"), fix: { id: "rm-networks", label: "Remove custom networks" } });
     if (f.containerName) issues.push({ id: `cname-${f.name}`, level: "info", message: `“${f.name}” has a fixed container name. That's fine unless another container already uses “${f.containerName}”.`, line: at("container_name"), fix: { id: `rm-container-name:${f.name}`, label: umbrel ? "Let Umbrel name it" : "Let Compose name it" } });
     if (f.privileged) issues.push({ id: `priv-${f.name}`, level: "warning", message: `“${f.name}” runs privileged: it can do anything on this server.`, line: at("privileged"), field: field("advanced") });
+    else {
+      const hatches = escapeHatches((node.toJSON() ?? {}) as Record<string, unknown>);
+      if (hatches.length) {
+        const key = ["cap_add", "pid", "ipc", "userns_mode", "cgroup", "uts", "security_opt", "devices"].find((k) => node.has(k)) ?? "image";
+        issues.push({ id: `escape-${f.name}`, level: "warning", message: `“${f.name}” gets ${hatches.join(", ")}. That's as good as running privileged: it can take over this server.`, line: at(key), field: field("advanced") });
+      }
+    }
     if (f.networkMode && f.networkMode !== "host" && f.networkMode !== "bridge") issues.push({ id: `netmode-${f.name}`, level: "info", message: `“${f.name}” uses network_mode: ${f.networkMode}.`, line: at("network_mode") });
 
     f.ports.forEach((p, i) => {
