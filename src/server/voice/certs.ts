@@ -96,14 +96,27 @@ function writeKeeping(file: string, data: Buffer, newMode: number) {
   }
   const dir = fs.statSync(path.dirname(p));
   const tmp = `${p}.gluon-${process.pid}`;
-  fs.writeFileSync(tmp, data, { mode: st ? st.mode & 0o777 : newMode });
   try {
-    fs.chownSync(tmp, st?.uid ?? dir.uid, st?.gid ?? dir.gid);
-  } catch {
-    /* not root (development) */
+    fs.writeFileSync(tmp, data, { mode: st ? st.mode & 0o777 : newMode });
+    try {
+      fs.chownSync(tmp, st?.uid ?? dir.uid, st?.gid ?? dir.gid);
+    } catch {
+      /* not root (development) */
+    }
+    fs.chmodSync(tmp, st ? st.mode & 0o777 : newMode);
+    fs.renameSync(tmp, p);
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    throw e;
   }
-  fs.chmodSync(tmp, st ? st.mode & 0o777 : newMode);
-  fs.renameSync(tmp, p);
+}
+
+function readOr(file: string): Buffer | null {
+  try {
+    return fs.readFileSync(hostPath(file));
+  } catch {
+    return null;
+  }
 }
 
 export interface CertSync {
@@ -153,9 +166,17 @@ export async function syncVoiceCert(appId: string, opts: { force?: boolean } = {
   const files = certFiles(f);
   let wrote = false;
   if (files) {
+    const oldCrt = readOr(files.crt);
     try {
       writeKeeping(files.crt, caddy.crt, 0o644);
-      writeKeeping(files.key, caddy.key, 0o600);
+      try {
+        writeKeeping(files.key, caddy.key, 0o600);
+      } catch (e) {
+        // A new certificate with the old key would stop Mumble starting: put the old one back.
+        if (oldCrt) writeKeeping(files.crt, oldCrt, 0o644);
+        else fs.rmSync(hostPath(files.crt), { force: true });
+        throw e;
+      }
       wrote = true;
     } catch (e) {
       return done(false, `Couldn't write the certificate into ${files.folder}: ${(e as Error).message}.`);

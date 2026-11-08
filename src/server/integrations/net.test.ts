@@ -34,3 +34,23 @@ describe("members' personal URLs can't reach the home network", () => {
     expect(addressProblem("2a02:8109:1234:5678::99", "trusted")).toBeNull();
   });
 });
+
+describe("HEAD requests", () => {
+  test("a big page's declared length doesn't fail a HEAD", async () => {
+    const http = await import("node:http");
+    const { safeFetch } = await import("./net");
+    const srv = http.createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "text/html", "Content-Length": String(10 * 1024 * 1024) });
+      res.end();
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    try {
+      const port = (srv.address() as { port: number }).port;
+      const r = await safeFetch(`http://127.0.0.1:${port}/`, { method: "HEAD", policy: "trusted", maxBytes: 64 * 1024 });
+      expect(r.status).toBe(200);
+      await expect(safeFetch(`http://127.0.0.1:${port}/`, { method: "GET", policy: "trusted", maxBytes: 64 * 1024 })).rejects.toMatchObject({ code: "too_large" });
+    } finally {
+      srv.close();
+    }
+  });
+});

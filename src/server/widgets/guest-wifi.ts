@@ -98,6 +98,8 @@ export function guestWifi(): GuestWifiData {
     }
   }
   const security = r.security;
+  // A code without the password would look fine and never connect: show it as not set up, so an admin enters it again.
+  if (security !== "nopass" && !password) return { configured: false };
   return {
     configured: true,
     ssid: r.ssid,

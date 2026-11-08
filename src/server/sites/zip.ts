@@ -92,6 +92,11 @@ export async function extractEntry(file: ZipFile, tmp: string): Promise<number> 
       else cb(null, chunk);
     },
   });
-  await pipeline(file.stream(), counter, fs.createWriteStream(tmp, { flags: "wx", mode: 0o644 }));
+  try {
+    await pipeline(file.stream(), counter, fs.createWriteStream(tmp, { flags: "wx", mode: 0o644 }));
+  } catch (e) {
+    if (e instanceof AppError || (e as NodeJS.ErrnoException).code === "ENOSPC") throw e;
+    throw new AppError("bad_zip", `Couldn't unpack “${file.path.slice(0, 80)}” from the zip. The zip may be damaged, or packed in a way Gluon can't read. Make it again and try once more.`, 400);
+  }
   return n;
 }

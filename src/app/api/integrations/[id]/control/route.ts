@@ -40,7 +40,14 @@ export const POST = route({ auth: "user", body, burst: { limit: 40, windowMs: 60
   if (rec!.kind !== "homeassistant") refuse(400, "That connected app has nothing to switch.");
   const ctx = contextFor(rec!);
   // Members never open a garage, gate or door from Gluon; that needs to know what the thing is.
-  const deviceClass = user.role === "admin" ? null : await deviceClassOf(ctx, body.entity).catch(() => null);
+  // When that can't be read, a member's press is refused rather than guessed at.
+  let deviceClass: string | null = null;
+  if (user.role !== "admin") {
+    const found = await deviceClassOf(ctx, body.entity).catch(() => "unreadable" as const);
+    if (found === "unreadable") refuse(503, "Couldn't check this with Home Assistant just now. Try again in a moment.");
+    if (found === undefined) refuse(404, "Home Assistant doesn't have that any more.");
+    deviceClass = found as string | null;
+  }
   const plan = planControl({ role: user.role, entityId: body.entity, action: body.action, householdAllowed: householdControlsOf(rec!.config), deviceClass });
   if (!plan.ok) return refuse(plan.status, plan.message);
 

@@ -12,9 +12,11 @@ interface Icon {
   body: Buffer;
   at: number;
 }
-const cache = new Map<string, Icon | null>();
+const cache = new Map<string, { icon: Icon | null; at: number }>();
 const MAX = 300;
 const TTL = 24 * 3_600_000;
+/** A site that had no icon (or was down) is asked again after this. */
+const MISS_TTL = 30 * 60_000;
 
 async function get(url: string, accept: string, limit: number, policy: NetPolicy): Promise<{ type: string; body: Buffer; finalUrl: string } | null> {
   try {
@@ -42,7 +44,7 @@ export async function favicon(raw: string, policy: NetPolicy): Promise<Icon | nu
   if (u.protocol !== "http:" && u.protocol !== "https:") return null;
   const key = `${policy}:${u.origin}`;
   const hit = cache.get(key);
-  if (hit !== undefined && (!hit || Date.now() - hit.at < TTL)) return hit;
+  if (hit && Date.now() - hit.at < (hit.icon ? TTL : MISS_TTL)) return hit.icon;
 
   let icon: Icon | null = null;
   const page = await get(u.origin + "/", "text/html", 512 * 1024, policy);
@@ -66,7 +68,8 @@ export async function favicon(raw: string, policy: NetPolicy): Promise<Icon | nu
     const r = await get(u.origin + "/favicon.ico", "image/*", 256 * 1024, policy);
     if (r && isImage(r.type, r.body)) icon = { type: r.type.startsWith("image/") ? r.type : "image/x-icon", body: r.body, at: Date.now() };
   }
-  if (cache.size > MAX) cache.delete(cache.keys().next().value!);
-  cache.set(key, icon);
+  cache.delete(key);
+  if (cache.size >= MAX) cache.delete(cache.keys().next().value!);
+  cache.set(key, { icon, at: Date.now() });
   return icon;
 }

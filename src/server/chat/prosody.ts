@@ -589,7 +589,7 @@ export async function reloadProsody(t: ProsodyTarget): Promise<{ loaded: string[
   // Reloading updates settings but doesn't load or unload modules, so do that for the ones
   // Gluon turns on and off. Others (dependencies, ones loaded by hand) are left alone. Group chat
   // and upload services read their options when they load, so they're reloaded too (rooms keep).
-  const body = `local ok,err=prosody.reload_config(); if ok==false then error(err or "Prosody couldn't read its config.") end;
+  const body = `local ok,err=prosody.reload_config(); if ok==false or (ok==nil and err~=nil) then error(err or "Prosody couldn't read its config.") end;
     local mm=require"core.modulemanager"; local managed=A.managed; local loaded,unloaded,failed={},{},{};
     for host,h in pairs(prosody.hosts) do if h.type=="local" then
       local want=mm.get_modules_for_host(host);
@@ -696,9 +696,9 @@ export function settingsBackup(snap: ConfigPlace): () => void {
   };
 }
 
-/** Have Prosody read its config again without touching modules: throws when it can't. */
+/** Have Prosody read its config again without touching modules: throws when it can't (reload_config answers false, or nil with a message). */
 export async function rereadConfig(t: ProsodyTarget) {
-  await prosodyLua<true>(t, `local ok,err=prosody.reload_config(); if ok==false then error(err or "Prosody couldn't read its config.") end; return true`);
+  await prosodyLua<true>(t, `local ok,err=prosody.reload_config(); if ok==false or (ok==nil and err~=nil) then error(err or "Prosody couldn't read its config.") end; return true`);
 }
 
 /** Write gluon.cfg.lua for these settings and make sure the main config includes it. */

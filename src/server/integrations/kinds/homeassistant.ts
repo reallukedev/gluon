@@ -159,9 +159,10 @@ export const householdVisibleOf = (config: Record<string, unknown> | null): stri
 export const sharedOf = (config: Record<string, unknown> | null): string[] => [...new Set([...householdVisibleOf(config), ...householdControlsOf(config)])];
 
 /** An entity's device class from the shared states fetch (garage, gate, door…), or null. */
-export async function deviceClassOf(ctx: KindContext<Record<string, unknown>>, entityId: string): Promise<string | null> {
+/** The entity's device class (null when it has none), or undefined when Home Assistant doesn't list the entity. */
+export async function deviceClassOf(ctx: KindContext<Record<string, unknown>>, entityId: string): Promise<string | null | undefined> {
   const s = (await allStates(ctx as unknown as Ctx)).find((x) => x.entity_id === entityId);
-  return s ? str(s.attributes?.device_class) : null;
+  return s ? str(s.attributes?.device_class) : undefined;
 }
 
 /** Device classes for many entities at once (for checking an admin's household edits). */
