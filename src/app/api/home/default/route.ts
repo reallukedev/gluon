@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { route } from "@/server/api";
 import { householdDefault, saveHouseholdDefault } from "@/server/home";
-import { layoutSchema } from "@/lib/home";
+import { layoutSchema } from "@/lib/home-schema";
 import { audit } from "@/server/audit";
 
 export const GET = route({ auth: "admin" }, () => householdDefault());

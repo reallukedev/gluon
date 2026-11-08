@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { route } from "@/server/api";
 import { audit } from "@/server/audit";
-import { monitorInputSchema } from "@/lib/alerts-types";
+import { monitorInputSchema } from "@/lib/alerts-schemas";
 import { createUserMonitor, monitorView } from "@/server/monitors/service";
 import { monitorsFor } from "@/server/monitors/ranged";
 

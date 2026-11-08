@@ -2,7 +2,8 @@ import "server-only";
 import { all, now, one, run } from "../db";
 import { id as newId } from "../crypto";
 import { AppError, conflict, fieldWords, notFound, ownIssueMessage } from "../errors";
-import { monitorConfigSchema, type MonitorConfig, type MonitorKind } from "@/lib/alerts-types";
+import type { MonitorConfig, MonitorKind } from "@/lib/alerts-types";
+import { monitorConfigSchema } from "@/lib/alerts-schemas";
 
 interface MonitorRow {
   id: string;

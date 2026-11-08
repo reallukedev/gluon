@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { defaultPrefs, encodeUiCookie, prefsSchema, uiBits, UI_COOKIE, type Prefs } from "@/lib/prefs";
+import { encodeUiCookie, uiBits, UI_COOKIE, type Prefs } from "@/lib/prefs";
+import { defaultPrefs, prefsSchema } from "@/lib/prefs-schema";
 import { now, one, run } from "./db";
 
 export function getPrefs(userId: string): Prefs {

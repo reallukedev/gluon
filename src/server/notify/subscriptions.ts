@@ -6,7 +6,8 @@ import { getPrefs } from "../prefs";
 import { getSetting } from "../settings";
 import type { User } from "../auth/users";
 import type { Finding } from "../findings";
-import { kindsFor, normalizeFilter, subscriptionFilterSchema, type NotifyKind, type SubscriptionFilter, type SubscriptionsResponse } from "@/lib/alerts-types";
+import { kindsFor, normalizeFilter, type NotifyKind, type SubscriptionFilter, type SubscriptionsResponse } from "@/lib/alerts-types";
+import { subscriptionFilterSchema } from "@/lib/alerts-schemas";
 import { allChannels, getChannel, type Channel } from "./channels";
 import { wantsFinding } from "./filter";
 

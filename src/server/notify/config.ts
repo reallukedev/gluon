@@ -2,7 +2,6 @@ import "server-only";
 import { z } from "zod";
 import { AppError, fieldWords, ownIssueMessage } from "../errors";
 import {
-  channelConfigSchemas,
   MASK,
   type ChannelKind,
   type EmailConfig,
@@ -11,6 +10,7 @@ import {
   type WebhookConfig,
   type XmppConfig,
 } from "@/lib/alerts-types";
+import { channelConfigSchemas } from "@/lib/alerts-schemas";
 import { splitServer } from "./xmpp-format";
 
 /**
