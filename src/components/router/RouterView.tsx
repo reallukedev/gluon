@@ -203,3 +203,12 @@ export function RouterView({ initial }: { initial: RouterOverview | null }) {
     </Page>
   );
 }
+
+/** While the server asks the router for the first time: the page's title and what's happening. */
+export function RouterSkeleton() {
+  return (
+    <Page pending>
+      <PageHeader back={BACK} title="Router" summary="Reading your router…" />
+    </Page>
+  );
+}
