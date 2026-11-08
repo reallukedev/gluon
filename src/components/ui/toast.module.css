@@ -1,6 +1,6 @@
 /*
  * Toasts rise from the bottom edge and leave through it (or the way they were swiped), on
- * transitions so a burst retargets instead of restarting: 400ms `ease`, the Sonner feel.
+ * transitions so a burst retargets instead of restarting: in over 400ms (the Sonner feel), out in 250ms.
  * Older toasts tuck behind the newest (scale 0.94 steps, 8px peek) and fan out on hover or focus.
  * Reduced motion: toasts fade in place; swiping still follows the finger.
  */
@@ -12,13 +12,7 @@
   width: min(380px, calc(100vw - 32px));
 }
 @media (max-width: 640px) {
-  /*
- * Toasts rise from the bottom edge and leave through it (or the way they were swiped), on
- * transitions so a burst retargets instead of restarting: 400ms `ease`, the Sonner feel.
- * Older toasts tuck behind the newest (scale 0.94 steps, 8px peek) and fan out on hover or focus.
- * Reduced motion: toasts fade in place; swiping still follows the finger.
- */
-.viewport { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .viewport { right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
 
 .toast {
@@ -52,7 +46,7 @@
 /* Slides in fully opaque; under reduced motion it fades instead. */
 .toast[data-starting-style] { opacity: var(--motion); }
 .toast[data-limited] { opacity: 0; }
-.toast[data-ending-style] { opacity: 0; }
+.toast[data-ending-style] { opacity: 0; transition-duration: var(--dur-slow); }
 .toast[data-ending-style][data-swipe-direction="right"] { transform: translateX(calc(var(--toast-swipe-movement-x) + 150%)) translateY(var(--offset-y)); }
 .toast[data-ending-style][data-swipe-direction="down"] { transform: translateY(calc(var(--toast-swipe-movement-y) + 150%)); }
 .toast[data-swiping] { transition-duration: 0ms; }

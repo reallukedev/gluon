@@ -2,14 +2,13 @@
 import { Page, PageHeader, Notice } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 
-/** A page that failed to load: say so in Gluon's own words and offer to try again. */
+/** A page that failed to load: say so plainly, say nothing changed, and offer to try again. */
 export default function ShellError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <Page>
-      <PageHeader title="This page didn't load" summary="Gluon hit a problem getting it ready. Nothing on the server was changed." />
+      <PageHeader title="This page didn't load" summary="Nothing on the server was changed." />
       <Notice
         tone="fault"
-        title="Couldn't load this page"
         action={
           <Button size="sm" onClick={reset}>
             Try again

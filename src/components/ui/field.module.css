@@ -220,3 +220,19 @@ textarea.input { height: auto; min-height: 88px; padding: 9px 11px; line-height:
 }
 :global([data-theme="dark"]) .segmented[data-ready] .segment[data-pressed] { background: transparent; box-shadow: none; }
 @media (prefers-color-scheme: dark) { :global([data-theme="system"]) .segmented[data-ready] .segment[data-pressed] { background: transparent; box-shadow: none; } }
+
+/* High contrast mode paints every background as Canvas: give the switch, checkbox and segmented
+   control system colours of their own, or on and off look the same. */
+@media (forced-colors: active) {
+  .switch { forced-color-adjust: none; background: Canvas !important; border: 1px solid CanvasText; }
+  .switch .thumb { background: CanvasText !important; box-shadow: none; top: 1px; left: 1px; }
+  .switch[data-checked] { background: Highlight !important; border-color: Highlight; }
+  .switch[data-checked] .thumb { background: HighlightText !important; }
+  .switch[data-disabled] { border-color: GrayText; opacity: 1; }
+  .checkbox[data-checked], .checkbox[data-indeterminate] { forced-color-adjust: none; background: Highlight; border-color: Highlight; color: HighlightText; }
+  .segmentThumb { display: none; }
+  /* Focus rings here are box-shadows, which this mode drops. */
+  .input:focus, .affix:focus-within { outline: 2px solid Highlight; outline-offset: 1px; }
+  .affix .input:focus { outline: 0; }
+  .segment[data-pressed] { forced-color-adjust: none; background: Highlight !important; color: HighlightText; }
+}

@@ -138,12 +138,23 @@ export function UsageBar({
   fault?: number;
   label: string;
 }) {
-  const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
-  const level = fault !== undefined && pct >= fault ? "fault" : attention !== undefined && pct >= attention ? "attention" : "normal";
+  // A reading that failed is unknown: an empty track, never a bar at 0% that looks like "nothing used".
+  const known = Number.isFinite(value) && Number.isFinite(max) && max > 0;
+  const pct = known ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+  const level = !known ? "normal" : fault !== undefined && pct >= fault ? "fault" : attention !== undefined && pct >= attention ? "attention" : "normal";
   return (
-    <div className={s.usage} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(value)}>
+    <div
+      className={s.usage}
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={known ? max : 100}
+      aria-valuenow={known ? Math.round(value) : 0}
+      aria-valuetext={known ? undefined : "Unknown"}
+      data-unknown={known ? undefined : ""}
+    >
       <div className={s.usageTrack}>
-        <div className={s.usageFill} data-level={level} style={{ width: `${pct}%` }} data-motion-gentle="" />
+        <div className={s.usageFill} data-level={level} style={{ width: `${pct}%` }} hidden={!known} data-motion-gentle="" />
         {attention !== undefined && <span className={s.usageTick} style={{ left: `${attention}%` }} />}
       </div>
     </div>

@@ -14,7 +14,7 @@
   transition: background-color var(--dur-fast) ease, transform var(--dur-press) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) { .open:hover { background: color-mix(in oklab, var(--ink) 86%, var(--ground)); } }
-.open:active { transform: scale(0.98); }
+.open:active { transform: scale(calc(1 - 0.03 * var(--motion))); }
 .open:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .scan { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
 .qr { width: 112px; height: 112px; padding: 10px; background: #fff; border-radius: 10px; border: 1px solid var(--line); }

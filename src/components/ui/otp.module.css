@@ -49,3 +49,7 @@
 .root[data-invalid] .slot { border-color: var(--fault); }
 .root[data-disabled] .slot { opacity: 0.55; }
 @media (max-width: 400px) { .slot { width: 40px; height: 48px; } .root { gap: 6px; } }
+@media (forced-colors: active) {
+  .slot[data-active] { outline: 2px solid Highlight; outline-offset: 1px; }
+  .caret, .sep { forced-color-adjust: none; background: CanvasText; }
+}

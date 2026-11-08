@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { niceMax, seriesPath, sparkPath } from "./paths";
 import s from "./charts.module.css";
 
 export interface Series {
@@ -37,13 +38,6 @@ interface Props {
   times?: boolean;
 }
 
-function niceMax(v: number): number {
-  if (v <= 0) return 1;
-  const p = 10 ** Math.floor(Math.log10(v));
-  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p;
-  return 10 * p;
-}
-
 /** A live chart's right edge: the newest sample while the stream is fresh, else the wall clock. */
 function liveEdge(latest: number): number {
   const now = Date.now();
@@ -77,8 +71,10 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
   let dataMin = Infinity;
   let vPeak = 0;
   let count = 0;
+  // Only samples with a value count: a failed read is a gap, not a zero and not "data".
   for (const sr of data)
     for (const p of sr.points) {
+      if (!Number.isFinite(p[0]) || !Number.isFinite(p[1])) continue;
       if (p[0] > dataMax) dataMax = p[0];
       if (p[0] < dataMin) dataMin = p[0];
       if (p[1] > vPeak) vPeak = p[1];
@@ -87,7 +83,7 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
   const liveMax = live ? liveEdge(dataMax) : 0;
   const tMax = frozen?.tMax ?? (live ? liveMax : dataMax || Date.now());
   const tMin = windowMs ? tMax - windowMs : Math.min(dataMin, tMax);
-  const vMax = yMax ?? niceMax(vPeak * 1.1);
+  const vMax = yMax !== undefined && yMax > 0 ? yMax : niceMax(vPeak * 1.1);
   const axisFmt = axisFormat ?? format;
   const padR = edge ? 8 + Math.max(axisFmt(vMax).length, 1) * 5.6 : compact ? 0 : 44;
   const padB = edge ? (times ? 14 : 0) : compact ? 0 : 20;
@@ -96,42 +92,7 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
   const x = (t: number) => ((t - tMin) / Math.max(1, tMax - tMin)) * plotW;
   const y = (v: number) => plotH - (Math.min(Math.max(v, 0), vMax) / vMax) * (plotH - 6) - 1;
 
-  const paths = data.map((sr) => {
-    const pts = sr.points.filter((p) => p[0] >= tMin - (tMax - tMin) * 0.02 && p[0] <= tMax + 1);
-    // Break the line where there are gaps (> 3× median spacing) instead of drawing across them.
-    const gaps: number[] = [];
-    for (let i = 1; i < pts.length; i++) gaps.push(pts[i]![0] - pts[i - 1]![0]);
-    const med = gaps.length ? [...gaps].sort((a, b) => a - b)[Math.floor(gaps.length / 2)]! : 0;
-    let d = "";
-    let area = "";
-    const lonely: [number, number][] = [];
-    let segStart: number | null = null;
-    let segLen = 0;
-    pts.forEach((p, i) => {
-      const gap = i > 0 && med > 0 && p[0] - pts[i - 1]![0] > med * 3;
-      const px = x(p[0]).toFixed(1);
-      const py = y(p[1]).toFixed(1);
-      if (i === 0 || gap) {
-        if (segStart !== null) {
-          if (segLen === 1) lonely.push(pts[i - 1]!);
-          if (sr.area) area += `L${x(pts[i - 1]![0]).toFixed(1)},${plotH}L${segStart.toFixed(1)},${plotH}Z`;
-        }
-        d += `M${px},${py}`;
-        segStart = x(p[0]);
-        segLen = 1;
-        if (sr.area) area += `M${px},${plotH}L${px},${py}`;
-      } else {
-        d += `L${px},${py}`;
-        segLen++;
-        if (sr.area) area += `L${px},${py}`;
-      }
-    });
-    if (pts.length && segStart !== null) {
-      if (segLen === 1) lonely.push(pts.at(-1)!);
-      if (sr.area) area += `L${x(pts.at(-1)![0]).toFixed(1)},${plotH}L${(segStart as number).toFixed(1)},${plotH}Z`;
-    }
-    return { sr, d, area, pts, lonely };
-  });
+  const paths = data.map((sr) => ({ sr, ...seriesPath(sr.points, { tMin, tMax, x, y, floor: plotH, area: sr.area }) }));
 
   // Hover → nearest timestamp across the first series.
   const base = paths[0]?.pts ?? [];
@@ -151,8 +112,8 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
     setFrozen(null);
   };
 
-  const last = data.map((sr) => sr.points.at(-1)?.[1]);
-  const peak = Math.max(0, ...(data[0]?.points.map((p) => p[1]) ?? [0]));
+  const last = paths.map((p) => p.pts.at(-1)?.[1]);
+  const peak = Math.max(0, ...(paths[0]?.pts.map((p) => p[1]) ?? [0]));
   const empty = count === 0;
   const aria = empty ? `${label}. No data yet.` : `${label}. Now ${last[0] !== undefined ? format(last[0]) : "no data"}, peak ${format(peak)}.`;
   const flip = hover !== null && hover > plotW / 2;
@@ -266,10 +227,7 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
 
 /** Minimal inline trend: a line ending at a marked "now". */
 export function Sparkline({ points, height = 28, yMax, tone = "muted", label }: { points: number[]; height?: number; yMax?: number; tone?: Series["tone"]; label?: string }) {
-  const pts = points.length === 1 ? [points[0]!, points[0]!] : points;
-  const n = pts.length;
-  const max = yMax ?? Math.max(1e-9, ...pts) * 1.1;
-  const d = pts.map((v, i) => `${i === 0 ? "M" : "L"}${((i / Math.max(1, n - 1)) * 100).toFixed(2)},${(height - (Math.min(Math.max(v, 0), max) / max) * (height - 3) - 1.5).toFixed(2)}`).join("");
+  const d = sparkPath(points, height, yMax);
   return (
     <svg
       className={s.spark}
@@ -281,7 +239,7 @@ export function Sparkline({ points, height = 28, yMax, tone = "muted", label }: 
       aria-hidden={label ? undefined : true}
       data-tone={tone}
     >
-      {n > 0 && <path d={d} vectorEffect="non-scaling-stroke" />}
+      {d && <path d={d} vectorEffect="non-scaling-stroke" />}
       <line x1="100" x2="100" y1="0" y2={height} vectorEffect="non-scaling-stroke" className={s.sparkNow} />
     </svg>
   );

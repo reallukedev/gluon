@@ -48,3 +48,8 @@
 @media (pointer: coarse) { .input { font-size: max(16px, 1em); height: 36px; } }
 .error { display: flex; gap: 7px; align-items: baseline; font-size: var(--text-sm); color: var(--fault); line-height: 1.4; }
 .error::before { content: ""; flex: none; width: 5px; height: 5px; transform: translateY(-2px) rotate(45deg); background: var(--fault); }
+/* Touch: a 40px tall tap area without changing how the value sits in its row. */
+@media (pointer: coarse) {
+  .display { position: relative; }
+  .display::before { content: ""; position: absolute; inset: -6px 0; }
+}

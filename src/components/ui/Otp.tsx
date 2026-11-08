@@ -30,9 +30,13 @@ export function Otp({ value, onChange, onComplete, id, invalid, disabled, autoFo
   const autoId = React.useId();
   const [focused, setFocused] = React.useState(false);
 
+  // Also after a disabled spell (checking a code, a throttle wait): disabling drops focus, and a
+  // wrong code should leave you typing the next one, unless you have moved somewhere else since.
   React.useEffect(() => {
-    if (autoFocus) ref.current?.focus();
-  }, [autoFocus]);
+    if (!autoFocus || disabled) return;
+    const at = document.activeElement;
+    if (!at || at === document.body || at === ref.current) ref.current?.focus();
+  }, [autoFocus, disabled]);
 
   const toEnd = () => {
     const el = ref.current;

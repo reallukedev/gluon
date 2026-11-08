@@ -8,7 +8,7 @@ li[data-state="running"] .stepMark { background: repeating-linear-gradient(to bo
 li[data-state="failed"] .stepMark { background: var(--fault); height: 7px; }
 @keyframes breathe { 50% { opacity: 0.3; } }
 .progress { position: relative; height: 22px; border-radius: 6px; background: var(--sunk); overflow: hidden; }
-.progress div { position: absolute; inset: 0 auto 0 0; background: color-mix(in oklab, var(--ink) 18%, transparent); transition: width 300ms var(--ease-out); }
+.progress div { position: absolute; inset: 0 auto 0 0; background: color-mix(in oklab, var(--ink) 18%, transparent); transition: width calc(var(--dur-slow) * var(--motion)) var(--ease-out); }
 .progress span { position: relative; display: block; padding: 3px 8px; font-size: var(--text-xs); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .out {
   margin: 0;
@@ -26,3 +26,9 @@ li[data-state="failed"] .stepMark { background: var(--fault); height: 7px; }
 .out span[data-err] { color: var(--ink); }
 .result { font-size: var(--text-md); font-weight: 560; color: var(--fault); }
 .result[data-ok] { color: var(--ink); }
+@media (forced-colors: active) {
+  .stepMark { forced-color-adjust: none; background: CanvasText; }
+  .progress { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .progress div { forced-color-adjust: none; background: CanvasText; opacity: 0.3; }
+  .progress span { color: CanvasText; }
+}

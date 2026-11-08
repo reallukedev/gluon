@@ -20,9 +20,12 @@
   align-items: center;
   gap: 8px;
   overflow-wrap: anywhere;
+  /* Invisible normally; high contrast mode draws it, so the tooltip keeps an edge. */
+  outline: 1px solid transparent;
   transform-origin: var(--transform-origin);
   transition: transform 125ms var(--ease-out), opacity 125ms var(--ease-out);
 }
+.tooltip[data-ending-style] { transition-duration: 90ms; }
 .tooltip[data-starting-style],
 .tooltip[data-ending-style] { opacity: 0; transform: scale(calc(1 - 0.03 * var(--motion))); }
 .tooltip[data-instant] { transition-duration: 0ms; }
@@ -94,6 +97,14 @@ a.item { cursor: pointer; }
 
 .separator { height: 1px; background: var(--line); margin: 5px -5px; }
 .groupLabel { padding: 8px 10px 4px; }
+
+/* High contrast: the highlighted row is the system highlight, or keyboard users lose their place. */
+@media (forced-colors: active) {
+  .item[data-highlighted] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .item[data-highlighted] svg, .item[data-highlighted] .itemHint, .item[data-highlighted] .itemDesc { color: HighlightText; }
+  .item[data-disabled] { color: GrayText; opacity: 1; }
+  .selectTrigger:focus-visible { outline: 2px solid Highlight; outline-offset: 1px; }
+}
 
 /* Touch: thumb-sized rows. */
 @media (pointer: coarse) {

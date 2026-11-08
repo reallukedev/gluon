@@ -140,7 +140,7 @@ export function ConfirmDialog({ open, onOpenChange, ...o }: ConfirmOptions & { o
       await o.onConfirm();
       onOpenChange(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "That didn't work.");
+      setError(e instanceof Error && e.message ? e.message : "That didn't work. Try again.");
     } finally {
       setBusy(false);
     }
@@ -148,7 +148,7 @@ export function ConfirmDialog({ open, onOpenChange, ...o }: ConfirmOptions & { o
 
   const confirmButton = o.holdMs ? (
     <HoldButton variant={o.variant ?? "dangerSolid"} holdMs={o.holdMs} disabled={!ready} loading={busy} onConfirm={go}>
-      {busy ? "Working…" : `Hold to ${o.confirmLabel.toLowerCase()}`}
+      {busy ? "Working…" : `Hold to ${o.confirmLabel.charAt(0).toLowerCase()}${o.confirmLabel.slice(1)}`}
     </HoldButton>
   ) : (
     <Button variant={o.variant ?? "dangerSolid"} disabled={!ready} loading={busy} onClick={go}>

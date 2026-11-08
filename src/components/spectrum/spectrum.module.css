@@ -69,7 +69,7 @@
   cursor: pointer;
   border-radius: 3px;
 }
-.hit:focus-visible { box-shadow: 0 0 0 2px var(--ink); }
+.hit:focus-visible { outline: 2px solid var(--ink); outline-offset: -1px; }
 /* An old copy's lines sit a step apart from the app they copy. */
 .hit[data-gap] { margin-left: 8px; }
 
@@ -80,7 +80,7 @@
   background: var(--ink);
   opacity: 0.85;
   transform-origin: bottom;
-  transition: opacity var(--dur-base) ease, transform var(--dur-slow) var(--ease-out), background-color var(--dur-base) ease;
+  transition: opacity var(--dur-base) ease, transform calc(var(--dur-slow) * var(--motion)) var(--ease-out), background-color var(--dur-base) ease;
 }
 .line[data-state="starting"] { background: repeating-linear-gradient(to bottom, var(--ink) 0 5px, transparent 5px 9px); }
 .line[data-state="unhealthy"] { height: 42%; background: var(--fault); opacity: 1; }
@@ -97,9 +97,9 @@
   width: 2px;
   background: var(--attn);
   opacity: 0;
-  transform: scaleY(0);
+  transform: scaleY(calc(1 - 0.96 * var(--motion)));
   transform-origin: bottom;
-  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+  transition: opacity var(--dur-slow) var(--ease-out), transform calc(var(--dur-slow) * var(--motion)) var(--ease-out);
 }
 .line[data-state="attention"]::after { opacity: 1; transform: scaleY(1); }
 .hit:has(.line[data-state="attention"]) { width: 14px; }
@@ -108,7 +108,7 @@
 .field[data-active] .line { opacity: 0.18; }
 .field[data-active] .line[data-state="attention"],
 .field[data-active] .line[data-state="unhealthy"] { opacity: 0.35; }
-.field[data-active] .hit[data-on] .line { opacity: 1; transform: scaleX(1.5); }
+.field[data-active] .hit[data-on] .line { opacity: 1; transform: scaleX(calc(1 + 0.5 * var(--motion))); }
 .groupLabel[data-on] { color: var(--ink); }
 
 /* One authored moment: the first time the spectrum appears in a session, lines rise from the rail. */
@@ -136,3 +136,9 @@
 .readoutLine[data-state="attention"] { background: var(--attn); margin-right: 4px; box-shadow: 4px 0 0 var(--attn); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); }
 .legendItem { display: inline-flex; align-items: center; gap: 7px; }
+
+/* High contrast: lines are backgrounds, which that mode paints over. Redraw them in system colours. */
+@media (forced-colors: active) {
+  .wrap { --ink: CanvasText; --fault: CanvasText; --attn: Highlight; }
+  .line, .line::after, .readoutLine { forced-color-adjust: none; }
+}

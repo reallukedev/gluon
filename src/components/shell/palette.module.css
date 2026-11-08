@@ -198,3 +198,10 @@
   .optHint { flex: none; font-size: var(--text-xs); }
   .foot { display: none; }
 }
+
+/* High contrast: the active result and scope use the system highlight (tints become Canvas there). */
+@media (forced-colors: active) {
+  .option[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .option[aria-selected="true"] :is(.optLabel, .optHint, .optGo, .optExt) { color: HighlightText; }
+  .scope[aria-selected="true"]::after { forced-color-adjust: none; background: Highlight; }
+}

@@ -88,7 +88,7 @@ export function ReauthDialog() {
         if (!o) finish(false);
       }}
       title="Confirm it's you"
-      description={`This change affects the whole server, so Gluon asks for your password${needCode ? " and a code" : ""} again. You won't be asked again for 10 minutes.`}
+      description={`This change affects the whole server, so enter your password${needCode ? " and a code" : ""} again. You won't be asked again for 10 minutes.`}
       initialFocus={passwordRef}
       footer={
         <>
