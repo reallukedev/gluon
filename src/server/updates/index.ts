@@ -16,15 +16,10 @@ import { CHANNEL_NAME, type GithubTarget, type UpdateChannel, type UpdateLog, ty
 import { REPO, changesSince, detectInstall, latestOnGithub, relate, runningBuild, umbrelStoreVersion, type InstallDetail } from "./source";
 
 /**
- * Gluon updating itself. Two ways in:
- *  - GitHub: download a release (Stable) or the newest commit on main (Nightly), build it on this
- *    server, and swap it in. The work runs as a transient systemd unit on the host
- *    (docker/gluon-update.sh), so it carries on while this container is replaced, checks the new one
- *    comes up healthy, and goes back to the previous image if it doesn't.
- *  - A store: ask Umbrel to update the app from its store, or have Compose pull the newer image a
- *    CasaOS install names. Gluon never publishes to a store; it only takes what one offers.
- * Automatic updates run in a chosen hour, at most once a day; on Nightly they can instead follow
- * each new commit (at most once every 45 minutes).
+ * From GitHub, the update builds here and runs as a transient systemd unit on the host
+ * (docker/gluon-update.sh), so it carries on while this container is replaced and rolls back if the
+ * new one isn't healthy. From a store, Umbrel or Compose does the update; Gluon never publishes to a
+ * store.
  */
 
 const DIR = "/var/lib/gluon";
@@ -76,12 +71,9 @@ const toRun = (r: Row): UpdateRun => ({
   username: r.username,
 });
 
-// ---------------------------------------------------------------- checking
-
 /**
- * How long a background answer is trusted. Stable: 6 hours. Nightly: just under the half-hour the
- * background job runs at, so each run asks GitHub again (1 request, or 3 when main has moved: well
- * under the 60 an hour GitHub allows). A failed check is retried at the next run.
+ * Nightly's is just under the half-hour the background job runs at, so each run asks GitHub again,
+ * well under the 60 an hour it allows.
  */
 const FRESH: Record<UpdateChannel, number> = { stable: 6 * 3600_000, nightly: 28 * 60_000 };
 const FAILED_FRESH = 25 * 60_000;
@@ -113,7 +105,6 @@ export async function check(force = false): Promise<Check> {
   return promise;
 }
 
-/** The channel changed: what was checked no longer applies. */
 export function forgetCheck() {
   g.__gluonUpdateCheck = undefined;
   g.__gluonUpdateChecking = undefined;
@@ -214,8 +205,6 @@ export async function status(force = false): Promise<UpdatesStatus> {
   return (await evaluate(force)).status;
 }
 
-// ---------------------------------------------------------------- running an update
-
 function readLog(file: string): string[] {
   try {
     return fs.readFileSync(hostPath(file), "utf8").split("\n").filter(Boolean).slice(-400);
@@ -224,7 +213,6 @@ function readLog(file: string): string[] {
   }
 }
 
-/** Fold the updater's "::stage" / "::done" markers into the run's row. */
 function refresh(r: Row): Row {
   if (r.outcome !== "running" || r.method === "umbrel") return r;
   const lines = readLog(r.log);
@@ -245,7 +233,7 @@ function refresh(r: Row): Row {
   return one<Row>("SELECT * FROM self_updates WHERE id = ?", r.id) ?? r;
 }
 
-/** Whether the host is still running an update's systemd unit (null when systemd can't be asked). */
+/** null when systemd can't be asked. */
 async function unitState(id: string): Promise<"running" | "gone" | null> {
   try {
     const { stdout } = await host("systemctl", ["is-active", `${unitName(id)}.service`], { timeoutMs: 5000, okCodes: [1, 3, 4] });
@@ -258,7 +246,6 @@ async function unitState(id: string): Promise<"running" | "gone" | null> {
   }
 }
 
-/** While a run is going, follow its log and tell open pages. */
 async function watch() {
   const active = all<Row>("SELECT * FROM self_updates WHERE outcome = 'running'");
   for (const r of active) {
@@ -300,7 +287,6 @@ export function runLog(id: string): UpdateLog {
   return { run: toRun(fresh), lines: r.method === "umbrel" ? [] : readLog(r.log).filter((l) => !l.startsWith("::")) };
 }
 
-/** The updater script ships inside the image; the host runs its own copy of it. */
 function installScript() {
   const candidates = [path.join(process.cwd(), "gluon-update.sh"), path.join(process.cwd(), "docker", "gluon-update.sh")];
   const src = candidates.find((p) => fs.existsSync(p));
@@ -416,8 +402,6 @@ async function startUpdateClaimed(opts: Parameters<typeof startUpdate>[0]): Prom
   return toRun(one<Row>("SELECT * FROM self_updates WHERE id = ?", id)!);
 }
 
-// ---------------------------------------------------------------- background: tell people, auto-update
-
 const ASAP_GAP = 45 * 60_000;
 
 /** Nightly "as it lands": not within 45 minutes of the last update, and not again for a build that already failed. */
@@ -477,7 +461,7 @@ async function startAuto(method: UpdateMethod) {
   );
 }
 
-/** After a channel switch: bring "an update is available" in line now (never installs anything). */
+/** Never installs anything. */
 export function reconsider() {
   void background({ install: false }).catch(() => undefined);
 }

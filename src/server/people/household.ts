@@ -31,8 +31,6 @@ async function visibleApps(user: User): Promise<Set<string> | null> {
 const nameOf = (id: string | null) => (id ? (findById(id)?.display_name ?? null) : null);
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-// ---------------------------------------------------------------- problem reports
-
 interface ReportRow {
   id: string;
   user_id: string | null;
@@ -49,8 +47,8 @@ interface ReportRow {
 }
 
 /**
- * "Seen" is newer than the reports table, so it's added on first use (ADD COLUMN is cheap and the
- * check is cached once true). No migration: a later ALTER in one would fail on servers that ran this.
+ * "Seen" is added on first use, not by a migration: a later ALTER in one would fail on servers that
+ * already ran this.
  */
 function ensureAcknowledged() {
   if (hasColumn("reports", "acknowledged_at")) return;
@@ -200,8 +198,6 @@ export function deleteReport(viewer: User, id: string): ReportRow {
   return r;
 }
 
-// ---------------------------------------------------------------- announcements
-
 interface AnnRow {
   id: string;
   message: string;
@@ -225,11 +221,7 @@ function toAnn(r: AnnRow, names: Map<string, string>, t: number): Announcement {
   };
 }
 
-/** Active announcements the viewer should see (members: none about apps they can't see). Admins can ask for all. */
-/**
- * The raw current announcements a person should see (the shell banner, Status): an app-scoped one
- * only reaches people who can open that app.
- */
+/** An app-scoped one only reaches people who can open that app. */
 export async function currentAnnouncements(viewer: User, limit?: number): Promise<{ id: string; message: string; app_id: string | null; until: number | null }[]> {
   const rows = all<{ id: string; message: string; app_id: string | null; until: number | null }>(
     "SELECT id, message, app_id, until FROM announcements WHERE until IS NULL OR until > ? ORDER BY created_at DESC",

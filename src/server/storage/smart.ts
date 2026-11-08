@@ -4,9 +4,8 @@ import { all, one, run } from "../db";
 import type { DiskMedia, SmartAttribute, SmartDetail, SmartSummary } from "@/lib/storage-types";
 
 /**
- * SMART health via the container's smartctl. Read every 30 minutes and cached; `-n standby` makes
- * smartctl skip disks that are spun down so Gluon never wakes a sleeping hard drive just to look at it.
- * Samples are kept in `storage_smart` so "reallocated sectors are rising" can be detected.
+ * `-n standby` makes smartctl skip spun-down disks, so Gluon never wakes a sleeping drive just to
+ * look at it.
  */
 
 export interface SmartTarget {
@@ -54,7 +53,7 @@ export function smartDetail(id: string): SmartDetail {
   return { summary: e?.summary ?? null, attributes: e?.attributes ?? [], firmware: e?.firmware ?? null, history };
 }
 
-/** Load the most recent stored summaries so the page isn't empty right after a restart. */
+/** So the page isn't empty right after a restart. */
 export function loadSmartCache() {
   try {
     const rows = all<{ disk_id: string; summary: string }>(
@@ -72,8 +71,6 @@ export function loadSmartCache() {
     /* table not there yet */
   }
 }
-
-// ---------------------------------------------------------------- parsing
 
 type J = Record<string, unknown>;
 const obj = (v: unknown): J => (v && typeof v === "object" ? (v as J) : {});
@@ -172,7 +169,6 @@ export function parseSmart(j: J, exit: number, media: DiskMedia, now = Date.now(
   s.powerOnHours = num(obj(j.power_on_time).hours);
   s.powerCycles = num(j.power_cycle_count);
 
-  // ATA attributes.
   const table = obj(j.ata_smart_attributes).table;
   const byId = new Map<number, J>();
   if (Array.isArray(table)) {
@@ -220,7 +216,6 @@ export function parseSmart(j: J, exit: number, media: DiskMedia, now = Date.now(
     }
   }
 
-  // NVMe health log.
   const nv = obj(j.nvme_smart_health_information_log);
   if (Object.keys(nv).length) {
     s.temperature ??= num(nv.temperature);
@@ -236,7 +231,6 @@ export function parseSmart(j: J, exit: number, media: DiskMedia, now = Date.now(
     };
   }
 
-  // Last self-test.
   const selfTests = obj(obj(j.ata_smart_self_test_log).standard).table;
   if (Array.isArray(selfTests) && selfTests[0]) {
     const t = obj(selfTests[0]);
@@ -249,7 +243,6 @@ export function parseSmart(j: J, exit: number, media: DiskMedia, now = Date.now(
     };
   }
 
-  // Verdict.
   const failingNow = attributes.filter((a) => a.whenFailed === "now" && a.prefailure);
   const failedPast = attributes.filter((a) => a.whenFailed === "past" && a.prefailure);
   const cw = s.nvme?.criticalWarning ?? 0;
@@ -285,8 +278,6 @@ export function parseSmart(j: J, exit: number, media: DiskMedia, now = Date.now(
 
   return { summary: s, attributes, firmware: typeof j.firmware_version === "string" ? j.firmware_version : null };
 }
-
-// ---------------------------------------------------------------- running
 
 async function runSmartctl(args: string[]): Promise<{ json: J | null; exit: number; stderr: string }> {
   try {
@@ -368,7 +359,7 @@ function record(id: string, s: SmartSummary) {
   }
 }
 
-/** Read SMART for the given disks (sequentially: some controllers dislike parallel passthrough). */
+/** Sequential: some controllers dislike parallel passthrough. */
 export function refreshSmart(targets: SmartTarget[]): Promise<void> {
   const state = st();
   if (state.running) return state.running;

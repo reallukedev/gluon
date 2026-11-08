@@ -14,8 +14,8 @@ import { listApps } from "../docker/apps";
 import type { DiskMedia, DiskView, FstabEntryView, Inventory, MountView, Persistence, VolumeRole, VolumeUser, VolumeView } from "@/lib/storage-types";
 
 /**
- * Disks → partitions → filesystems → mount points, joined with /etc/fstab, swap, SMART and Docker.
- * Nothing here touches the disks themselves (no blkid probing), so building it never wakes a sleeping drive.
+ * Nothing here touches the disks themselves (no blkid probing), so building it never wakes a sleeping
+ * drive.
  */
 
 interface LsblkNode {
@@ -388,7 +388,6 @@ async function build(): Promise<InventoryState> {
     if (whole) record(whole, n);
   }
 
-  // fstab view.
   const entries: FstabEntryView[] = [];
   const mountedTargets = new Set(mounts.map((m) => m.target));
   for (const l of parsed.lines) {
@@ -449,7 +448,7 @@ async function build(): Promise<InventoryState> {
 type G = typeof globalThis & { __gluonStorageInv?: { at: number; value: Promise<InventoryState> } | null };
 const g = globalThis as G;
 
-/** Inventory, cached for 5 s (operations invalidate it). */
+/** Cached for 5 s; operations invalidate it. */
 export function getInventoryState(fresh = false): Promise<InventoryState> {
   const c = g.__gluonStorageInv;
   if (!fresh && c && Date.now() - c.at < 5000) return c.value;
@@ -473,13 +472,11 @@ export function invalidateInventory() {
   g.__gluonStorageInv = null;
 }
 
-/** Find a disk by id, kernel name or /dev path. */
 export function findDisk(s: InventoryState, key: string): DiskView | null {
   const k = key.replace(/^\/dev\//, "");
   return s.view.disks.find((d) => d.id === key || d.name === k || d.path === key || d.serial === key) ?? null;
 }
 
-/** Find a volume by kernel name, /dev path, UUID or current mount point. */
 export function findVolume(s: InventoryState, key: string): VolumeRecord | null {
   const k = key.trim();
   const name = k.replace(/^\/dev\//, "");

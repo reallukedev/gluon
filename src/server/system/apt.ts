@@ -11,11 +11,7 @@ import { publish } from "../events";
 import type { AptLockHolder, PendingPackage, RebootStatus, RestartNeeded, UpdateRunSummary } from "@/lib/system-types";
 import { friendlyName, isImportant, isValidUnit } from "./units";
 
-/**
- * Debian package updates: what's waiting (`apt list --upgradable` + a dry-run for origins and new
- * packages), refreshing package lists (`apt-get update`), who holds apt's locks, and whether the
- * machine needs a restart. Installing lives in ./apt-runner.ts.
- */
+/** Installing lives in ./apt-runner.ts. */
 
 type G = typeof globalThis & {
   __gluonApt?: {
@@ -29,8 +25,6 @@ const g = globalThis as G;
 const state = () => (g.__gluonApt ??= {});
 
 const PENDING_TTL = 10 * 60_000;
-
-// ---------------------------------------------------------------- versions
 
 /** Loose Debian-ish version compare: numeric runs compare as numbers, "~" sorts before anything. */
 export function compareVersions(a: string, b: string): number {
@@ -56,8 +50,6 @@ export function compareVersions(a: string, b: string): number {
   }
   return 0;
 }
-
-// ---------------------------------------------------------------- parsing
 
 export interface ListedUpgrade {
   name: string;
@@ -148,8 +140,6 @@ function rebootReason(name: string): PendingPackage["rebootReason"] {
 
 const isSecurity = (suites: string[], origins: string[]) => suites.some((s) => /-security$/.test(s)) || origins.some((o) => /security/i.test(o));
 
-// ---------------------------------------------------------------- first-seen bookkeeping
-
 interface SeenRow {
   package: string;
   candidate: string;
@@ -206,8 +196,6 @@ function trackSeen(pkgs: { name: string; candidate: string; security: boolean }[
     return rows;
   });
 }
-
-// ---------------------------------------------------------------- listing
 
 async function computePending(): Promise<{
   list: PendingPackage[];
@@ -273,7 +261,7 @@ async function computePending(): Promise<{
   return { list, removals: sim.removals };
 }
 
-/** Waiting updates (cached for 10 minutes; pass fresh after apt-get update or an install). */
+/** Cached for 10 minutes; pass fresh after apt-get update or an install. */
 export async function pendingUpdates(opts: { fresh?: boolean } = {}): Promise<{ list: PendingPackage[]; removals: string[]; at: number }> {
   const s = state();
   if (!opts.fresh && s.pending && Date.now() - s.pending.at < PENDING_TTL) return s.pending;
@@ -308,8 +296,6 @@ export function pendingClock(): {
     oldestSecurityAt: r?.sec ?? null,
   };
 }
-
-// ---------------------------------------------------------------- locks
 
 const APT_LOCKS = ["/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/var/lib/apt/lists/lock", "/var/cache/apt/archives/lock"];
 
@@ -393,8 +379,6 @@ export function dpkgInterrupted(): boolean {
   }
 }
 
-// ---------------------------------------------------------------- refresh (apt-get update)
-
 export interface RefreshResult {
   ok: boolean;
   at: number;
@@ -454,7 +438,6 @@ export function explainAptError(out: string): string {
   return line ? line.replace(/^(?:E:|W:|Err:\d*)\s*/, "").slice(0, 240) : "apt couldn't refresh the package lists.";
 }
 
-/** Run `apt-get update` (one at a time), record it, and re-list waiting updates. */
 export async function refreshLists(
   opts: {
     reason: "daily" | "manual" | "retry";
@@ -549,8 +532,6 @@ export function listsUpdatedAt(): number | null {
   return best || null;
 }
 
-// ---------------------------------------------------------------- reboot required
-
 function kernelFlavour(release: string): string {
   const variant = release.match(/-(cloud|rt)-/)?.[1] ?? "";
   return `${variant}:${release.split("-").at(-1)}`;
@@ -628,8 +609,6 @@ export function rebootStatus(): RebootStatus {
     since,
   };
 }
-
-// ---------------------------------------------------------------- services using old libraries
 
 function unitOfPid(pid: number): string | null {
   try {
@@ -748,7 +727,7 @@ async function askNeedrestart(): Promise<RestartNeeded | null> {
   }
 }
 
-/** Reboot status plus services still running old code after an update. Cached for 5 minutes. */
+/** Cached for 5 minutes. */
 export async function restartNeeded(opts: { fresh?: boolean } = {}): Promise<RestartNeeded> {
   const s = state();
   if (!opts.fresh && s.restartNeeded && Date.now() - s.restartNeeded.checkedAt < 5 * 60_000) return { ...s.restartNeeded, reboot: rebootStatus() };

@@ -10,8 +10,8 @@ import { probeHttp, probeTcp, type ProbeResult } from "./probe";
 import { flips, lastCheck, recordCheck, trailingFailures, trailingSuccesses } from "./stats";
 
 /**
- * Scheduler: every monitor runs on its own interval with jitter so checks don't bunch up, at most
- * CONCURRENCY at a time. After each check the down/flapping findings are updated.
+ * Every monitor runs on its own interval with jitter so checks don't bunch up, at most CONCURRENCY at
+ * a time.
  */
 
 const CONCURRENCY = 6;
@@ -49,13 +49,10 @@ function monitors(): Monitor[] {
 const isAppMonitor = (m: Monitor) => m.source === "auto" && !!m.ref?.startsWith("app:");
 const isRouteMonitor = (m: Monitor) => m.source === "auto" && !!m.ref?.startsWith("route:");
 
-/** Close any findings for a monitor (paused, removed, app stopped on purpose). */
 export function clearFindings(id: string, note?: string) {
   resolve(downId(id), note);
   resolve(flapId(id));
 }
-
-// ---------------------------------------------------------------- findings
 
 function hostOf(target: string): string {
   try {
@@ -135,8 +132,6 @@ async function evaluate(m: Monitor, r: ProbeResult, at: number) {
     resolve(flapId(m.id));
   }
 }
-
-// ---------------------------------------------------------------- running checks
 
 async function probe(m: Monitor): Promise<ProbeResult> {
   if (m.kind === "tcp") {

@@ -9,9 +9,8 @@ import { formatBytes, plural } from "@/lib/format";
 import { checkSitePath, kindOf, SITE_LIMITS, type SiteFile, type SiteFileContent, type SiteTree } from "@/lib/sites-types";
 
 /**
- * Sites' drafts: plain files under the data folder, one folder per site, that only Gluon writes.
  * Every change goes through here, one at a time per site, and bumps the draft's revision so the
- * editor (and a second tab) can tell what changed. Publishing copies a draft elsewhere (publish.ts).
+ * editor (and a second tab) can tell what changed.
  */
 
 export const SITES_DIR = path.join(DATA_DIR, "sites");
@@ -118,8 +117,6 @@ export function deleteSiteRows(id: string) {
   run("DELETE FROM sites WHERE id = ?", id);
 }
 
-// ---------------------------------------------------------------- paths
-
 /** A checked path inside the site, as an AppError the person can read when it isn't one. */
 export function sitePath(raw: string, field = "path"): string {
   const c = checkSitePath(raw);
@@ -128,8 +125,8 @@ export function sitePath(raw: string, field = "path"): string {
 }
 
 /**
- * The real file for a site path, refusing anything that isn't a plain file or folder on the way
- * (nothing but Gluon writes here, so a link would mean something is wrong).
+ * Refuses anything that isn't a plain file or folder on the way: nothing but Gluon writes here, so a
+ * link would mean something is wrong.
  */
 function resolveIn(root: string, rel: string): { abs: string; st: fs.Stats | null } {
   const parts = rel.split("/");
@@ -152,8 +149,6 @@ function resolveIn(root: string, rel: string): { abs: string; st: fs.Stats | nul
 
 export const resolveDraft = (id: string, rel: string) => resolveIn(draftDir(id), rel);
 export { resolveIn };
-
-// ---------------------------------------------------------------- reading
 
 /** Everything in a folder of site files: plain files and folders only, hidden junk ignored. */
 export function walk(root: string): { files: (SiteFile & { abs: string })[]; dirs: string[] } {
@@ -215,14 +210,11 @@ export function readFile(id: string, rel: string): SiteFileContent {
   return { path: p, kind: "text", text, etag, size: buf.length };
 }
 
-// ---------------------------------------------------------------- writing
-
 export interface Change {
   summary: string;
   tree: SiteTree;
 }
 
-/** Record that the draft changed: new revision, fresh totals. */
 export function touched(id: string, user: Pick<User, "username">): SiteTree {
   const { files } = walk(draftDir(id));
   const bytes = files.reduce((n, f) => n + f.size, 0);
@@ -236,7 +228,6 @@ function tooMuch(files: number, bytes: number): AppError | null {
   return null;
 }
 
-/** Throw when adding `addFiles` files and `addBytes` bytes (net) would go over the site's limits. */
 export function checkRoom(id: string, addFiles: number, addBytes: number) {
   const r = siteRow(id);
   const err = tooMuch(r.files + addFiles, r.bytes + addBytes);
@@ -248,7 +239,7 @@ function mkTemp(id: string): string {
   return path.join(workDir(id), `${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`);
 }
 
-/** Make the folders above `rel`, refusing if a file is in the way. Returns the folders it made, deepest last. */
+/** Refuses if a file is in the way. Returns the folders it made, deepest last. */
 function ensureParents(id: string, rel: string): string[] {
   const parts = rel.split("/").slice(0, -1);
   const made: string[] = [];
@@ -267,7 +258,7 @@ function ensureParents(id: string, rel: string): string[] {
   return made;
 }
 
-/** Put a finished temp file in place in one step, so the preview never sees half a file. */
+/** In one step, so the preview never sees half a file. */
 function place(id: string, tmp: string, rel: string, mtime?: number) {
   ensureParents(id, rel);
   const { abs, st } = resolveDraft(id, rel);
@@ -277,7 +268,7 @@ function place(id: string, tmp: string, rel: string, mtime?: number) {
   fs.renameSync(tmp, abs);
 }
 
-/** Save text from the editor. `etag` is what the editor loaded (null: a new file). */
+/** `etag` is what the editor loaded (null for a new file). */
 export function writeText(id: string, user: Pick<User, "username">, rel: string, text: string, etag: string | null): Promise<{ etag: string; tree: SiteTree; created: boolean }> {
   return withSite(id, () => {
     const p = sitePath(rel);
@@ -299,7 +290,7 @@ export function writeText(id: string, user: Pick<User, "username">, rel: string,
   });
 }
 
-/** Stream an uploaded file into place, stopping the moment it goes over the limits. */
+/** Stops the moment it goes over the limits. */
 export async function writeUpload(id: string, user: Pick<User, "username">, rel: string, body: ReadableStream<Uint8Array> | null, declared: number | null, replace: boolean): Promise<{ path: string; replaced: boolean; tree: SiteTree }> {
   const p = sitePath(rel);
   if (declared !== null && declared > SITE_LIMITS.fileBytes) throw new AppError("too_large", `“${p}” is ${formatBytes(declared)}. Files can be up to ${formatBytes(SITE_LIMITS.fileBytes)}.`, 413);
@@ -347,7 +338,7 @@ export function makeFolder(id: string, user: Pick<User, "username">, rel: string
   });
 }
 
-/** Rename or move a file or folder. Never replaces something that's already there. */
+/** Never replaces something that's already there. */
 export function movePath(id: string, user: Pick<User, "username">, fromRaw: string, toRaw: string): Promise<Change> {
   return withSite(id, () => {
     const from = sitePath(fromRaw, "from");
@@ -405,9 +396,8 @@ export function clashIn(id: string, rels: string[]): string | null {
 }
 
 /**
- * Write a set of finished files (from a starter or an import) into the draft, all or nothing. Each
- * file it replaces is set aside until the whole batch is in; if any step fails, the new files and
- * folders come out and the old files go back, so the draft is exactly as it was.
+ * All or nothing: each replaced file is set aside until the whole batch is in, and any failure puts
+ * the draft back exactly as it was.
  */
 export function placeAll(id: string, items: { rel: string; tmp: string; mtime?: number }[]): { added: number; replaced: number } {
   const clash = clashIn(id, items.map((it) => it.rel));
@@ -443,7 +433,6 @@ export function placeAll(id: string, items: { rel: string; tmp: string; mtime?: 
 
 export { mkTemp };
 
-/** Remove every trace of a site's draft. */
 export function removeDraft(id: string) {
   fs.rmSync(path.join(SITES_DIR, id), { recursive: true, force: true });
 }

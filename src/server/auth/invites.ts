@@ -63,9 +63,8 @@ export function peekInvite(raw: string): InviteRow | null {
 }
 
 /**
- * Use an invite. The invite is claimed first (a single conditional UPDATE), so the same link opened
- * twice at once can only ever create one account; if creating the account then fails (username
- * taken), the claim is released so the person can try another name.
+ * The invite is claimed first with one conditional UPDATE, so the same link opened twice at once can
+ * only create one account; if creating it then fails (username taken), the claim is released.
  */
 export async function acceptInvite(raw: string, input: { username: string; displayName: string; password: string }): Promise<User> {
   const row = peekInvite(raw);

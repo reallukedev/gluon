@@ -8,8 +8,6 @@ import { hostPath } from "../host/paths";
 import type { RuntimeMount, ServiceRuntime, VolumeInfo } from "./rewrite";
 import type { Measured } from "./plan";
 
-/** Reads from the server that the move and uninstall plans are built from. All read-only. */
-
 export async function inspectAll(ids: string[]): Promise<Docker.ContainerInspectInfo[]> {
   const out = await Promise.all(ids.map((id) => docker().getContainer(id).inspect().catch(() => null)));
   return out.filter((x): x is Docker.ContainerInspectInfo => !!x);
@@ -29,7 +27,6 @@ export function mountsOf(i: Pick<Docker.ContainerInspectInfo, "Mounts">): Runtim
   return (i.Mounts ?? []).map((m) => ({ type: m.Type, source: m.Source, destination: m.Destination, name: m.Name, rw: m.RW }));
 }
 
-/** Every volume, with the containers that mount it. */
 export async function volumeInfo(all?: Docker.ContainerInfo[]): Promise<VolumeInfo[]> {
   const [vols, cs] = await Promise.all([docker().listVolumes().catch(() => ({ Volumes: [] as Docker.VolumeInspectInfo[] })), all ? Promise.resolve(all) : docker().listContainers({ all: true })]);
   const users = new Map<string, string[]>();
@@ -46,7 +43,7 @@ export async function volumeInfo(all?: Docker.ContainerInfo[]): Promise<VolumeIn
   }));
 }
 
-/** Bytes under a path (`du -sb`), or null if it took too long. */
+/** null if `du -sb` took too long. */
 export async function sizeOf(p: string, timeoutMs = 120_000): Promise<number | null> {
   try {
     const { stdout } = await host("du", ["-sb", "--", p], { timeoutMs, okCodes: [1] });
@@ -98,7 +95,6 @@ export function readText(p: string): string | null {
   }
 }
 
-/** Every bind mount on the server and the container that has it. */
 export function bindUses(list: Docker.ContainerInfo[]): { source: string; container: string }[] {
   return list.flatMap((c) => (c.Mounts ?? []).filter((m) => m.Type === "bind" && m.Source).map((m) => ({ source: m.Source, container: (c.Names?.[0] ?? c.Id).replace(/^\//, "") })));
 }

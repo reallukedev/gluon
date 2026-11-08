@@ -25,15 +25,12 @@ import { clash, deleteGamePort, getGamePort, insertGamePort, listGamePorts, rese
 import { portNeeds } from "../router/service";
 
 /**
- * Network → Game servers. Minecraft Java addresses live in mc-router's routes file, which Gluon
- * edits in place and then tells mc-router to reload (SIGHUP: a full reload, so removed addresses
- * really go, without dropping anyone who's playing). Every change is checked by pinging the
- * address through mc-router, the way a player's server list does.
+ * mc-router is told to reload with SIGHUP, a full reload so removed addresses really go, without
+ * dropping anyone playing. Every change is checked by pinging the address through mc-router, the way
+ * a player's server list does.
  */
 
 type Where = { ip: string; zone: string };
-
-// ------------------------------------------------------------------ what's there
 
 interface Router {
   c: Listed;
@@ -111,7 +108,6 @@ function pickCrafty(list: Listed[], aliases: Map<string, string[]>, router: Rout
   return all.sort((a, b) => score(b) - score(a))[0]!;
 }
 
-/** mc-router and the addresses it has, without Crafty or Docker network details. */
 async function readRouter(list: Listed[]): Promise<Pick<Ctx, "router" | "info" | "doc" | "mappings" | "fallback">> {
   const router = await findRouter(list);
   const info: McRouterInfo = { status: "missing", container: null, version: null, file: null, editable: false, reason: null, watch: false, hostPort: null, networks: [], broken: null, rev: null };
@@ -163,9 +159,8 @@ async function load(): Promise<Ctx> {
 const HOSTNAME = /^([a-z0-9_]([a-z0-9_-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /**
- * Every address players type that should lead here: mc-router's Minecraft addresses and the
- * addresses on forwarded game ports. Gluon's Cloudflare connection keeps their DNS. null when
- * mc-router's routes file couldn't be read, so a hiccup never looks like every address went away.
+ * Gluon's Cloudflare connection keeps their DNS. null when mc-router's routes file couldn't be read,
+ * so a hiccup never looks like every address went away.
  */
 export async function gameAddresses(): Promise<{ host: string; why: string }[] | null> {
   try {
@@ -209,8 +204,6 @@ function targetOf(ctx: Ctx, backend: string): McTarget {
   return { kind: "address" };
 }
 
-// ------------------------------------------------------------------ checks
-
 interface Checks {
   at: number;
   pings: Map<string, McPing>;
@@ -245,7 +238,6 @@ async function mapLimit<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): 
   return out;
 }
 
-/** Where Gluon reaches mc-router's player port. */
 function routerAddress(r: Router): { host: string; port: number } | null {
   if (r.hostPort) return { host: LOCAL_HOST, port: r.hostPort };
   const ip = Object.values(r.info.NetworkSettings?.Networks ?? {}).find((n) => n.IPAddress)?.IPAddress;
@@ -365,8 +357,6 @@ export function javaNeed(): Promise<{ hostPort: number; addresses: number } | nu
   return v;
 }
 
-// ------------------------------------------------------------------ history
-
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS mc_router_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -386,7 +376,6 @@ function ensure() {
 
 const KEEP = 40;
 
-/** Keep the file as it was before a change, so it can be put back. */
 function snapshot(file: string, content: string, summary: string, user: Pick<User, "username">): number {
   ensure();
   const id = Number(run("INSERT INTO mc_router_history (at, file, content, summary, username) VALUES (?, ?, ?, ?, ?)", now(), file, content, summary, user.username).lastInsertRowid);
@@ -404,8 +393,6 @@ export async function mcHistory(): Promise<McHistoryEntry[]> {
   });
 }
 
-// ------------------------------------------------------------------ changes
-
 /** One change at a time, so two people (or tabs) can't interleave edits to the file. */
 function locked<T>(fn: () => Promise<T>): Promise<T> {
   const prev = g.__gluonGameLock ?? Promise.resolve();
@@ -417,9 +404,8 @@ function locked<T>(fn: () => Promise<T>): Promise<T> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Tell mc-router to read the file again. SIGHUP makes it reset and load the file (the watcher
- * only adds and updates, so a removed address would keep working until a restart). Its log says
- * whether it did. With MAPPING set too, a reset would drop those, so the watcher is left to it.
+ * The watcher only adds and updates, so a removed address would keep working until a restart; SIGHUP
+ * resets and reloads. With MAPPING set too a reset would drop those, so the watcher is left to it.
  */
 async function reload(r: Router | null): Promise<{ applied: boolean; note: string | null }> {
   if (!r || r.c.State !== "running") return { applied: false, note: "mc-router isn't running. It reads the change when it starts." };
@@ -446,7 +432,6 @@ function needWritable(ctx: Ctx): { r: Router; file: string; doc: RoutesDoc } {
   return { r: ctx.router, file: ctx.info.file, doc: ctx.doc };
 }
 
-/** Write a new version of the file and make sure that's what's there now. */
 function put(file: string, content: string, previous: string) {
   try {
     writeInPlace(hostPath(file), content);
@@ -543,7 +528,7 @@ export function setFallback(user: User, where: Where, body: { backend: string | 
   }));
 }
 
-/** Put back the file as it was before a change. The current file goes into the history first, so this can be undone too. */
+/** The current file goes into the history first, so this can be undone too. */
 export function restoreMcHistory(user: User, where: Where, id: number): Promise<McChangeResult> {
   return locked(async () => {
     const ctx = await load();
@@ -567,7 +552,6 @@ export function restoreMcHistory(user: User, where: Where, id: number): Promise<
   });
 }
 
-/** Ask mc-router to reload without changing anything (after a hand edit, say). */
 export async function reloadMcRouter(user: User, where: Where): Promise<McChangeResult> {
   const ctx = await load();
   if (!ctx.router) throw new AppError("no_mc_router", "mc-router isn't installed on this server.", 409);
@@ -576,8 +560,6 @@ export async function reloadMcRouter(user: User, where: Where): Promise<McChange
   audit(user, { action: "games.mc.reload", target: ctx.info.container, summary: "Minecraft: asked mc-router to reload its routes", detail: { applied: res.applied } }, where);
   return { status: await gamesStatus({ force: true }), check: null, applied: res.applied, undo: null, note: res.note };
 }
-
-// ------------------------------------------------------------------ game ports
 
 export interface GamePortBody {
   name: string;

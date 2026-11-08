@@ -1,10 +1,7 @@
 import { Scalar, YAMLSeq, isMap, isScalar, isSeq, type Document, type YAMLMap } from "yaml";
 import { parseCompose, parsePortString, readService, serviceNode, stringify } from "@/lib/builder/compose";
 
-/**
- * Edits to a Mumble service in a compose file, made in place so everything else in the file
- * (comments, other services, keys Gluon doesn't know) stays as it was. Pure.
- */
+/** Edits are made in place so comments, other services and keys Gluon doesn't know survive. */
 
 export const ICE_CONTAINER_PORT = 6502;
 export const ENV_FILE = "gluon-voice.env";
@@ -24,7 +21,7 @@ function envKeyOf(item: unknown): string | null {
   return eq > 0 ? s.slice(0, eq) : s || null;
 }
 
-/** Change a service's environment in whichever form it's written (map or KEY=value list). */
+/** Handles both the map and the KEY=value list forms. */
 function editEnv(doc: Document, svc: YAMLMap, edit: EnvEdit): string[] {
   const removed: string[] = [];
   const set = edit.set ?? {};
@@ -82,11 +79,9 @@ export interface ManageEdit {
 }
 
 /**
- * Make Ice reachable from this server only, with its secrets read from a file next to the compose
- * file (`envFile`) or, for builder apps, from the builder's secrets (envFile null).
- *
- * With its own network, Ice listens on all of the container's addresses and Docker publishes it on
- * 127.0.0.1 only. On the host's network there is nothing to publish, so Ice listens on 127.0.0.1.
+ * Ice's secrets come from `envFile`, or for builder apps (envFile null) from the builder's secrets.
+ * With its own network Docker publishes Ice on 127.0.0.1 only; on the host's network there is nothing
+ * to publish, so Ice listens on 127.0.0.1.
  */
 export function manageCompose(text: string, service: string, opts: { port: number; envFile: string | null }): ManageEdit {
   const parsed = parseCompose(text);
@@ -122,7 +117,6 @@ export function manageCompose(text: string, service: string, opts: { port: numbe
   return { text: stringify(doc), removed, hostNetwork: form.hostNetwork };
 }
 
-/** Set or remove plain variables of one service (used to take the join password out of the file). */
 export function editServiceEnv(text: string, service: string, edit: EnvEdit): { text: string; removed: string[] } {
   const parsed = parseCompose(text);
   if (!parsed.ok) throw new Error("The compose file has errors, so Gluon can't change it safely. Fix it in the Compose tab first.");
@@ -132,12 +126,11 @@ export function editServiceEnv(text: string, service: string, edit: EnvEdit): { 
   return { text: stringify(parsed.doc), removed };
 }
 
-/** The env file's text. Values are base64url, so they never need quoting. */
+/** Values are base64url, so they never need quoting. */
 export function iceEnvFile(secrets: { write: string; read: string }): string {
   return `# Written by Gluon: the secrets it uses to manage this voice server. Keep this file private.\nMUMBLE_CONFIG_ICESECRETWRITE=${secrets.write}\nMUMBLE_CONFIG_ICESECRETREAD=${secrets.read}\n`;
 }
 
-/** The service in a compose file that runs Mumble's server. */
 export function mumbleService(text: string): string | null {
   const parsed = parseCompose(text);
   if (!parsed.ok) return null;

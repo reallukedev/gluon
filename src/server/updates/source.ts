@@ -6,9 +6,8 @@ import { isNightlyVersion, type GithubTarget, type Install, type RunningBuild, t
 import pkg from "../../../package.json";
 
 /**
- * What's running, how it was installed, and what GitHub has. Gluon updates itself by building a
- * newer version from its GitHub repository on this server (or through Umbrel's store), so it needs
- * to know which container is its own and who manages that container.
+ * Gluon updates itself by building from GitHub on this server (or through Umbrel's store), so it
+ * needs to know which container is its own and who manages it.
  */
 
 export const REPO = process.env.GLUON_REPO && /^[\w.-]+\/[\w.-]+$/.test(process.env.GLUON_REPO) ? process.env.GLUON_REPO : "reallukedev/gluon";
@@ -26,8 +25,6 @@ export function runningBuild(): RunningBuild {
     startedAt,
   };
 }
-
-// ---------------------------------------------------------------- how Gluon is installed
 
 export interface SelfContainer {
   id: string;
@@ -102,8 +99,6 @@ export async function umbrelStoreVersion(appId: string): Promise<string | null> 
   }
   return null;
 }
-
-// ---------------------------------------------------------------- GitHub
 
 /*
  * Unauthenticated, GitHub allows 60 requests an hour per address. A background check costs one or
@@ -283,8 +278,6 @@ export async function latestOnGithub(channel: UpdateChannel): Promise<GithubTarg
     since: null,
   };
 }
-
-// ---------------------------------------------------------------- comparing versions
 
 function parseVersion(v: string) {
   const s = v.trim().replace(/^v/, "").split("+")[0] ?? "";

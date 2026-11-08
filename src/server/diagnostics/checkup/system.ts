@@ -6,8 +6,6 @@ import { dockerUsage } from "../../storage/cleanup";
 import { formatBytes, formatRelative, plural } from "@/lib/format";
 import { fail, go, kv, ok, skip, warn, type CheckSpec, type Outcome } from "./core";
 
-/** System: failed services, clock, restart needed, security updates, Docker's disk use. */
-
 export async function unitsOutcome(): Promise<Outcome> {
   const failed = await failedServices();
   if (!failed.length) return ok("No system services have failed");

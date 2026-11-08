@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import type { OwnCertInfo } from "@/lib/network-types";
 
 /**
- * Checking a certificate someone supplies for an address: pure, so the editor's "check" and the
- * save run the same rules. The key is only used to prove it belongs to the certificate.
+ * Pure, so the editor's check and the save run the same rules. The key is only used to prove it
+ * belongs to the certificate.
  */
 
 /** Gluon can't renew a certificate someone else supplies, so it speaks up this long before it ends. */
@@ -36,7 +36,6 @@ export function certNames(x: crypto.X509Certificate): string[] {
   return cn ? [cn] : [];
 }
 
-/** What to show about a certificate that's already stored (no checks against a key). */
 export function describeCert(x: crypto.X509Certificate, host: string, now = Date.now()): OwnCertInfo {
   const validTo = Date.parse(x.validTo);
   const daysLeft = Math.floor((validTo - now) / DAY);
@@ -74,10 +73,7 @@ function parseKey(text: string): { key: crypto.KeyObject; pem: string } | { erro
   }
 }
 
-/**
- * Is this certificate (with its chain) and key usable for `host`? It must parse, cover the host,
- * match the key and be valid now. The certificate for the key goes first, whatever order it came in.
- */
+/** The certificate for the key goes first, whatever order it came in. */
 export function checkOwnCert(certText: string, keyText: string, host: string, now = Date.now()): CertCheck {
   const fail = (field: "cert" | "key", message: string): CertCheck => ({ ok: false, field, message });
   if (!certText.trim()) return fail("cert", "Paste the certificate, or choose its file.");

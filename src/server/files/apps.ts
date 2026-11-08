@@ -20,8 +20,6 @@ import { splitFields } from "./walk";
 
 type Where = { ip: string; zone: string };
 
-// ---------------------------------------------------------------- who runs as whom
-
 function envMap(env: string[] | undefined): Map<string, string> {
   const m = new Map<string, string>();
   for (const e of env ?? []) {
@@ -31,7 +29,7 @@ function envMap(env: string[] | undefined): Map<string, string> {
   return m;
 }
 
-/** Look a user/group name up in the container's own /etc/passwd (via its root in /proc). */
+/** Reads the container's own /etc/passwd through its root in /proc. */
 function containerLookup(pid: number, file: "passwd" | "group", name: string): number | null {
   if (!pid) return null;
   try {
@@ -49,10 +47,7 @@ function named(uid: number, gid: number, source: string): RunsAs {
   return { uid, gid, user: userName(uid), group: groupName(gid), source, root: uid === 0 };
 }
 
-/**
- * The uid/gid an app's files should belong to: linuxserver-style PUID/PGID first, then the
- * container's `user:`, else root (the image default).
- */
+/** linuxserver-style PUID/PGID first, then the container's `user:`, else root (the image default). */
 export function runsAs(info: Docker.ContainerInspectInfo): RunsAs | null {
   const env = envMap(info.Config?.Env);
   const puid = env.get("PUID") ?? env.get("USER_UID") ?? env.get("UID") ?? env.get("USERMAP_UID");
@@ -84,8 +79,6 @@ export function runsAs(info: Docker.ContainerInspectInfo): RunsAs | null {
   if (gid === null || !Number.isInteger(gid)) return null;
   return named(uid, gid, `user: ${u}`);
 }
-
-// ---------------------------------------------------------------- used by apps
 
 export async function usedBy(user: User, p: string): Promise<{ path: string; uses: AppUse[] }> {
   const t = await authorize(user, p, "read");
@@ -148,8 +141,6 @@ export async function usedBy(user: User, p: string): Promise<{ path: string; use
   return { path: t.path, uses };
 }
 
-// ---------------------------------------------------------------- fix ownership
-
 async function targetFor(user: User, real: string, app: string | undefined, uid: number | undefined, gid: number | undefined): Promise<{ target: RunsAs; app: { id: string; name: string } | null }> {
   if (uid !== undefined) {
     const g = gid ?? uid;
@@ -190,7 +181,6 @@ interface WalkStats {
   partial: boolean;
 }
 
-/** One pass of find over the tree (one filesystem, no link following). */
 function walkOwners(real: string, target: RunsAs, signal: AbortSignal, onProgress: (s: WalkStats) => void, onMismatch?: (uid: number, gid: number, rel: string) => void, timeoutMs = 180_000): Promise<WalkStats> {
   return new Promise((resolve, reject) => {
     const child = localSpawn("find", [hostPath(real), "-xdev", "-printf", "%U\\t%G\\t%y\\t%P\\0"]);
@@ -250,7 +240,7 @@ function describeTarget(t: RunsAs) {
   return u === g ? u : `${u}:${g}`;
 }
 
-/** Count what "fix ownership" would change. Streams progress through `emit` (ndjson). */
+/** Streams progress through `emit` (ndjson). */
 export async function previewOwnership(
   user: User,
   input: { path: string; app?: string; uid?: number; gid?: number },
@@ -312,13 +302,13 @@ async function* readManifest(file: string): AsyncGenerator<{ header: Manifest } 
 }
 
 /**
- * Owners are changed by Gluon itself, one item at a time through folders opened without following
- * links: the tree belongs to an app that can write in it, and between listing and changing it could
- * swap a folder for a link to /etc. chown(1) given a path would follow that link.
+ * Owners are changed one item at a time through folders opened without following links: the app can
+ * write in the tree and could swap a folder for a link to /etc between listing and changing, and
+ * chown(1) given a path would follow it.
  */
 const chownAll = lchownMany;
 
-/** Give a folder tree to an app's user. Saves the previous owners so it can be undone. */
+/** Saves the previous owners so it can be undone. */
 export async function applyOwnership(user: User, input: { path: string; app?: string; uid?: number; gid?: number }, where: Where): Promise<FileJob> {
   const t = await authorize(user, input.path, "write");
   if (!t.stat?.isDirectory()) throw badRequest("Choose a folder.");
@@ -376,7 +366,6 @@ export async function applyOwnership(user: User, input: { path: string; app?: st
   );
 }
 
-/** Put back the owners recorded by an earlier ownership job. */
 export async function undoOwnership(user: User, jobId: string, where: Where): Promise<FileJob> {
   if (!/^[A-Za-z0-9_-]{6,40}$/.test(jobId)) throw notFound("That change");
   const manifest = path.join(MANIFEST_DIR, `${jobId}.tsv`);

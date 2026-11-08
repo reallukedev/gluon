@@ -1,5 +1,4 @@
 import "server-only";
-// Side-effect module: background housekeeping and ⌘K search for connected apps.
 import { every, onStart } from "../jobs";
 import { registerSearch } from "../search";
 import { rank } from "@/lib/search-match";

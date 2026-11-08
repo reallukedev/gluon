@@ -3,8 +3,6 @@ import { AppError } from "../errors";
 import type { CloudflareZoneT, DnsRecordT } from "@/lib/cloudflare-types";
 import type { ExistingRecord } from "./plan";
 
-/** A small client for the parts of Cloudflare's API Gluon uses: zones, DNS records and SSL settings. */
-
 const API = "https://api.cloudflare.com/client/v4";
 
 interface Envelope<T> {
@@ -111,13 +109,11 @@ export class Cloudflare {
     return (await this.allRecords(zoneId)).map((r) => ({ id: r.id, name: r.name, type: r.type, content: r.content, proxied: r.proxied, comment: r.comment }));
   }
 
-  /** Every record in a domain, with what the DNS editor needs. */
   async allRecords(zoneId: string): Promise<RawRecord[]> {
     const raw = await this.pages<{ id: string; name: string; type: string; content: string; proxied?: boolean; proxiable?: boolean; ttl?: number; priority?: number; comment?: string | null }>(`/zones/${zoneId}/dns_records`, 500);
     return raw.map((r) => ({ id: r.id, name: r.name, type: r.type, content: r.content, proxied: !!r.proxied, proxiable: !!r.proxiable, ttl: r.ttl ?? 1, priority: r.priority ?? null, comment: r.comment ?? null }));
   }
 
-  /** Make or replace a record exactly as given (the DNS editor). */
   async putRecord(zoneId: string, id: string | null, body: RecordBody): Promise<void> {
     if (id) await this.call("PUT", `/zones/${zoneId}/dns_records/${id}`, body);
     else await this.call("POST", `/zones/${zoneId}/dns_records`, body);
@@ -135,7 +131,7 @@ export class Cloudflare {
     await this.call("DELETE", `/zones/${zoneId}/dns_records/${id}`);
   }
 
-  /** Edit rights, tried for real: a TXT record made and removed again. */
+  /** Tried for real: a TXT record made and removed again. */
   async canEditDns(zoneId: string, zone: string): Promise<boolean> {
     const name = `_gluon-check.${zone}`;
     try {
@@ -151,7 +147,7 @@ export class Cloudflare {
     }
   }
 
-  /** The zone's SSL mode (off, flexible, full, strict), or null when the token can't read it. */
+  /** null when the token can't read it. */
   async sslMode(zoneId: string): Promise<string | null> {
     try {
       return (await this.call<{ value: string }>("GET", `/zones/${zoneId}/settings/ssl`)).result.value;

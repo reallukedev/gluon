@@ -30,8 +30,8 @@ async function relayApp(): Promise<AppSummary | null> {
 }
 
 /**
- * Quark carries calls itself: its relay is part of the chat server, so there's nothing to install
- * and turning calls on is just a setting. The status reads the relay from Quark's snapshot.
+ * Quark's relay is part of the chat server, so there's nothing to install and turning calls on is
+ * just a setting.
  */
 async function quarkCallsStatus(appId: string): Promise<ChatCallsStatus> {
   const [snap, lan, lanIp] = await Promise.all([chatSnapshot(appId), lanSide().catch(() => ({ lanIp: null, gateway: null })), serverLanIp()]);
@@ -59,7 +59,6 @@ async function quarkCallsStatus(appId: string): Promise<ChatCallsStatus> {
   };
 }
 
-/** The relay, whether it answers here and through the router, and what to forward. */
 export async function callsStatus(appId: string): Promise<ChatCallsStatus> {
   if ((await chatTarget(appId)).kind === "quark") return quarkCallsStatus(appId);
   const [relay, lan, lanIp, snap] = await Promise.all([relayApp(), lanSide().catch(() => ({ lanIp: null, gateway: null })), serverLanIp(), chatSnapshot(appId)]);
@@ -101,7 +100,6 @@ export async function startCalls(user: User, where: Where, appId: string): Promi
   return { draftId };
 }
 
-/** The relay's secret, as its container sees it. */
 async function relaySecret(relay: AppSummary): Promise<string> {
   const c = relay.containers.find((x) => COTURN.test(x.image) && x.state === "running");
   if (!c) throw new AppError("relay_stopped", `${relay.name} isn't running. Start it, then turn calls on again.`, 409);
@@ -111,7 +109,6 @@ async function relaySecret(relay: AppSummary): Promise<string> {
   return secret;
 }
 
-/** Share the relay's secret with Prosody and turn calls on. */
 export async function finishCalls(user: User, where: Where, appId: string, draftId: string | null) {
   const target = await chatTarget(appId);
   if (target.kind === "quark") {

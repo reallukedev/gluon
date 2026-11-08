@@ -3,10 +3,8 @@ import { filesystems, history, sampleFilesystems } from "../metrics/sampler";
 import type { SpaceData, SpaceDisk } from "@/lib/home-widgets-types";
 
 /**
- * "Running out of space": for each real filesystem, the trend of used bytes over the last week, from the history the
- * metrics sampler already keeps (`fs.<mount>.used`, a minute value, rolled up hourly). The slope is Theil–Sen (the
- * median of pairwise slopes), so one big download or clean-up doesn't swing the forecast the way a straight-line fit
- * would.
+ * The slope is Theil-Sen (the median of pairwise slopes), so one big download or clean-up doesn't
+ * swing the forecast the way a straight-line fit would.
  */
 
 const WINDOW_MS = 7 * 86_400_000;

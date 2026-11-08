@@ -4,13 +4,9 @@ import net from "node:net";
 import path from "node:path";
 
 /**
- * mc-router's routes file: {"default-server": "host:port", "mappings": {"address": "host:port"}}.
- * Gluon edits only those two keys and keeps everything else in the file as it was.
- *
- * How it's written matters. mc-router (1.48) watches the file itself, not its folder, and reloads
- * on a write or create event for it. Replacing the file by rename swaps the inode under the
- * watch: mc-router gets a remove instead of a write and stops watching until it restarts. So the
- * file is rewritten in place, padded so that every step leaves valid JSON (see writeInPlace).
+ * Gluon edits only "default-server" and "mappings" and keeps the rest of the file. mc-router (1.48)
+ * watches the file itself, not its folder, so replacing it by rename swaps the inode and mc-router
+ * stops watching until it restarts. It's rewritten in place instead (see writeInPlace).
  */
 
 export interface RoutesDoc {
@@ -69,29 +65,25 @@ export function parseRoutes(raw: string): Parsed {
 /** A routes file with no addresses, as mc-router can load it. */
 export const EMPTY_CONFIG = '{\n  "mappings": {}\n}\n';
 
-/** Where edits start when there's no file yet. */
 export function emptyDoc(): RoutesDoc {
   return { raw: "", data: {}, mappings: [], fallback: null, rev: "new", indent: "  " };
 }
 
 /**
- * What to write to put an earlier version back. A version from before the file existed comes
- * back as an empty list (writing nothing would leave a file mc-router can't load); anything else
- * must itself be loadable. Null means it can't be put back.
+ * A version from before the file existed comes back as an empty list, since an empty file is one
+ * mc-router can't load. Null means it can't be put back.
  */
 export function restorable(content: string): string | null {
   if (!content.trim()) return EMPTY_CONFIG;
   return parseRoutes(content).ok ? content : null;
 }
 
-// ------------------------------------------------------------------ validation
-
 const LABEL = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
 const IPV4 = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
 
 /**
- * The address a player types: a host name or an IPv4 address, compared without case (mc-router
- * lowercases both sides). No wildcards: mc-router 1.48 matches names exactly.
+ * Compared without case (mc-router lowercases both sides). No wildcards: mc-router 1.48 matches names
+ * exactly.
  */
 export function normalizeHost(input: string): { ok: true; host: string } | { ok: false; message: string } {
   const h = input.trim().toLowerCase().replace(/\.$/, "");
@@ -118,7 +110,6 @@ export function parseBackend(input: string): { ok: true; host: string; port: num
   return { ok: true, host, port, value: s.startsWith("[") ? `[${host}]:${port}` : `${host}:${port}` };
 }
 
-/** The address part of host:port (no brackets). */
 export function backendHost(backend: string): string {
   const b = parseBackend(backend);
   return b.ok ? b.host : backend.replace(/:\d+$/, "");
@@ -128,8 +119,6 @@ export function backendPort(backend: string): number | null {
   const b = parseBackend(backend);
   return b.ok ? b.port : null;
 }
-
-// ------------------------------------------------------------------ edits
 
 export type Edit =
   | { kind: "add"; host: string; backend: string }
@@ -148,7 +137,7 @@ export class EditError extends Error {
 
 const same = (a: string, b: string) => a.toLowerCase().replace(/\.$/, "") === b.toLowerCase().replace(/\.$/, "");
 
-/** The file's data with one change made. Other keys stay where they were; a renamed address keeps its place. */
+/** Other keys stay where they were; a renamed address keeps its place. */
 export function applyEdit(doc: RoutesDoc, e: Edit): Record<string, unknown> {
   const out: Record<string, unknown> = { ...doc.data };
   const entries = doc.mappings.map(([k, v]) => [k, v] as [string, string]);
@@ -178,13 +167,9 @@ export function serialize(data: Record<string, unknown>, indent = "  "): string 
   return JSON.stringify(data, null, indent) + "\n";
 }
 
-// ------------------------------------------------------------------ writing
-
 /**
- * Rewrite a file in place (same inode, so watchers on the file keep working) without it ever
- * holding something unreadable: when the new text is shorter, it's first written padded with
- * trailing spaces to the old length (still valid JSON), then the file is trimmed. Creates the
- * file when it's missing, owned like its folder.
+ * Same inode, so watchers keep working, and it never holds invalid JSON: shorter text is first
+ * written padded with trailing spaces to the old length, then the file is trimmed.
  */
 export function writeInPlace(file: string, content: string) {
   const next = Buffer.from(content, "utf8");

@@ -95,7 +95,7 @@ interface Slow {
 type G = typeof globalThis & { __gluonSysSlow?: Slow };
 const g = globalThis as G;
 
-/** Things that come from running programs; they rarely change, so cache them for 5 minutes. */
+/** They rarely change, so cache them for 5 minutes. */
 async function slowFacts(): Promise<Slow> {
   const c = g.__gluonSysSlow;
   if (c && Date.now() - c.at < 5 * 60_000) return c;

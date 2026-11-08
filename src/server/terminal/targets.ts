@@ -56,8 +56,6 @@ export async function resolveTarget(target: TargetId): Promise<Resolved> {
   return { target, place: { kind: "container", id: info.Id }, label: ref.name, auditTarget: ref.app?.id ?? ref.name, host: false };
 }
 
-// ---------------------------------------------------------------- the picker
-
 export async function listTargets(): Promise<TargetList> {
   const a = hostAvailability();
   const snap = await snapshot();
@@ -87,8 +85,6 @@ export async function listTargets(): Promise<TargetList> {
   list.sort((x, y) => Number(x.key === "other") - Number(y.key === "other") || Number(x.targets.every((t) => t.blocked)) - Number(y.targets.every((t) => t.blocked)) || x.name.localeCompare(y.name));
   return { host: { available: a.available, note: a.note, name: getSetting("serverName") }, groups: list };
 }
-
-// ---------------------------------------------------------------- what a target is like
 
 /** Fixed script: the best shell, who we are, where we start, and every program on the PATH. */
 const PROBE = `
@@ -136,8 +132,6 @@ async function runProbe(r: Resolved): Promise<TargetProbe> {
   const cwd = r.host ? home || "/" : kv.get("pwd") || "/";
   return { shell: kv.get("shell") || "/bin/sh", user: kv.get("user") || "root", home, cwd, commands };
 }
-
-// ---------------------------------------------------------------- suggestions that ask the target
 
 export async function listDir(r: Resolved, dir: string): Promise<DirEntry[]> {
   const argv = ["ls", "-1Ap", "--", dir];

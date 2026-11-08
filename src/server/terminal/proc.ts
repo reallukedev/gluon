@@ -8,9 +8,8 @@ import { dockerError } from "../dockerx/core";
 import { host } from "../host/exec";
 
 /**
- * A program running with a terminal (a PTY), wherever it runs: inside a container (Docker gives it
- * the PTY), on the server through Gluon's own container (the same, entering the host with nsenter),
- * or, when Gluon runs outside Docker in development, locally through a small Python PTY helper.
+ * Inside a container, on the server (Gluon's own container entering the host with nsenter), or in
+ * development outside Docker through a small Python PTY helper.
  */
 export interface Proc {
   write(data: string): void;
@@ -19,7 +18,6 @@ export interface Proc {
   onExit(cb: (code: number | null) => void): void;
   /** Send a signal to the process group led by `pid` (from the wrapper's marker), where it runs. */
   signal(pid: number, sig: "INT" | "TERM" | "HUP" | "KILL"): Promise<void>;
-  /** Let go of the connection. */
   destroy(): void;
 }
 
@@ -57,8 +55,6 @@ class Emitter {
     for (const cb of this.exitCbs) cb(code);
   }
 }
-
-// ---------------------------------------------------------------- Docker exec (containers and the host)
 
 async function dockerProc(containerId: string, o: StartOptions, signalPlace: Place): Promise<Proc> {
   const ctr = docker().getContainer(containerId);
@@ -188,12 +184,7 @@ async function signalIn(place: Place, pid: number, sig: string): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------- local PTY (development, outside Docker)
-
-/**
- * Node has no PTY of its own and the dev machine isn't in Docker, so a few lines of Python make one:
- * fd 0/1 carry the terminal, fd 3 takes "rows cols" lines to resize it.
- */
+/** Node has no PTY of its own: fd 0/1 carry the terminal, fd 3 takes "rows cols" lines to resize it. */
 const PY_PTY = String.raw`
 import os, pty, sys, select, signal, struct, fcntl, termios
 rows, cols = int(sys.argv[1]), int(sys.argv[2])

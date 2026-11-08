@@ -41,18 +41,15 @@ export function householdDefault(): HomeLayout {
   return read("__default__") ?? HOUSEHOLD_DEFAULT;
 }
 
-/** Apps this person can open in a browser, in the order Apps lists them. */
 async function openableApps(userId: string, role: Role): Promise<AppSummary[]> {
   const apps = role === "admin" ? (await listApps()).filter((a) => !a.hidden) : await appsForMember(userId);
   return apps.filter((a) => a.urls.home || a.urls.away);
 }
 
 /**
- * Pinned apps are one `app` card each. Two older shapes become cards here:
- * - the single Apps block (`apps`) of personal layouts from before, showing the person's pinned apps (prefs.homeApps),
- *   the apps it was set to, or all of them: replaced once, in place, and saved with the next change;
- * - the "all your apps" placeholder in default layouts, expanded for whoever is reading it.
- * Defaults also drop cards for apps this person can't open (an admin's layout made the household default).
+ * Older layouts' single Apps block and the "all your apps" placeholder in defaults become cards here.
+ * Defaults also drop cards for apps this person can't open (an admin's layout made the household
+ * default).
  */
 async function withAppCards(layout: HomeLayout, userId: string, role: Role, personal: boolean): Promise<HomeLayout> {
   const blocks = layout.items.filter((i) => i.type === ALL_APPS);

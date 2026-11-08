@@ -7,11 +7,8 @@ import { ensureNotifyTables } from "../notify/state";
 import { compareDigest, MANIFEST_ACCEPT, parseChallenge, planImageCheck, registryHost } from "./registry";
 
 /**
- * Newer images for apps that aren't managed by a store: a cheap daily look at the registry. For
- * each running image tag, ask the registry (anonymously, with HEAD, which Docker Hub doesn't count
- * against its pull limit) which digest the tag points at now, and compare it with the digests the
- * image here was pulled as. Never blocks anything; a registry that says "slow down" is left alone
- * for six hours.
+ * Asks the registry with HEAD (which Docker Hub doesn't count against its pull limit) which digest
+ * each running tag points at now. A registry that says "slow down" is left alone for six hours.
  */
 
 const DAY = 86_400_000;
@@ -76,7 +73,6 @@ const get = (url: string, headers: Record<string, string>, method: "GET" | "HEAD
 
 class Slow extends Error {}
 
-/** An anonymous pull token for one repository (null when the registry needs none). */
 async function tokenFor(host: string, repository: string): Promise<string | null> {
   const key = `${host}/${repository}`;
   const hit = tokens.get(key);
@@ -101,7 +97,6 @@ async function tokenFor(host: string, repository: string): Promise<string | null
   return token;
 }
 
-/** The digest a tag points at right now. */
 async function remoteDigest(registry: string, repository: string, tag: string): Promise<string | null> {
   const host = registryHost(registry);
   const tok = await tokenFor(host, repository);
@@ -136,10 +131,7 @@ function save(ref: string, imageId: string, status: CheckRow["status"], remote: 
   );
 }
 
-/**
- * Check what's due (each tag at most once a day, a few per run, two at a time). Store apps are left
- * to their store. Returns the images found to have a newer version.
- */
+/** Each tag at most once a day, a few per run, two at a time. Store apps are left to their store. */
 export async function checkAppImages(opts: { max?: number } = {}): Promise<{ checked: number; newer: number }> {
   ensureNotifyTables();
   const images = (await runningImages()).filter((i) => !i.umbrel);

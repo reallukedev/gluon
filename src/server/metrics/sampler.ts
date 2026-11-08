@@ -94,8 +94,6 @@ function flushMinute(force = false) {
   })();
 }
 
-// ---------------------------------------------------------------- host
-
 export function sampleHost(): HostSample {
   const s = st();
   const t = Date.now();
@@ -184,8 +182,6 @@ export function sampleHost(): HostSample {
   return sample;
 }
 
-// ---------------------------------------------------------------- containers
-
 async function refreshPids(ids: string[]) {
   const s = st();
   for (const id of ids) {
@@ -244,8 +240,6 @@ export async function sampleContainers(): Promise<ContainerSample[]> {
   return list;
 }
 
-// ---------------------------------------------------------------- filesystems
-
 const REAL_FS = new Set(["ext4", "ext3", "ext2", "xfs", "btrfs", "zfs", "vfat", "exfat", "ntfs", "ntfs3", "fuseblk", "f2fs", "nfs", "nfs4", "cifs", "smb3", "fuse.mergerfs", "fuse.sshfs"]);
 // statfs on a hard-mounted share whose server is gone blocks forever, so these are never read
 // synchronously: a background read fills `remote` and a stuck one is simply left pending.
@@ -253,7 +247,6 @@ export const REMOTE_FS = new Set(["nfs", "nfs4", "cifs", "smb3", "fuse.sshfs", "
 const REMOTE_STALE_MS = 5 * 60_000;
 const remote = new Map<string, { at: number; size: number; used: number; avail: number; pending: boolean }>();
 
-/** Decode the octal escapes /proc/mounts uses for space, tab, newline and backslash. */
 export const unescapeMount = (s: string) => s.replace(/\\([0-7]{3})/g, (_, o: string) => String.fromCharCode(parseInt(o, 8)));
 
 const usage = (sfs: fs.StatsFs) => {
@@ -309,8 +302,6 @@ export function sampleSensors() {
   return st().sensors;
 }
 
-// ---------------------------------------------------------------- reads
-
 export const latestHost = (): HostSample | null => st().host.at(-1) ?? null;
 export const hostHistory = (): HostSample[] => st().host;
 export const latestContainers = () => st().containers.at(-1) ?? null;
@@ -340,7 +331,7 @@ export function history(keys: string[], rangeMs: number): Record<string, [number
   return out;
 }
 
-/** Hourly rollup + retention. Minute data: 7 days. Hourly: 400 days. */
+/** Minute data is kept 7 days, hourly 400. */
 export function rollup() {
   const cutoff = Math.floor((now() - 2 * 86_400_000) / 3_600_000) * 3_600_000;
   const d = db();

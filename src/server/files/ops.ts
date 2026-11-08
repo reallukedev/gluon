@@ -58,8 +58,6 @@ function repointPins(fromPaths: string[], to: string) {
   }
 }
 
-// ---------------------------------------------------------------- new folder / rename
-
 export async function makeFolder(user: User, parent: string, rawName: string, where: Where): Promise<FileEntry> {
   const name = cleanName(rawName, "folder name");
   const dir = await authorize(user, parent, "write");
@@ -105,8 +103,6 @@ export async function renamePath(user: User, p: string, rawName: string, where: 
   return entryOf(user, t, logical, dest);
 }
 
-// ---------------------------------------------------------------- conflicts
-
 export async function findConflicts(user: User, sources: string[], dest: string): Promise<{ conflicts: { name: string; source: string; existing: FileEntry }[] }> {
   const scope = await scopeFor(user);
   const d = await authorize(user, dest, "read", { scope });
@@ -120,8 +116,6 @@ export async function findConflicts(user: User, sources: string[], dest: string)
   }
   return { conflicts: out };
 }
-
-// ---------------------------------------------------------------- copy engine
 
 interface Totals {
   files: number;
@@ -211,9 +205,8 @@ async function copyFile(from: Dir, name: string, st: fs.Stats, to: Dir, toName: 
 }
 
 /**
- * Copy `src` (file, link or folder) to the new path `dest`, preserving modes, owners and times.
- * Every item is read and written inside folders opened without following links, so a folder
- * swapped for a link halfway through stops the copy instead of reading or writing elsewhere.
+ * Every item is read and written inside folders opened without following links, so a folder swapped
+ * for a link halfway through stops the copy instead of reading or writing elsewhere.
  */
 async function copyTree(src: string, dest: string, ctx: JobContext, state: CopyState, logicalRoot: string) {
   let lastReport = 0;
@@ -260,8 +253,6 @@ async function copyTree(src: string, dest: string, ctx: JobContext, state: CopyS
   }
   ctx.progress({ done: state.filesDone, bytesDone: state.bytesDone });
 }
-
-// ---------------------------------------------------------------- copy / move
 
 interface Plan {
   src: Target;
@@ -314,7 +305,7 @@ export interface TransferResult {
   skipped: string[];
 }
 
-/** Move items. Same-drive moves are instant renames; across drives it becomes a copy-then-delete job. */
+/** Across drives this becomes a copy-then-delete job. */
 export async function moveItems(user: User, sources: string[], dest: string, policy: ConflictPolicy, where: Where): Promise<TransferResult> {
   const { d, plans } = await plan(user, sources, dest, policy, "move");
   const skipped = plans.filter((p) => p.finalName === null).map((p) => p.src.path);

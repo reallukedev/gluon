@@ -51,15 +51,12 @@ export function allChannels(): Channel[] {
   return all<ChannelRow>("SELECT * FROM channels ORDER BY owner IS NOT NULL, name COLLATE NOCASE").map(toChannel);
 }
 
-/** Admins see every channel; members only their own. */
 export function canSee(user: User, ch: { owner: string | null }) {
   return user.role === "admin" || ch.owner === user.id;
 }
 
 /** Admins can change any channel (members' ones too, e.g. to turn off a broken one); members their own. */
 const canEdit = canSee;
-
-// ---------------------------------------------------------------- send context
 
 /** Hosts used by server-wide channels (admin-approved), which personal channels may also use. */
 function adminHosts(): Set<string> {
@@ -92,8 +89,6 @@ export function sendContext(ch: Pick<Channel, "owner" | "kind" | "config">): Sen
     viaConfig: ch.kind === "email" ? viaConfig(ch.config) : null,
   };
 }
-
-// ---------------------------------------------------------------- views
 
 interface HealthRow {
   last_sent: number | null;
@@ -156,8 +151,6 @@ export function listChannelsFor(user: User): ChannelView[] {
     .filter((c) => canSee(user, c))
     .map((c) => viewChannel(c, user));
 }
-
-// ---------------------------------------------------------------- mutations
 
 async function checkConfig(user: User, owner: string | null, kind: ChannelKind, cfg: StoredConfig, selfId?: string) {
   if (owner && user.role !== "admin" && !MEMBER_CHANNEL_KINDS.includes(kind)) {
@@ -266,8 +259,6 @@ export function deleteChannel(user: User, id: string): Channel {
   });
   return ch;
 }
-
-// ---------------------------------------------------------------- test send
 
 export async function testChannel(
   user: User,

@@ -18,17 +18,12 @@ export async function dockerNetworks(): Promise<DockerNetworkInfo[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/**
- * Checks that need the server: ports something else already listens on, names Umbrel already
- * uses, container names taken, images that don't exist. `ownId` is the app's own id where it
- * runs, so an update doesn't collide with itself.
- */
+/** `ownId` is the app's own id where it runs, so an update doesn't collide with itself. */
 export async function serverChecks(spec: AppSpec, target: BuilderTarget, ownId: string | null, opts: { images?: boolean } = {}): Promise<ServerCheck> {
   const issues: Issue[] = [];
   const parsed = parseCompose(spec.compose);
   const services = parsed.ok ? readServices(parsed.doc) : [];
 
-  // ------------------------------------------------ who uses which port
   const used = new Map<string, string>();
   const [listeners, apps, umbrel] = await Promise.all([
     hostListeners().catch(() => []),
@@ -80,7 +75,6 @@ export async function serverChecks(spec: AppSpec, target: BuilderTarget, ownId: 
     });
   }
 
-  // ------------------------------------------------ names
   if (target === "umbrel") {
     const name = spec.details.name.trim().toLowerCase();
     const installed = umbrel.find((u) => u.id !== ownId && u.name.trim().toLowerCase() === name);
@@ -93,7 +87,6 @@ export async function serverChecks(spec: AppSpec, target: BuilderTarget, ownId: 
     else if (listed) issues.push({ id: "srv-name", level: "info", message: `${listed} also has an app called ${spec.details.name.trim()}.`, field: "details.name" });
   }
 
-  // ------------------------------------------------ container names
   try {
     const existing = await docker().listContainers({ all: true });
     const taken = new Map<string, string>();
@@ -110,7 +103,6 @@ export async function serverChecks(spec: AppSpec, target: BuilderTarget, ownId: 
     /* Docker unreachable: the publish will say so */
   }
 
-  // ------------------------------------------------ networks and the GPU
   const external = parsed.ok ? readNetworks(parsed.doc).filter((n) => n.external) : [];
   const wantsGpu = services.filter((s) => s.gpu);
   if (target === "compose" && (external.length || wantsGpu.length)) {
@@ -131,7 +123,6 @@ export async function serverChecks(spec: AppSpec, target: BuilderTarget, ownId: 
     }
   }
 
-  // ------------------------------------------------ images
   if (opts.images) {
     const refs = services.filter((s) => !s.build && s.image && !isLocalImage(s.image)).map((s) => s.image);
     for (const m of await missingImages(refs)) {

@@ -2,9 +2,8 @@ import "server-only";
 import { safeFetch, type NetPolicy } from "./integrations/net";
 
 /**
- * Fetch a site's icon server-side (no third-party icon service), with a small cache. Requests go
- * through the guarded fetcher: every address is checked when connecting (no DNS rebinding), each
- * redirect hop is re-checked, and members can't reach the home network or the server itself.
+ * Server-side, so no third-party icon service sees the request; the guarded fetcher checks every
+ * address and redirect hop, and members can't reach the home network or the server itself.
  */
 
 interface Icon {

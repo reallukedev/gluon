@@ -6,11 +6,9 @@ import { AppError } from "../errors";
 import { walk } from "./store";
 
 /**
- * Published versions: complete, never-changing copies of a draft in Gluon's Caddy folder
- * (CADDY_DIR/sites/<id>/<version>/), which Caddy's container already mounts read-only. A version
- * is copied to a hidden folder first and renamed into place whole, so Caddy never sees half of one.
- * Files are 0644 and folders 0755, owned like the Caddy folder itself, so Caddy can read them
- * whichever user it runs as.
+ * Copied to a hidden folder first and renamed into place whole, so Caddy never sees half a version.
+ * Files are 0644 and folders 0755, owned like the Caddy folder, so Caddy can read them whichever user
+ * it runs as.
  */
 
 export const PUBLISHED_DIR = path.join(CADDY_DIR, "sites");
@@ -53,7 +51,7 @@ export interface CopiedVersion {
   own404: boolean;
 }
 
-/** Copy a folder of site files into a new version. Keeps each file's modified time, so unchanged files keep their ETag. */
+/** Keeps each file's modified time, so unchanged files keep their ETag. */
 export function copyToVersion(id: string, from: string, version: string): CopiedVersion {
   const o = owner();
   for (const d of [PUBLISHED_DIR, siteVersionsDir(id)]) {
@@ -92,7 +90,6 @@ export function copyToVersion(id: string, from: string, version: string): Copied
   }
 }
 
-/** Version folders on disk, newest first. */
 export function versionsOnDisk(id: string): string[] {
   try {
     return fs
@@ -105,10 +102,7 @@ export function versionsOnDisk(id: string): string[] {
   }
 }
 
-/**
- * Keep the newest `keep` versions plus any still in use (the live one, even after a rollback to an
- * old one); delete the rest. Returns what was deleted.
- */
+/** Versions still in use are kept too, including the live one after a rollback. Returns what was deleted. */
 export function pruneVersions(id: string, keep: number, inUse: string[]): string[] {
   const all = versionsOnDisk(id);
   const stay = new Set([...inUse, ...all.filter((v) => !inUse.includes(v)).slice(0, Math.max(0, keep - inUse.filter((v) => all.includes(v)).length))]);

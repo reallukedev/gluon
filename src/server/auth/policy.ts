@@ -2,18 +2,12 @@ import "server-only";
 import { getSetting } from "../settings";
 import type { Zone } from "../net-zone";
 
-/**
- * Sign-in rules an admin can set in Settings → Server: who needs two-step sign-in and where, and
- * what a password must look like.
- */
-
 export type MfaPolicy = "off" | "admins-away" | "admins" | "everyone-away" | "everyone";
 
 export function mfaPolicy(): MfaPolicy {
   return getSetting("mfaPolicy") ?? (getSetting("requireMfaAway") ? "admins-away" : "off");
 }
 
-/** Whether someone with this role, signing in from this zone, must use two-step sign-in. */
 export function mfaRequired(role: "admin" | "member", zone: Zone, policy: MfaPolicy = mfaPolicy()): boolean {
   switch (policy) {
     case "off":
@@ -34,7 +28,7 @@ export function mfaAlways(policy: MfaPolicy = mfaPolicy()): boolean {
   return policy === "admins" || policy === "everyone";
 }
 
-/** The sentence for whoever is stopped by the rule, so it says what to do next. */
+/** Says what to do next. */
 export function mfaRequiredMessage(role: "admin" | "member", policy: MfaPolicy = mfaPolicy()): string {
   const who = role === "admin" && (policy === "admins" || policy === "admins-away") ? "Admins" : "Everyone";
   return mfaAlways(policy)
@@ -43,9 +37,8 @@ export function mfaRequiredMessage(role: "admin" | "member", policy: MfaPolicy =
 }
 
 /**
- * When a session stops working. A full session also ends once it has sat unused for longer than
- * today's limit for where it is used now: one last used at home 10 days ago must not carry on from
- * away when away sessions last 7 days, and shortening the setting applies to sessions already open.
+ * A full session also ends once it has sat unused longer than today's limit for where it's used now:
+ * one last used at home 10 days ago must not carry on from away when away sessions last 7 days.
  */
 export function sessionEndsAt(row: { expires_at: number; last_seen_at: number; mfa_pending: number }, lifetimeMs: number): number {
   if (row.mfa_pending) return row.expires_at;

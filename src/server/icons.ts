@@ -8,14 +8,9 @@ import { listApps } from "./docker/apps";
 import { pickEvictions, type CacheFile } from "./icons-cache";
 
 /**
- * App icons, fetched once by the server and kept on disk. Icons come from app stores' CDNs
- * (GitHub, jsDelivr, selfh.st); through Gluon they keep loading when the internet is down, and
- * household members' browsers never contact those sites. A fetched icon is refreshed after a
- * week; if the refresh fails, the copy on disk is served.
- *
- * Bounded: household members only get icons of the apps on this server (not any URL they type), and the folder
- * keeps at most MAX_FILES icons and MAX_DIR_BYTES, dropping the least recently used. Admins may fetch any icon
- * (the app builder previews the address they enter), within the same caps.
+ * Kept on disk so icons load when the internet is down and household members' browsers never contact
+ * the CDNs. Members only get icons of the apps on this server, not any URL they type, and the folder
+ * is capped (MAX_FILES, MAX_DIR_BYTES), dropping the least recently used.
  */
 
 const DIR = path.join(DATA_DIR, "icons");
@@ -38,7 +33,7 @@ const g = globalThis as G;
 const misses = (g.__gluonIconMisses ??= new Map());
 const inflight = (g.__gluonIconInflight ??= new Map());
 
-/** What's in the folder, read once per process and kept current as icons are written and evicted. */
+/** Read once per process and kept current as icons are written and evicted. */
 function index(): Promise<Map<string, CacheFile>> {
   g.__gluonIconIndex ??= (async () => {
     const m = new Map<string, CacheFile>();

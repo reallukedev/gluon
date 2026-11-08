@@ -18,7 +18,7 @@ const EXT: Record<Exclude<FileKind, "folder" | "other">, string[]> = {
   ],
 };
 
-/** File extensions that make up a kind, for searching by kind ("every photo under here"). */
+/** For searching by kind ("every photo under here"). */
 export function extensionsOf(kind: FileKind): string[] {
   return kind === "folder" || kind === "other" ? [] : EXT[kind];
 }
@@ -85,7 +85,6 @@ export function isCompressed(name: string) {
   return COMPRESSED.has(extOf(name));
 }
 
-/** Syntax hint for the text editor. */
 export function languageOf(name: string): string | null {
   const lower = name.toLowerCase();
   if (lower === "dockerfile" || lower.endsWith(".dockerfile")) return "dockerfile";

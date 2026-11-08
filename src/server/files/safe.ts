@@ -5,17 +5,12 @@ import { AppError } from "../errors";
 import { hostPath, normalizeHostPath } from "../host/paths";
 
 /**
- * Changes made through folders that can't be swapped underneath us.
- *
- * Every Files request resolves and checks a path first, but the kernel walks the path again when
- * the change happens. Anyone who can write in a shared folder some other way (Samba, an app's
- * container, a shell) could swap a folder on the way for a symlink to `/` in between, and Gluon,
- * running as root, would then write wherever that points. So changes are made relative to a folder
- * opened one component at a time with O_NOFOLLOW: once it's open, the folder itself is used (through
- * /proc/self/fd/N), however its path changes afterwards.
- *
- * Where /proc/self/fd isn't available (a Mac running the dev server) the same walk only checks
- * each component with lstat, which narrows the window but can't close it.
+ * Every Files request checks a path first, but the kernel walks it again when the change happens.
+ * Anyone who can write in a shared folder some other way (Samba, a container, a shell) could swap a
+ * folder on the way for a symlink to `/` in between, and Gluon, running as root, would write wherever
+ * it points. So changes go through a folder opened one component at a time with O_NOFOLLOW and used
+ * through /proc/self/fd/N. Without /proc/self/fd (a Mac dev server) the walk only lstats each
+ * component, which narrows the window but can't close it.
  */
 
 const PROC_FD = process.platform === "linux" && fs.existsSync("/proc/self/fd");
@@ -126,7 +121,6 @@ async function openDirChecked(norm: string, parts: string[], expect?: Pick<fs.St
   };
 }
 
-/** Run `fn` with the folder open, closing it afterwards. */
 export async function inDir<T>(real: string, expect: Pick<fs.Stats, "dev" | "ino"> | null | undefined, fn: (dir: Dir) => Promise<T>): Promise<T> {
   const dir = await openDir(real, expect);
   try {
@@ -136,15 +130,14 @@ export async function inDir<T>(real: string, expect: Pick<fs.Stats, "dev" | "ino
   }
 }
 
-/** Run `fn` with the folder that holds `real` open, and the item's name in it. */
 export function inParent<T>(real: string, fn: (dir: Dir, name: string) => Promise<T>): Promise<T> {
   const norm = normalizeHostPath(real);
   return inDir(path.posix.dirname(norm), null, (dir) => fn(dir, path.posix.basename(norm)));
 }
 
 /**
- * Make `real` and any missing folders above it, each one inside the last (never through a link).
- * Returns the folders it created, outermost first.
+ * Each folder is made inside the last, never through a link. Returns the folders it created,
+ * outermost first.
  */
 export async function mkdirs(real: string, mode = 0o755): Promise<string[]> {
   const norm = normalizeHostPath(real);
@@ -176,10 +169,7 @@ export async function mkdirs(real: string, mode = 0o755): Promise<string[]> {
   return made;
 }
 
-/**
- * Change the owner of many paths (never following a link, at the end or on the way), keeping the
- * last folder open so siblings share one walk. Returns how many were changed and how many failed.
- */
+/** Keeps the last folder open so siblings share one walk. */
 export async function lchownMany(
   items: AsyncIterable<{ path: string; uid: number; gid: number }>,
   onProgress: (done: number) => void,

@@ -92,10 +92,7 @@ export async function containerAction(containerId: string, action: "start" | "st
   }
 }
 
-/**
- * Stream a compose operation's output (pull/up) line by line. Used for "Update" so the person can
- * watch images download instead of staring at a spinner.
- */
+/** Used for "Update", so the person can watch images download instead of a spinner. */
 export async function streamCompose(app: AppSummary, args: string[], onLine: (line: string, stream: "out" | "err") => void, signal?: AbortSignal, timeoutMs = 30 * 60_000): Promise<number> {
   const r = await spawnLines("docker", composeArgs(app, ...args), onLine, { timeoutMs, signal });
   if (r.timedOut) onLine(`Stopped after ${Math.round(timeoutMs / 60_000)} minutes without finishing.`, "err");
@@ -104,10 +101,7 @@ export async function streamCompose(app: AppSummary, args: string[], onLine: (li
   return r.code;
 }
 
-/**
- * Follow an Umbrel app through a long action (install, update, uninstall) by polling its state,
- * emitting a line whenever it changes. Resolves with the state it settled in.
- */
+/** Polls the state and emits a line whenever it changes. */
 export async function followUmbrel(
   appId: string,
   settled: (s: UmbrelAppState) => boolean,

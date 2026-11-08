@@ -3,7 +3,7 @@ import net from "node:net";
 
 /**
  * Cloudflare edge ranges (https://www.cloudflare.com/ips/). A name whose A/AAAA answers all fall in
- * these ranges is proxied ("orange cloud"). Same list as the Caddyfile's trusted_proxies.
+ * these is proxied. Same list as the Caddyfile's trusted_proxies.
  */
 export const CLOUDFLARE_RANGES = [
   "173.245.48.0/20",

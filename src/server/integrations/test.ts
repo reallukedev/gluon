@@ -5,7 +5,6 @@ import { noteStatus } from "./store";
 import type { KindContext } from "./kinds/base";
 import type { IntegrationKind, IntegrationTestResult } from "@/lib/widgets-types";
 
-/** Run a kind's connection test with a hard ceiling, and remember the outcome for saved integrations. */
 export async function runIntegrationTest(kind: IntegrationKind, ctx: KindContext<Record<string, unknown>>, remember: boolean): Promise<IntegrationTestResult> {
   const started = Date.now();
   const def = KINDS[kind];

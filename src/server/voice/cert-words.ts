@@ -1,6 +1,6 @@
 /**
- * decideCopy (shared with chat servers) words its reasons for a chat server. The decision is the
- * same for Mumble; only the nouns change. Pure.
+ * decideCopy words its reasons for chat servers. The decision is the same for Mumble; only the nouns
+ * change.
  */
 export function voiceReason(reason: string): string {
   return reason

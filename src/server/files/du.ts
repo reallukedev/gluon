@@ -11,9 +11,8 @@ import { authorize } from "./paths";
 import { displayPath } from "./list";
 
 /**
- * Folder sizes with `du` (disk usage, one filesystem, one level deep so every sub-folder's size
- * comes from the same pass). Results are cached in `dir_sizes`; calculations run in the background
- * and at most two at a time, because du on a big media drive keeps the disk busy for minutes.
+ * One level deep so every sub-folder's size comes from the same pass. At most two run at a time,
+ * because du on a big media drive keeps the disk busy for minutes.
  */
 
 const STALE_MS = 60 * 60_000;
@@ -105,7 +104,6 @@ function save(real: string, m: Measure) {
   }
 }
 
-/** Measure (or join an in-flight measurement of) a resolved folder. */
 export function measure(real: string): Promise<Measure> {
   const cur = inflight().get(real);
   if (cur) return cur;
@@ -131,7 +129,7 @@ export function measure(real: string): Promise<Measure> {
   return p;
 }
 
-/** Bytes used by a folder, or null on failure. Used for trash items. */
+/** Null on failure. Used for trash items. */
 export async function measureQuiet(real: string): Promise<number | null> {
   try {
     return (await measure(real)).bytes;
@@ -171,8 +169,8 @@ function cachedChildren(real: string): Row[] {
 }
 
 /**
- * Current size of a folder for a person. Starts a background calculation when there's no recent
- * number (or `refresh`), and returns immediately; the client polls or listens on "files.size".
+ * Returns immediately, starting a background calculation when there's no recent number; the client
+ * polls or listens on "files.size".
  */
 export async function folderSize(user: User, p: string, refresh: boolean): Promise<FolderSize> {
   const t = await authorize(user, p, "read");

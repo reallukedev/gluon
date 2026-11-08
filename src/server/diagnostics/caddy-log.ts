@@ -75,8 +75,6 @@ const st = (): State =>
     dockerBlock: defaultBlock(),
   });
 
-// ---------------------------------------------------------------- parsing
-
 const ANSI = /\x1b\[[0-9;]*m/g;
 
 type Fields = Record<string, unknown>;
@@ -189,8 +187,6 @@ export function parseCaddyLine(line: string): ParsedCaddyLine | null {
   return null;
 }
 
-// ---------------------------------------------------------------- state updates
-
 function isInternal(e: Omit<RequestEntry, "id" | "internal">, block: net.BlockList): boolean {
   if (/^(domains-ui-check|Gluon-)/.test(e.userAgent)) return true;
   const ip = e.remoteIp;
@@ -226,7 +222,6 @@ function handleLine(line: string) {
     publish("caddy.request", entry);
     return;
   }
-  // Certificate bookkeeping.
   const ident = typeof p.fields.identifier === "string" ? p.fields.identifier.toLowerCase() : null;
   if (ident) {
     if (/obtained successfully|certificate obtained|renewed successfully/i.test(p.msg)) s.certErrors.delete(ident);
@@ -258,8 +253,6 @@ function humanCertError(err: string): string {
   if (/unauthorized|Invalid response/i.test(err)) return "Let's Encrypt reached a different server than this one for that name.";
   return err.slice(0, 200);
 }
-
-// ---------------------------------------------------------------- follower
 
 async function refreshBlock() {
   try {
@@ -319,7 +312,6 @@ async function loop() {
   }
 }
 
-/** Start following Caddy's log (once per process). */
 export function ensureCaddyFollower() {
   const s = st();
   if (s.started) return;

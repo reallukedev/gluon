@@ -9,8 +9,6 @@ import { host } from "../host/exec";
 import { hostPath, isWithin, normalizeHostPath } from "../host/paths";
 import type { AppVisibility, FolderGrant, VisibilityResponse } from "@/lib/people-types";
 
-// ---------------------------------------------------------------- app visibility
-
 async function appsOrExplain() {
   try {
     return await listApps();
@@ -80,8 +78,6 @@ export async function setUserApps(userId: string, appIds: string[]) {
     for (const a of new Set(appIds)) run("INSERT INTO app_access (app_id, user_id) VALUES (?, ?)", a, id);
   });
 }
-
-// ---------------------------------------------------------------- folder grants
 
 interface GrantRow {
   id: string;

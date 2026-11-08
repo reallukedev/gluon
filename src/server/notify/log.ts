@@ -52,7 +52,6 @@ export function listDeliveries(
   return { items, next: more ? items[items.length - 1]!.id : null };
 }
 
-/** Send a failed message again now. */
 export function retryDelivery(viewer: User, id: number): DeliveryEntry {
   const s = scope(viewer);
   const r = one<DeliveryRow>(`SELECT * FROM notify_deliveries WHERE id = ? AND ${s.sql}`, id, ...s.params);

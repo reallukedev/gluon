@@ -69,7 +69,6 @@ const privateNets = makeList([
   ["64:ff9b::", 96, "ipv6"],
 ]);
 let own: { at: number; set: Set<string> } | null = null;
-/** This machine's own addresses (including its public IPv6), refreshed every minute. */
 function ownAddresses(): Set<string> {
   if (own && Date.now() - own.at < 60_000) return own.set;
   const set = new Set<string>();
@@ -120,7 +119,6 @@ function guardedLookup(policy: NetPolicy): LookupFunction {
   }) as unknown as LookupFunction;
 }
 
-/** Parse and check a URL before any connection. Throws AppError with a human message. */
 export function checkUrl(raw: string, policy: NetPolicy): URL {
   let u: URL;
   try {
@@ -158,7 +156,6 @@ export interface FetchOptions {
   maxRedirects?: number;
   /** Accept self-signed certificates (admin option for LAN apps). */
   insecureTls?: boolean;
-  /** Headers to drop if a redirect leaves the original origin (auth). Default: all custom headers. */
   signal?: AbortSignal;
 }
 
@@ -179,7 +176,6 @@ export interface StreamResult {
   ms: number;
 }
 
-/** Network-level failure with a machine code for message mapping. */
 export class NetError extends Error {
   constructor(
     public readonly code: "timeout" | "refused" | "notfound" | "unreachable" | "reset" | "tls" | "blocked" | "too_large" | "redirects" | "other",
@@ -268,7 +264,6 @@ function requestOnce(u: URL, opts: FetchOptions, headers: Record<string, string>
   });
 }
 
-/** Open a request and return the (decompressed, limited) body as a stream. Follows redirects safely. */
 export async function openStream(rawUrl: string, opts: FetchOptions): Promise<StreamResult> {
   const started = Date.now();
   const totalMs = opts.totalMs ?? (opts.timeoutMs ?? 5000) + 5000;
@@ -344,7 +339,6 @@ export async function openStream(rawUrl: string, opts: FetchOptions): Promise<St
   }
 }
 
-/** Fetch into memory. */
 export async function safeFetch(rawUrl: string, opts: FetchOptions): Promise<FetchResult> {
   const r = await openStream(rawUrl, opts);
   const chunks: Buffer[] = [];
@@ -372,7 +366,6 @@ export function decodeText(body: Buffer, contentType: string | undefined): strin
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }
 
-/** Human sentence for a network failure while talking to `what` at `host`. */
 export function describeNetError(e: NetError, what: string, host: string): string {
   switch (e.code) {
     case "timeout":
@@ -398,7 +391,6 @@ export function describeNetError(e: NetError, what: string, host: string): strin
   }
 }
 
-/** Convert a Node stream to a web ReadableStream for Response bodies. */
 export function toWebStream(s: Readable): ReadableStream<Uint8Array> {
   return Readable.toWeb(s) as unknown as ReadableStream<Uint8Array>;
 }

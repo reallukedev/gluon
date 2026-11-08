@@ -10,22 +10,14 @@ import type { FailedAttempts, LiveLogins, LiveSession, LoginMethod, LoginZone, S
 import { listServices } from "./services";
 
 /**
- * Who is signed in to the machine (SSH and the local console), recent sign-ins and failed
- * attempts, and how SSH is set up. Everything here is read-only except `endSession`.
- *
- * Sources:
- *  - live sessions: logind (`loginctl`), the session's cgroup for its processes, /proc for what's
- *    in the foreground, `ss` for the client's port, /dev/pts atime for idle time;
- *  - history: sshd's journal entries, read once for 7 days and then incrementally by cursor;
- *    wtmp (`last`) adds console sign-ins and stands in when the journal has nothing;
- *  - posture: `sshd -T`, the effective configuration.
+ * Read-only except `endSession`. History comes from sshd's journal, read once for 7 days and then
+ * incrementally by cursor; wtmp (`last`) adds console sign-ins and stands in when the journal has
+ * nothing.
  */
 
 const DAY = 86_400_000;
 const WINDOW = 7 * DAY;
 const CLK_TCK = 100;
-
-// ---------------------------------------------------------------- small helpers
 
 const normIp = (ip: string | null | undefined): string | null => {
   if (!ip) return null;
@@ -62,7 +54,7 @@ interface ProcStat {
   startMs: number;
 }
 
-/** /proc/<pid>/stat. With `pid: host` this container's /proc is the host's. */
+/** With `pid: host` this container's /proc is the host's. */
 function procStat(pid: number, boot: number): ProcStat | null {
   let text: string;
   try {
@@ -93,8 +85,6 @@ function procTitle(pid: number): string {
     return "";
   }
 }
-
-// ---------------------------------------------------------------- reverse DNS (cached, bounded)
 
 type G = typeof globalThis & {
   __gluonRdnsV2?: Map<string, { at: number; host: string | null }>;
@@ -139,8 +129,6 @@ async function reverseMany(ips: (string | null)[]): Promise<Map<string, string |
   await Promise.all(unique.map(async (ip) => out.set(ip, await reverse(ip))));
   return out;
 }
-
-// ---------------------------------------------------------------- accounts and their keys
 
 function passwdUsers(): Map<string, { uid: number; home: string }> {
   const out = new Map<string, { uid: number; home: string }>();
@@ -197,8 +185,6 @@ function keyLabel(user: string, fingerprint: string | null): string | null {
   if (!home) return null;
   return authorizedKeys(user, home).get(fingerprint) ?? null;
 }
-
-// ---------------------------------------------------------------- journal: sign-ins and failures
 
 interface SessionRec {
   key: string;
@@ -365,7 +351,7 @@ async function readJournal(st: JournalState) {
   st.ok = true;
 }
 
-/** Bring the in-memory sign-in record up to date (cheap after the first read). */
+/** Cheap after the first read. */
 export async function refreshSignIns(maxAgeMs = 20_000): Promise<JournalState> {
   const st = state();
   if (st.pending) {
@@ -390,8 +376,6 @@ export async function refreshSignIns(maxAgeMs = 20_000): Promise<JournalState> {
   }
   return st;
 }
-
-// ---------------------------------------------------------------- boots and wtmp
 
 type Boot = { id: string; first: number; last: number };
 let bootCache: { at: number; boots: Boot[] } | null = null;
@@ -464,8 +448,6 @@ async function wtmp(): Promise<WtmpRec[]> {
   wtmpCache = { at: Date.now(), recs };
   return recs;
 }
-
-// ---------------------------------------------------------------- history
 
 interface FlatSession {
   user: string;
@@ -697,8 +679,6 @@ function pidAlive(pid: number): boolean {
     return false;
   }
 }
-
-// ---------------------------------------------------------------- live sessions
 
 const SESSION_ID = /^[A-Za-z0-9]{1,32}$/;
 
@@ -962,8 +942,6 @@ async function readLive(): Promise<LiveSession[]> {
   return out.sort((a, b) => b.startedAt - a.startedAt);
 }
 
-// ---------------------------------------------------------------- posture
-
 function yes(v: string | undefined): boolean | null {
   return v === undefined ? null : v === "yes";
 }
@@ -1032,9 +1010,7 @@ async function sshPosture(): Promise<SshPosture> {
   };
 }
 
-// ---------------------------------------------------------------- public API
-
-/** Live sessions + SSH posture; shared by the page, the widget and the checks (cached 4 s). */
+/** Shared by the page, the widget and the checks (cached 4 s). */
 export async function liveLogins(opts: { maxAgeMs?: number } = {}): Promise<LiveLogins> {
   const c = g.__gluonLiveLogins;
   if (c && Date.now() - c.at < (opts.maxAgeMs ?? 4000)) return c.data;
@@ -1063,8 +1039,8 @@ export function invalidateLiveLogins() {
 }
 
 /**
- * End a session: logind stops every process in it, which drops the SSH connection.
- * Refuses sessions Gluon can't identify, and any session Gluon itself runs in.
+ * logind stops every process in the session, which drops the SSH connection. Refuses sessions Gluon
+ * can't identify, and any session Gluon itself runs in.
  */
 export async function endSession(id: string): Promise<LiveSession> {
   if (!SESSION_ID.test(id)) throw new AppError("invalid_session", "That isn't a valid session.", 400);

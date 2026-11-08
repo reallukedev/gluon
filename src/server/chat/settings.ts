@@ -3,16 +3,12 @@ import { PROSODY_TURN_SECRET, TURN_PORT } from "./turn";
 import type { ChatHostSnapshot, ChatSettings, HistoryKeep, SignUp } from "@/lib/chat-types";
 
 /**
- * The chat settings Gluon manages live in their own file next to Prosody's config,
- * `gluon.cfg.lua`, pulled in by one Include line at the end of prosody.cfg.lua. Prosody reads
- * config top to bottom and a later value wins, and `Host "*"` returns to the global section, so
- * the file overrides what the main config says without Gluon rewriting the person's own file.
- *
- * Pure functions only: rendering, reading back, and the Include line.
+ * gluon.cfg.lua is pulled in by one Include at the end of prosody.cfg.lua. Prosody reads top to
+ * bottom with later values winning, and `Host "*"` returns to the global section, so it overrides the
+ * main config without rewriting the person's file.
  */
 
 export const GLUON_CONFIG = "gluon.cfg.lua";
-/** The person's own file in the conf.d layout. */
 export const CUSTOM_FILE = "custom.lua";
 /** Modules Gluon's settings turn on and off; after a reload Gluon loads or unloads these. */
 export const MANAGED_MODULES = ["account_activity", "server_contact_info", "invites", "invites_register", "invites_adhoc", "mam", "cloud_notify", "s2s", "welcome", "bosh", "websocket", "turn_external"];
@@ -59,25 +55,26 @@ export function signUpFrom(allow: unknown, inviteOnly: unknown, invitesRegister:
 }
 
 export interface RenderContext {
-  /** The VirtualHost these settings are for. */
   host: string;
   /** Group chat and file sharing components declared in the person's own config (Gluon leaves them alone). */
   ownComponents: { muc: string | null; files: string | null };
   /** Gluon's public address, for invite links ("https://server.example.com"), when it has one. */
   publicBase: string | null;
   /**
-   * "main": Gluon's file is included at the end of the person's prosody.cfg.lua. "confd": the
-   * official image's own config includes Gluon's file (PROSODY_EXTRA_CONFIG), which includes the
-   * person's custom.cfg.lua last, so their own settings win.
+   * "main": Gluon's file is included at the end of prosody.cfg.lua. "confd": the image's config
+   * includes Gluon's file (PROSODY_EXTRA_CONFIG), which includes the person's custom.lua last so
+   * their settings win.
    */
   layout?: "main" | "confd";
-  /** Where custom.cfg.lua is inside the container (confd layout). Includes resolve against the main config's folder, so it's absolute. */
+  /**
+   * Inside the container (confd layout). Absolute, since includes resolve against the main config's
+   * folder.
+   */
   customPath?: string;
 }
 
 const q = luaString;
 
-/** The whole of gluon.cfg.lua for these settings. */
 export function renderGluonConfig(s: ChatSettings, ctx: RenderContext): string {
   const enable = new Set<string>(["account_activity", "server_contact_info"]);
   const disable = new Set<string>();
@@ -85,7 +82,7 @@ export function renderGluonConfig(s: ChatSettings, ctx: RenderContext): string {
     "-- Chat settings managed by Gluon (Apps, Prosody, Chat server).",
     "-- Gluon rewrites this file whenever those settings change.",
     ctx.layout === "confd"
-      ? "-- Put your own settings in custom.cfg.lua, which is read after this file."
+      ? `-- Put your own settings in ${CUSTOM_FILE}, which is read after this file.`
       : "-- Put your own settings in prosody.cfg.lua. A global setting here wins over the same one there; one set inside a VirtualHost there still wins.",
     `${SETTINGS_MARK} ${JSON.stringify(s)}`,
     "",

@@ -1,14 +1,12 @@
 import "server-only";
 import path from "node:path";
 
-/** Normalised absolute path, or null for anything else. */
 export function norm(p: string): string | null {
   if (typeof p !== "string" || !p.startsWith("/") || p.includes("\0")) return null;
   const n = path.posix.normalize(p);
   return n.length > 1 && n.endsWith("/") ? n.slice(0, -1) : n;
 }
 
-/** Is `child` the same as or inside `parent`? */
 export function within(child: string, parent: string): boolean {
   const c = norm(child);
   const p = norm(parent);
@@ -41,7 +39,6 @@ export function isBroadPath(p: string): boolean {
   return false;
 }
 
-/** Resolve a compose path (absolute, ./relative or bare relative) against the project folder. */
 export function resolveFrom(p: string, base: string | null): string | null {
   if (p.startsWith("~")) return null;
   if (p.startsWith("/")) return norm(p);
@@ -74,10 +71,9 @@ export interface BindUse {
 }
 
 /**
- * Containers outside `mine` that mount `p`, a folder inside it, or a folder above it (so they see
- * it). A mount of the whole disk ("/") doesn't count as using any one app's data. With
- * `broadParents: false`, nor does any folder above it too general to be one app's (Umbrel mounting
- * all of /srv/umbrel): fine for copying, where seeing isn't using, but not for deleting.
+ * A mount of the whole disk ("/") doesn't count. With `broadParents: false`, nor does a too-general
+ * folder above it (Umbrel mounting all of /srv/umbrel): fine for copying, where seeing isn't using,
+ * but not for deleting.
  */
 export function usersOf(p: string, binds: BindUse[], mine: Set<string>, { broadParents = true }: { broadParents?: boolean } = {}): string[] {
   const n = norm(p);

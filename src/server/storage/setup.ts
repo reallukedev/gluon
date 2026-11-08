@@ -16,11 +16,7 @@ import { afterChange, mountError, PERSIST_BASE_OPTIONS, type Where } from "./ops
 import { sentence } from "./rename";
 import type { DiskView, SetupPlan } from "@/lib/storage-types";
 
-/**
- * Set up a disk for storage: erase it, create a GPT table with one partition, format it ext4 with a
- * label, mount it and add it to /etc/fstab by UUID. Refuses the system disk and anything in use; the
- * person must type the disk's serial number to confirm.
- */
+/** Refuses the system disk and anything in use; the person must type the disk's serial number to confirm. */
 
 export interface SetupInput {
   disk: string;

@@ -1,9 +1,9 @@
 import "server-only";
 
 /**
- * The image proxy only serves images that a widget has handed out (poster ids, cover ids, asset ids), so it can't
- * be used to walk an app's whole library (e.g. every private photo in Immich) by guessing ids.
- * Refs live in memory for 12 hours; the widget data that contains the URLs refreshes far more often.
+ * The image proxy only serves ids a widget has handed out, so it can't be used to walk an app's whole
+ * library (every private photo in Immich, say) by guessing ids. Refs live 12 hours; the widget data
+ * holding the URLs refreshes far more often.
  */
 
 const TTL = 12 * 60 * 60_000;
@@ -46,7 +46,7 @@ export function pruneImageRefs() {
   }
 }
 
-/** Same-origin proxy URL for an image, registering it in the allowlist. null when there's no saved integration. */
+/** Registers the ref in the allowlist. null when there's no saved integration. */
 export function imageUrl(integrationId: string | null, ref: string, params: Record<string, string | number>): string | null {
   if (!integrationId) return null;
   allowImage(integrationId, ref);

@@ -94,8 +94,6 @@ interface CasaMeta {
   main?: string;
 }
 
-// ---------------------------------------------------------------- compose metadata
-
 const metaCache = new Map<string, { mtime: number; meta: CasaMeta | null }>();
 
 function pickLang(v: unknown): string | undefined {
@@ -156,7 +154,6 @@ function casaMeta(configFile: string | null): CasaMeta | null {
 
 const oneShotCache = new Map<string, { mtime: number; services: Set<string> }>();
 
-/** One-off jobs the app's compose file declares, cached until the file changes. */
 function oneShotFor(configFile: string | null): Set<string> {
   if (!configFile) return new Set();
   const p = hostPath(configFile);
@@ -172,13 +169,10 @@ function oneShotFor(configFile: string | null): Set<string> {
   }
 }
 
-// ---------------------------------------------------------------- Umbrel apps
-
 /**
- * Umbrel starts every app through its own internal compose files, so the container labels point
- * at umbreld's source tree, not at the app. The app's real manifest lives in Umbrel's data folder:
- * <root>/app-data/<appId>/umbrel-app.yml. The root is read off the app's own bind mounts, with the
- * usual install locations as a fallback.
+ * Umbrel starts every app through its own internal compose files, so container labels point at
+ * umbreld's source tree. The real manifest is <root>/app-data/<appId>/umbrel-app.yml, with the root
+ * read off the app's bind mounts.
  */
 const UMBREL_ROOTS = ["/srv/umbrel", "/home/umbrel/umbrel", "/umbrel", "/DATA/AppData/umbrel/data"];
 
@@ -246,8 +240,6 @@ function umbrelInfo(u: UmbrelInstalledApp, latest: { version: string; storeId: s
   };
 }
 
-// ---------------------------------------------------------------- helpers
-
 export function containerLine(state: string, health: ContainerSummary["health"]): LineState {
   if (state === "running") {
     if (health === "unhealthy") return "unhealthy";
@@ -276,10 +268,7 @@ function titleCase(s: string) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/**
- * Best-effort icon for apps without CasaOS metadata, from the selfh.st icon set. Tries the compose
- * project name and the image name (with -server/-app/-web suffixes removed) and remembers which exist.
- */
+/** From the selfh.st icon set, trying the compose project and image names; remembers which exist. */
 const iconExists = new Map<string, boolean | Promise<boolean>>();
 const ICON_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/";
 
@@ -315,7 +304,6 @@ async function guessIcon(projectOrName: string, image: string): Promise<string |
 let lanHostCache: { at: number; value: string; ttl: number } | null = null;
 let lanHostLooking: Promise<string> | null = null;
 
-/** The server's LAN address for "at home" links (e.g. 192.168.1.10). */
 export async function lanHost(): Promise<string> {
   const override = (process.env.GLUON_LAN_HOST ?? process.env.TEND_LAN_HOST);
   if (override) return override;
@@ -343,8 +331,6 @@ async function lookUpLanHost(): Promise<string> {
   return value;
 }
 
-// ---------------------------------------------------------------- listing
-
 interface PrefRow {
   app_id: string;
   display_name: string | null;
@@ -363,7 +349,7 @@ export function invalidateApps() {
   listCache = null;
 }
 
-/** Every app on the machine: compose stacks (CasaOS or not) and standalone containers. Cached 3 s. */
+/** Cached 3 s. */
 export function listApps(): Promise<AppSummary[]> {
   if (listCache && Date.now() - listCache.at < 3000) return listCache.value;
   const value = buildApps();
@@ -408,10 +394,7 @@ export function exitCodeOf(status: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/**
- * The app's state in one line. A one-off job its compose file declares (see `oneShotServices`)
- * that finished cleanly is done, not stopped, so it doesn't count against the app.
- */
+/** A one-off job that finished cleanly is done, not stopped, so it doesn't count against the app. */
 export function aggregate(all: ContainerSummary[], oneShot: Set<string> = new Set()): { line: LineState; summary: string } {
   const done = (c: ContainerSummary) => c.state === "exited" && !!c.service && oneShot.has(c.service) && exitCodeOf(c.status) === 0;
   const containers = all.some((c) => !done(c)) ? all.filter((c) => !done(c)) : all;
@@ -438,9 +421,8 @@ export function aggregate(all: ContainerSummary[], oneShot: Set<string> = new Se
 }
 
 /**
- * Two installs of the same app ("Immich" from Umbrel and an older one from CasaOS) are confusing
- * side by side. Same-named apps are grouped; the one Umbrel manages (else the one running) is the
- * app, and the others become its "old copy" when they're stopped, or when Umbrel runs the app.
+ * Same-named apps are grouped: the one Umbrel manages (else the one running) is the app, and the
+ * others become its "old copy".
  */
 const sameApp = (name: string) => name.toLowerCase().replace(/^big[\s-]*bear[\s-]+/, "").replace(/[^a-z0-9]+/g, "");
 
@@ -688,7 +670,6 @@ export async function getApp(id: string): Promise<AppSummary | null> {
   return (await listApps()).find((a) => a.id === id) ?? null;
 }
 
-/** Apps a household member can see. */
 export async function appsForMember(userId: string): Promise<AppSummary[]> {
   const granted = new Set(all<{ app_id: string }>("SELECT app_id FROM app_access WHERE user_id = ?", userId).map((r) => r.app_id));
   return (await listApps()).filter((a) => !a.hidden && (a.household || granted.has(a.id)));

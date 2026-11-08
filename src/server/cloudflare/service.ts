@@ -18,17 +18,9 @@ import { inZone, MARK, plan, type ExistingRecord, type PlanInput, type PlanRoute
 import { RecordError, toBody } from "./records";
 
 /**
- * Settings → Integrations → Cloudflare. With one API token Gluon keeps the zone's DNS pointed at
- * this server (its own dynamic DNS), adds and removes records as addresses come and go, and sends
- * web addresses through Cloudflare's proxy.
- *
- * Beyond the public addresses it keeps game addresses (Minecraft through mc-router, forwarded game
- * ports) and any other names the admin lists, so an older cloudflare-ddns updater can go. While
- * that updater still runs, Gluon leaves the names it writes alone: two updaters on one record take
- * turns rewriting it.
- *
- * Every change to the saved connection runs through one queue and starts from a fresh read, so a
- * slow sync can never write back an older copy over a newer one (a token just removed, say).
+ * While an older cloudflare-ddns still runs, Gluon leaves the names it writes alone: two updaters on
+ * one record take turns rewriting it. Every change to the saved connection runs through one queue
+ * from a fresh read, so a slow sync can never write back an older copy over a newer one.
  */
 
 type Conn = NonNullable<SettingValue<"cloudflare">>;
@@ -86,9 +78,6 @@ export function zoneFor(zones: CloudflareZoneT[], name: string | null): Cloudfla
   return zones.filter((z) => inZone(name, z.name)).sort((a, b) => b.name.length - a.name.length)[0] ?? null;
 }
 
-// ---------------------------------------------------------------- token
-
-/** What a token can do, before anything is saved. */
 export async function checkToken(token: string, zoneId?: string | null): Promise<TokenCheck> {
   const cf = new Cloudflare(token.trim());
   let zones: CloudflareZoneT[];
@@ -217,11 +206,7 @@ export async function dropName(user: User, where: Where, name: string): Promise<
   return status();
 }
 
-/**
- * Take over from cloudflare-ddns: every name it writes that Gluon doesn't keep yet joins the kept
- * names (proxied as it has them), and all of them are handed to Gluon. While the updater still
- * runs Gluon writes nothing there, so this changes no record by itself.
- */
+/** While the updater still runs Gluon writes nothing there, so this changes no record by itself. */
 export async function takeover(user: User, where: Where): Promise<CloudflareStatus> {
   await serial(async () => {
     const d = await ddnsStatus(true).catch(() => null);
@@ -264,8 +249,6 @@ export async function takeover(user: User, where: Where): Promise<CloudflareStat
   return status();
 }
 
-// ---------------------------------------------------------------- sync
-
 /** Soon after a change, coalescing bursts (a save that touches several addresses). */
 export function scheduleSync(ms = 1500) {
   if (!connection()) return;
@@ -280,7 +263,7 @@ export function scheduleSync(ms = 1500) {
 
 export const sync = () => serial(syncNow);
 
-/** One pass: read the zone, plan, apply. Only ever called inside the queue. */
+/** Only ever called inside the queue. */
 async function syncNow(): Promise<CloudflareStatus["sync"]> {
   const s = st();
   const c = connection();
@@ -412,8 +395,6 @@ async function syncNow(): Promise<CloudflareStatus["sync"]> {
   }
 }
 
-// ---------------------------------------------------------------- status
-
 export async function status(): Promise<CloudflareStatus> {
   const c = connection();
   const cfg = tryReadConfig();
@@ -435,8 +416,6 @@ export async function status(): Promise<CloudflareStatus> {
     handoff: c && ddns?.container.exists ? handoff(ddns, zonesOf(c), sync) : null,
   };
 }
-
-// ---------------------------------------------------------------- DNS editor
 
 /** A domain the saved token can see, by its name or id. */
 function zoneOf(c: Conn, key: string): CloudflareZoneT {

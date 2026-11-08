@@ -7,7 +7,7 @@ import { pruneActivity } from "./audit";
 type G = typeof globalThis & { __gluonJobs?: boolean; __gluonTimers?: ReturnType<typeof setInterval>[] };
 const g = globalThis as G;
 
-/** Registry so feature modules can add background work without touching this file much. */
+/** So feature modules can add background work without touching this file. */
 const starters: { name: string; start: () => void | Promise<void> }[] = [];
 export function onStart(name: string, start: () => void | Promise<void>) {
   starters.push({ name, start });

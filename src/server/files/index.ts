@@ -11,9 +11,6 @@ import { markInterrupted } from "./jobs";
 import { cleanupUploads } from "./upload";
 import { deleteForever, reconcileTrash, trashTotals } from "./trash";
 
-// Side-effect module: background jobs and the "trash is holding space" finding. (Universal search
-// finds files through searchNames in ./search.)
-
 onStart("files", async () => {
   markInterrupted();
   cleanupUploads(true);

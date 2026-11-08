@@ -11,16 +11,11 @@ import { access, codeOnHold } from "./access";
 import { whereAmI, type Here } from "./where";
 
 /**
- * What the router says, read in the background and served from memory, so no page ever waits on
- * a router that takes 40 seconds per page. Reads are grouped by how fast the pages answer and how
- * fast they change, and they speed up only while someone has the router page open:
- *
- *   status   System Information + Broadband (about 2 s): every 15 s while watched, else every 2 min
- *   network  Status + Device List (about 10 s): every minute while watched, else every 30 min
- *   line     Fiber + Firewall: every 5 min while watched, else hourly
- *
- * The status reads also feed the throughput history (byte counters, kept 2 days) and notice
- * restarts and broadband drops. A failed read keeps the last good data and backs off.
+ * Served from memory so no page waits on a router that takes 40 seconds per page. Reads are grouped
+ * by how fast pages answer and change, and speed up only while someone has the router page open:
+ * status (sysinfo + broadband) every 15 s watched, else 2 min; network (Status + Device List) every
+ * minute, else 30 min; line (Fiber + Firewall) every 5 min, else hourly. A failed read keeps the last
+ * good data and backs off.
  */
 
 type Group = "status" | "network" | "line";
@@ -101,8 +96,6 @@ function ensureTables() {
   g.__gluonRouterTables = true;
 }
 
-// ---------------------------------------------------------------- scheduling
-
 function cadence(s: State, group: Group, t: number): number {
   const e = EVERY[group];
   return t < s.watchedUntil ? e.watched : t - s.glancedAt < GLANCE_MS ? e.glanced : e.idle;
@@ -154,7 +147,6 @@ async function readGroup(s: State, gateway: string, group: Group) {
   }
 }
 
-/** One step of background work: find the router, then read whatever is due (one group at a time). */
 export async function tick(): Promise<void> {
   const s0 = st();
   if (s0.running) return s0.running;
@@ -190,8 +182,6 @@ export async function tick(): Promise<void> {
   st().running = work;
   return work;
 }
-
-// ---------------------------------------------------------------- history and changes
 
 function observe(s: State, gateway: string, at: number) {
   ensureTables();
@@ -262,12 +252,7 @@ function events(gateway: string): RouterEventT[] {
   return all<RouterEventT>("SELECT at, kind, text FROM router_events WHERE gateway = ? AND at >= ? ORDER BY at DESC LIMIT 20", gateway, now() - 30 * 86_400_000);
 }
 
-// ---------------------------------------------------------------- restarts Gluon asked for
-
-/**
- * After Gluon presses Restart: wait for the router to answer again and check it really did start
- * over (its uptime is shorter than the time since the press). Runs in the background.
- */
+/** Checks it really started over: its uptime must be shorter than the time since the press. */
 export function awaitRestart(gateway: string, requestedAt: number) {
   const s = st();
   s.restart = { requestedAt, state: "waiting", message: null, prevBoot: s.sys?.bootAt ?? null };
@@ -299,8 +284,6 @@ export function awaitRestart(gateway: string, requestedAt: number) {
   })();
 }
 
-// ---------------------------------------------------------------- reading it back
-
 function devicesFor(s: State, here: Here): DeviceT[] | null {
   if (!s.devicesHtml) return null;
   return sortDevices(readDevices(s.devicesHtml, s.homeHtml, s.sys?.offset ?? null, { mac: here.mac, ip: here.lanIp }));
@@ -308,10 +291,7 @@ function devicesFor(s: State, here: Here): DeviceT[] | null {
 
 const otherName = (id: Identity | null) => (id?.kind === "other" ? id.name : null);
 
-/**
- * The router page's data. Never waits on the router unless there is nothing at all yet, and then
- * only up to `waitMs` (the status pages take about two seconds).
- */
+/** Never waits on the router unless there is nothing at all yet, and then only up to `waitMs`. */
 export async function overview(opts: { waitMs?: number; watch?: boolean } = {}): Promise<RouterOverview> {
   const here = await whereAmI();
   const s0 = st();
@@ -352,7 +332,7 @@ export async function overview(opts: { waitMs?: number; watch?: boolean } = {}):
   };
 }
 
-/** The Home widget's slice: cheap, from memory, and it keeps the slow reads ticking over. */
+/** Cheap, from memory, and it keeps the slow reads ticking over. */
 export async function glance(): Promise<RouterGlance | null> {
   const here = await whereAmI();
   const s = st();
@@ -372,8 +352,8 @@ export async function glance(): Promise<RouterGlance | null> {
 }
 
 /**
- * What the router last said about its own internet connection, from memory and without waiting:
- * the Internet widget uses it to tell "the line is down" from "something else is wrong".
+ * From memory, without waiting: the Internet widget uses it to tell "the line is down" from
+ * "something else is wrong".
  */
 export function routerSays(): { model: string | null; broadband: boolean | null; source: string | null; bootAt: number | null; readAt: number } | null {
   const s = st();

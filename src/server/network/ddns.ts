@@ -54,8 +54,6 @@ const split = (v: string | undefined) =>
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
 
-// ---------------------------------------------------------------- PROXIED expression
-
 /**
  * Evaluate favonia's PROXIED expression for one domain: true | false | is(d…) | sub(d…) | ! | && | ||
  * and parentheses. Returns null if the expression uses something we don't understand.
@@ -138,12 +136,9 @@ export async function ddnsRunning(): Promise<boolean | null | undefined> {
   return (await dockerUp()) ? null : undefined;
 }
 
-// ---------------------------------------------------------------- status
-
 type G = typeof globalThis & { __gluonDdns?: { at: number; value: Promise<DdnsStatus> } };
 const g = globalThis as G;
 
-/** Parse ddns log lines (with Docker timestamps) into the moving parts of the status. */
 export function parseDdnsLog(lines: string[]) {
   const parsed = lines.map(splitTimestamp).filter((p) => p.text.trim());
   let ipv4: DdnsStatus["ipv4"] = null;

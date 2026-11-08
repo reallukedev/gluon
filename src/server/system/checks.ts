@@ -14,8 +14,6 @@ import { failuresSince, keyLabelFor, liveLogins, refreshSignIns, reverseLookup, 
 const DAY = 86_400_000;
 const DOCKER_PKGS = /^(docker-ce|docker\.io|containerd|containerd\.io|moby-engine)$/;
 
-// ---------------------------------------------------------------- updates waiting
-
 registerCheck("system-updates", 30 * 60_000, async () => {
   if (activeRun()) return; // being installed right now; re-evaluated when the run finishes
   const { list } = await pendingUpdates();
@@ -84,8 +82,6 @@ registerRemedy("system.installUpdates", {
   },
 });
 
-// ---------------------------------------------------------------- reboot required
-
 registerCheck("system-reboot", 10 * 60_000, () => {
   const r = rebootStatus();
   if (!r.required) return resolve("system.reboot");
@@ -108,8 +104,6 @@ registerCheck("system-reboot", 10 * 60_000, () => {
     },
   });
 });
-
-// ---------------------------------------------------------------- failed services
 
 registerCheck("system-failed-units", 60_000, async () => {
   const failed = await failedServices();
@@ -161,8 +155,6 @@ registerRemedy("system.restartUnit", {
   },
 });
 
-// ---------------------------------------------------------------- can't check for updates
-
 registerCheck("system-apt-refresh", 60 * 60_000, () => {
   const h = refreshHistory();
   const t = Date.now();
@@ -184,8 +176,6 @@ registerCheck("system-apt-refresh", 60 * 60_000, () => {
     remedy: { action: "", label: "See updates", href: "/system?tab=updates" },
   });
 });
-
-// ---------------------------------------------------------------- clock
 
 type G = typeof globalThis & { __gluonClockUnsynced?: number | null };
 const g = globalThis as G;
@@ -236,14 +226,11 @@ registerRemedy("system.enableNtp", {
   },
 });
 
-// ---------------------------------------------------------------- SSH sign-ins from outside
-
 const SIGNINS_HREF = "/system?tab=sign-ins";
 
 /**
- * "Needs you" when someone signs in over SSH from outside the home networks. One finding per
- * person and address, open for a day after the latest such sign-in (or while it's still connected),
- * so dismissing it acknowledges that source and a new address raises a new one.
+ * One finding per person and address, open for a day after the latest such sign-in (or while still
+ * connected), so dismissing it acknowledges that source and a new address raises a new one.
  */
 registerCheck("system-ssh-away", 60_000, async () => {
   await refreshSignIns(30_000);

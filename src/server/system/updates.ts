@@ -3,7 +3,6 @@ import type { UpdatesStatus } from "@/lib/system-types";
 import { aptLockHolders, dpkgInterrupted, listsUpdatedAt, pendingClock, pendingUpdates, rebootStatus, refreshHistory } from "./apt";
 import { activeRun } from "./apt-runner";
 
-/** Everything the Updates tab shows, in one response. */
 export async function updatesStatus(opts: { fresh?: boolean } = {}): Promise<UpdatesStatus> {
   const pending = await pendingUpdates({ fresh: opts.fresh });
   const history = refreshHistory();

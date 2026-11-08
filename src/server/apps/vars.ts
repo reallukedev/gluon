@@ -53,9 +53,8 @@ export function interpolate(s: string, vars: Record<string, string>): { value: s
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * Work out variable values by lining a template up with what it became, e.g. a compose file's
- * `${APP_DATA_DIR}/data/config` against the container's real mount `/srv/umbrel/app-data/x/data/config`.
- * Returns null when the two don't line up or the template is ambiguous (two variables side by side).
+ * Lines a template up with what it became (`${APP_DATA_DIR}/data/config` against
+ * `/srv/umbrel/app-data/x/data/config`). null when they don't line up or the template is ambiguous.
  */
 export function learnVars(template: string, actual: string): Record<string, string> | null {
   const ps = parts(template);

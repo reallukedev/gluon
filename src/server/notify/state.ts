@@ -1,10 +1,10 @@
 import "server-only";
 import { db, now, one, run } from "../db";
 
-/** What the notification watchers have already seen, so a restart never announces old news again. */
+/** So a restart never announces old news again. */
 
 let ready = false;
-/** Same statements as migration 15 (idempotent), so a running server doesn't need a restart. */
+/** Same statements as migration 15, so a running server doesn't need a restart. */
 export function ensureNotifyTables() {
   if (ready) return;
   db().exec(`
@@ -38,7 +38,7 @@ export function setState(key: string, value: unknown) {
   );
 }
 
-/** Mark something as announced. True the first time only. */
+/** True the first time only. */
 export function firstTime(key: string): boolean {
   ensureNotifyTables();
   return run("INSERT OR IGNORE INTO notify_state (key, value, updated_at) VALUES (?, '1', ?)", `seen:${key}`, now()).changes > 0;

@@ -3,9 +3,8 @@ import { dayNumber, daysInMonth, fromDayNumber, isoDate, resolveTzid, utcToWall,
 import type { CalendarEvent } from "@/lib/widgets-types";
 
 /**
- * A small iCalendar (RFC 5545) reader for "what's coming up": VEVENTs with all-day and timed starts, TZIDs
- * (IANA, Windows and fixed-offset VTIMEZONEs), DTEND/DURATION, STATUS:CANCELLED, EXDATE, RDATE, RECURRENCE-ID
- * overrides and RRULE (DAILY/WEEKLY/MONTHLY/YEARLY with INTERVAL, COUNT, UNTIL, BYDAY, BYMONTHDAY, BYMONTH).
+ * Handles all-day and timed starts, IANA, Windows and fixed-offset zones, DTEND/DURATION,
+ * cancellations, EXDATE, RDATE, RECURRENCE-ID overrides and the common RRULE parts.
  */
 
 interface Prop {
@@ -222,8 +221,6 @@ function buildEvent(props: Prop[]): VEvent | null {
     cancelled: (get("STATUS")?.value.trim().toUpperCase() ?? "") === "CANCELLED",
   };
 }
-
-// ------------------------------------------------------------------ expansion
 
 interface Resolver {
   zoneOf(t: IcsTime): Zone;

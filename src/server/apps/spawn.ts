@@ -14,10 +14,7 @@ export interface SpawnResult {
   aborted: boolean;
 }
 
-/**
- * A host command with its output streamed line by line, stopped on a timer or when the request
- * goes away: SIGTERM first, SIGKILL if it hasn't gone 10 seconds later. Never a shell string.
- */
+/** SIGTERM first, SIGKILL if it hasn't gone 10 seconds later. Never a shell string. */
 export function spawnLines(cmd: string, args: string[], onLine: (line: string, stream: "out" | "err") => void, limits: SpawnLimits): Promise<SpawnResult> {
   return new Promise((resolve) => {
     if (limits.signal?.aborted) return resolve({ code: 1, timedOut: false, aborted: true });

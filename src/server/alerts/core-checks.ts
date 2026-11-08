@@ -14,8 +14,6 @@ import { formatBytes } from "@/lib/format";
 import { AppError } from "../errors";
 import { all } from "../db";
 
-// ---------------------------------------------------------------- disk space
-
 /** Percentage points below the threshold a disk or memory must drop before its alert clears. */
 const DISK_HYSTERESIS = 2;
 const MEMORY_HYSTERESIS = 3;
@@ -59,9 +57,8 @@ export async function findLeftovers(): Promise<Leftover[]> {
 }
 
 /**
- * Days until full at the recent fill rate, or null if it isn't reliably filling.
- * Uses the change between the median of the first and last hour of the window (robust to spikes
- * from one-off downloads) and needs at least 6 hours of history.
+ * Compares the median of the first and last hour of the window (robust to one-off downloads) and
+ * needs at least 6 hours of history.
  */
 function daysToFull(mount: string, avail: number): number | null {
   const series = history([`fs.${mount}.used`], 86_400_000)[`fs.${mount}.used`] ?? [];
@@ -161,8 +158,6 @@ registerRemedy("storage.removeLeftovers", {
   },
 });
 
-// ---------------------------------------------------------------- apps
-
 registerCheck("apps", 20_000, async () => {
   const apps = await listApps();
   const open = new Set<string>();
@@ -226,8 +221,6 @@ registerRemedy("apps.start", {
     return { message: await appAction(String(params.id), "start") };
   },
 });
-
-// ---------------------------------------------------------------- memory & temperature
 
 registerCheck("memory", 30_000, () => {
   const h = latestHost();

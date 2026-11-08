@@ -7,9 +7,8 @@ import type { Zone } from "../net-zone";
 import type { UserRow } from "./users";
 
 /**
- * Known devices. Each browser gets a long-lived random cookie (separate from the session, so it
- * survives signing out). The first full sign-in of an account from a device is "new"; an admin's
- * new device away from home is recorded in Activity and raised as a finding (which notifies).
+ * The device cookie is separate from the session so it survives signing out. An admin's new device
+ * away from home is recorded in Activity and raised as a finding (which notifies).
  */
 
 export const DEVICE_COOKIE = "gluon_device";
@@ -42,7 +41,7 @@ function ensureTables() {
 export const newDeviceToken = () => token(24);
 export const deviceHash = (raw: string) => sha256(`device:${raw}`);
 
-/** Record a full sign-in from this device. Returns true the first time this account uses it. */
+/** Returns true the first time this account uses it. */
 export function rememberDevice(userId: string, hash: string, where: { ip: string; zone: Zone }): boolean {
   ensureTables();
   const t = now();
@@ -104,7 +103,7 @@ function describeAgent(ua: string | null): string {
   return os ? `${browser} on ${os}` : browser;
 }
 
-/** Called after a full sign-in (password, plus second step when on). */
+/** After a full sign-in (password, plus second step when on). */
 export function noteSignIn(row: Pick<UserRow, "id" | "username" | "display_name" | "role">, sessionHash: string, deviceHashValue: string, where: { ip: string; zone: Zone; userAgent: string | null }) {
   const isNew = rememberDevice(row.id, deviceHashValue, where);
   const flag = isNew && where.zone === "away";

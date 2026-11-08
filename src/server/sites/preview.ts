@@ -8,19 +8,17 @@ import { draftDir, resolveIn } from "./store";
 import { versionDir } from "./versions";
 
 /**
- * Previews of a draft (or an older version) run the site's own HTML and scripts, which Gluon
- * didn't write. They're served from Gluon's address but never as Gluon: every response carries
- * `Content-Security-Policy: sandbox`, so the browser gives the page an opaque origin with no
- * cookies, no storage and no way to read or call Gluon, and the frame showing it has the same
- * sandbox. Cookies don't reach an opaque origin, so the URL itself carries a short-lived signed
- * token; relative links and assets keep working because the token is a path segment.
+ * Previews run the site's own HTML and scripts. Every response carries `Content-Security-Policy:
+ * sandbox`, so the page gets an opaque origin with no cookies, storage or way to call Gluon. Cookies
+ * don't reach an opaque origin, so the URL carries a short-lived signed token as a path segment,
+ * which keeps relative links working.
  */
 
 export const PREVIEW_PREFIX = "/api/sites/preview";
 export const PREVIEW_TTL_MS = 60 * 60_000;
 const PURPOSE = "sites.preview";
 
-/** Allowed in the frame: scripts and forms and popups (which inherit the sandbox). Never same-origin, never top navigation. */
+/** Never same-origin, never top navigation. */
 export const PREVIEW_SANDBOX = "allow-scripts allow-forms allow-popups";
 
 export const PREVIEW_HEADERS: Record<string, string> = {
@@ -48,7 +46,7 @@ export function signPreview(site: string, target: PreviewTarget, nowMs = Date.no
   return { token: `${payload}.${hmac(PURPOSE, payload).slice(0, 32)}`, expires: Math.floor(expires / 1000) * 1000 };
 }
 
-/** The token's site and target, or null when it's malformed, forged or expired. */
+/** null when it's malformed, forged or expired. */
 export function verifyPreview(token: string, nowMs = Date.now()): PreviewToken | null {
   const m = TOKEN_RE.exec(token);
   if (!m) return null;
@@ -73,9 +71,8 @@ function typeOf(p: string): string {
 }
 
 /**
- * Links that start with "/" mean the site's own root once it's published; in the preview that root
- * is the token's folder. Rewrites them in HTML attributes and CSS url()/@import. Only the preview
- * changes, never the files.
+ * "/" links mean the site's root once published; in the preview that root is the token's folder. Only
+ * the preview changes, never the files.
  */
 export function rewriteRootLinks(text: string, kind: "html" | "css", base: string): string {
   const fix = (u: string) => (u.startsWith("/") && !u.startsWith("//") ? `${base}${u}` : u);
@@ -112,8 +109,8 @@ function serveFile(abs: string, rel: string, base: string, status: number, head:
 }
 
 /**
- * Serve one preview request the way Caddy serves the published site: the file, else the same
- * name with .html, else a folder's index.html, else the site's own 404.html with a 404.
+ * The way Caddy serves the published site: the file, else name.html, else a folder's index.html, else
+ * the site's own 404.html.
  */
 export function servePreview(token: string, segments: string[], head: boolean): Response {
   const t = verifyPreview(token);

@@ -13,14 +13,6 @@ import { mumblePorts } from "./voice-servers";
 import { plural, listJoin } from "@/lib/format";
 import type { ExposureFlag, ExposureReport, InternetExposure, LanExposure, ListenScope, LoginInfo, RouteAppRef } from "@/lib/network-types";
 
-/**
- * Exposure audit: what can reach what.
- *  (a) the internet → every enabled public address, and whether the app behind it has a login;
- *  (b) the home network → every socket listening on the host (incl. Docker published ports);
- *  (c) flags → public apps without a login, admin tools on the internet, addresses pointing at
- *      ports nothing listens on, databases open to the whole network.
- */
-
 const KNOWN_PORTS: Record<number, { label: string; login?: LoginProbe["result"]; evidence?: string; system?: boolean; db?: boolean }> = {
   22: { label: "SSH (remote terminal)", login: "login", evidence: "SSH always asks for a key or password." },
   53: { label: "DNS server" },
@@ -118,7 +110,6 @@ async function build(force: boolean): Promise<ExposureReport> {
   const appByContainer = new Map<string, AppSummary>();
   for (const a of apps) for (const c of a.containers) appByContainer.set(c.id, a);
 
-  // ---- LAN listeners, grouped by proto/port/owner
   interface Group {
     proto: "tcp" | "udp";
     port: number;
@@ -208,7 +199,6 @@ async function build(force: boolean): Promise<ExposureReport> {
   );
   lan.sort((a, b) => Number(a.system) - Number(b.system) || SCOPE_RANK[b.scope] - SCOPE_RANK[a.scope] || a.port - b.port || a.proto.localeCompare(b.proto));
 
-  // ---- Internet
   const proxiedNames = new Set(ddns?.config.proxiedDomains ?? []);
   // What public DNS answered on the last status check beats the old updater's settings: with
   // Gluon's own Cloudflare connection there's no updater to ask at all.
@@ -270,7 +260,6 @@ async function build(force: boolean): Promise<ExposureReport> {
     ),
   );
 
-  // ---- Flags
   const flags: ExposureFlag[] = [];
   for (const x of internet) {
     const where = x.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -342,7 +331,6 @@ async function build(force: boolean): Promise<ExposureReport> {
   const rank = { fault: 0, attention: 1, info: 2 } as const;
   flags.sort((a, b) => rank[a.severity] - rank[b.severity]);
 
-  // ---- Summary
   const noLogin = internet.filter((x) => x.login.verdict === "no-login" && !x.onlyPaths);
   const partialNoLogin = internet.filter((x) => x.login.verdict !== "login" && x.onlyPaths);
   const admins = internet.filter((x) => x.adminUi);
@@ -373,7 +361,7 @@ async function build(force: boolean): Promise<ExposureReport> {
   };
 }
 
-/** Exposure report, cached a minute; `force` re-runs it and re-probes logins older than 10 minutes. */
+/** `force` re-runs it and re-probes logins older than 10 minutes. */
 export async function exposureReport(opts: { force?: boolean; maxAgeMs?: number } = {}): Promise<ExposureReport> {
   const s = st();
   if (!opts.force && s.value && Date.now() - s.at < (opts.maxAgeMs ?? 60_000)) return s.value;

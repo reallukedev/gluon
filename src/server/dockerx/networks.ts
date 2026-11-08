@@ -101,8 +101,6 @@ async function getNetwork(idOrName: string): Promise<DockerNetwork> {
   return n;
 }
 
-// ---------------------------------------------------------------- create
-
 const CIDR4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/;
 const IP4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 
@@ -180,8 +178,6 @@ export async function createNetwork(input: CreateNetworkInput): Promise<{ messag
   }
 }
 
-// ---------------------------------------------------------------- remove
-
 export async function removeNetwork(idOrName: string, confirm?: string): Promise<{ message: string }> {
   const n = await getNetwork(idOrName);
   if (n.builtin) throw new AppError("protected", `${n.name} is one of Docker's own networks and can't be removed.`, 409);
@@ -197,8 +193,6 @@ export async function removeNetwork(idOrName: string, confirm?: string): Promise
   afterChange();
   return { message: `Removed the network ${n.name}.` };
 }
-
-// ---------------------------------------------------------------- connect / disconnect
 
 export async function connectContainer(network: string, container: string, ipv4?: string | null): Promise<{ message: string }> {
   const n = await getNetwork(network);

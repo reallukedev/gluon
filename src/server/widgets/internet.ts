@@ -6,19 +6,13 @@ import type { InternetCell, InternetData, InternetOutage } from "@/lib/home-widg
 import { routerSays } from "../router/monitor";
 import type { User } from "../auth/users";
 
-/**
- * The router's own word on its internet connection, when Gluon reads it (AT&T BGW gateways), and
- * how recent that is. While the probes find the internet down, this says whether it's the line.
- */
+/** While the probes find the internet down, this says whether it's the line. */
 export type InternetWithRouter = InternetData & { gateway: ReturnType<typeof routerSays> };
 
 /**
- * "Is it the internet or the server?" A light background probe: every 30 seconds Gluon opens (and immediately
- * closes) a TCP connection to two well-known public addresses on :443, and to the router. The handshake time is the
- * latency. No processes are spawned and nothing is downloaded. When a round fails, the next one comes sooner so an
- * outage's start and end are pinned to within ~10 seconds.
- *
- * Minutes are stored in `internet_minutes` for 7 days.
+ * A TCP handshake every 30 s to two public addresses on :443 and the router: no processes spawned,
+ * nothing downloaded. When a round fails the next comes sooner, so an outage's start and end are
+ * pinned to within ~10 seconds.
  */
 
 export const TARGETS = ["1.1.1.1", "9.9.9.9"] as const;
@@ -54,9 +48,7 @@ export function ensureInternetTable() {
   st().tableReady = true;
 }
 
-// ---------------------------------------------------------------- probing
-
-/** Handshake time in ms, or null. A refused connection still proves the host answered (for the router). */
+/** A refused connection still proves the host answered (for the router). */
 function connect(host: string, port: number, refusedCounts: boolean): Promise<number | null> {
   return new Promise((resolve) => {
     const t0 = process.hrtime.bigint();
@@ -76,7 +68,6 @@ function connect(host: string, port: number, refusedCounts: boolean): Promise<nu
   });
 }
 
-/** The default gateway from the host's routing table (lowest metric), or null. */
 export function routerAddress(): string | null {
   const text = readHostFileOr("/proc/1/net/route", "");
   let best: { ip: string; metric: number } | null = null;
@@ -178,8 +169,6 @@ export function pruneInternet() {
   run("DELETE FROM internet_minutes WHERE ts < ?", now() - KEEP_MS);
 }
 
-// ---------------------------------------------------------------- reading
-
 interface Row {
   ts: number;
   rounds: number;
@@ -238,7 +227,7 @@ function outagesFrom(rows: Row[], lastAt: number | null, ongoing: { up: boolean;
   return out;
 }
 
-/** The internet widget's data as GET /api/widgets/internet answers it: the router's address is for admins only. */
+/** The router's address is for admins only. */
 export function internetFor(user: User) {
   const d = internetData();
   return user.role === "admin" ? d : { ...d, router: null };

@@ -5,11 +5,6 @@ import { AppError } from "../errors";
 import { recentDockerEvents, explainExit, type DockerEvent } from "../docker/events";
 import type { LogEntry, LogLevel } from "@/lib/diagnostics-types";
 
-/**
- * Kernel log and system journal via `journalctl -o json` on the host, and Docker events, normalised
- * to { time, source, level, message }.
- */
-
 export const LEVELS: LogLevel[] = ["emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"];
 export const UNIT_RE = /^[A-Za-z0-9@._:\\-]{1,128}$/;
 
@@ -72,7 +67,6 @@ function missingJournal(e: unknown): never {
   throw e;
 }
 
-/** The last `lines` entries (oldest first). */
 export async function journalSnapshot(q: JournalQuery): Promise<LogEntry[]> {
   const a = [...args(q), "-n", String(Math.max(1, Math.min(2000, q.lines)))];
   let stdout = "";
@@ -91,8 +85,8 @@ export async function journalSnapshot(q: JournalQuery): Promise<LogEntry[]> {
 }
 
 /**
- * Follow new entries. journalctl is exec'd directly in the host's namespaces (no PID-namespace
- * fork), so killing our child really stops it.
+ * journalctl is exec'd directly in the host's namespaces (no PID-namespace fork), so killing our
+ * child really stops it.
  */
 export function journalFollow(q: JournalQuery & { afterCursor?: string | null }, onEntry: (e: LogEntry) => void, onEnd: (err?: string) => void): () => void {
   // Continue exactly after the snapshot's last entry when we have its cursor (no gap, no duplicates).
@@ -140,7 +134,6 @@ export function journalFollow(q: JournalQuery & { afterCursor?: string | null },
   };
 }
 
-/** Units that have journal entries (for the filter menu). */
 export async function journalUnits(): Promise<string[]> {
   let stdout = "";
   try {
@@ -152,8 +145,6 @@ export async function journalUnits(): Promise<string[]> {
     .filter((u) => u && UNIT_RE.test(u) && !/^(session-\d+\.scope|user@\d+\.service|run-.*\.scope|docker-[0-9a-f]{64}\.scope)$/.test(u))
     .sort((a, b) => a.localeCompare(b));
 }
-
-// ---------------------------------------------------------------- docker events
 
 export function dockerEventEntry(ev: DockerEvent): LogEntry {
   const who = ev.name || ev.id.slice(0, 12);

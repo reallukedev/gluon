@@ -3,9 +3,8 @@ import type { User } from "../../auth/users";
 import type { CheckFix, CheckPlanItem, CheckResult, CheckState } from "@/lib/diagnostics-types";
 
 /**
- * Building blocks for checkups. A check is a named, read-only probe that returns one plain-language
- * result. Checks never change the server: fixed-argument host commands with timeouts, socket probes
- * and reads of data other modules already collect.
+ * Checks never change the server: fixed-argument host commands with timeouts, socket probes and reads
+ * of data other modules already collect.
  */
 
 export type Outcome = Omit<CheckResult, "id" | "ms"> & {
@@ -36,7 +35,6 @@ export const skip = (title: string, extra: Partial<Outcome> = {}): Outcome => ({
 export const go = (label: string, href: string): CheckFix => ({ label, action: "", href });
 export const act = (label: string, action: string, params?: Record<string, unknown>): CheckFix => ({ label, action, params });
 
-/** The worst of several states (fail > warn > ok > skip). */
 export function worst(states: CheckState[]): CheckState {
   if (states.includes("fail")) return "fail";
   if (states.includes("warn")) return "warn";
@@ -44,7 +42,6 @@ export function worst(states: CheckState[]): CheckState {
   return "skip";
 }
 
-/** Run `fn` with at most `n` in flight. */
 export function limiter(n: number) {
   let active = 0;
   const queue: (() => void)[] = [];

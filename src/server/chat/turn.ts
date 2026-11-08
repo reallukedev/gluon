@@ -3,10 +3,9 @@ import dgram from "node:dgram";
 import type { AppSpec } from "@/lib/builder-types";
 
 /**
- * Calls across networks: a TURN relay (coturn) next to Prosody. Two phones on different networks
- * often can't reach each other directly, so the relay carries the call. Prosody tells chat apps
- * where it is and hands each one short-lived credentials signed with a secret shared with coturn
- * (XEP-0215, mod_turn_external). Pure parts here: the app recipe and the STUN check's messages.
+ * Phones on different networks often can't reach each other directly, so coturn carries the call.
+ * Prosody hands each app short-lived credentials signed with a secret shared with coturn (XEP-0215,
+ * mod_turn_external).
  */
 
 export const COTURN_IMAGE = "coturn/coturn:4.6";
@@ -90,8 +89,6 @@ ${args.map((x) => `      - "${x}"`).join("\n")}
     compose,
   };
 }
-
-// ---------------------------------------------------------------- STUN check
 
 const MAGIC = 0x2112a442;
 

@@ -7,8 +7,6 @@ import { apps } from "./addresses";
 import { act, fail, go, kv, ms, ok, skip, warn, type CheckCtx, type CheckSpec, type Outcome } from "./core";
 import { explainConnectError } from "../../network/probes";
 
-/** Apps: containers crash-looping, unhealthy or restarting, and whether each app's web port answers. */
-
 export const appHref = (id: string, tab?: string) => `/apps/${encodeURIComponent(id)}${tab ? `?tab=${tab}` : ""}`;
 
 export interface ContainerVerdict {
@@ -19,7 +17,7 @@ export interface ContainerVerdict {
   policy: string | null;
 }
 
-/** Inspect only exited containers (restart policy + exit code decide whether it's a surprise). */
+/** Only exited containers: restart policy and exit code decide whether it's a surprise. */
 export async function containerVerdicts(app: AppSummary): Promise<ContainerVerdict[]> {
   return Promise.all(
     app.containers.map(async (c): Promise<ContainerVerdict> => {
@@ -50,7 +48,6 @@ export function containerEvidence(vs: ContainerVerdict[]): string {
   return vs.map((v) => `${v.c.name.padEnd(28)}  ${v.c.state}${v.c.health ? ` · ${v.c.health}` : ""}${v.dies ? ` · ${v.dies} crash${v.dies === 1 ? "" : "es"} in 15 min` : ""}${v.exitCode !== null ? ` · exit ${v.exitCode}` : ""}  ${v.c.status}`).join("\n");
 }
 
-/** The containers' side of an app: running, healthy, not crash-looping. */
 export function containersOutcome(app: AppSummary, vs: ContainerVerdict[]): Outcome {
   const evidence = containerEvidence(vs);
   const findings = app.containers.map((c) => `app.broken:${c.name}`);
@@ -69,7 +66,6 @@ export function containersOutcome(app: AppSummary, vs: ContainerVerdict[]): Outc
   return ok(`${app.name} is running${vs.length > 1 ? ` (${running} of ${vs.length} parts)` : ""}`, { evidence });
 }
 
-/** Does the app's web port answer HTTP? */
 export async function webPortOutcome(app: AppSummary): Promise<Outcome | null> {
   if (!app.webPort) return null;
   const a = await httpAnswer(app.webPort, { timeoutMs: 5000 });

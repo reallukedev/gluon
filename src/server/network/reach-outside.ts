@@ -1,16 +1,10 @@
 import type { MumblePing, ReachOutcome } from "@/lib/network-types";
 
 /**
- * Asking a machine on the internet whether a port is open on this network's public address, for the
- * ports that didn't answer when Gluon tried them through the router from inside. Some routers (AT&T's
- * BGW320, for one) loop some forwarded ports back inside and silently drop others, so a port that's
- * closed from inside can still be open to everyone else.
- *
- * The outside source is portchecker.io: a free service that opens a TCP connection to the address and
- * ports it's given and says which ones accepted. It only sees the public address and port numbers.
- * It can't tell UDP, or whose server answered, so it only settles TCP ports that loopback called closed.
- *
- * Pure apart from the default checker, so the batching and caching can be tested with a fake one.
+ * Some routers (AT&T's BGW320, for one) loop some forwarded ports back inside and silently drop
+ * others, so a port closed from inside can still be open to everyone else. portchecker.io only sees
+ * the public address and port numbers and can't tell UDP or whose server answered, so it only settles
+ * TCP ports loopback called closed.
  */
 
 export type ReachTarget =

@@ -1,9 +1,4 @@
-/**
- * Pure parsers behind the security checks. No I/O, so each one is tested on real command output.
- * Everything here reads; nothing builds a command.
- */
-
-// ---------------------------------------------------------------- listening sockets (ss -H -lntup)
+/** No I/O, so each parser is tested on real command output. Nothing here builds a command. */
 
 export interface Listener {
   proto: "tcp" | "udp";
@@ -73,8 +68,6 @@ export function riskyListeners(list: Listener[]): (Listener & RiskyPort)[] {
   }
   return out.sort((a, b) => (a.severity === b.severity ? a.port - b.port : a.severity === "fail" ? -1 : 1));
 }
-
-// ---------------------------------------------------------------- firewall
 
 export interface FilterState {
   /** Something drops or rejects unwanted incoming connections. */
@@ -146,8 +139,6 @@ export function parseUfw(stdout: string): { active: boolean; incoming: string | 
   return { active: status === "active", incoming: stdout.match(/^Default:\s*(\w+)\s*\(incoming\)/m)?.[1] ?? null };
 }
 
-// ---------------------------------------------------------------- IPv6
-
 /** `ip -6 -o addr show scope global`: public-looking addresses (not ULA fc00::/7, not deprecated). */
 export function globalV6(stdout: string): string[] {
   const out: string[] = [];
@@ -160,8 +151,6 @@ export function globalV6(stdout: string): string[] {
   }
   return out;
 }
-
-// ---------------------------------------------------------------- SSH
 
 /** `sshd -T` into lowercase key → values (repeated keys keep every value). */
 export function parseSshdT(stdout: string): Map<string, string[]> {
@@ -264,8 +253,6 @@ export function parseFail2banJail(stdout: string): { banned: number | null; tota
   return { banned: n(/Currently banned:\s*(\d+)/), total: n(/Total banned:\s*(\d+)/) };
 }
 
-// ---------------------------------------------------------------- host accounts
-
 export interface PasswdEntry {
   name: string;
   /** The second field: "x" means the hash is in /etc/shadow. */
@@ -336,8 +323,6 @@ export function nopasswdRules(text: string): string[] {
   return out;
 }
 
-// ---------------------------------------------------------------- automatic updates (apt)
-
 /** The effective APT::Periodic::Unattended-Upgrade from apt.conf.d files, read in apt's order. */
 export function aptUnattended(files: { name: string; text: string }[]): boolean | null {
   let v: boolean | null = null;
@@ -347,8 +332,6 @@ export function aptUnattended(files: { name: string; text: string }[]): boolean 
   }
   return v;
 }
-
-// ---------------------------------------------------------------- kernel settings
 
 export interface SysctlRule {
   key: string;
@@ -368,8 +351,6 @@ export const SYSCTL_RULES: SysctlRule[] = [
 
 /** Shown in the evidence only: stricter settings some guides recommend, which distributions vary on. */
 export const SYSCTL_INFO = ["kernel/kptr_restrict", "kernel/dmesg_restrict", "kernel/yama/ptrace_scope", "kernel/unprivileged_bpf_disabled", "net/ipv4/conf/all/rp_filter", "net/ipv4/conf/all/accept_redirects", "net/ipv4/ip_forward", "fs/suid_dumpable"];
-
-// ---------------------------------------------------------------- UPnP
 
 /** An SSDP reply's LOCATION header. */
 export function ssdpLocation(reply: string): string | null {
@@ -420,8 +401,6 @@ export function parseMappingEntry(xml: string): UpnpMapping | null {
     leaseSeconds: lease === null ? null : Number(lease),
   };
 }
-
-// ---------------------------------------------------------------- containers
 
 /** The parts of `docker inspect` the container checks read. */
 export interface InspectLike {
@@ -492,8 +471,6 @@ export function dockerTcpHosts(daemonJson: string, execStart: string): { hosts: 
   return { hosts, tlsverify };
 }
 
-// ---------------------------------------------------------------- distribution support
-
 export function osRelease(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const line of text.split("\n")) {
@@ -502,8 +479,6 @@ export function osRelease(text: string): Record<string, string> {
   }
   return out;
 }
-
-// ---------------------------------------------------------------- file modes
 
 /** "0640" style, and which unsafe bits are set. */
 export const octal = (mode: number) => `0${(mode & 0o777).toString(8).padStart(3, "0")}`;

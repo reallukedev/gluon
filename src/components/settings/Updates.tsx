@@ -519,26 +519,38 @@ type SaveSettings = (patch: Partial<UpdateSettings>) => Promise<UpdatesStatus>;
  */
 function useSettingsWriter(data: UpdatesStatus | undefined, onSaved: (v: UpdatesStatus) => void) {
   const [shown, setShown] = React.useState<UpdateSettings | null>(null);
-  const intended = React.useRef<UpdateSettings | null>(null);
+  // What the server last confirmed, and the changes still on their way. A failed change is dropped,
+  // so the saves queued behind it don't send it again.
+  const base = React.useRef<UpdateSettings | null>(null);
+  const pending = React.useRef<Partial<UpdateSettings>[]>([]);
   const queue = React.useRef<Promise<unknown>>(Promise.resolve());
-  const out = React.useRef(0);
   const confirmed = data?.settings;
   const save = React.useCallback<SaveSettings>(
     (patch) => {
-      const v = { ...(intended.current ?? confirmed!), ...patch };
-      intended.current = v;
-      setShown(v);
-      out.current++;
-      const run = queue.current.then(() => api.put<UpdatesStatus>(`${URL}/settings`, v)).then((fresh) => {
-        onSaved(fresh);
-        return fresh;
-      });
+      if (!pending.current.length) base.current = confirmed!;
+      pending.current.push(patch);
+      const showPending = () => setShown(pending.current.length ? Object.assign({ ...base.current! }, ...pending.current) : null);
+      showPending();
+      const done = () => {
+        pending.current.splice(pending.current.indexOf(patch), 1);
+        showPending();
+      };
+      const run = queue.current
+        .then(() => api.put<UpdatesStatus>(`${URL}/settings`, { ...base.current!, ...patch }))
+        .then(
+          (fresh) => {
+            base.current = fresh.settings;
+            done();
+            onSaved(fresh);
+            return fresh;
+          },
+          (e) => {
+            done();
+            throw e;
+          },
+        );
       queue.current = run.catch(() => undefined);
-      return run.finally(() => {
-        if (--out.current > 0) return;
-        intended.current = null;
-        setShown(null);
-      });
+      return run;
     },
     [confirmed, onSaved],
   );

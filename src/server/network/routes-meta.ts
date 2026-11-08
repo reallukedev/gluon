@@ -25,7 +25,6 @@ function prefFor(appId: string): { name: string | null; hasLogin: HasLogin } {
   }
 }
 
-/** Which app each route (and the fallback) leads to. */
 export async function routeApps(cfg: RoutesConfig, apps?: AppSummary[]): Promise<Record<string, RouteAppRef>> {
   const list = apps ?? (await listApps().catch(() => [] as AppSummary[]));
   const byId = new Map(list.map((a) => [a.id, a]));
@@ -94,8 +93,8 @@ function publicKey(r: Route): string {
 }
 
 /**
- * Warnings to show after a save: every enabled address that leads to an app with no login of its own
- * (unless only some paths are published). `isNew` marks the ones this save published.
+ * Every enabled address leading to an app with no login of its own, unless only some paths are
+ * published. `isNew` marks the ones this save published.
  */
 export async function routeWarnings(next: RoutesConfig, prev: RoutesConfig | null): Promise<RouteWarning[]> {
   const list = await listApps().catch(() => [] as AppSummary[]);

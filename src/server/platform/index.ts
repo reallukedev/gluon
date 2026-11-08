@@ -5,9 +5,8 @@ import { hostExists } from "../host/paths";
 import { findUmbrel, umbrelVersion } from "./umbrel";
 
 /**
- * The home server OS Gluon works alongside. It decides where apps are installed, updated and
- * removed, which app store Gluon shows, and what the public domain's fallback is called.
- * "auto" picks Umbrel when it's reachable, then CasaOS, then neither (plain Docker).
+ * Decides where apps are installed and updated, which store Gluon shows, and what the public domain's
+ * fallback is called. "auto" picks Umbrel when it's reachable, then CasaOS, then plain Docker.
  */
 export type Platform = "umbrel" | "casaos" | "none";
 export type PlatformSetting = Platform | "auto";

@@ -6,8 +6,6 @@ import { checkConfig, deleteMonitorRow, getMonitor, insertMonitor, listMonitorRo
 import { clearFindings, downId, flapId, invalidateMonitors, runCheck, runner } from "./runner";
 import { emptyStrip, incidents, lastCheck, latencyPercentiles, recentChecks, stateSince, stripsAll, trailingFailures, uptimeAll, type Uptime } from "./stats";
 
-// ---------------------------------------------------------------- views
-
 const NO_UPTIME: Uptime = { h24: null, d7: null, d30: null, d90: null };
 
 function view(m: Monitor, uptime: Uptime, strip: MonitorView["strip"]): MonitorView {
@@ -62,8 +60,6 @@ export function monitorDetail(id: string): MonitorDetail {
     week: stripsAll(168, id).get(id) ?? emptyStrip(168),
   };
 }
-
-// ---------------------------------------------------------------- mutations
 
 function checkTarget(kind: MonitorKind, target: string) {
   if (kind === "tcp") {

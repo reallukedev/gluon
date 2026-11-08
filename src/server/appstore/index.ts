@@ -4,10 +4,6 @@ import { failInterruptedBuilds, listAppRows, saveGithub, readSecrets, ensureSche
 import { latestCommit } from "./github";
 import { isRunning } from "./jobs";
 
-/**
- * The app builder's background work: builds cut short by a restart are marked failed, and apps
- * from GitHub are checked for new commits a few times a day so the list can say "new commits".
- */
 onStart("app builder", () => {
   ensureSchema();
   failInterruptedBuilds();

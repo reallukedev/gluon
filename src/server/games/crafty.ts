@@ -11,9 +11,8 @@ import { hostPathFor, type Listed } from "./discover";
 import type { CraftyServer } from "@/lib/games-types";
 
 /**
- * Crafty Controller's Minecraft servers, read without touching Crafty: each server's folder and
- * server.properties (its port and MOTD), Crafty's own names from a copy of its database, and
- * which ones are running from the processes in Crafty's container.
+ * Read without touching Crafty: server folders and server.properties, its names from a copy of its
+ * database, and which are running from the processes in its container.
  */
 
 interface Named {
@@ -28,9 +27,8 @@ const g = globalThis as G;
 const MAX_DB = 256 * 1024 * 1024;
 
 /**
- * Crafty keeps its server list in config/db/crafty.sqlite (WAL mode, Crafty 4). Opening it in
- * place could leave -wal/-shm files owned by root next to it, which Crafty (not root) then can't
- * open, so Gluon copies the database and its write-ahead log and reads the copy.
+ * Opening Crafty's WAL-mode database in place could leave root-owned -wal/-shm files that Crafty (not
+ * root) then can't open, so the database and its log are copied and the copy is read.
  */
 function craftyNames(configDir: string): Map<string, Named> | null {
   const dbFile = hostPath(path.posix.join(configDir, "db", "crafty.sqlite"));
@@ -82,8 +80,8 @@ function craftyNames(configDir: string): Map<string, Named> | null {
 }
 
 /**
- * Which server folders have a game running in them: Crafty starts each server with its folder as
- * the working directory. Null when this machine's processes aren't visible (Gluon off the server).
+ * Crafty starts each server with its folder as the working directory. Null when this machine's
+ * processes aren't visible.
  */
 async function liveFolders(c: Listed, ids: string[]): Promise<Set<string> | null> {
   if (c.State !== "running") return new Set();

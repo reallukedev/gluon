@@ -27,10 +27,7 @@ export async function readBody(body: ReadableStream<Uint8Array> | null, max: num
   return Buffer.concat(chunks);
 }
 
-/**
- * Unpack a .zip into the draft (or a folder of it). Everything is checked and extracted to a work
- * folder first; only then do the files move into the draft, replacing ones with the same name.
- */
+/** Everything is checked and extracted to a work folder before anything moves into the draft. */
 export async function importZip(id: string, user: Pick<User, "username">, zip: Buffer, into: string): Promise<SiteImportResult> {
   const plan = await planZip(zip);
   if (!plan.entries.length) throw new AppError("empty_zip", plan.skipped.length ? `Nothing in that zip can go on a site: ${plan.skipped[0]!.reason}` : "That zip is empty.", 400);
@@ -64,7 +61,6 @@ export async function importZip(id: string, user: Pick<User, "username">, zip: B
   }
 }
 
-/** The starter page: a few small files that look finished and are easy to change. */
 export function addStarter(id: string, user: Pick<User, "username">, name: string) {
   return withSite(id, () => {
     const items = starterFiles(name).map((f) => {
