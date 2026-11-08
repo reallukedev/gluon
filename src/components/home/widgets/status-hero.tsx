@@ -18,17 +18,12 @@ import { Age, WidgetState } from "./kit";
 import { useHome } from "../context";
 import h from "./statusHero.module.css";
 
-/**
- * Home's status hero: one plain sentence about the server, why, and the fix right under it. The coil beside it
- * carries the mood: open and breathing when all is well, wound tight in sodium when something needs you.
- * This is the one place on Home that names a problem; the app shelf and the uptime list only mark it.
- */
+/** This is the one place on Home that names a problem; the app shelf and the uptime list only mark it. */
 
 const SETTLE_MS = 60_000;
 
 const worst = (f: Finding) => (f.severity === "fault" ? 0 : f.severity === "attention" ? 1 : 2);
 
-/** "It's running but its web page stopped answering (connection refused)." → its first sentence, no aside. */
 function plainWhy(f: Finding): string {
   const text = (f.cause ?? f.title).replace(/\s*\([^)]*\)/g, "").trim();
   const first = /^.+?[.!?](\s|$)/.exec(text)?.[0]?.trim() ?? text;
@@ -45,14 +40,12 @@ function upFor(seconds: number | null): string | null {
 
 interface Settled {
   id: string;
-  /** The app's short name, or null for a finding that isn't about one app. */
   name: string | null;
   at: number;
-  /** Server time of the first status read after the fix; a check after it that still finds the problem ends "back up". */
+  /** A check after it that still finds the problem ends "back up". */
   since: number | null;
 }
 
-/** "All 8 apps are happy." or "8 running, 1 stopped.", counting apps like Status does: old copies left out. */
 function appsLine(apps: StatusPayload["apps"], nameOf: (id: string) => string | null): string | null {
   const ids = new Set(apps.map((a) => a.id));
   const current = apps.filter((a) => !(a.copyOf && ids.has(a.copyOf.id)));
@@ -122,7 +115,7 @@ function sayFor(data: StatusPayload, admin: boolean, serverName: string, settled
   };
 }
 
-/** The fix, as the page's one primary button. Destructive fixes confirm first; the server re-asks for a password when it must. */
+/** Destructive fixes confirm first; the server re-asks for a password when it must. */
 function Fix({ remedy, finding, onFixed }: { remedy: Remedy; finding: Finding; onFixed: () => void }) {
   const [busy, setBusy] = React.useState(false);
   const [confirm, confirmNode] = useConfirm();

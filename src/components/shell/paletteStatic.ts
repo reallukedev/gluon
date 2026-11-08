@@ -3,8 +3,6 @@ import { activityHref, alertsHref, peopleHref } from "@/lib/settings-links";
 import type { Pin } from "@/server/pins";
 import type { PaletteItem, StaticGroup } from "./paletteModel";
 
-/** The palette's own entries: pages, settings, places inside pages, pins and quick actions. */
-
 const SETTINGS: [string, string, string][] = [
   ["appearance", "Appearance", "theme dark light colour color contrast text size density motion"],
   ["home", "Home page", "widgets search engine greeting layout"],
@@ -15,8 +13,8 @@ const SETTINGS: [string, string, string][] = [
 ];
 
 /**
- * Places inside a page, found by typing (they don't crowd the list before you type). Old names are
- * keywords, so "alerts" still finds monitors and channels in Settings.
+ * Found only by typing, so they don't crowd the list. Old names are keywords, so "alerts" still finds monitors and
+ * channels.
  */
 const SECTIONS: { id: string; parent: string; label: string; hint: string; keywords: string; href: string; icon: string }[] = [
   { id: "alerts:watching", parent: "settings", label: "Monitors", hint: "Settings · Alerts", keywords: "alerts uptime checks http tcp ping watching", href: alertsHref("watching"), icon: "settings" },

@@ -12,7 +12,6 @@ import { ACTION_LABEL, availableActions, bootLabel, serviceLine } from "./servic
 import { ServiceJournal } from "./ServiceJournal";
 import s from "./system.module.css";
 
-/** A service's details and live log, opened from the list (or ⌘K / a Needs you link via ?unit=). */
 export function ServiceDialog({
   unit,
   summary,

@@ -8,15 +8,12 @@ import s from "./builder.module.css";
 const ORDER = { error: 0, warning: 1, info: 2 } as const;
 export const sortIssues = (list: Issue[]) => [...list].sort((a, b) => ORDER[a.level] - ORDER[b.level] || (a.line ?? 0) - (b.line ?? 0));
 
-/** Issues for one field (exact) or a whole group (prefix match with a trailing dot). */
 export function issuesAt(issues: Issue[], field: string, prefix = false): Issue[] {
   return issues.filter((i) => i.field === field || (prefix && i.field?.startsWith(`${field}.`)));
 }
 
-/** The first error for a field, as <Field error=…> wants it. */
 export const errorAt = (issues: Issue[], field: string) => issues.find((i) => i.field === field && i.level === "error")?.message ?? null;
 
-/** Warnings and notes shown under a field or row (errors go through Field's own error line). */
 export function FieldNotes({ issues, errors = false, onFix }: { issues: Issue[]; errors?: boolean; onFix?: (fixId: string) => void }) {
   const shown = issues.filter((i) => errors || i.level !== "error");
   if (!shown.length) return null;
@@ -79,7 +76,6 @@ export function IssueCount({ issues }: { issues: Issue[] }) {
   return <span className={s.issueCount} data-level="ok">Ready to publish</span>;
 }
 
-/** How a custom app reads in lists and headers: the StateLine and its words. */
 export function runtimeLine(status: CustomAppStatus, rt: RuntimeState | null, job: { kind: string } | null): { line: LineState; label: string } {
   if (job) return { line: "starting", label: job.kind === "build" ? "Building" : job.kind === "remove" ? "Removing" : "Publishing" };
   if (status === "draft" || !rt) return { line: "stopped", label: "Draft" };

@@ -23,11 +23,7 @@ interface Props<T extends string> {
   "aria-label"?: string;
 }
 
-/**
- * Underlined tabs. The 2px indicator glides between tabs (150ms, --ease-out: clicked constantly, so
- * it starts moving at once) and the eye follows; keyboard changes and the first paint land instantly. On narrow
- * screens the list scrolls sideways and keeps the active tab in view.
- */
+/** Keyboard changes and the first paint land instantly; only pointer changes glide. */
 export function Tabs<T extends string>({ value, onChange, items, hrefFor, children, className, ...aria }: Props<T>) {
   const list = React.useRef<HTMLDivElement>(null);
   const [ready, setReady] = React.useState(false);

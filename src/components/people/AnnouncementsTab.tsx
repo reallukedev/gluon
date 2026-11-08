@@ -18,7 +18,6 @@ import s from "./people.module.css";
 
 const URL_ALL = "/api/household/announcements?all=1";
 
-/** Banners everyone sees at the top of Gluon ("Power cut tonight at 10"). */
 export function AnnouncementsTab() {
   const { data, error, isLoading, mutate } = useApi<Announcement[]>(URL_ALL, { refresh: 60_000 });
   const [editing, setEditing] = React.useState<Announcement | null>(null);
@@ -150,7 +149,6 @@ function untilFrom(choice: Until, custom: string): number | null {
   }
 }
 
-/** yyyy-mm-ddThh:mm in local time, for datetime-local inputs. */
 function localInput(ts: number): string {
   const d = new Date(ts);
   const p = (n: number) => String(n).padStart(2, "0");

@@ -28,11 +28,7 @@ const within = (p: string, root: string) => p === root || p.startsWith(root.ends
 
 const quiet = (e: unknown) => e instanceof ApiError && e.code === "reauth_cancelled";
 
-/**
- * Who can open what: household members across, apps and shared folders down. Every cell is the
- * control: tap an app cell to let that person see the app; open a folder cell to choose view or change.
- * With `memberId`, only that person's column (their detail page).
- */
+/** With `memberId`, only that person's column (their detail page). */
 export function AccessMap({ memberId }: { memberId?: string }) {
   const vis = useApi<VisibilityResponse>(APPS_URL);
   const grantsQ = useApi<FolderGrant[]>(GRANTS_URL);

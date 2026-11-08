@@ -1,10 +1,7 @@
 "use client";
 import * as React from "react";
 
-/**
- * Seconds left until `until` (a Date.now() timestamp), ticking once a second, 0 when done or unset.
- * Used to show "try again in 0:42" after too many sign-in attempts.
- */
+/** Ticks once a second; 0 when done or unset. */
 export function useCountdown(until: number | null): number {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -25,7 +22,6 @@ export function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-/** Seconds to wait from an ApiError's details, if it was a throttle. */
 export function retryAfterOf(e: unknown): number | null {
   const d = (e as { code?: string; details?: Record<string, unknown> } | null) ?? null;
   if (d?.code !== "rate_limited") return null;

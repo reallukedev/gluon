@@ -1,27 +1,17 @@
-/*
- * Collection previews: each widget drawn as a tiny, faithful schematic of what it shows, in the product's line
- * language. One 120×56 tile per widget, on the panel colour with a hairline. Rules that keep them one family:
- *   - figures are real numerals in the display face; words are 2px rounded strokes (never fake text)
- *   - state marks use StateLine geometry: solid running, dashed starting, short red down, doubled sodium needs you
- *   - 1px hairlines for rules and tracks, 1.5–2px for marks; ink, ink-2 and faint only; no fills beyond sunk
- */
+/* Figures are real numerals in the display face; words are 2px rounded strokes, never fake text. */
 import * as React from "react";
 import p from "./previews.module.css";
 
 type Tone = "ink" | "ink2" | "faint" | "line";
 type Glyph = "running" | "starting" | "unhealthy" | "attention" | "stopped";
 
-/** A word, as a 2px stroke. */
 const W = ({ x, y, w, t = "line" }: { x: number; y: number; w: number; t?: Tone }) => <line x1={x} x2={x + w} y1={y} y2={y} className={p.word} data-t={t} />;
-/** A 1px rule. */
 const H = ({ x, y, w }: { x: number; y: number; w: number }) => <line x1={x} x2={x + w} y1={y + 0.5} y2={y + 0.5} className={p.rule} />;
-/** A figure in the display face. */
 const F = ({ x, y, size = 16, children, t = "ink", anchor }: { x: number; y: number; size?: number; children: React.ReactNode; t?: Tone; anchor?: "end" }) => (
   <text x={x} y={y} className={p.fig} data-t={t} style={{ fontSize: size }} textAnchor={anchor}>
     {children}
   </text>
 );
-/** StateLine geometry at (x, top y) with height h. */
 function G({ x, y, h, s }: { x: number; y: number; h: number; s: Glyph }) {
   if (s === "attention")
     return (
@@ -33,14 +23,12 @@ function G({ x, y, h, s }: { x: number; y: number; h: number; s: Glyph }) {
   if (s === "unhealthy") return <line x1={x} x2={x} y1={y + h * 0.55} y2={y + h} className={p.fault} />;
   return <line x1={x} x2={x} y1={y} y2={y + h} className={p.glyph} data-s={s} />;
 }
-/** A usage track with its fill. */
 const Bar = ({ x, y, w, v, attn }: { x: number; y: number; w: number; v: number; attn?: boolean }) => (
   <g>
     <rect x={x} y={y} width={w} height={3} rx={1.5} className={p.track} />
     <rect x={x} y={y} width={Math.max(2, w * v)} height={3} rx={1.5} className={attn ? p.fillAttn : p.fill} />
   </g>
 );
-/** A trace through points given as 0…1 heights. */
 function Trace({ x, y, w, h, v, area }: { x: number; y: number; w: number; h: number; v: number[]; area?: boolean }) {
   const pts = v.map((k, i) => [x + (i / (v.length - 1)) * w, y + h - k * h] as const);
   const d = pts.map(([a, b], i) => `${i ? "L" : "M"}${a.toFixed(1)} ${b.toFixed(1)}`).join("");
@@ -566,7 +554,6 @@ const DRAWINGS: Record<string, () => React.ReactNode> = {
 
 export type PreviewKind = keyof typeof DRAWINGS;
 
-/** The catalog drawing for a widget: a miniature tile with its schematic. */
 export function Preview({ of }: { of: string }) {
   const draw = DRAWINGS[of];
   return (

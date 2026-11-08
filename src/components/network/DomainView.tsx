@@ -13,10 +13,7 @@ import { toast } from "@/components/ui/Toast";
 import { EDITABLE_TYPES, type DnsRecordFull, type DnsRecordInput, type DnsZoneView, type EditableType } from "@/lib/cloudflare-types";
 import d from "./domains.module.css";
 
-/**
- * Every DNS record in one Cloudflare domain. Records Gluon keeps for public addresses are shown but
- * locked (Gluon would only write them back); types Gluon doesn't edit open in Cloudflare.
- */
+/** Records Gluon keeps for public addresses are locked: Gluon would only write them back. */
 
 const TTL_OPTIONS: { value: string; label: string }[] = [
   { value: "1", label: "Auto" },
@@ -43,7 +40,7 @@ const short = (name: string, zone: string) => (name === zone ? "@" : name.endsWi
 
 const BACK = { href: "/network", label: "Network" };
 
-/** The domain's page goes out at once; its records follow when Cloudflare answers. */
+/** The page goes out at once; its records follow when Cloudflare answers. */
 export function DomainView({ zone, initial }: { zone: string; initial: Promise<DnsZoneView | null> }) {
   return (
     <Page>

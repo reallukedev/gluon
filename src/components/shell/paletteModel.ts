@@ -1,26 +1,19 @@
 import { matchScore, placeQuery, type Query } from "@/lib/search-match";
 import type { SearchEvent, SearchGroupOut, SearchItem, SearchTier } from "@/lib/search-types";
 
-/**
- * The palette's data model, kept free of React so it can be tested: the streamed search state, and
- * how it and the palette's own entries (pages, settings, quick actions) become the sections shown.
- */
+/** Kept free of React so it can be tested. */
 
 export interface PaletteItem extends SearchItem {
   keywords?: string;
-  /** Runs in the browser (switch theme, sign out). */
   run?: () => void | Promise<void>;
-  /** A recent search: picking it types this into the box. */
   fill?: string;
 }
 
-/** Entries the palette knows itself, without asking the server. */
 export interface StaticGroup {
   key: string;
   name: string;
   priority: number;
   items: PaletteItem[];
-  /** Shown before anything is typed. */
   idle?: boolean;
 }
 
@@ -33,13 +26,11 @@ export interface StreamState {
   term: string;
   scope: string;
   groups: StreamGroup[];
-  /** Connected apps still being asked. */
   pending: { key: string; name: string }[];
   failed: { key: string; name: string; message: string; timedOut: boolean }[];
   /** App groups in the order they were announced, so they keep their place as answers arrive. */
   order: string[];
   done: boolean;
-  /** The search itself failed (offline, rate limited). */
   error: string | null;
 }
 
@@ -75,25 +66,19 @@ export function reduceStream(s: StreamState, e: SearchEvent): StreamState {
   }
 }
 
-// ------------------------------------------------------------------ sections
-
 export interface Section {
   key: string;
   name: string;
   tier: SearchTier;
   items: PaletteItem[];
-  /** A connected app that hasn't answered yet. */
   loading?: boolean;
-  /** Why this source has nothing to show ("Immich didn't answer in time."). */
   error?: string;
-  /** The best match across everything, lifted to the top. */
   best?: boolean;
 }
 
 const BEST_MIN = 0.75;
 const STRONG = 0.75;
 
-/** "go to notifications" and "settings sidebar" score the place by its name. */
 function scoreStatic(q: Query, place: Query | null, it: PaletteItem): number {
   const f = { label: it.label, keywords: it.keywords, hint: it.hint };
   return Math.max(matchScore(q, f), place ? matchScore(place, f) : 0);
@@ -105,14 +90,12 @@ export interface BuildOptions {
   statics: StaticGroup[];
   stream: StreamState | null;
   recent: string[];
-  /** Results per group: fewer when searching everywhere, more inside one place. */
   perGroup: number;
 }
 
 /** The last entry under recent searches; a result so it can be reached from the keyboard. */
 export const CLEAR_RECENT = "recent:clear";
 
-/** Recent searches, quick actions and places to go, for an empty box. */
 function idleSections(o: BuildOptions): Section[] {
   const out: Section[] = [];
   if (o.recent.length) {
@@ -124,11 +107,6 @@ function idleSections(o: BuildOptions): Section[] {
   return out;
 }
 
-/**
- * Everything that matches, grouped: "Best match" first, then the palette's and the server's groups
- * (strong matches before weak ones, each kind in a fixed order), then connected apps in the order
- * they were asked, with loading and failed apps holding their place.
- */
 export function buildSections(o: BuildOptions): Section[] {
   if (!o.query.folded) return idleSections(o);
   const min = o.query.compact.length >= 3 ? 0.3 : 0.5;
@@ -215,7 +193,6 @@ export function buildSections(o: BuildOptions): Section[] {
 
 export const flatten = (sections: Section[]): PaletteItem[] => sections.flatMap((s) => s.items);
 
-/** What the live region says once results settle: "12 results. Immich didn't answer in time." */
 export function announce(sections: Section[], stream: StreamState | null, term: string): string {
   if (!term) return "";
   if (stream?.error) return stream.error;

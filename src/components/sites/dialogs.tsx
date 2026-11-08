@@ -6,7 +6,6 @@ import { Field, Input } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { checkSitePath } from "@/lib/sites-types";
 
-/** Ask for one name (a new file, a folder, a rename). The server's answer shows under the field. */
 export function NameDialog({
   open,
   onOpenChange,
@@ -27,9 +26,7 @@ export function NameDialog({
   label: string;
   initial: string;
   confirmLabel: string;
-  /** The folder it goes in, shown before the field. */
   prefix?: string;
-  /** Select the name without its extension, ready to type over. */
   selectStem?: boolean;
   validate?: (name: string) => string | null;
   onSubmit: (name: string) => Promise<void>;
@@ -105,7 +102,6 @@ export function NameDialog({
 // Select values can't be empty; no real folder is called ".".
 const TOP = ".";
 
-/** Pick the folder something moves to. */
 export function MoveDialog({ open, onOpenChange, path, dirs, isDir, onSubmit }: { open: boolean; onOpenChange: (o: boolean) => void; path: string; dirs: string[]; isDir: boolean; onSubmit: (to: string) => Promise<void> }) {
   const name = path.split("/").pop()!;
   const from = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";

@@ -3,10 +3,7 @@ import * as React from "react";
 import { readHistory, remember, type History } from "@/lib/terminal/history";
 import type { TargetId } from "@/lib/terminal/types";
 
-/**
- * Commands typed per place, kept in this browser only (most recent first). Secrets and commands
- * typed with a leading space are never saved.
- */
+/** Kept in this browser only. Secrets and commands typed with a leading space are never saved. */
 const key = (userId: string) => `gluon.terminal.history.${userId}`;
 
 function load(userId: string): Record<string, History> {

@@ -1,4 +1,3 @@
-/* Toolbar (matches the Apps list) */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
 .filter {
   flex: 1 1 260px;
@@ -19,7 +18,6 @@
 .filter input::-webkit-search-cancel-button { cursor: pointer; }
 .count { margin-left: auto; font-size: var(--text-sm); color: var(--muted); }
 
-/* Category row: words with counts, the chosen one underlined like a tab. */
 .cats {
   display: flex;
   align-items: stretch;
@@ -54,11 +52,9 @@
 .cat[aria-pressed="true"]::after { transform: scaleX(1); }
 .cat:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; border-radius: 6px; }
 @media (hover: hover) and (pointer: fine) { .cat:hover { color: var(--ink); } }
-/* The doubled sodium mark: some installed apps have an update waiting. */
 .catUpdates { width: 2px; height: 10px; background: var(--attn); box-shadow: 4px 0 0 var(--attn); margin-right: 4px; }
 .catRule { flex: none; width: 1px; margin: 10px 6px; background: var(--line); }
 
-/* Wide screens: categories become a sticky list beside the grid, marked like the sidebar. */
 .results { min-width: 0; }
 @media (min-width: 1180px) {
   .body { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -71,7 +67,6 @@
   .catRule { width: auto; height: 1px; margin: 6px 10px; }
 }
 
-/* Grid (virtualised by row) */
 .grid { position: relative; width: 100%; }
 .gridRow {
   position: absolute;
@@ -84,7 +79,6 @@
 }
 .skeletonGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 
-/* Card */
 .card {
   position: relative;
   display: grid;
@@ -158,13 +152,11 @@
   .cardOpen:hover { color: var(--ink); background: color-mix(in oklab, var(--ink) 6%, transparent); }
 }
 
-/* Install / update progress along the card's bottom edge. */
 .cardProgress { position: absolute; left: 16px; right: 16px; bottom: 8px; height: 2px; border-radius: 1px; background: var(--sunk); overflow: hidden; }
 .cardProgress > span { position: absolute; inset: 0; background: var(--ink); transform: scaleX(0); transform-origin: left; transition: transform var(--dur-slow) var(--ease-out); }
 .cardProgress > span[data-indeterminate] { right: 70%; animation: sweep 1400ms var(--ease-in-out) infinite; }
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 
-/* Detail dialog */
 .dialogTitle { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .dialogName { display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
 .dialogState { display: block; font-size: var(--text-sm); font-weight: 400; }

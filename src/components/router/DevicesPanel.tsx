@@ -13,7 +13,6 @@ import s from "./router.module.css";
 /** Offline devices shown before "Show more": the router remembers every visitor for months. */
 const OFFLINE_FIRST = 12;
 
-/** Wi-Fi signal as the router reports it, 0 to 5 bars, drawn as five rising hairline bars. */
 function Bars({ n }: { n: number }) {
   return (
     <svg className={s.bars} width="17" height="12" viewBox="0 0 17 12" role="img" aria-label={`Signal ${n} of 5 bars`}>

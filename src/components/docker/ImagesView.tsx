@@ -30,7 +30,6 @@ type Sort = "created" | "name" | "size";
 const COLUMNS = "18px minmax(0, 2.3fr) minmax(0, 1.5fr) minmax(0, 104px) minmax(0, 112px) 68px";
 const PAGE = 150;
 
-/** "ghcr.io/immich-app/immich-server" + ":v3.2.2", the tag quieter than the name. */
 function RefName({ image }: { image: DockerImage }) {
   const t = image.tags[0];
   if (t) {
@@ -125,8 +124,6 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
       {unused.length === 0 ? "Every one is used by a container." : <>{unused.length === 1 ? "1 isn't" : `${unused.length} aren't`} used by anything{unusedBytes > 0 ? <>, freeing at least <span className="num">{fmt.bytes(unusedBytes)}</span> if removed</> : null}.</>}
     </>
   );
-
-  // ---------------------------------------------------------------- actions
 
   async function checkNewer(i: DockerImage, tag: string) {
     const t = toast.loading(`Asking the registry about ${tag}…`);
@@ -256,8 +253,6 @@ export function ImagesView({ initial, initialError, initialQuery }: { initial: I
       },
     ];
   };
-
-  // ---------------------------------------------------------------- render
 
   const allShownSelectable = shown.filter((i) => selectable.includes(i.id));
   const allOn = allShownSelectable.length > 0 && allShownSelectable.every((i) => selected.has(i.id));

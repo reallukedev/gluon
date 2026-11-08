@@ -21,11 +21,6 @@ import { DnsHelp } from "./DnsHelp";
 import s from "./network.module.css";
 import c from "./chat.module.css";
 
-/**
- * One app's place on the internet: the chain a visit takes (DNS, certificate, web server, app) with
- * each link's state, every address that leads to it, and whether a login protects it.
- */
-
 interface Props {
   entry: AppEntry;
   baseDomain: string;
@@ -72,7 +67,6 @@ function dnsLink(d: RouteStatus["dns"]): Link {
           : { name: "DNS", state: "unknown", label: "Lookup failed", title: d.message };
 }
 
-/** A port on the chat server: does it answer, and is the certificate it presents good. */
 function portLink(name: string, p: XmppStatus["c2s"]): Link {
   if (!p.reachable) return { name, state: "unhealthy", label: `Not answering on :${p.port}`, title: p.error ?? "" };
   if (p.error) return { name, state: "unhealthy", label: "Refuses chat apps", title: p.error };
@@ -83,7 +77,6 @@ function portLink(name: string, p: XmppStatus["c2s"]): Link {
   return { name, state: "unhealthy", label: t.status === "expired" ? "Certificate expired" : "Certificate not trusted", title: t.message };
 }
 
-/** How a chat app reaches the server: the name, the sign-in port, and other servers. */
 function chatChain(st: RouteStatus | undefined): Link[] | null {
   if (!st?.enabled || !st.xmpp) return null;
   const x = st.xmpp;
@@ -94,7 +87,6 @@ function chatChain(st: RouteStatus | undefined): Link[] | null {
   return out;
 }
 
-/** Whether people outside get through the router, as one hop of the chain. */
 function reachLink(r: PublicReach): Link {
   if (r.state === "ok") return { name: "From outside", state: "running", label: "Gets through your router", title: r.summary };
   if (r.state === "blocked") {
@@ -106,7 +98,6 @@ function reachLink(r: PublicReach): Link {
   return { name: "From outside", state: "unknown", label: "Can't tell from inside", title: r.summary };
 }
 
-/** How a voice app reaches Mumble: the name, its port (TCP, then UDP for the voice itself), the router. */
 function voiceChain(st: RouteStatus | undefined): Link[] | null {
   if (!st?.enabled || !st.voice) return null;
   const v = st.voice;
@@ -553,7 +544,6 @@ function VoiceFacts({ v }: { v: VoiceStatus }) {
   );
 }
 
-/** Whether people outside get through, with what to forward when they don't. */
 function ReachFact({ r }: { r: PublicReach }) {
   const bad = r.ports.filter((p) => p.verdict === "not-forwarded" || p.verdict === "elsewhere");
   return (

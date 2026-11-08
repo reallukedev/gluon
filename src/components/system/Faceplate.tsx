@@ -10,10 +10,6 @@ import { SegmentBar } from "@/components/ui/SegmentBar";
 import { useMachineReadings } from "@/components/charts/readings";
 import f from "./faceplate.module.css";
 
-/**
- * The machine as an instrument plate: every processor thread as a live hairline, memory as one
- * bar split by app, and every temperature sensor on one graduated scale with its limits ticked.
- */
 export function Faceplate({ overview, memory }: { overview: SystemOverview; memory?: MemoryBreakdown }) {
   return (
     <div className={f.plate}>
@@ -23,8 +19,6 @@ export function Faceplate({ overview, memory }: { overview: SystemOverview; memo
     </div>
   );
 }
-
-// ---------------------------------------------------------------- processor
 
 function CpuThreads({ overview }: { overview: SystemOverview }) {
   const { host, status } = useLive();
@@ -109,8 +103,6 @@ function shortCpu(model: string) {
     .trim();
 }
 
-// ---------------------------------------------------------------- memory
-
 function MemoryBar({ overview, initial }: { overview: SystemOverview; initial?: MemoryBreakdown }) {
   const fmt = useFormat();
   const router = useRouter();
@@ -182,8 +174,6 @@ function MemoryBar({ overview, initial }: { overview: SystemOverview; initial?: 
     </section>
   );
 }
-
-// ---------------------------------------------------------------- temperatures
 
 interface TempGroup {
   key: string;
@@ -303,8 +293,8 @@ function TempScale({ overview }: { overview: SystemOverview }) {
                   />
                 )}
                 <i className={f.tempMark} style={{ left: at(g.max) }} />
-                {g.high && <i className={f.limit} data-kind="high" style={{ left: at(g.high) }} />}
-                {g.crit && <i className={f.limit} data-kind="crit" style={{ left: at(g.crit) }} />}
+                {g.high ? <i className={f.limit} data-kind="high" style={{ left: at(g.high) }} /> : null}
+                {g.crit ? <i className={f.limit} data-kind="crit" style={{ left: at(g.crit) }} /> : null}
               </span>
               <span className={`${f.tempValue} num`}>
                 {lv === "fault" && <span className={f.faultGlyph} aria-hidden />}

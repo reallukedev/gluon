@@ -20,7 +20,6 @@ const STAGES = [
   { key: "run", label: "Running" },
 ];
 
-/** What the router has to forward, with copy buttons: the part people get wrong. */
 function Forwarding({ st }: { st: ChatCallsStatus }) {
   const to = st.lanIp ?? "this server";
   const rows = [
@@ -76,11 +75,6 @@ function Checks({ st }: { st: ChatCallsStatus }) {
   );
 }
 
-/**
- * Calls across networks: installs a small TURN relay (coturn) next to Prosody and turns on the
- * setting that hands chat apps logins for it. Quark has the relay built in, so there it's just the
- * setting. Says exactly what the router has to forward.
- */
 export function CallsDialog({ open, onOpenChange, appId, onChanged }: { open: boolean; onOpenChange: (o: boolean) => void; appId: string; onChanged: () => void }) {
   const url = `/api/chat/${encodeURIComponent(appId)}/calls`;
   const { data: st, mutate } = useApi<ChatCallsStatus>(open ? url : null);

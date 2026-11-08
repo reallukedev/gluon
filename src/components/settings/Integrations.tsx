@@ -32,7 +32,6 @@ import { SectionHeader } from "./SectionHeader";
 import { ConnectDialog, type ConnectTarget } from "@/components/home/connect/Connect";
 import { CloudflarePanel, cloudflareSummary, useCloudflare } from "./Cloudflare";
 
-/** "Home Assistant" and "Homeassistant" are the same app. */
 const squash = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const KIND_ICON: Partial<Record<IntegrationKind, string>> = {
@@ -70,8 +69,6 @@ type FormState =
       };
     }
   | { mode: "edit"; integration: Integration };
-
-// ================================================================= page
 
 export function Integrations() {
   const { viewer } = usePrefs();
@@ -403,8 +400,6 @@ function StatusLine({ it }: { it: Integration }) {
     </span>
   );
 }
-
-// ================================================================= form
 
 type Config = Record<string, unknown>;
 interface Header {

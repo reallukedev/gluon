@@ -67,8 +67,6 @@ export function Security() {
   );
 }
 
-// ---------------------------------------------------------------- password
-
 function Password() {
   const { viewer } = usePrefs();
   const { data, mutate } = useApi<{ changedAt: number | null }>("/api/me/password");
@@ -175,8 +173,6 @@ function Password() {
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- two-step
 
 function TwoStep({ status, refresh }: { status: MfaStatus | undefined; refresh: () => void }) {
   const router = useRouter();
@@ -366,14 +362,7 @@ function TwoStep({ status, refresh }: { status: MfaStatus | undefined; refresh: 
   );
 }
 
-// ---------------------------------------------------------------- devices
-
-/**
- * Every signed-in browser as a lane on a shared 60-day scale (30 days back, 30 ahead): a solid line
- * while it was signed in from home (dashed from away), a faint line while it sits idle, and a dotted
- * tail until it signs itself out. Stale sessions read at a glance as long faint lines.
- */
-/** Rows shown before "Show more": enough for a household's phones and laptops. */
+/** Enough for a household's phones and laptops. */
 const FIRST = 8;
 
 function Devices() {

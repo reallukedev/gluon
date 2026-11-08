@@ -450,7 +450,6 @@ export function DiskDetailView({ initial }: { initial: Detail }) {
   );
 }
 
-/** A disk's page while the server reads the drives: back link, name, the drawing and its panels in their places. */
 export function DiskDetailSkeleton() {
   return (
     <Page pending>

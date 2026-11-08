@@ -23,14 +23,12 @@ const ICON: Record<string, React.ReactNode> = {
   about: <InfoCircle />,
 };
 
-/** The section in a /settings path, or null on /settings itself. */
 export function sectionOf(pathname: string): string | null {
   return pathname.split("/")[2] || null;
 }
 
 /**
- * The Settings list and the frame around a section. It lives in settings/layout.tsx, so moving between
- * sections swaps only the content: the list stays mounted and keeps keyboard focus on the item clicked.
+ * Lives in settings/layout.tsx, so moving between sections swaps only the content and the list keeps keyboard focus.
  */
 export function SettingsFrame({ sections, children }: { sections: SettingsSection[]; children: React.ReactNode }) {
   const pathname = usePathname();

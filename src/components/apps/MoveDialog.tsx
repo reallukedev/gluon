@@ -29,10 +29,7 @@ const STAGES = (name: string, from: string) => [
   { key: "check", label: "Check it runs" },
 ];
 
-/**
- * Move an app into Gluon's own apps folder: review exactly what moves and what stays, start it,
- * watch it, and get pointed at the next step. The move runs on the server whatever this dialog does.
- */
+/** The move runs on the server whatever this dialog does. */
 export function MoveDialog({
   app,
   open,
@@ -44,7 +41,6 @@ export function MoveDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onFinished?: (newId: string | null) => void;
-  /** Start removing the old copy (it keeps its data unless the person chooses otherwise). */
   onRemoveOld?: () => void;
 }) {
   const [phase, setPhase] = React.useState<Phase>("review");
@@ -53,7 +49,6 @@ export function MoveDialog({
   const [loading, setLoading] = React.useState(false);
   const [view, setView] = React.useState<MoveView>(emptyMove);
   const [starting, setStarting] = React.useState(false);
-  /** Why the server refused to start (or follow) a move; stays until the next attempt. */
   const [startError, setStartError] = React.useState<string | null>(null);
   const live = React.useRef(false);
   const finished = React.useRef(onFinished);

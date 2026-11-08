@@ -46,7 +46,6 @@
 .hostName { font-size: 1.125rem; font-weight: 600; font-family: var(--font-display); font-stretch: 86%; line-height: 1.1; letter-spacing: 0.005em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .collapse { flex: none; }
 
-/* Search: the palette's front door for pointer users (⌘K for everyone else). */
 .searchRow { padding: 12px 12px 0; }
 .search {
   display: flex;
@@ -174,7 +173,6 @@
 .meName { display: block; font-size: var(--text-md); font-weight: 560; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meRole { display: block; font-size: var(--text-xs); color: var(--muted); }
 
-/* Collapsed rail */
 .frame[data-collapsed] .searchText,
 .frame[data-collapsed] .searchKbd,
 .frame[data-collapsed] .hostText,
@@ -207,7 +205,6 @@
 .announcementText { flex: 1; min-width: 0; padding: 5px 0; overflow-wrap: anywhere; text-wrap: pretty; }
 .announcementClose { flex: none; }
 
-/* Mobile */
 .topbar { display: none; }
 @media (max-width: 900px) {
   .frame, .frame[data-collapsed] { grid-template-columns: 1fr; --sidebar-w: 280px; }
@@ -229,7 +226,6 @@
   .topName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
-/* Drawer (mobile nav) */
 .drawerBackdrop {
   position: fixed; inset: 0; z-index: 40; background: var(--backdrop);
   opacity: calc(1 - var(--drawer-swipe-progress, 0));

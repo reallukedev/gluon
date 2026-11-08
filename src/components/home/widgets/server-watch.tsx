@@ -1,6 +1,5 @@
 "use client";
-// Server widgets for admins' Home: uptime of watched addresses, recent activity, drive health and
-// the busiest apps. Each reads an existing admin API, so members never see them in the catalog.
+// Each reads an existing admin API, so members never see them in the catalog.
 import * as React from "react";
 import Link from "next/link";
 import { registerWidget } from "../widgetStore";
@@ -26,8 +25,6 @@ import { Preview } from "../previews";
 import { useHome } from "../context";
 import { activityLimit } from "@/lib/home";
 import w from "./watch.module.css";
-
-// ---------------------------------------------------------------- shared bits
 
 function Loading({ rows = 3 }: { rows?: number }) {
   return (
@@ -59,8 +56,6 @@ function Failed({ title, status, retry }: { title: string; status?: number; retr
 }
 
 const QUARTER = 15 * 60_000;
-
-// ---------------------------------------------------------------- uptime
 
 function UptimeWidget({ size }: WidgetProps) {
   const home = useHome();
@@ -163,8 +158,6 @@ registerWidget({
   preview: <Preview of="uptime" />,
 });
 
-// ---------------------------------------------------------------- activity
-
 function ActivityWidget({ size }: WidgetProps) {
   const limit = activityLimit(size);
   const { data, error, mutate } = useApi<ActivityPage>(`/api/activity?limit=${limit}`, { refresh: 30_000 });
@@ -212,8 +205,6 @@ registerWidget({
   Component: ActivityWidget,
   preview: <Preview of="activity" />,
 });
-
-// ---------------------------------------------------------------- drive health
 
 function driveState(d: DiskView): { line: LineState; word: string } {
   const sm = d.smart;
@@ -316,8 +307,6 @@ registerWidget({
   Component: DrivesWidget,
   preview: <Preview of="drives" />,
 });
-
-// ---------------------------------------------------------------- busiest apps
 
 interface BusyConfig {
   by?: "cpu" | "memory";

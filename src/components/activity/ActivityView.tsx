@@ -41,7 +41,6 @@ function dayLabel(ts: number, date: (ts: number, o?: { weekday?: boolean; year?:
   return date(ts, { weekday: true, year: new Date(ts).getFullYear() !== new Date(now).getFullYear() });
 }
 
-/** A run of entries that say the same thing, newest first. Most runs are one entry. */
 interface Run {
   key: number;
   items: ActivityItem[];
@@ -50,10 +49,6 @@ interface Run {
 /** Scrolled further than this, new entries wait above instead of pushing the page down. */
 const HOLD_BELOW = 240;
 
-/**
- * Who did what to which thing, and what the server noticed: a live timeline grouped by day, with
- * its filters. Lives in Settings → Activity (its summary goes in the section's header).
- */
 export function ActivityView({ initial, people, initialTarget, initialUser, pageSize }: { initial: ActivityPage; people: Person[]; initialTarget: string; initialUser: string; pageSize: number }) {
   const fmt = useFormat();
   const { serverName } = usePrefs();
@@ -167,8 +162,7 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
     return () => io.disconnect();
   }, [cursor, loadMore]);
 
-  // Rebuilt only when entries arrive, not on every keystroke in the search box: the rows are memoized
-  // and keep their runs, so typing doesn't re-render the whole timeline.
+  // Keyed on entries, not the search box, so typing doesn't re-render the whole timeline.
   const firstItems = first?.items;
   const items = React.useMemo(() => {
     const seen = new Set<number>();

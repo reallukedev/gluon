@@ -8,13 +8,12 @@ import s from "./meters.module.css";
 export interface AppUsage {
   cpu: number;
   mem: number;
-  /** CPU (% of the machine) for each recent sample, oldest first. */
+  /** Percent of the whole machine, oldest first. */
   cpuSeries: number[];
 }
 
 const SERIES = 40;
 
-/** Live CPU and memory per app, summed over its containers, with a short CPU history. */
 export function useAppUsage(apps: { id: string; containers: { name: string }[] }[]): Map<string, AppUsage> {
   const { containers, status } = useLive();
   return React.useMemo(() => {
@@ -42,10 +41,7 @@ export function useAppUsage(apps: { id: string; containers: { name: string }[] }
   }, [apps, containers, status]);
 }
 
-/**
- * A short CPU trace ending at now, then the figure. Idle apps draw a flat line on the floor.
- * `fit`: lay out by the surrounding container's width (the Apps table) instead of the window's.
- */
+/** `fit` lays out by the surrounding container's width (the Apps table) instead of the window's. */
 export function CpuMeter({ series, value, name, fit }: { series: number[] | null; value: number | null; name: string; fit?: boolean }) {
   const fmt = useFormat();
   if (value === null)
@@ -70,10 +66,7 @@ export function CpuMeter({ series, value, name, fit }: { series: number[] | null
   );
 }
 
-/**
- * Memory as a bar measured against the app using the most (so rows compare at a glance), then the
- * figure. The tooltip gives the share of the whole machine.
- */
+/** Measured against the app using the most, so rows compare at a glance. */
 export function MemMeter({ value, scale, total, name, fit }: { value: number | null; scale: number; total: number | null; name: string; fit?: boolean }) {
   const fmt = useFormat();
   if (value === null)

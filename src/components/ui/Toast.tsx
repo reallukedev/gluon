@@ -28,7 +28,6 @@ function add(type: Kind, t: ToastInput) {
   });
 }
 
-/** Fire-and-forget notices. Call from anywhere on the client. */
 export const toast = {
   success: (title: string, rest?: Omit<ToastInput, "title">) => add("success", { title, ...rest }),
   info: (title: string, rest?: Omit<ToastInput, "title">) => add("info", { title, ...rest }),

@@ -20,7 +20,6 @@ import s from "./notifications.module.css";
 const SUBS_URL = "/api/alerts/subscriptions";
 const CHANNELS_URL = "/api/alerts/channels";
 
-/** Settings → Notifications: your own channels, and what each channel you use tells you. */
 export function Notifications() {
   const { viewer } = usePrefs();
   const admin = viewer.role === "admin";
@@ -433,7 +432,6 @@ function SubscriptionRow({
   );
 }
 
-/** One line for the row: what this channel tells you. */
 export function describe(f: SubscriptionFilter, role: "admin" | "member"): string {
   let out: string;
   if (role !== "admin") {

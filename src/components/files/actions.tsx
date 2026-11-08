@@ -19,20 +19,13 @@ import { fromInput, type Incoming } from "./drop";
 import { baseName, downloadUrl, isArchive as isArchiveName, isDirLike, joinPath, modKey, parentOf, rawUrl } from "./lib";
 import { planUpload, uploadTops } from "./logic";
 
-// ---------------------------------------------------------------- actions
-
 export interface ActionContext {
-  /** Folder being shown (for "here" in messages and as the default destination). */
   here: ListingT | undefined;
   places: Places | undefined;
   refresh: () => void;
 }
 
-/**
- * Every file operation the explorer can do, with the same confirmations, conflict questions,
- * undo toasts and background tasks as the current Files page. `nodes` holds the dialogs and the
- * tasks tray; render it once.
- */
+/** `nodes` holds the dialogs and the tasks tray; render it once. */
 export function useFileActions({ here, places, refresh }: ActionContext) {
   const fmt = useFormat();
   const { viewer } = usePrefs();
@@ -144,7 +137,6 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
     }
   }
 
-  /** A new folder with the first free name ("New folder 2"), ready to be renamed in place. */
   async function newFolder(dir: string, taken: Iterable<string>): Promise<FileEntry | null> {
     const names = new Set([...taken].map((n) => n.toLowerCase()));
     for (let i = 1; i < 60; i++) {
@@ -176,7 +168,6 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
     }
   }
 
-  /** Copy or move, asking about name clashes first. Resolves true when it went ahead. */
   async function transfer(sources: string[], dest: string, mode: "copy" | "move"): Promise<boolean> {
     try {
       const { conflicts } = await api.post<{ conflicts: { name: string; source: string; existing: FileEntry }[] }>("/api/files/conflicts", { sources, dest });
@@ -226,7 +217,6 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
     }
   }
 
-  /** Upload picked files into `dest`, asking about names that are already there. */
   /** Every name in a folder (up to 20,000), so a clash past the first page isn't missed. */
   async function namesIn(dir: string): Promise<FileEntry[]> {
     const out: FileEntry[] = [];
@@ -238,7 +228,6 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
     return out;
   }
 
-  /** Upload picked or dropped files into `dest`, asking first about names that are already there. */
   async function upload(incoming: { files: Incoming[]; dirs: string[] }, dest: string) {
     if (!incoming.files.length && !incoming.dirs.length) return;
     try {
@@ -288,7 +277,6 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
     }
   }
 
-  /** A new, empty text file with a free name, ready to be renamed in place. */
   async function newTextFile(dir: string, taken: Iterable<string>): Promise<FileEntry | null> {
     const names = new Set([...taken].map((n) => n.toLowerCase()));
     for (let i = 1; i < 60; i++) {
@@ -307,7 +295,6 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
     return null;
   }
 
-  // ---- the Files clipboard: ⌘C or ⌘X in one folder, ⌘V in another
   const mod = typeof window === "undefined" ? "Ctrl+" : modKey();
   function toClipboard(mode: "copy" | "cut", targets: FileEntry[], from: string) {
     if (!targets.length) return;
@@ -326,7 +313,6 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
     if (ok && c.mode === "cut") clip.set(null);
   }
 
-  /** Measure a folder (or every folder in it) now, with the result in a toast. */
   async function measure(target: { path: string; name: string }, all = false) {
     const t = toast.loading(all ? `Measuring the folders in ${target.name}…` : `Measuring ${target.name}…`);
     const url = `/api/files/size?path=${encodeURIComponent(target.path)}`;
@@ -456,19 +442,15 @@ export function useFileActions({ here, places, refresh }: ActionContext) {
 
 export type FileActions = ReturnType<typeof useFileActions>["actions"];
 
-// ---------------------------------------------------------------- the item menu
-
 export interface MenuContext {
   actions: FileActions;
   writable: boolean;
-  /** Folder the items are in (for Duplicate). */
   dir: string;
   onOpen: (e: FileEntry) => void;
   onRename?: (e: FileEntry) => void;
   after?: () => void;
 }
 
-/** Everything you can do to the given items, in the order people look for it. */
 export function entryMenu(targets: FileEntry[], c: MenuContext): MenuEntry[] {
   const { actions: a, writable } = c;
   const one = targets.length === 1 ? targets[0]! : null;

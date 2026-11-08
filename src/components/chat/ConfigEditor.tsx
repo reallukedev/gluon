@@ -17,11 +17,7 @@ interface Check {
   output: string;
 }
 
-/**
- * The chat server's own config file, for anything Gluon's settings don't cover: Prosody's Lua or
- * Quark's TOML. The server checks every change before it's saved. For Prosody, the file Gluon
- * manages is shown read-only beside it; Quark has no such file, and applies a save without a restart.
- */
+/** For Prosody, the file Gluon manages is shown read-only beside it; Quark has no such file. */
 export function ConfigEditor({ appId, onSaved }: { appId: string; onSaved: () => void }) {
   const url = `/api/chat/${encodeURIComponent(appId)}/config`;
   const { data, error, mutate } = useApi<Files>(url);

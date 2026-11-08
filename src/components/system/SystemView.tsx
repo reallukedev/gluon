@@ -16,7 +16,6 @@ import s from "./system.module.css";
 
 export type SystemTab = "overview" | "updates" | "services" | "sign-ins" | "power";
 
-/** The server's reads, still on their way: each part of the page waits only for its own. */
 export interface SystemInitial {
   updates: Promise<UpdatesStatus | undefined>;
   services: Promise<{ services: ServiceInfo[] } | undefined>;
@@ -35,7 +34,6 @@ export function updatesOverdue(u: UpdatesStatus | undefined): boolean {
   return (!!u.oldestSecurityAt && u.counts.security > 0 && t - u.oldestSecurityAt > 3 * DAY) || (!!u.oldestPendingAt && t - u.oldestPendingAt > 30 * DAY);
 }
 
-/** The summary when updates or services couldn't be read (or are still loading). */
 function unreadSummary(updatesError: ApiError | null, servicesError: ApiError | null): string {
   const failed = [updatesError && "updates", servicesError && "services"].filter(Boolean) as string[];
   if (!failed.length) return "Checking updates and services.";
@@ -112,7 +110,6 @@ function PowerBody({ initial }: { initial: SystemInitial }) {
 
 type TabCount = { count?: number; attention: boolean };
 
-/** Title and tabs, known before any host command answers; the summary and counts come with the data. */
 function SystemHead({ tab, summary, counts = {} }: { tab: SystemTab; summary: React.ReactNode; counts?: { updates?: TabCount; services?: TabCount; signIns?: TabCount } }) {
   return (
     <>

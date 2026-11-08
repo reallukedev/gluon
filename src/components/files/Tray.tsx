@@ -32,10 +32,6 @@ function Progress({ value, max, state }: { value: number; max: number; state?: "
   );
 }
 
-/**
- * Bottom-right tray: uploads (with pause, resume, cancel, speed and time left) and background file
- * tasks (copy, move, extract, ownership, emptying the trash). Hidden when there's nothing to show.
- */
 export function Tray({ jobs, onCancelJob, onUndo, onClearJobs }: { jobs: FileJob[]; onCancelJob: (id: string) => void; onUndo: (job: FileJob) => void; onClearJobs: () => void }) {
   const fmt = useFormat();
   const list = useUploads();

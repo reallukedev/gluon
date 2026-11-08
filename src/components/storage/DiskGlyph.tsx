@@ -1,12 +1,7 @@
-import * as React from "react";
 
 export type GlyphMedia = "hdd" | "ssd" | "nvme" | "flash" | "card" | "unknown";
 
-/**
- * A disk drawn as the object it is, in the iconoir line weight: a hard drive shows its platter and
- * arm, an SSD its chips, an NVMe stick its long board, a USB stick its plug, a card its clipped
- * corner. Same 24px grid and 1.5 stroke as the rest of the icons, so it sits in any icon slot.
- */
+/** Same 24px grid and 1.5 stroke as the rest of the icons, so it sits in any icon slot. */
 export function DiskGlyph({ media, className, size }: { media: GlyphMedia | null | undefined; className?: string; size?: number }) {
   const common = {
     viewBox: "0 0 24 24",

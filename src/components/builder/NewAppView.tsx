@@ -13,11 +13,6 @@ import f from "./flow/flow.module.css";
 
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
 
-/**
- * Making an app, step by step: what to run, then the essentials, an optional public address, a
- * review of exactly what will run, and the start itself. The draft exists from the second step
- * on, so a reload (or the full builder) picks up where things were.
- */
 export function NewAppView({ initialSource, initialDraft, initialStep, missingDraft, draftError, target }: { initialSource: FlowSource; initialDraft: CustomAppDetail | null; initialStep: DraftStep; missingDraft: boolean; draftError: string | null; target: BuilderTarget }) {
   const router = useRouter();
   const [source, setSource] = React.useState<FlowSource>(initialSource);

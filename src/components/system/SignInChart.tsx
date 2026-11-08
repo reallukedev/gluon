@@ -8,7 +8,6 @@ import s from "./signins.module.css";
 
 const HOUR = 3_600_000;
 
-/** Local midnights (in the person's timezone) between `from` and `to`. */
 function midnights(from: number, to: number, timeZone: string | undefined): number[] {
   const f = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -28,7 +27,6 @@ function midnights(from: number, to: number, timeZone: string | undefined): numb
   return [...new Set(out)];
 }
 
-/** Whole hours divisible by `every` (local time) between `from` and `to`. */
 function everyHours(from: number, to: number, every: number, timeZone: string | undefined): number[] {
   const f = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -45,12 +43,6 @@ function spanAt(lane: SignInLane, t: number, slack: number): SignInSpan | null {
   return null;
 }
 
-/**
- * The week as swimlanes: one lane per person, sessions as hairline segments (overlapping ones
- * merged), sign-ins from outside the home drawn as the doubled "needs you" line, and the failed
- * attempts as a strip of hourly ticks underneath on the same time axis. A cursor (pointer or
- * arrow keys) reads out who was on at that moment.
- */
 export function SignInChart({ history: h, live }: { history: SignInHistory; live: LiveLogins }) {
   const fmt = useFormat();
   const { timeZone } = usePrefs();
@@ -105,7 +97,6 @@ export function SignInChart({ history: h, live }: { history: SignInHistory; live
     }
   }
 
-  // ---------------------------------------------------------------- readout
   let readout: React.ReactNode;
   if (cursor === null) {
     const now = [...new Set(live.sessions.map((x) => x.user))];
@@ -186,7 +177,6 @@ export function SignInChart({ history: h, live }: { history: SignInHistory; live
           gridTemplateRows: `22px repeat(${Math.max(1, lanes.length)}, var(--lane-h)) var(--fail-h)`,
         }}
       >
-        {/* axis */}
         <div className={s.axisLabel} aria-hidden />
         <div className={s.axis} aria-hidden>
           {days.map((d) =>
@@ -199,7 +189,6 @@ export function SignInChart({ history: h, live }: { history: SignInHistory; live
           <span className={s.nowLabel}>now</span>
         </div>
 
-        {/* lanes */}
         {lanes.map((l, i) => (
           <React.Fragment key={l.user}>
             <div className={s.laneLabel}>
@@ -242,7 +231,6 @@ export function SignInChart({ history: h, live }: { history: SignInHistory; live
           </>
         )}
 
-        {/* failed attempts */}
         <div className={s.laneLabel}>
           <span className={s.laneText}>
             <span className={s.laneName}>Failed</span>

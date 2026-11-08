@@ -32,7 +32,6 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
     if (data && text === null) setText(data.content);
   }, [data, text]);
 
-  // Warn before leaving with unsaved edits.
   const dirty = data !== undefined && text !== null && text !== data.content;
   React.useEffect(() => {
     if (!dirty) return;

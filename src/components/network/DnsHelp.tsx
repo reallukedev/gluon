@@ -6,11 +6,7 @@ import { StateLine } from "@/components/ui/StateLine";
 import { useDnsLookup } from "./shared";
 import d from "./dns.module.css";
 
-/**
- * What a name needs in DNS, without assuming who hosts the domain: the A (and AAAA) record to add,
- * with copy buttons, or a plain "already points here". Cloudflare's proxy only comes up when the
- * name's answers really are Cloudflare's.
- */
+/** Cloudflare's proxy only comes up when the name's answers really are Cloudflare's. */
 
 const HOST_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
@@ -26,7 +22,7 @@ function useSettled<T>(value: T, ms = 600): T {
 interface Props {
   host: string;
   baseDomain: string;
-  /** What connects: web browsers go through any proxy, chat and voice apps can't. */
+  /** Web browsers go through any proxy; chat and voice apps can't. */
   purpose: "web" | "chat" | "voice";
   /** Known from the last status check, so a saved address doesn't need a lookup. */
   known?: DnsResult | null;

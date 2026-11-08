@@ -18,11 +18,7 @@ interface PendingRow {
   reveal?: boolean;
 }
 
-/**
- * Environment variables. Locked ones are secrets: encrypted on the server, never shown again,
- * and kept out of the compose file. `imageEnv` is what the image sets by default, offered for
- * the ones not here yet.
- */
+/** Locked ones are secrets: encrypted on the server, never shown again, and kept out of the compose file. */
 export function EnvGroup({ draft, form: f, issues, imageEnv = [], onFix }: { draft: Draft; form: ServiceForm; issues: Issue[]; imageEnv?: { key: string; value: string }[]; onFix: (id: string) => void }) {
   const base = `services.${f.name}.env`;
   const secrets = draft.secrets[f.name] ?? [];
@@ -185,7 +181,6 @@ export function EnvGroup({ draft, form: f, issues, imageEnv = [], onFix }: { dra
   );
 }
 
-/** A new variable: typed here, added once it has a valid name (and as a secret when locked). */
 function PendingEnv({ row, taken, onChange, onCommit, onRemove }: { row: PendingRow; taken: (k: string) => boolean; onChange: (r: PendingRow) => void; onCommit: () => void; onRemove: () => void }) {
   const nameErr = row.key ? envNameError(row.key) ?? (taken(row.key) ? "That variable is already set." : null) : null;
   const ref = React.useRef<HTMLDivElement>(null);

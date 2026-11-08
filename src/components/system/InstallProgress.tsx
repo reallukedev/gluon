@@ -8,11 +8,7 @@ import { Disclosure } from "@/components/ui/Disclosure";
 import { useFormat } from "@/components/PrefsProvider";
 import u from "./updates.module.css";
 
-/**
- * Reads apt's own output and draws each package moving through its three steps
- * (download → unpack → set up), so a long install shows where it is instead of a wall of text.
- * The raw output is one click away.
- */
+/** Reads apt's own output, so a long install shows where each package is instead of a wall of text. */
 
 type Stage = 0 | 1 | 2 | 3; // waiting, downloaded, unpacked, set up
 

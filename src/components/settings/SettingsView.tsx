@@ -18,7 +18,6 @@ const AlertsSettings = dynamic(() => import("@/components/alerts/AlertsSettings"
 const ActivityView = dynamic(() => import("@/components/activity/ActivityView").then((m) => m.ActivityView), { loading: () => <Skeleton height={320} radius={12} /> });
 const PeopleSettings = dynamic(() => import("@/components/people/PeopleView").then((m) => m.PeopleSettings), { loading: () => <Skeleton height={320} radius={12} /> });
 
-/** What the Keep watch sections start with (read on the server for the section being opened). */
 export type SectionData =
   | { kind: "alerts"; tab: AlertsTab; monitorId: string | null; channelId: string | null }
   | {
@@ -52,7 +51,6 @@ const CONTENT: Record<string, React.ComponentType> = {
 };
 
 
-/** One sentence of state under each section title, for the sections whose state is the viewer's own. */
 function useSummary(id: string, fallback: string): React.ReactNode {
   const { prefs, viewer } = usePrefs();
   const access = useNavAccess();

@@ -14,11 +14,7 @@ import s from "./voice.module.css";
 
 const shown = (st: VoiceSetting) => (st.scale ? String(Math.round(Number(st.value) / st.scale)) : st.value);
 
-/**
- * Mumble's common settings, applied live through Ice (no restart). Edits collect in a save bar.
- * Each says where its value comes from when the compose file is involved, because a value set
- * here wins over the file's until it's cleared.
- */
+/** A value set here wins over the compose file's until it's cleared, so each says where its value comes from. */
 export function VoiceSettings({ appId, appName, details, connected, via, onChanged }: { appId: string; appName: string; details: VoiceDetails | null; connected: number; via: "builder" | "compose" | null; onChanged: () => void }) {
   const where = via === "builder" ? "the app's builder settings" : "the compose file";
   const [draft, setDraft] = React.useState<Record<string, string>>({});
@@ -207,7 +203,6 @@ function WelcomeRow({ id, text, value, onChange }: { id: string; text: React.Rea
   );
 }
 
-/** The join password: shown masked, changed live, or removed (from the compose file too, when it sets one). */
 function PasswordRow({ appId, appName, st, connected, where, onChanged }: { appId: string; appName: string; st: VoiceSetting; connected: number; where: string; onChanged: () => void }) {
   const [reveal, setReveal] = React.useState(false);
   const [changing, setChanging] = React.useState(false);

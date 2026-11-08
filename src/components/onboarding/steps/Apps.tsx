@@ -10,10 +10,6 @@ import { Actions, PartError, StepHead, useFlow, useMemberPlan } from "../flow";
 import { APPS_URL, openable, type MemberApp } from "./memberApps";
 import o from "../onboarding.module.css";
 
-/**
- * Household member: which of their apps sit on Home, one card each. The picked ones are pinned (in this order),
- * the rest unpinned. Everything else on Home stays.
- */
 export function AppsStep() {
   const plan = useMemberPlan();
   const { next } = useFlow();

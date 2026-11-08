@@ -1,4 +1,3 @@
-/* The console on Status: channel strips on a meter bridge, a log scale on the left. */
 .desk {
   --meter-h: 96px;
   display: grid;
@@ -51,7 +50,6 @@
 }
 .link:focus-visible { outline-offset: -2px; }
 
-/* The meter: a sunk slot, an ink column rising from the floor, a peak tick that lingers. */
 .meter { position: relative; width: 8px; height: var(--meter-h); border-radius: 3px; background: var(--sunk); z-index: 1; }
 .fill {
   position: absolute;

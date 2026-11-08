@@ -6,9 +6,8 @@ import { api, useApi } from "@/lib/client/api";
 import { appInsertIndex, appItem, isAppItem, type HomeLayout, type WidgetItem } from "@/lib/home";
 
 /**
- * Pinned apps are `app` cards in the person's Home layout, one per app; the layout is the only record of what's
- * pinned. Home, the Apps page and an app's own page all read and change it through the same SWR entry, so a pin
- * made anywhere shows up everywhere without a reload.
+ * The layout is the only record of what's pinned. Everything reads it through the same SWR entry, so a pin made
+ * anywhere shows up everywhere.
  */
 
 export const HOME_KEY = "/api/me/home";

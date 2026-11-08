@@ -18,11 +18,7 @@ interface Props {
   onRollback: (version: string) => Promise<void>;
 }
 
-/**
- * Where each version sits on the rail: by when it was published, from the oldest kept (left) to
- * the draft's last change (right), so a long gap means the draft has moved on a while ago. Ticks
- * published close together are nudged apart enough to stay clickable.
- */
+/** Ticks published close together are nudged apart enough to stay clickable. */
 function placeOnRail(times: number[], now: number): number[] {
   if (!times.length) return [];
   const t0 = times[0]!;
@@ -34,10 +30,6 @@ function placeOnRail(times: number[], now: number): number[] {
   return over > 0 ? out.map((x, i) => Math.max(i * 7, x - over)) : out;
 }
 
-/**
- * The site's instrument: what's live, the versions kept behind it, and the draft ahead of it, on
- * one line. Versions are ticks on the rail; open one to look at it or put it back live.
- */
 export function VersionStrip({ site, busy, onPreview, onRollback }: Props) {
   const fmt = useFormat();
   const versions = [...site.versions].reverse();

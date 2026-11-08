@@ -1,5 +1,3 @@
-/* Chat server (XMPP) flow and details. Built on flow.module.css; only what chat adds lives here. */
-
 .servers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 8px; }
 .serverIcon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px; background: var(--sunk); color: var(--ink-2); }
 .serverIcon svg { width: 16px; height: 16px; }
@@ -31,7 +29,6 @@
 .after li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; align-items: start; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.5; }
 .after svg { width: 16px; height: 16px; margin-top: 2px; color: var(--muted); }
 
-/* ---- details panel */
 .facts { margin: 0; display: grid; border: 1px solid var(--line); border-radius: var(--radius-control); }
 .fact { display: grid; grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.3fr); gap: 4px 14px; align-items: baseline; padding: 10px 14px; border-top: 1px solid var(--line); font-size: var(--text-sm); }
 .fact:first-child { border-top: 0; }

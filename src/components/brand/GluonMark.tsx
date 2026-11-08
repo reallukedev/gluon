@@ -1,6 +1,5 @@
 import { MARK_20 } from "./mark";
 
-/** The Gluon mark at glyph size (sidebar, sign-in, anywhere the name appears). Draws in currentColor. */
 export function GluonMark({ className, title }: { className?: string; title?: string }) {
   const { coil, y, x0, x1 } = MARK_20;
   return (

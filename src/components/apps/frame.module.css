@@ -1,8 +1,4 @@
-/*
- * The Apps frame. The DOM keeps title, tabs, then the tab's own summary, actions and body (so the tabs
- * come first for keyboards); the grid draws them as a normal page header: summary under the title,
- * actions at the right, tabs underneath.
- */
+/* The DOM keeps the tabs before the summary and actions for keyboard order; the grid draws a normal page header. */
 .frame {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -23,7 +19,6 @@
 @media (max-width: 720px) {
   .tabs { margin-top: 20px; }
 }
-/* Phones: the actions drop under the summary, as PageHeader's wrap does. */
 @media (max-width: 640px) {
   .frame {
     grid-template-columns: minmax(0, 1fr);

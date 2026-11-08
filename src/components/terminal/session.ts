@@ -18,10 +18,7 @@ export interface SessionStart {
   cols: number;
 }
 
-/**
- * One running command or terminal: its output arrives on a streamed POST; keystrokes, resizes and
- * Stop go out as small POSTs, in order, with typing batched so a fast typist isn't a request storm.
- */
+/** Typing is batched so a fast typist isn't a request storm. */
 export class LiveSession {
   id: string | null = null;
   private abort = new AbortController();
@@ -95,7 +92,6 @@ export class LiveSession {
     this.post({ resize: { rows, cols } });
   }
 
-  /** Ctrl-C, then harder until it's gone. */
   stop() {
     if (this.ended || !this.id) {
       this.close();
@@ -105,7 +101,6 @@ export class LiveSession {
     return this.post({ stop: true });
   }
 
-  /** Drop the stream; the server ends whatever is running. */
   close() {
     this.ended = true;
     if (this.timer) clearTimeout(this.timer);

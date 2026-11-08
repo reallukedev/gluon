@@ -120,7 +120,6 @@ textarea.input { height: auto; min-height: 88px; padding: 9px 11px; line-height:
   .row.stack { grid-template-columns: 1fr; gap: 10px; }
 }
 
-/* Checkbox */
 .checkRow { display: inline-flex; align-items: flex-start; gap: 10px; font-size: var(--text-md); cursor: pointer; line-height: 1.4; -webkit-tap-highlight-color: transparent; }
 .checkRow:has([data-disabled]) { cursor: not-allowed; color: var(--muted); }
 .checkbox {
@@ -152,7 +151,6 @@ textarea.input { height: auto; min-height: 88px; padding: 9px 11px; line-height:
   .segment::before { content: ""; position: absolute; inset: -6px 0; }
 }
 
-/* Segmented control: a sunk well; the raised plate slides between segments. */
 .segmented {
   position: relative;
   display: inline-flex;

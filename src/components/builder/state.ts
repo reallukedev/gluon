@@ -18,10 +18,7 @@ interface PendingOps {
 const emptyOps = (): PendingOps => ({ set: {}, remove: {} });
 const hasOps = (o: PendingOps) => Object.keys(o.set).length > 0 || Object.keys(o.remove).length > 0 || !!o.renameService || o.token !== undefined || !!o.github;
 
-/**
- * The draft being edited, saved on its own shortly after each change (and when the page is left).
- * Secret values go up once and never come back: the client only ever knows their names.
- */
+/** Secret values go up once and never come back: the client only ever knows their names. */
 export function useDraft(detail: CustomAppDetail, onSaved: (d: Partial<CustomAppDetail>) => void) {
   const [spec, setSpecState] = React.useState<AppSpec>(detail.spec);
   const [secrets, setSecrets] = React.useState<SecretNames>(detail.secrets);
@@ -117,7 +114,6 @@ export function useDraft(detail: CustomAppDetail, onSaved: (d: Partial<CustomApp
     [schedule],
   );
 
-  /** Edit the compose document in place (the form's writers), keeping everything else. */
   const editCompose = React.useCallback(
     (fn: (doc: Document) => void) => {
       const parsed = parseCompose(specRef.current.compose);
@@ -185,7 +181,6 @@ export function useDraft(detail: CustomAppDetail, onSaved: (d: Partial<CustomApp
     [schedule],
   );
 
-  /** Take the server's copy (after a conflict). */
   const reset = React.useCallback((d: CustomAppDetail) => {
     ops.current = emptyOps();
     dirty.current = false;
@@ -222,8 +217,6 @@ function mergeSet(a: Record<string, Record<string, string>>, b: Record<string, R
 }
 
 export type Draft = ReturnType<typeof useDraft>;
-
-// ---------------------------------------------------------------- jobs
 
 export interface JobView {
   kind: JobKind | null;
@@ -262,7 +255,6 @@ export function reduceJob(v: JobView, e: JobEvent): JobView {
 
 export const jobFrom = (events: JobEvent[]) => events.reduce(reduceJob, emptyJob);
 
-/** Read an NDJSON stream from GET (re-attaching to a running job). */
 export async function streamGet(url: string, onEvent: (e: JobEvent) => void, signal?: AbortSignal) {
   const res = await fetch(url, { credentials: "same-origin", signal });
   if (!res.ok || !res.body) return;
@@ -282,5 +274,4 @@ export async function streamGet(url: string, onEvent: (e: JobEvent) => void, sig
   }
 }
 
-/** The host links to the app's port use: this server's LAN address, else the one in the address bar. */
 export const linkHost = (d: Pick<CustomAppDetail, "lanHost">) => d.lanHost ?? (typeof window !== "undefined" ? window.location.hostname : "localhost");

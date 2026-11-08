@@ -23,7 +23,6 @@ interface Props {
   onNavigate: (path: string) => void;
 }
 
-/** What's been moved to the trash, per drive; restore with conflict handling; admins delete for good. */
 export function TrashView({ data, error, isAdmin, refresh, onJob, onNavigate }: Props) {
   const fmt = useFormat();
   const [selected, setSelected] = React.useState<Set<string>>(new Set());

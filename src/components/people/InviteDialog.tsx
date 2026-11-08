@@ -12,7 +12,6 @@ import { Notice, Skeleton } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
 import s from "./people.module.css";
 
-/** Make a one-time invite link, then show it (with a QR code for phones) exactly once. */
 export function InviteDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; onCreated: () => void }) {
   const [role, setRole] = React.useState<"member" | "admin">("member");
   const [name, setName] = React.useState("");

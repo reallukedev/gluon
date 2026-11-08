@@ -1,5 +1,3 @@
-/* The Overview faceplate: three instruments on one plate, divided by hairlines. */
-
 .plate {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1.25fr);
@@ -25,8 +23,6 @@
 .caption { margin: 0; font-size: var(--text-xs); color: var(--muted); }
 .dim { color: var(--muted); }
 .emptyNote { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
-
-/* ---------------------------------------------------------------- processor threads */
 
 .threads {
   display: grid;
@@ -65,8 +61,6 @@
 @media (hover: hover) and (pointer: fine) {
   .thread:hover::before { background: var(--line-strong); }
 }
-
-/* ---------------------------------------------------------------- temperatures: one scale */
 
 .scale, .tempRow { display: grid; grid-template-columns: minmax(104px, 0.8fr) minmax(0, 2fr) 76px; gap: 12px; align-items: center; }
 .scaleName { min-height: 1px; }

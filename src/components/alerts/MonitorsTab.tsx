@@ -48,7 +48,6 @@ function rank(m: MonitorView): number {
   return m.state === "down" ? 0 : m.state === "failing" ? 1 : m.flapping ? 2 : m.state === "pending" ? 3 : m.state === "up" ? 4 : 5;
 }
 
-/** Where a monitor looks from, in words: automatic ones are named by vantage point. */
 function lane(m: MonitorView): { title: string; where: string | null; addr: string } {
   const addr = m.target.replace(/^https?:\/\//, "").replace(/\/$/, "");
   if (m.source === "auto" && m.ref?.startsWith("route:")) return { title: "From the internet", where: "from the internet", addr };
@@ -85,7 +84,6 @@ export function MonitorsTab({ initialOpen }: { initialOpen: string | null }) {
   const { data, error, isLoading, mutate: mutateList } = useApi<MonitorView[]>(listUrl, { refresh: 30_000, keepPreviousData: true });
   const { data: apps } = useApi<AppLite[]>("/api/apps", { revalidateOnFocus: false });
   const { mutate: globalMutate } = useSWRConfig();
-  /** Refresh the list (every range) and any open detail. */
   const mutate = React.useCallback(() => {
     void mutateList();
     void globalMutate((k) => typeof k === "string" && k.startsWith(MONITORS_URL));
@@ -331,9 +329,7 @@ function MonitorRow({
   since,
 }: {
   m: MonitorView;
-  /** Only monitor for its app: the row carries the app's name and says where it checks from. */
   solo: string | null;
-  /** The app this row stands for, when it's the only monitor in its group: its icon leads the row. */
   app: { icon: string | null; name: string } | null;
   range: Range;
   busy: boolean;

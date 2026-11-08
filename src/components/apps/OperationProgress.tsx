@@ -21,10 +21,7 @@ const STAGES: Record<UmbrelOperation, { key: string; word: string | null; label:
   ],
 };
 
-/**
- * Umbrel's install or update as FlowSteps, with Umbrel's own percentage under the rail while it
- * downloads. Every stage comes from what Umbrel reports; nothing advances on a timer.
- */
+/** Every stage comes from what Umbrel reports; nothing advances on a timer. */
 export function OperationProgress({ state, op, running }: { state: StreamState; op: UmbrelOperation; running: boolean }) {
   const stages = STAGES[op];
   const words = state.lines.map((l) => l.text);

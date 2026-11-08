@@ -18,7 +18,6 @@ export type ChannelEdit = { kind: "create"; parent: number } | { kind: "edit"; i
 const RAIL = 22;
 const railX = (level: number) => 18 + (level - 1) * RAIL + 6;
 
-/** The channel tree, drawn in hairlines, with how many people are in each channel. */
 export function Channels({ appId, live, rootName, onEdit, onChanged }: { appId: string; live: VoiceLive; rootName: string | null; onEdit: (e: ChannelEdit) => void; onChanged: () => void }) {
   const [confirm, confirmNode] = useConfirm();
   const rows = React.useMemo(() => layoutTree(live.channels, live.users), [live.channels, live.users]);
@@ -112,7 +111,6 @@ export function Channels({ appId, live, rootName, onEdit, onChanged }: { appId: 
 
 const stripTags = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 
-/** Create a channel, or rename, move and describe one. */
 export function ChannelDialog({ appId, live, edit, onClose, onChanged }: { appId: string; live: VoiceLive; edit: ChannelEdit | null; onClose: () => void; onChanged: () => void }) {
   const byId = React.useMemo(() => new Map(live.channels.map((c) => [c.id, c])), [live.channels]);
   const [name, setName] = React.useState("");

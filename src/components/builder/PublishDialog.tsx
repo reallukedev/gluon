@@ -21,17 +21,12 @@ interface Props {
   issues: Issue[];
   target: BuilderTarget;
   store: StoreStatus | null;
-  /** Save any typing before publishing. */
   beforeStart: () => Promise<void>;
   onFinished: () => void;
   onSetUpStore: () => void;
   initialMode?: JobMode;
 }
 
-/**
- * Publish (install or update) in one place: what will happen, then the run itself, then how it
- * ended. The run belongs to the server; closing this doesn't stop it, and reopening shows it again.
- */
 export function PublishDialog({ open, onOpenChange, detail, issues, target, store, beforeStart, onFinished, onSetUpStore, initialMode }: Props) {
   const { view, setView, running, startError, start, reset, serverRunning } = useJob(detail, { beforeStart, onFinished });
   const [rebuild, setRebuild] = React.useState(false);

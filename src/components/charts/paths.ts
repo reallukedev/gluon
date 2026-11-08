@@ -1,16 +1,12 @@
 /**
- * Path building for the hairline charts, kept apart from React so it can be tested. A sample with no
- * value (NaN, null from a failed read) is a gap in the line, never a drop to zero: unknown is not 0.
+ * A sample with no value (NaN, null from a failed read) is a gap in the line, never a drop to zero: unknown is not 0.
  */
 
 export type Point = [number, number];
 
 export interface SeriesPath {
-  /** The line, broken at gaps. */
   d: string;
-  /** The area under it, one closed shape per run. Empty unless asked for. */
   area: string;
-  /** Points with a real value inside the window, for hover and the end dot. */
   pts: Point[];
   /** Points that sit alone between gaps, drawn as dots so they don't vanish. */
   lonely: Point[];
@@ -63,7 +59,6 @@ export function seriesPath(points: Point[], o: { tMin: number; tMax: number; x: 
   return { d, area, pts, lonely };
 }
 
-/** A sparkline's path in a 0..100 wide box; missing values break the line. */
 export function sparkPath(values: number[], height: number, yMax?: number): string {
   const vals = values.length === 1 ? [values[0]!, values[0]!] : values;
   const n = vals.length;

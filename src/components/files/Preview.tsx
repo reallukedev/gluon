@@ -22,7 +22,6 @@ const CodeEditor = dynamic(() => import("@/components/code/CodeEditor").then((m)
 
 interface Props {
   entry: FileEntry | null;
-  /** Files in the same folder, in listing order, for previous/next. */
   siblings: FileEntry[];
   onNavigate: (e: FileEntry) => void;
   onClose: () => void;
@@ -143,7 +142,6 @@ export function Preview({ entry: open, siblings, onNavigate, onClose, canWrite, 
       <div
         className={s.previewBody}
         key={entry.path}
-        // Swipe sideways through photos and videos on a touch screen.
         onTouchStart={(e) => {
           const t = e.touches[0];
           swipe.current = entry.preview === "text" || e.touches.length > 1 || !t ? null : { x: t.clientX, y: t.clientY };
@@ -200,10 +198,6 @@ export function Preview({ entry: open, siblings, onNavigate, onClose, canWrite, 
   );
 }
 
-/**
- * A photo fitted to the window, with its real size once it loads; click (or Enter) to see it at
- * full size and scroll around, click again to fit. A thumbnail shows while the original loads.
- */
 function ImagePreview({ entry }: { entry: FileEntry }) {
   const [size, setSize] = React.useState<{ w: number; h: number } | null>(null);
   const [actual, setActual] = React.useState(false);

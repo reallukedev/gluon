@@ -3,10 +3,7 @@ import * as React from "react";
 import { passwordStrength } from "./strength";
 import s from "./parts.module.css";
 
-/**
- * Four hairline ticks and a plain word. Advice, never a gate: any password is accepted. Announced
- * politely (only the label) so screen readers aren't interrupted on every keystroke.
- */
+/** Announced politely (only the label) so screen readers aren't interrupted on every keystroke. */
 export function PasswordStrength({ value, context = [], id }: { value: string; context?: string[]; id?: string }) {
   const deferred = React.useDeferredValue(value);
   const ctxKey = context.join("\u0000");

@@ -19,11 +19,7 @@ import { Preview } from "./previews";
 import { ConnectForm, type ConnectTarget } from "./connect/Connect";
 import c from "./collection.module.css";
 
-/**
- * The Collection: everything that can live on Home, each with Pin / Unpin. Apps (one card each), folders from
- * Files, widgets by category, and the widgets each installed app offers, under that app. Nothing here needs Home to
- * be in arrange mode: pinning puts the thing on Home straight away, unpinning takes it off.
- */
+/** Nothing here needs arrange mode: pinning puts the thing on Home straight away. */
 
 const CATEGORIES: WidgetDef["category"][] = ["For you", "Household", "Server", "Media & services"];
 const BLURB: Partial<Record<WidgetDef["category"], string>> = {
@@ -49,12 +45,10 @@ function matches(q: string, ...texts: (string | null | undefined)[]) {
 export interface CollectionProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  /** Which section to show first. */
   section: CollectionSection | null;
   widgets: WidgetDef[];
   items: WidgetItem[];
   onPin: (type: string, config?: Record<string, unknown>) => void;
-  /** Take these items off Home (with an Undo toast). */
   onUnpin: (ids: string[]) => void;
 }
 
@@ -186,7 +180,6 @@ export function Collection({ open, onOpenChange, section, widgets, items, onPin,
           </p>
         )}
 
-        {/* ---------------------------------------------------------------- apps */}
         {(!q || shownApps.length > 0) && (
           <section className={c.section} id="collection-apps" aria-labelledby="collection-apps-title">
             <div className={c.head}>
@@ -240,7 +233,6 @@ export function Collection({ open, onOpenChange, section, widgets, items, onPin,
           </section>
         )}
 
-        {/* ---------------------------------------------------------------- folders */}
         {(!q || shownFolders.length > 0) && (
           <section className={c.section} id="collection-folders" aria-labelledby="collection-folders-title">
             <div className={c.head}>
@@ -283,7 +275,6 @@ export function Collection({ open, onOpenChange, section, widgets, items, onPin,
           </section>
         )}
 
-        {/* ---------------------------------------------------------------- widgets */}
         <div id="collection-widgets" className={c.widgets}>
           {groups.map((g) => (
             <section key={g.cat} className={c.section} aria-labelledby={`collection-cat-${g.cat.replace(/\W+/g, "-")}`}>
@@ -318,7 +309,6 @@ export function Collection({ open, onOpenChange, section, widgets, items, onPin,
           ))}
         </div>
 
-        {/* ---------------------------------------------------------------- per app */}
         {appBlocks.length > 0 && (
           <section className={c.section} id="collection-from-apps" aria-labelledby="collection-from-apps-title">
             <div className={c.head}>
@@ -373,7 +363,6 @@ function targetOf(app: InstalledApp, sv: AppService): ConnectTarget {
   return { appId: app.appId, appName: app.name, icon: app.icon, line: app.line, service: sv, integrationId: sv.state === "broken" ? sv.integrationId : null };
 }
 
-/** One thing that can be pinned: a drawing of it, its name, one line, and the button. */
 function Entry({
   name,
   preview,
@@ -391,7 +380,6 @@ function Entry({
   preview: React.ReactNode;
   detail: React.ReactNode;
   title?: string;
-  /** Why it can't be pinned here; replaces the button. */
   reason?: string | null;
   pinned: boolean;
   count?: number;

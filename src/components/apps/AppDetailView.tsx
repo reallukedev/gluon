@@ -103,7 +103,6 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
     setBusy(action);
     say(`${{ start: "Starting", stop: "Stopping", restart: "Restarting" }[action]} ${app.name}…`);
     try {
-      // The state under the title shows it happening and settles when it's done.
       await api.post(`${apiBase}/action`, { action });
       const fresh = await mutate();
       if (action !== "stop" && fresh?.line === "running") setSettled(action === "restart" ? "Back up" : "Running");
@@ -496,11 +495,8 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
   );
 }
 
-// ---------------------------------------------------------------- Umbrel
-
 const OFFICIAL_STORE = "umbrel-app-store";
 
-/** Umbrel owns this app: its version, where it came from, what works here and what goes through Umbrel. */
 function UmbrelNotice({ app, busy, onUpdate }: { app: AppDetail; busy: boolean; onUpdate: () => void }) {
   const u = app.umbrel!;
   // Community store names live in the store listing; only fetch it when we need one.
@@ -542,8 +538,6 @@ function UmbrelNotice({ app, busy, onUpdate }: { app: AppDetail; busy: boolean; 
   );
 }
 
-// ---------------------------------------------------------------- overview
-
 function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | null; onContainer: (name: string, action: "restart" | "stop" | "start") => void }) {
   const fmt = useFormat();
   const stats = useContainerStats();
@@ -552,7 +546,6 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
   const windowMs = { "1h": 3_600_000, "24h": 86_400_000, "7d": 7 * 86_400_000 }[range];
   const base = `/apps/${encodeURIComponent(app.id)}`;
 
-  // Sum containers into one series per metric, aligned by timestamp.
   const sum = (suffix: "cpu" | "mem") => {
     const m = new Map<number, number>();
     for (const c of app.containers) for (const [t, v] of hist?.[`ctr.${c.name}.${suffix}`] ?? []) m.set(t, (m.get(t) ?? 0) + v);

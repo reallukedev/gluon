@@ -8,48 +8,34 @@ export interface Series {
   label: string;
   points: [number, number][];
   tone?: "ink" | "muted" | "attn" | "fault";
-  /** Draw an area fill under this series (first series only looks best). */
   area?: boolean;
 }
 
 interface Props {
   series: Series[];
   height?: number;
-  /** Fixed y-axis max; otherwise a rounded-up max of the data. */
   yMax?: number;
   format: (v: number) => string;
   formatTime: (t: number) => string;
-  /** Visible time window in ms ending at `now` (live charts) or the data's end. */
   windowMs?: number;
   live?: boolean;
   label: string;
-  /** Compact: no axis labels (for cards). */
   compact?: boolean;
-  /**
-   * Reading style, for small charts under a headline figure: the scale (top value and 0) at the
-   * right edge, the span ("6 min ago" … "now") underneath, and a dot on the newest value.
-   */
+  /** Small charts under a headline figure: scale at the right edge, span underneath, a dot on the newest value. */
   edge?: boolean;
-  /** With `edge`: what the left end of the time axis says, e.g. "6 min ago". */
   span?: string;
-  /** Short scale labels for `edge` (defaults to `format`). */
   axisFormat?: (v: number) => string;
-  /** With `edge`: label the time axis. Off for the smallest tiles, where the span is in the label. */
   times?: boolean;
 }
 
-/** A live chart's right edge: the newest sample while the stream is fresh, else the wall clock. */
 function liveEdge(latest: number): number {
   const now = Date.now();
   return latest > 0 && now - latest < 15_000 ? Math.max(latest, now - 15_000) : now;
 }
 
 /**
- * A time series chart drawn in hairlines. Rules and the "now" line snap to device pixels at any
- * DPR (crispEdges); data lines stay antialiased. Hovering (or touching) pins a readout and freezes
- * the picture (data and time window) so live data doesn't slide out from under the pointer.
- * Live charts step with their samples (the right edge is the newest sample), never by render
- * timing, so streaming data doesn't jitter. Values are never animated.
+ * The picture freezes while hovered so live data doesn't slide out from under the pointer. Live charts step with their
+ * samples, never by render timing, so streaming data doesn't jitter.
  */
 export function TimeChart({ series, height = 140, yMax, format, formatTime, windowMs, live, label, compact, edge, span, axisFormat, times = true }: Props) {
   const wrap = React.useRef<HTMLDivElement>(null);
@@ -94,7 +80,6 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
 
   const paths = data.map((sr) => ({ sr, ...seriesPath(sr.points, { tMin, tMax, x, y, floor: plotH, area: sr.area }) }));
 
-  // Hover → nearest timestamp across the first series.
   const base = paths[0]?.pts ?? [];
   const hoverIdx = hover === null || !base.length ? null : base.reduce((best, p, i) => (Math.abs(x(p[0]) - hover) < Math.abs(x(base[best]![0]) - hover) ? i : best), 0);
   const hoverT = hoverIdx !== null ? base[hoverIdx]![0] : null;
@@ -225,7 +210,6 @@ export function TimeChart({ series, height = 140, yMax, format, formatTime, wind
   );
 }
 
-/** Minimal inline trend: a line ending at a marked "now". */
 export function Sparkline({ points, height = 28, yMax, tone = "muted", label }: { points: number[]; height?: number; yMax?: number; tone?: Series["tone"]; label?: string }) {
   const d = sparkPath(points, height, yMax);
   return (

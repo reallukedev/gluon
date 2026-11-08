@@ -38,7 +38,6 @@ export function reduceStream(st: StreamState, e: StreamEvent): StreamState {
   }
 }
 
-/** Steps + scrolling output + final result, for long server operations. */
 export function StreamView({ state, height = 280 }: { state: StreamState; height?: number }) {
   const out = React.useRef<HTMLPreElement>(null);
   const stick = React.useRef(true);
@@ -92,7 +91,6 @@ export function StreamView({ state, height = 280 }: { state: StreamState; height
   );
 }
 
-/** A dialog that runs a streamed operation and shows its progress. Can't be closed while running. */
 export function StreamDialog({ open, onClose, title, description, state, running }: { open: boolean; onClose: () => void; title: string; description?: string; state: StreamState; running: boolean }) {
   return (
     <Dialog

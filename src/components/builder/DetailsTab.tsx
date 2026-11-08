@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import type { AppDetails, BuilderTarget, CustomAppDetail, Issue, WebSettings } from "@/lib/builder-types";
 import { CATEGORIES } from "@/lib/builder-types";
 import { Panel } from "@/components/ui/Surface";
@@ -177,7 +176,6 @@ export function WebPanel({ draft, detail, services, issues, target, usedPorts, s
   );
 }
 
-/** When the chosen port is taken (the check says by whom), offer the next free one. */
 function PortSuggestion({ port, usedPorts, ownPort, disabled, onUse }: { port: number | null; usedPorts: Map<number, string>; ownPort: number | null; disabled: boolean; onUse: (p: number) => void }) {
   if (!port || port === ownPort || disabled || !usedPorts.has(port)) return null;
   const free = nextFreePort(port + 1, usedPorts);

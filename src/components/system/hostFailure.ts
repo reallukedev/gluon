@@ -2,7 +2,6 @@ import type { ApiError } from "@/lib/client/api";
 
 type Kind = "missing" | "timeout" | "other";
 
-/** What went wrong with a host command, from the API error. */
 export function hostFailure(error: Pick<ApiError, "message" | "details">): { kind: Kind; program: string | null; command: string | null } {
   const command = typeof error.details?.command === "string" ? error.details.command : null;
   const first = command?.split(" ")[0] ?? null;

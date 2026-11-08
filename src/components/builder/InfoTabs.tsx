@@ -16,8 +16,6 @@ import { LazyYamlEditor as YamlEditor } from "./LazyYamlEditor";
 import type { Draft } from "./state";
 import s from "./builder.module.css";
 
-// ---------------------------------------------------------------- files
-
 interface Preview {
   target: BuilderTarget;
   appId: string;
@@ -28,7 +26,6 @@ interface Preview {
   secretFiles: string[];
 }
 
-/** Exactly what the next publish writes, beside what was published last. */
 export function FilesTab({ id, rev }: { id: string; rev: number }) {
   const { data, error, isLoading, mutate } = useApi<Preview>(`/api/custom-apps/${id}/files`, { revalidateOnFocus: false });
   React.useEffect(() => {
@@ -76,8 +73,6 @@ export function FilesTab({ id, rev }: { id: string; rev: number }) {
   );
 }
 
-// ---------------------------------------------------------------- history
-
 export function HistoryTab({ detail }: { detail: CustomAppDetail }) {
   if (!detail.versions.length) return <Empty title="Not published yet">Each published version shows up here.</Empty>;
   return (
@@ -103,8 +98,6 @@ export function HistoryTab({ detail }: { detail: CustomAppDetail }) {
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- source (GitHub)
 
 export function SourceTab({ detail, draft, onRebuild, busy }: { detail: CustomAppDetail; draft: Draft; onRebuild: () => void; busy: boolean }) {
   const gh = detail.github!;

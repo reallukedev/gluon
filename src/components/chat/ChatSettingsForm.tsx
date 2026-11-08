@@ -26,9 +26,8 @@ const SIGN_UP: Record<SignUp, string> = {
 };
 
 /**
- * Saving settings, shared by the form and the "Turn on" buttons in What chat apps can do. Changes
- * that add or remove a group chat or file service restart Prosody, so those ask first and say how
- * many people get bumped. Quark applies everything live, so it never asks.
+ * Changes that add or remove a group chat or file service restart Prosody, so those ask first. Quark applies everything
+ * live.
  */
 export function useSettingsSaver(appId: string, host: ChatHostSnapshot, rev: string, onSaved: () => void) {
   const [saving, setSaving] = React.useState(false);

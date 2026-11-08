@@ -18,7 +18,6 @@ import c from "./cloudflare.module.css";
 export const CLOUDFLARE_ICON = "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/cloudflare.svg";
 const TOKENS_URL = "https://dash.cloudflare.com/profile/api-tokens";
 
-/** The panel's summary line, also used by the section header. */
 export function cloudflareSummary(cf: CloudflareStatus | undefined): string | null {
   if (!cf?.connected || !cf.zone) return null;
   const s = cf.sync;
@@ -34,8 +33,6 @@ export function useCloudflare(enabled = true) {
   React.useEffect(() => setFast(running), [running]);
   return res;
 }
-
-// ================================================================= panel
 
 export function CloudflarePanel() {
   const { data, error, mutate } = useCloudflare();
@@ -331,8 +328,6 @@ export function CloudflarePanel() {
   );
 }
 
-// ================================================================= cloudflare-ddns
-
 const REASON: Record<Exclude<HandoffReason, "differs">, string> = {
   "not-kept": "Gluon doesn't keep it yet",
   foreign: "Its records aren't Gluon's yet",
@@ -341,7 +336,6 @@ const REASON: Record<Exclude<HandoffReason, "differs">, string> = {
   error: "Cloudflare refused Gluon's last change",
 };
 
-/** What stands between cloudflare-ddns and its removal; "can be stopped" only when nothing does. */
 function Handoff({ h, busy, onTakeOver }: { h: DdnsHandoff; busy: boolean; onTakeOver: () => void }) {
   const waiting = h.names.filter((n) => n.reason && n.reason !== "differs");
   const differs = h.names.filter((n) => n.reason === "differs");
@@ -415,8 +409,6 @@ function Handoff({ h, busy, onTakeOver }: { h: DdnsHandoff; busy: boolean; onTak
     </div>
   );
 }
-
-// ================================================================= other names
 
 function AddNameDialog({ open, cf, onClose, onAdded }: { open: boolean; cf: CloudflareStatus; onClose: () => void; onAdded: (s: CloudflareStatus, name: string) => void }) {
   const [name, setName] = React.useState("");
@@ -525,8 +517,6 @@ function NameRow({ n, busy, waitingOn, onAdopt, onRemove }: { n: ManagedName; bu
     </li>
   );
 }
-
-// ================================================================= connect
 
 const PERMISSIONS: [string, string, string, boolean][] = [
   ["Zone", "DNS", "Edit", true],

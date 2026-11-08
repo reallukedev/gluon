@@ -14,7 +14,6 @@ import s from "./voice.module.css";
 
 type Edit = { kind: "create" } | { kind: "rename"; r: VoiceRegistered } | { kind: "password"; r: VoiceRegistered };
 
-/** People with a registered name on this server: their name is kept for them and they skip the join password. */
 export function Registered({ appId, details, onChanged }: { appId: string; details: VoiceDetails | null; onChanged: () => void }) {
   const [confirm, confirmNode] = useConfirm();
   const [edit, setEdit] = React.useState<Edit | null>(null);

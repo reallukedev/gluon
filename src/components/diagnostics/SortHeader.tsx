@@ -7,7 +7,6 @@ export interface SortState<K extends string> {
   dir: "asc" | "desc";
 }
 
-/** A column header that sorts; clicking the active one flips the direction. */
 export function SortHeader<K extends string>({ label, k, sort, onSort, align }: { label: string; k: K; sort: SortState<K>; onSort: (s: SortState<K>) => void; align?: "end" }) {
   const active = sort.key === k;
   return (

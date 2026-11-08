@@ -4,9 +4,7 @@ import { mutate } from "swr";
 import { api, ApiError, streamPost } from "@/lib/client/api";
 import type { CheckupEvent, CheckupKind, CheckupRun } from "@/lib/diagnostics-types";
 
-/** A run as the page shows it: stored runs and live ones share this shape. */
 export interface RunView extends CheckupRun {
-  /** Ids probing right now (live runs only). */
   running: string[];
   live: boolean;
 }
@@ -104,7 +102,6 @@ export async function startCheckup(kind: CheckupKind, target: string | null = nu
   }
 }
 
-/** Stop the run for everyone watching; the stream then ends with a "stopped" summary. */
 export async function stopCheckup() {
   const id = snap.view?.live ? snap.view.meta.id : null;
   if (!id) {

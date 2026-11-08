@@ -10,10 +10,6 @@ import s from "./builder.module.css";
 
 type Phase = { kind: "checking" } | { kind: "ready"; address: string; reachable: boolean | null; storeId: string } | { kind: "unreachable"; address: string; detail: string | null } | { kind: "error"; message: string } | { kind: "adding" } | { kind: "done" };
 
-/**
- * Adding Gluon's store to Umbrel, once. Opening the dialog writes the store and asks Umbrel's
- * container to fetch it (changes nothing in Umbrel); only "Add to Umbrel" registers it.
- */
 export function StoreSetupDialog({ open, onOpenChange, onDone, repair }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (s: StoreStatus) => void; repair?: boolean }) {
   const [phase, setPhase] = React.useState<Phase>({ kind: "checking" });
   const run = React.useRef(0);

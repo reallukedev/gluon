@@ -25,10 +25,6 @@ interface Kind {
   exact: boolean;
 }
 
-/**
- * What Docker keeps on disk and what could go: one bar of the disk Docker lives on, then one row
- * per kind of thing with its one cleanup, each previewed before anything is removed.
- */
 export function DiskView() {
   const fmt = useFormat();
   const [fresh, setFresh] = React.useState(0);

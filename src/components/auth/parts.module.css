@@ -1,6 +1,3 @@
-/* Shared pieces of the sign-in experience: strength meter, zone line, two-step setup, recovery codes. */
-
-/* ---------------------------------------------------------------- strength */
 .strength { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; min-height: 18px; }
 .ticks { display: inline-grid; grid-template-columns: repeat(4, 14px); gap: 3px; align-items: end; height: 12px; }
 .ticks i {
@@ -15,7 +12,6 @@
 .strengthLabel { font-size: var(--text-sm); color: var(--ink-2); font-weight: 560; }
 .strengthHint { grid-column: 1 / -1; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
 
-/* ---------------------------------------------------------------- zone line */
 .zone { display: grid; gap: 8px; }
 .zoneTrack { display: grid; grid-template-columns: auto minmax(48px, 1fr) minmax(0, auto); align-items: center; gap: 10px; font-size: var(--text-xs); color: var(--muted); }
 .zoneNode { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; min-width: 0; }
@@ -43,7 +39,6 @@
 .zoneText { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.45; text-wrap: pretty; }
 .zoneText b { color: var(--ink); font-weight: 620; }
 
-/* ---------------------------------------------------------------- two-step setup */
 .setup { display: grid; gap: 20px; }
 .setupSteps { margin: 0; padding: 0; list-style: none; display: grid; gap: 22px; counter-reset: st; }
 .setupSteps > li { counter-increment: st; display: grid; gap: 12px; padding-left: 32px; position: relative; font-size: var(--text-md); line-height: 1.5; color: var(--ink); }
@@ -88,7 +83,6 @@
 .error::before { content: ""; flex: none; width: 5px; height: 5px; transform: translateY(-2px) rotate(45deg); background: var(--fault); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 
-/* ---------------------------------------------------------------- recovery codes */
 .codes {
   list-style: none;
   margin: 0;

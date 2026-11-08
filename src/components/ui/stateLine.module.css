@@ -1,9 +1,3 @@
-/*
- * StateLine: the state is the line's form. Changes settle over 250ms on --ease-out:
- * the short red line drops from full height (scaleY from the baseline, no layout shift), the
- * doubled "needs you" stroke slides into the main line and fades as the item resolves.
- * Reduced motion keeps the colour and opacity fades and drops the travel.
- */
 .wrap { display: inline-flex; align-items: center; gap: 8px; line-height: 1; min-width: 0; }
 .line {
   position: relative;

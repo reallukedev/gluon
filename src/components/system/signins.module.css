@@ -12,11 +12,7 @@
 .subhead { margin: 0 0 8px; font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .note { margin: 10px 0 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
 
-/* ---------------------------------------------------------------- connected now */
-
-/* Sessions are sized by this list's own width, not the viewport. Every column is minmax(0, …) so nothing
-   can overflow; the tiers keep each text column readable. One-line row: 14 mark + 64 action + 4×16 gaps + 32
-   padding = 174px fixed, so at 720px the three text columns still get ~160–200px each. */
+/* Sized by this list's own width. 14 mark + 64 action + 4×16 gaps + 32 padding = 174px fixed, so at 720px the three text columns still get ~160–200px each. */
 .people { display: grid; container: sessions / inline-size; }
 .person + .person { border-top: 1px solid var(--line); }
 .personHead { display: flex; align-items: baseline; gap: 10px; padding: 12px 18px 4px; }
@@ -75,8 +71,6 @@
   .personHead { padding: 12px 16px 2px; }
 }
 
-/* ---------------------------------------------------------------- the week: chart */
-
 .chart { display: grid; gap: 10px; padding: 14px 18px 14px; min-width: 0; }
 
 .chartTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
@@ -134,7 +128,6 @@
   height: 2px;
   min-width: 2px;
   background: var(--ink);
- 
   clip-path: inset(0 0 0 0);
   animation: draw var(--dur-slow) var(--ease-out) both;
   animation-delay: calc(min(var(--i, 0), 6) * 40ms);
@@ -204,8 +197,6 @@
   .span[data-away] { top: calc(72% - 3px); }
 }
 
-/* ---------------------------------------------------------------- failures detail */
-
 .failures { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding: 14px 18px 16px; border-top: 1px solid var(--line); }
 @media (max-width: 900px) { .failures { grid-template-columns: 1fr; gap: 18px; padding: 14px 16px; } }
 .failCol { min-width: 0; }
@@ -218,16 +209,12 @@
 .nameList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--text-sm); }
 .nameList li { display: flex; justify-content: space-between; gap: 12px; }
 
-/* ---------------------------------------------------------------- sources */
-
 .sources { list-style: none; margin: 0; padding: 0; }
 .source { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 54px; padding: 8px 18px; }
 .source + .source { border-top: 1px solid var(--line); }
 .source .srcMain { font-size: var(--text-md); }
 .source .srcMain > span:last-child { font-size: var(--text-sm); }
 .srcTitle { display: flex; align-items: baseline; gap: 8px; }
-
-/* ---------------------------------------------------------------- posture */
 
 .facts { list-style: none; margin: 0; padding: 0; }
 .fact { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 12px 14px 12px 18px; }

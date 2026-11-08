@@ -6,7 +6,6 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Segmented } from "@/components/ui/Field";
 import s from "./section.module.css";
 
-/** The Apps section's tabs. Docker's four pages share one tab and switch with a segmented control. */
 export type AppsSection = "apps" | "store" | "custom" | "docker";
 export type DockerPart = "images" | "volumes" | "networks" | "disk";
 
@@ -18,7 +17,7 @@ const DOCKER: { value: DockerPart; label: string; href: string }[] = [
 ];
 const dockerHref = (p: DockerPart) => DOCKER.find((d) => d.value === p)!.href;
 
-/** Which platform Gluon works with, from the /apps layout: the App store tab only exists with Umbrel. */
+/** From the /apps layout: the App store tab only exists with Umbrel. */
 const PlatformContext = React.createContext<Platform | null>(null);
 export function AppsPlatform({ value, children }: { value: Platform; children: React.ReactNode }) {
   return <PlatformContext.Provider value={value}>{children}</PlatformContext.Provider>;
@@ -26,7 +25,6 @@ export function AppsPlatform({ value, children }: { value: Platform; children: R
 
 const LAST_DOCKER = "gluon:apps-docker";
 
-/** Which tab a path belongs to, and for Docker which of its four pages. */
 export function sectionOf(pathname: string): { current: AppsSection; docker?: DockerPart } {
   const part = pathname.replace(/\/+$/, "").split("/")[2];
   if (part === "store" || part === "custom") return { current: part };
@@ -34,11 +32,6 @@ export function sectionOf(pathname: string): { current: AppsSection; docker?: Do
   return d ? { current: "docker", docker: d.value } : { current: "apps" };
 }
 
-/**
- * Sits under the Apps title on every Apps tab: All apps, App store (with Umbrel), Custom, Docker. It lives
- * in the section's layout and follows the path, so it stays mounted while the tab below changes.
- * The Docker tab reopens the Docker page you used last in this session.
- */
 export function AppsSectionTabs() {
   const router = useRouter();
   const { current, docker } = sectionOf(usePathname());

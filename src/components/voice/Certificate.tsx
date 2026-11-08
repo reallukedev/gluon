@@ -16,10 +16,6 @@ import s from "./voice.module.css";
 const OFF = "__off__";
 const DAY = 86_400_000;
 
-/**
- * What certificate Mumble presents, and the switch that keeps it current from one Caddy already
- * has for a public address.
- */
 export function Certificate({ appId, details, onChanged }: { appId: string; details: VoiceDetails | null; onChanged: () => void }) {
   const fmt = useFormat();
   const [busy, setBusy] = React.useState<"choose" | "check" | null>(null);

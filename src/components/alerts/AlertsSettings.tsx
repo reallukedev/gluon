@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import dynamic from "next/dynamic";
 import type { ChannelView, DeliveryPage, MonitorView } from "@/lib/alerts-types";
 import { alertsHref, type AlertsTab } from "@/lib/settings-links";
@@ -18,10 +17,6 @@ const ChannelsTab = dynamic(() => import("./ChannelsTab").then((m) => m.Channels
 const SentTab = dynamic(() => import("./SentTab").then((m) => m.SentTab), { loading });
 const HistoryTab = dynamic(() => import("./FindingsTabs").then((m) => m.HistoryTab), { loading });
 
-/**
- * Settings → Alerts: what Gluon watches (monitors), where it tells you (shared channels and what was
- * sent), and the problems that cleared. What needs you now is on Status.
- */
 export function AlertsSettings({ tab, monitorId, channelId }: { tab: AlertsTab; monitorId: string | null; channelId: string | null }) {
   const fmt = useFormat();
   const { data: monitors } = useApi<MonitorView[]>(MONITORS_URL, { refresh: 30_000 });

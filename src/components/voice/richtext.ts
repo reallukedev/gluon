@@ -1,7 +1,5 @@
 /**
- * A safe preview of Mumble's welcome text. Mumble shows a small subset of HTML (Qt rich text);
- * the preview keeps only formatting tags and http(s) links, so nothing typed here can run in Gluon.
- * Browser only (uses DOMParser).
+ * Keeps only formatting tags and http(s) links, so nothing typed here can run in Gluon. Browser only (uses DOMParser).
  */
 
 const KEEP = new Set(["b", "strong", "i", "em", "u", "s", "br", "p", "div", "span", "a", "ul", "ol", "li", "h1", "h2", "h3", "h4", "font", "hr", "blockquote", "code", "pre", "sub", "sup", "small", "big", "center"]);
@@ -42,5 +40,4 @@ export function previewHtml(input: string): DocumentFragment {
   return out;
 }
 
-/** Plain text with line breaks shown as Mumble shows them when no HTML is used. */
 export const looksLikeHtml = (s: string) => /<\/?[a-z][^>]*>/i.test(s);

@@ -243,7 +243,6 @@ export function Stat({ label, value, sub }: { label: string; value: React.ReactN
 const SCOPES: AddrScope[] = ["internet", "lan", "containers", "local"];
 const REACH_WORD: Record<AddrScope, string> = { internet: "Internet", lan: "Home network", containers: "Between apps", local: "Inside this machine" };
 
-/** Where the other ends are: one cell per place, split into incoming (solid) and outgoing (dashed). Click to filter. */
 function Reach({ snap, scope, onScope, includeLocal }: { snap: ConnectionsSnapshot; scope: "all" | AddrScope; onScope: (s: "all" | AddrScope) => void; includeLocal: boolean }) {
   const per = new Map<AddrScope, { in: number; out: number }>(SCOPES.map((x) => [x, { in: 0, out: 0 }]));
   for (const c of snap.connections) {

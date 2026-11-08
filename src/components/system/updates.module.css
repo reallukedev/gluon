@@ -1,7 +1,5 @@
 .dim { color: var(--muted); }
 
-/* ---------------------------------------------------------------- what installing does */
-
 .impact { display: grid; margin-top: 16px; border-top: 1px solid var(--line); }
 .impactRow { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 0; }
 .impactRow + .impactRow { border-top: 1px solid var(--line); }
@@ -18,8 +16,6 @@
   .impactRow { grid-template-columns: 20px minmax(0, 1fr); }
   .impactTicks { grid-column: 2; height: 14px; }
 }
-
-/* ---------------------------------------------------------------- install progress */
 
 .progress { display: grid; gap: 14px; min-width: 0; }
 .progressHead { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }

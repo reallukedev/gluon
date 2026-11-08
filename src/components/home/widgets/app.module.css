@@ -1,5 +1,3 @@
-/* The App tile: one installed app, its state, live CPU and memory, and where to open it. */
-
 .app { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); overflow: hidden; }
 
 .head { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -54,7 +52,6 @@
 .addresses dt { color: var(--muted); }
 .addresses dd { margin: 0; color: var(--ink-2); }
 
-/* Wide: identity and addresses on the left, the instrument on the right. */
 .app[data-size="m"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto 1fr; gap: 12px 24px; }
 .app[data-size="m"] .head { grid-column: 1 / -1; }
 .app[data-size="m"] .vitals,
@@ -62,13 +59,11 @@
 .app[data-size="m"] .description { grid-column: 2; grid-row: 2; align-self: end; }
 .app[data-size="m"] .addresses { grid-column: 1; grid-row: 2; align-self: end; }
 
-/* Small: the figures shrink a step so both fit beside each other. */
 .app[data-size="s"] { --figure: 1.375rem; gap: 10px; }
 
 .state { height: 100%; display: grid; place-content: center; justify-items: center; gap: 4px; padding: 16px 16px calc(16px + var(--title-h, 0px)); text-align: center; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
 .state b { color: var(--ink); font-size: var(--text-md); font-weight: 600; }
 
-/* Catalog preview: a 120×56 miniature tile, like previews.tsx, with the app's real icon. */
 .preview { box-sizing: border-box; width: 120px; height: 56px; display: grid; align-content: space-between; padding: 9px 11px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); }
 .previewHead { display: flex; align-items: center; gap: 8px; }
 .previewWords { display: grid; gap: 5px; }
