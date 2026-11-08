@@ -98,7 +98,8 @@
 .sectionHead { display: flex; align-items: baseline; gap: 10px; padding: 0 10px 6px; }
 .sectionMeta { font-size: var(--text-xs); color: var(--muted); }
 .none { margin: 0; padding: 8px 10px; color: var(--muted); font-size: var(--text-sm); }
-.option { position: relative; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 6px 10px; border-radius: var(--radius-control); cursor: pointer; }
+/* A search can list hundreds of rows; only the ones in view are laid out and painted. */
+.option { position: relative; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 6px 10px; border-radius: var(--radius-control); cursor: pointer; content-visibility: auto; contain-intrinsic-size: auto 46px; }
 .option[data-active] { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .option[data-danger] .optText { color: var(--fault); }
 .optFace { flex: none; display: grid; place-items: center; width: 32px; height: 32px; overflow: hidden; border-radius: 6px; background: var(--sunk); color: var(--muted); }

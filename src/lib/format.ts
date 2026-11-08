@@ -115,37 +115,49 @@ function tz(p?: Pick<FormatPrefs, "timezone">): string | undefined {
   return p && p.timezone !== "auto" ? p.timezone : undefined;
 }
 
+/*
+ * Building a formatter costs about 100 times more than using one, and a long table formats a time
+ * or two per row, so formatters are kept per locale and options.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function dateTimeFormat(locale: string | undefined, o: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale ?? ""}|${JSON.stringify(o)}`;
+  let f = formatters.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, o);
+    formatters.set(key, f);
+  }
+  return f;
+}
+
 export function formatTime(ts: number | Date, p?: Pick<FormatPrefs, "clock" | "timezone">, seconds = false): string {
   if (!Number.isFinite(+ts)) return "Unknown";
-  return new Date(ts).toLocaleTimeString(undefined, {
+  return dateTimeFormat(undefined, {
     hour: "numeric",
     minute: "2-digit",
     second: seconds ? "2-digit" : undefined,
     hour12: hour12(p),
     timeZone: tz(p),
-  });
+  }).format(new Date(ts));
 }
 
 export function formatDate(ts: number | Date, p?: Pick<FormatPrefs, "dateOrder" | "timezone">, opts: { year?: boolean; weekday?: boolean } = {}): string {
   if (!Number.isFinite(+ts)) return "Unknown";
   const d = new Date(ts);
-  if (p && p.dateOrder === "ymd") {
-    const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz(p) }).format(d);
-    return parts;
-  }
+  if (p && p.dateOrder === "ymd") return dateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz(p) }).format(d);
   const locale = p?.dateOrder === "dmy" ? "en-GB" : p?.dateOrder === "mdy" ? "en-US" : undefined;
-  return d.toLocaleDateString(locale, {
+  return dateTimeFormat(locale, {
     weekday: opts.weekday ? "short" : undefined,
     day: "numeric",
     month: "short",
     year: opts.year ? "numeric" : undefined,
     timeZone: tz(p),
-  });
+  }).format(d);
 }
 
 /** The calendar day of `ts` in the viewer's chosen zone (or the runtime's when it's "auto"). */
 function dayKey(ts: number, p?: Pick<FormatPrefs, "timezone">): string {
-  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz(p) }).format(ts);
+  return dateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: tz(p) }).format(ts);
 }
 
 export function formatDateTime(ts: number, p?: FormatPrefs, now = Date.now()): string {
