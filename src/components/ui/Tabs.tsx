@@ -2,6 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Tabs as BaseTabs } from "@base-ui/react/tabs";
+import { prefersReducedMotion } from "@/lib/client/motion";
 import s from "./tabs.module.css";
 
 export interface TabItem<T extends string> {
@@ -44,8 +45,10 @@ export function Tabs<T extends string>({ value, onChange, items, hrefFor, childr
     if (!l || !tab || l.scrollWidth <= l.clientWidth) return;
     const left = tab.offsetLeft - 16;
     const right = tab.offsetLeft + tab.offsetWidth + 16;
-    if (left < l.scrollLeft) l.scrollTo({ left, behavior: ready ? "smooth" : "auto" });
-    else if (right > l.scrollLeft + l.clientWidth) l.scrollTo({ left: right - l.clientWidth, behavior: ready ? "smooth" : "auto" });
+    // A script's smooth scroll ignores the CSS reduced-motion rule, so ask here.
+    const behavior = ready && !prefersReducedMotion() ? "smooth" : "auto";
+    if (left < l.scrollLeft) l.scrollTo({ left, behavior });
+    else if (right > l.scrollLeft + l.clientWidth) l.scrollTo({ left: right - l.clientWidth, behavior });
   }, [value, ready]);
 
   return (

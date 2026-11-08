@@ -41,7 +41,7 @@
 .button:active:not(:disabled):not([data-disabled]):not([data-loading]) {
   transform: scale(calc(1 - 0.03 * var(--motion)));
   background: var(--btn-press);
-  transition-duration: 60ms, 0ms, 0ms, 0ms;
+  transition-duration: var(--dur-press), 0ms, 0ms, 0ms;
 }
 .button:disabled, .button[data-disabled] { cursor: not-allowed; opacity: 0.5; }
 .button[data-loading] { cursor: progress; opacity: 1; }
@@ -71,7 +71,7 @@
   --btn-fg: var(--ink-2);
 }
 @media (hover: hover) and (pointer: fine) {
-  .ghost:hover:not(:disabled):not([data-disabled]) { color: var(--ink); }
+  .ghost:hover:not(:disabled):not([data-disabled]):not([data-loading]) { color: var(--ink); }
 }
 .danger {
   --btn-fg: var(--fault);
@@ -139,3 +139,9 @@
 :global(:root[data-motion="reduce"]) .button[data-loading]::after { animation: breathe 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .button[data-loading]::after { animation: breathe 1.4s ease-in-out infinite; } }
 @keyframes breathe { 50% { opacity: 0.25; } }
+
+/* Windows high contrast: disabled reads as GrayText, and the loading hairline keeps a colour. */
+@media (forced-colors: active) {
+  .button:disabled, .button[data-disabled] { color: GrayText; border-color: GrayText; opacity: 1; }
+  .button[data-loading]::after { forced-color-adjust: none; background: CanvasText; }
+}

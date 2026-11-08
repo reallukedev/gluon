@@ -48,24 +48,7 @@ function Entries({ items, parts }: { items: MenuEntry[]; parts: typeof BaseMenu 
             </P.CheckboxItem>
           );
         }
-        if (it.kind === "sub") {
-          return (
-            <P.SubmenuRoot key={i}>
-              <P.SubmenuTrigger className={s.item}>
-                {it.icon}
-                <span className={s.itemText}>{it.label}</span>
-                <NavArrowRight className={s.subArrow} />
-              </P.SubmenuTrigger>
-              <P.Portal>
-                <P.Positioner className={s.positioner} sideOffset={-4} alignOffset={-5}>
-                  <P.Popup className={s.popup} data-motion-gentle="">
-                    <Entries items={it.items} parts={parts} />
-                  </P.Popup>
-                </P.Positioner>
-              </P.Portal>
-            </P.SubmenuRoot>
-          );
-        }
+        if (it.kind === "sub") return <Submenu key={i} it={it} parts={parts} />;
         const content = (
           <>
             {it.icon}
@@ -100,6 +83,28 @@ function Entries({ items, parts }: { items: MenuEntry[]; parts: typeof BaseMenu 
   );
 }
 
+/** A submenu opened with the arrow keys appears instantly, like its parent. */
+function Submenu({ it, parts }: { it: MenuSub; parts: typeof BaseMenu | typeof BaseContextMenu }) {
+  const P = parts as typeof BaseMenu;
+  const [kbd, onOpenChange] = useKeyboardOpen();
+  return (
+    <P.SubmenuRoot onOpenChange={onOpenChange}>
+      <P.SubmenuTrigger className={s.item}>
+        {it.icon}
+        <span className={s.itemText}>{it.label}</span>
+        <NavArrowRight className={s.subArrow} />
+      </P.SubmenuTrigger>
+      <P.Portal>
+        <P.Positioner className={s.positioner} sideOffset={-4} alignOffset={-5}>
+          <P.Popup className={s.popup} data-keyboard={kbd ? "" : undefined} data-motion-gentle="">
+            <Entries items={it.items} parts={parts} />
+          </P.Popup>
+        </P.Positioner>
+      </P.Portal>
+    </P.SubmenuRoot>
+  );
+}
+
 interface MenuProps {
   trigger: React.ReactElement<Record<string, unknown>>;
   items: MenuEntry[];
@@ -112,7 +117,9 @@ interface MenuProps {
 export function useKeyboardOpen() {
   const [kbd, setKbd] = React.useState(false);
   const onOpenChange = React.useCallback((open: boolean, d: { event?: Event }) => {
-    if (open) setKbd(typeof KeyboardEvent !== "undefined" && d.event instanceof KeyboardEvent);
+    // Enter or Space on a trigger arrives as a click with no pointer behind it (detail 0).
+    const e = d.event;
+    if (open) setKbd((typeof KeyboardEvent !== "undefined" && e instanceof KeyboardEvent) || (typeof MouseEvent !== "undefined" && e instanceof MouseEvent && e.type === "click" && e.detail === 0));
   }, []);
   return [kbd, onOpenChange] as const;
 }
@@ -134,13 +141,14 @@ export function Menu({ trigger, items, align = "end", side = "bottom", modal = f
 }
 
 export function ContextMenu({ items, children, disabled }: { items: MenuEntry[]; children: React.ReactElement<Record<string, unknown>>; disabled?: boolean }) {
+  const [kbd, onOpenChange] = useKeyboardOpen();
   if (disabled) return children;
   return (
-    <BaseContextMenu.Root>
+    <BaseContextMenu.Root onOpenChange={onOpenChange}>
       <BaseContextMenu.Trigger render={children} />
       <BaseContextMenu.Portal>
         <BaseContextMenu.Positioner className={s.positioner} collisionPadding={8}>
-          <BaseContextMenu.Popup className={s.popup} data-motion-gentle="">
+          <BaseContextMenu.Popup className={s.popup} data-keyboard={kbd ? "" : undefined} data-motion-gentle="">
             <Entries items={items} parts={BaseContextMenu as unknown as typeof BaseMenu} />
           </BaseContextMenu.Popup>
         </BaseContextMenu.Positioner>

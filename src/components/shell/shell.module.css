@@ -234,3 +234,10 @@
 .drawerPopup[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dur-drawer)); }
 .drawerPopup[data-swiping] { transition-duration: 0ms; user-select: none; }
 
+
+/* High contrast: box-shadow rings vanish, so the current page gets a real outline. */
+@media (forced-colors: active) {
+  .link[aria-current="page"] { outline: 1px solid Highlight; outline-offset: -1px; }
+  .zoneDot { forced-color-adjust: none; background: CanvasText; }
+  .zoneDot[data-zone="away"] { background: Canvas; border: 1.5px solid CanvasText; box-shadow: none; }
+}

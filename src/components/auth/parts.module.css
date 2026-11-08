@@ -17,8 +17,10 @@
 
 /* ---------------------------------------------------------------- zone line */
 .zone { display: grid; gap: 8px; }
-.zoneTrack { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; font-size: var(--text-xs); color: var(--muted); }
-.zoneNode { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.zoneTrack { display: grid; grid-template-columns: auto minmax(48px, 1fr) minmax(0, auto); align-items: center; gap: 10px; font-size: var(--text-xs); color: var(--muted); }
+.zoneNode { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; min-width: 0; }
+/* A long server name ellipsizes rather than pushing a phone screen sideways. */
+.zoneName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .zoneNode svg { width: 16px; height: 16px; color: var(--ink-2); flex: none; }
 .zoneWire { position: relative; height: 16px; display: grid; align-items: center; }
 .zoneWire::before { content: ""; border-top: 1.5px solid var(--ink-2); }
@@ -107,3 +109,6 @@
   .codes { grid-template-columns: 1fr; }
   .qr, .qrSkeleton { width: 148px; height: 148px; }
 }
+
+/* Text links that are buttons still get a thumb-sized target on touch screens. */
+@media (pointer: coarse) { .linkButton { min-height: 40px; display: inline-flex; align-items: center; } }

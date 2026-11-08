@@ -108,7 +108,7 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
     return (
       <div className={`${s.form} appear`}>
         <h2>Gluon is already set up</h2>
-        <p className={s.lede}>Someone just finished setting up {serverName}, maybe in another window. Sign in with that account.</p>
+        <p className={s.lede}>Someone finished setting up {serverName}, maybe in another window. Sign in with that account.</p>
         <LinkButton href="/login" variant="primary" size="lg" block>
           Sign in
         </LinkButton>

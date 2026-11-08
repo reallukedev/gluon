@@ -382,7 +382,7 @@ Quiet and exact; the label never moves.
 - **Secondary (default):** plate fill, strong hairline border, ink text. This is also the remedy button beside every "Needs you" item: outlined, small, named for the action ("Make them permanent", "Free 5.2 GB").
 - **Ghost:** transparent with ink-2 text, 6% ink wash on hover.
 - **Danger:** fault text on a fault-tinted border, fault-soft on hover. **Danger solid** (fault fill, white text) is reserved for the final step of a destructive confirmation; the most dangerous also require hold-to-confirm (a darkening sweep over 1400ms).
-- **Hover / Press / Loading:** hover changes background only, inside `(hover: hover) and (pointer: fine)`. Press scales to 0.97 over 140ms. Loading keeps the label in place at 55% opacity and sweeps a 2px hairline along the bottom edge.
+- **Hover / Press / Loading:** hover changes background only, inside `(hover: hover) and (pointer: fine)`. Press scales to 0.97 over 160ms. Loading keeps the label in place at 55% opacity and sweeps a 2px hairline along the bottom edge.
 
 ### Inputs / Fields
 - **Style:** plate fill, strong hairline border, control radius, 11px side padding; the label sits above in 13px 600 ink, help text below in 13px muted.

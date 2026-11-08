@@ -70,7 +70,7 @@ export function Summary() {
       set: joined.length + waiting.length > 0,
       // Invites out but nobody in yet: the dashed "on its way" line.
       pending: !joined.length && waiting.length > 0,
-      text: parts.length ? parts.join(" ") : "Just you for now.",
+      text: parts.length ? parts.join(" ") : "Only you for now.",
       where: { href: "/settings/people", label: "Change" },
     });
   }

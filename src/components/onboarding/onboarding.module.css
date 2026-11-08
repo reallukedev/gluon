@@ -417,3 +417,14 @@ ul[aria-busy] > .pick + .pick { border-top: 1px solid var(--line); }
 @keyframes bondDraw { from { stroke-dashoffset: 1; } }
 @keyframes bondDot { from { opacity: 0; transform: scale(0.4); } }
 @keyframes bondWord { from { opacity: 0; } }
+
+/* Phones by touch: a done step's hairline is a button; give it a 40px target that stops short of the header. */
+@media (max-width: 639px) and (pointer: coarse) {
+  .barButton { height: 40px; margin-top: -17px; margin-bottom: -11px; }
+}
+/* High contrast: the step hairlines are backgrounds, so draw them in system colours. */
+@media (forced-colors: active) {
+  .barLine { forced-color-adjust: none; background: GrayText; }
+  .barLine::after { forced-color-adjust: none; background: CanvasText; }
+  .bar[data-state="current"] .barLine::after { background: Highlight; }
+}

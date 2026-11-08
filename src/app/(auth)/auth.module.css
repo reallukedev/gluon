@@ -82,3 +82,6 @@
   .name p { display: none; }
   .main { place-items: start center; padding-top: 28px; }
 }
+
+/* Text links that are buttons still get a thumb-sized target on touch screens. */
+@media (pointer: coarse) { .linkButton { min-height: 40px; display: inline-flex; align-items: center; } }

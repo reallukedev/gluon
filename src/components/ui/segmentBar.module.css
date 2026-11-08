@@ -55,3 +55,10 @@
 .swatch[data-rest] { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .legendLabel { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
 .legendValue { color: var(--muted); white-space: nowrap; }
+/* High contrast: parts and swatches are backgrounds, so draw them in system colours. */
+@media (forced-colors: active) {
+  .bar { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .part, .swatch { forced-color-adjust: none; background: CanvasText; }
+  .part[data-tone="attn"], .part[data-tone="fault"], .swatch[data-tone="attn"], .swatch[data-tone="fault"] { background: Highlight; }
+  .swatch[data-rest] { background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+}

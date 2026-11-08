@@ -27,7 +27,7 @@ export function ZoneLine({ zone, serverName, children }: { zone: "home" | "away"
             <rect x="2.5" y="9" width="11" height="4.5" rx="1" />
             <path d="M5 4.75h1.5M5 11.25h1.5" strokeLinecap="round" />
           </svg>
-          {serverName}
+          <span className={s.zoneName}>{serverName}</span>
         </span>
       </div>
       {children && <p className={s.zoneText}>{children}</p>}

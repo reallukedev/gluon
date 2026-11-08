@@ -151,7 +151,7 @@ export function Spectrum({ groups, legend = true, height = 88, labelRows: maxRow
         data-more-left={more.left ? "" : undefined}
         data-more-right={more.right ? "" : undefined}
         style={{ height: height + rowCount * ROW_H + 6, paddingBottom: rowCount * ROW_H + 6 }}
-        role="list"
+        role="group"
         aria-label={label}
         onPointerLeave={() => setActive(null)}
         data-active={active !== null ? "" : undefined}
@@ -166,7 +166,6 @@ export function Spectrum({ groups, legend = true, height = 88, labelRows: maxRow
               }}
               className={s.group}
               style={{ flexGrow: Math.max(g.lines.length, 2), minWidth: layout.min[gi] ? Math.max(layout.min[gi]!, natural(g)) : undefined, "--row": layout.rows[gi] ?? 0 } as React.CSSProperties}
-              role="presentation"
             >
               <div className={s.lines}>
                 {g.lines.map((l) => {
@@ -178,7 +177,6 @@ export function Spectrum({ groups, legend = true, height = 88, labelRows: maxRow
                       ref={(el) => {
                         refs.current[idx] = el;
                       }}
-                      role="listitem"
                       href={l.href ?? g.href ?? "#"}
                       className={s.hit}
                       data-gap={l.gapBefore ? "" : undefined}
@@ -213,7 +211,7 @@ export function Spectrum({ groups, legend = true, height = 88, labelRows: maxRow
                         }
                       }}
                     >
-                      <span className={s.line} data-state={l.state} />
+                      <span className={s.line} data-state={l.state} data-motion-gentle="" />
                     </a>
                   );
                 })}
@@ -236,7 +234,8 @@ export function Spectrum({ groups, legend = true, height = 88, labelRows: maxRow
         })}
       </div>
 
-      <div className={s.readout} aria-live="polite">
+      {/* Not a live region: each line already names itself on focus, and live CPU figures would chatter. */}
+      <div className={s.readout}>
         {current ? (
           <>
             <span className={s.readoutName}>
