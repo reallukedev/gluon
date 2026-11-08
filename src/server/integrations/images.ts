@@ -10,9 +10,8 @@ import { toWebStream } from "./net";
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/avif"]);
 
 /**
- * Stream a poster / cover / thumbnail from a connected app with its credentials added server-side.
- * Not an open proxy: the integration must be readable by this person, the parameters must match the kind's
- * schema, and the id must be one a widget handed out recently.
+ * Not an open proxy: the integration must be readable by this person, the parameters must match the
+ * kind's schema, and the id must be one a widget handed out recently.
  */
 export async function proxyImage(user: User, id: string, search: URLSearchParams): Promise<Response> {
   const rec = readableRecord(user, id);

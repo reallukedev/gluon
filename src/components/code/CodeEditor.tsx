@@ -10,7 +10,7 @@ import { unifiedMergeView } from "@codemirror/merge";
 import { loadLanguage, type CodeLanguage } from "./languages";
 import s from "./code.module.css";
 
-/** Colours come from Gluon's tokens, so the editor follows light/dark. Shared with the app builder's YAML editor. */
+/** Colours come from Gluon's tokens, so the editor follows light/dark. */
 export const editorTheme = EditorView.theme({
   "&": { color: "var(--ink)", backgroundColor: "var(--panel)", fontSize: "12.75px", height: "100%" },
   ".cm-content": { fontFamily: "var(--font-mono)", caretColor: "var(--ink)", padding: "10px 0" },
@@ -55,7 +55,6 @@ export interface CodeEditorProps {
   onChange?: (v: string) => void;
   language?: CodeLanguage;
   readOnly?: boolean;
-  /** Show a diff against this text (unified, inline). */
   original?: string;
   height?: number | string;
   label: string;
@@ -111,7 +110,6 @@ export function CodeEditor({ value, onChange, language = "text", readOnly, origi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, readOnly, original]);
 
-  // External value changes (load, restore backup) replace the document.
   React.useEffect(() => {
     const v = view.current;
     if (v && v.state.doc.toString() !== value) v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value } });

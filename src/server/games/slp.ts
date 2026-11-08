@@ -1,8 +1,6 @@
 /**
- * Minecraft Java's Server List Ping, the exchange the multiplayer screen does: a handshake that
- * names the address the player typed (which is how mc-router picks a server), a status request,
- * and a JSON reply with the version, the MOTD and who's online. Servers from before 1.7 answer
- * the older "legacy" ping instead, with a 0xFF packet of UTF-16 text. Pure: no sockets here.
+ * The handshake names the address the player typed, which is how mc-router picks a server. Servers
+ * before 1.7 answer the legacy ping instead, a 0xFF packet of UTF-16 text. Pure: no sockets here.
  */
 
 export interface SlpStatus {
@@ -53,10 +51,7 @@ function packet(id: number, body: Buffer): Buffer {
   return Buffer.concat([encodeVarInt(inner.length), inner]);
 }
 
-/**
- * Handshake (next state: status) followed by the status request. Protocol -1 is the convention
- * for "just asking", which every server answers whatever its version.
- */
+/** Protocol -1 is the convention for "just asking", which every server answers whatever its version. */
 export function encodeStatusRequest(address: string, port: number, protocol = -1): Buffer {
   const p = Buffer.alloc(2);
   p.writeUInt16BE(port);

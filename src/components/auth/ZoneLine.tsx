@@ -1,11 +1,6 @@
 import * as React from "react";
 import s from "./parts.module.css";
 
-/**
- * Where this browser is connecting from, drawn as the path it takes: this device, a solid wire over
- * the home network or a dashed one across the internet, then the server. Sign-in rules differ by
- * that path, so it is shown before anyone is surprised by it.
- */
 export function ZoneLine({ zone, serverName, children }: { zone: "home" | "away"; serverName: string; children?: React.ReactNode }) {
   const label = zone === "home" ? "Home network" : "Internet";
   return (

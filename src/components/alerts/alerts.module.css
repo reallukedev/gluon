@@ -1,6 +1,5 @@
 .tabBody { margin-top: 20px; display: grid; gap: 20px; min-width: 0; }
 .stackBody { display: grid; gap: 20px; min-width: 0; }
-/* Notifications: the sent log is its own section under the channels (36px apart, the gap included). */
 .sentSection { min-width: 0; }
 .sentSection > section { margin-top: 16px; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -26,7 +25,6 @@
 .pad { padding: 16px 18px; color: var(--muted); font-size: var(--text-md); }
 .skeletons { display: grid; gap: 12px; padding: 16px 18px; }
 
-/* ---------------------------------------------------------------- findings */
 .findings { margin: 0; padding: 0; list-style: none; }
 .finding {
   display: grid;
@@ -44,7 +42,6 @@
 .finding[data-severity="fault"] .mark::after { display: none; }
 .finding[data-severity="info"] .mark, .finding[data-quiet] .mark { background: var(--line-strong); }
 .finding[data-severity="info"] .mark::after, .finding[data-quiet] .mark::after { display: none; }
-/* Fixed: the doubled line settles into one ink line. */
 .finding[data-settled] .mark { background: var(--ink); }
 .finding[data-settled] .mark::after { opacity: 0; transform: translateX(calc(-4px * var(--motion))); }
 .finding[data-settled] .findingTitle { color: var(--ink-2); }
@@ -61,7 +58,6 @@
   .findingActions { grid-column: 2; justify-self: start; }
 }
 
-/* ---------------------------------------------------------------- timeline (history, sent) */
 .day { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 18px 8px; border-top: 1px solid var(--line); background: var(--panel-2); position: sticky; top: 0; z-index: 2; }
 @media (max-width: 900px) { .day { top: calc(56px + env(safe-area-inset-top)); } }
 .dayCount { font-size: var(--text-xs); color: var(--muted); }
@@ -83,10 +79,9 @@
 }
 .more { display: flex; justify-content: center; padding: 14px; border-top: 1px solid var(--line); }
 
-/* ---------------------------------------------------------------- tables */
 .table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); }
 .headRow, .row { display: grid; align-items: center; gap: 20px; padding: 0 12px 0 18px; }
-/* Columns follow the table's own width (sidebar open or not): full ≥ 680px (min 674), restacked below. */
+/* Columns follow the table's own width (sidebar open or not), not the window's. */
 .monitors { container: monitors / inline-size; }
 .monitors .headRow, .monitors .row { grid-template-columns: minmax(180px, 1.1fr) minmax(180px, 2fr) 64px 70px 68px; }
 .headRow {
@@ -150,7 +145,6 @@
   .headRow + .group .groupHead { border-radius: calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px) 0 0; }
 }
 
-/* ---------------------------------------------------------------- monitor detail */
 .detailHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
 .figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 @media (max-width: 560px) { .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -170,7 +164,6 @@
 .outage { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; padding: 9px 12px; border-top: 1px solid var(--line); font-size: var(--text-sm); }
 .outage:first-child { border-top: 0; }
 
-/* ---------------------------------------------------------------- forms */
 .form { display: grid; gap: 16px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
@@ -179,7 +172,6 @@
 .error { color: var(--fault); font-size: var(--text-sm); }
 .testResult { margin-top: 4px; }
 
-/* ---------------------------------------------------------------- channels */
 .channels { margin: 0; padding: 0; list-style: none; }
 .channel { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px 14px; align-items: center; padding: 14px 12px 14px 18px; border-top: 1px solid var(--line); }
 .channel:first-child { border-top: 0; }
@@ -228,7 +220,6 @@
   .headerRow > :nth-child(2) { grid-column: 1; grid-row: 2; }
 }
 
-/* ---------------------------------------------------------------- sent log */
 .sentRow { display: grid; grid-template-columns: 76px 14px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 11px 12px 11px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
 .day + .sentRow { border-top: 0; }
 .sentRow[data-status="cancelled"] .histTitle { color: var(--muted); }
@@ -259,7 +250,6 @@
 .pickText { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-md); }
 @media (max-width: 640px) { .channel > .kindIcon { align-self: start; } }
 
-/* A monitor that's down: its app's icon greys and tips, like everywhere else in Gluon. */
 .laneCell[data-icon] > :first-child { transition: transform var(--dur-slow) var(--ease-out), filter var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out); }
 .row[data-problem] .laneCell[data-icon] > :first-child { filter: grayscale(1); opacity: 0.7; transform: rotate(calc(-6deg * var(--motion))); }
 .stateSub[data-fault] { white-space: normal; }

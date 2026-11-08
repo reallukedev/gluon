@@ -5,9 +5,8 @@ import { pickable, sharedOf } from "@/server/integrations/kinds/homeassistant";
 import type { HomeAssistantPickableList } from "@/lib/widgets-types";
 
 /**
- * What a Home Assistant widget can show, for its settings: names, rooms and whether household members may see and
- * use each one. No states and no attributes. Admins get everything; household members only what an admin shared
- * with the household, so the rest of the house's inventory never reaches them.
+ * Names and rooms only, no states. Household members get only what an admin shared with the household,
+ * so the rest of the house's inventory never reaches them.
  */
 export const GET = route({ auth: "user", burst: { limit: 30, windowMs: 60_000 } }, async ({ user, params }): Promise<HomeAssistantPickableList> => {
   const rec = readableRecord(user, String(Array.isArray(params.id) ? params.id[0] : params.id));

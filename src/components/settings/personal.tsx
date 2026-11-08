@@ -23,8 +23,6 @@ export function useSet() {
   );
 }
 
-// ---------------------------------------------------------------- appearance
-
 const ATTENTION: { value: Prefs["attention"]; label: string; light: string; dark: string }[] = [
   { value: "sodium", label: "Sodium", light: "#d49b12", dark: "#f2c14e" },
   { value: "orange", label: "Orange", light: "#e0691a", dark: "#ff9a4d" },
@@ -55,7 +53,6 @@ const PLATES = {
   dark: { ground: "#111214", panel: "#17181b", line: "#2c2d31", ink: "#ece7db", faint: "#4a4a4f" },
 };
 
-/** The theme cards draw Gluon itself in miniature: sidebar, a page title, a panel with one thing that needs you. */
 function MiniPlate({ p }: { p: (typeof PLATES)["light"] }) {
   return (
     <g>
@@ -186,11 +183,7 @@ export function Appearance() {
   );
 }
 
-/**
- * A small plate drawn with the live tokens, so every choice above shows up here as you make it:
- * theme, the "needs you" colour, text size, density, contrast. "Try a fix" plays the one bit of
- * motion Gluon has everywhere: a doubled line settling into a single one.
- */
+/** Drawn with the live tokens, so every choice above shows up here as it's made. */
 function PreviewPlate() {
   const [fixed, setFixed] = React.useState(false);
   return (
@@ -254,8 +247,6 @@ function PreviewPlate() {
     </aside>
   );
 }
-
-// ---------------------------------------------------------------- home page
 
 export function HomePrefs() {
   const { prefs, viewer } = usePrefs();
@@ -328,8 +319,6 @@ export function HomePrefs() {
     </div>
   );
 }
-
-// ---------------------------------------------------------------- formats
 
 export function Formats() {
   const { prefs, timeZone } = usePrefs();

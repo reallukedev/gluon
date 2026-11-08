@@ -53,7 +53,6 @@ function installWords(i: Install): string {
   }
 }
 
-/** "Gluon 1.2.0" / "Nightly 1.3.0-nightly.20260928.1a2b3c4". */
 function buildName(d: UpdatesStatus): string {
   if (!d.latest) return "A newer Gluon";
   return d.latest.channel === "nightly" ? `${CHANNEL_NAME.nightly} ${d.latest.version}` : `Gluon ${d.latest.version}`;
@@ -129,8 +128,6 @@ export function Updates() {
     </div>
   );
 }
-
-// ---------------------------------------------------------------- what's running, drawn on a rail
 
 function Running({ data, checking, onCheck }: { data: UpdatesStatus; checking: boolean; onCheck: () => void }) {
   const fmt = useFormat();
@@ -222,8 +219,6 @@ function Running({ data, checking, onCheck }: { data: UpdatesStatus; checking: b
   );
 }
 
-// ---------------------------------------------------------------- what to do now: one of several states
-
 function Situation({
   data,
   checking,
@@ -274,7 +269,6 @@ function CantUpdate({ data }: { data: UpdatesStatus }) {
   );
 }
 
-/** Stable, while running something past the newest release (usually a nightly). */
 function Ahead({ data, onStarted, confirm }: { data: UpdatesStatus; onStarted: () => void; confirm: (o: ConfirmOptions) => void }) {
   const latest = data.latest!;
   const nightly = data.running.channel === "nightly";
@@ -325,8 +319,6 @@ function Ahead({ data, onStarted, confirm }: { data: UpdatesStatus; onStarted: (
     </Notice>
   );
 }
-
-// ---------------------------------------------------------------- what's available and how to get it
 
 function Available({ data, onStarted }: { data: UpdatesStatus; onStarted: () => void }) {
   const usable = data.options.filter((o) => o.available);
@@ -427,8 +419,6 @@ function Available({ data, onStarted }: { data: UpdatesStatus; onStarted: () => 
   );
 }
 
-// ---------------------------------------------------------------- an update in progress, or one that failed
-
 function Progress({ run, onDone }: { run: UpdateRun; onDone: () => void }) {
   const [log, setLog] = React.useState<UpdateLog | null>(null);
   const [offline, setOffline] = React.useState(false);
@@ -502,7 +492,6 @@ function LastFailed({ run }: { run: UpdateRun }) {
   );
 }
 
-/** The updater's output for one run, fetched when opened. */
 function RunOutput({ id }: { id: string }) {
   const [open, setOpen] = React.useState(false);
   const { data, error, isLoading } = useApi<UpdateLog>(open ? `${URL}/runs/${id}` : null);
@@ -521,8 +510,6 @@ function RunOutput({ id }: { id: string }) {
   );
 }
 
-// ---------------------------------------------------------------- saving
-
 type SaveSettings = (patch: Partial<UpdateSettings>) => Promise<UpdatesStatus>;
 
 /**
@@ -532,33 +519,43 @@ type SaveSettings = (patch: Partial<UpdateSettings>) => Promise<UpdatesStatus>;
  */
 function useSettingsWriter(data: UpdatesStatus | undefined, onSaved: (v: UpdatesStatus) => void) {
   const [shown, setShown] = React.useState<UpdateSettings | null>(null);
-  const intended = React.useRef<UpdateSettings | null>(null);
+  // What the server last confirmed, and the changes still on their way. A failed change is dropped,
+  // so the saves queued behind it don't send it again.
+  const base = React.useRef<UpdateSettings | null>(null);
+  const pending = React.useRef<Partial<UpdateSettings>[]>([]);
   const queue = React.useRef<Promise<unknown>>(Promise.resolve());
-  const out = React.useRef(0);
   const confirmed = data?.settings;
   const save = React.useCallback<SaveSettings>(
     (patch) => {
-      const v = { ...(intended.current ?? confirmed!), ...patch };
-      intended.current = v;
-      setShown(v);
-      out.current++;
-      const run = queue.current.then(() => api.put<UpdatesStatus>(`${URL}/settings`, v)).then((fresh) => {
-        onSaved(fresh);
-        return fresh;
-      });
+      if (!pending.current.length) base.current = confirmed!;
+      pending.current.push(patch);
+      const showPending = () => setShown(pending.current.length ? Object.assign({ ...base.current! }, ...pending.current) : null);
+      showPending();
+      const done = () => {
+        pending.current.splice(pending.current.indexOf(patch), 1);
+        showPending();
+      };
+      const run = queue.current
+        .then(() => api.put<UpdatesStatus>(`${URL}/settings`, { ...base.current!, ...patch }))
+        .then(
+          (fresh) => {
+            base.current = fresh.settings;
+            done();
+            onSaved(fresh);
+            return fresh;
+          },
+          (e) => {
+            done();
+            throw e;
+          },
+        );
       queue.current = run.catch(() => undefined);
-      return run.finally(() => {
-        if (--out.current > 0) return;
-        intended.current = null;
-        setShown(null);
-      });
+      return run;
     },
     [confirmed, onSaved],
   );
   return { settings: shown, save };
 }
-
-// ---------------------------------------------------------------- channel
 
 function Channel({ settings, save, setChecking }: { settings: UpdateSettings; save: SaveSettings; setChecking: (b: boolean) => void }) {
   const [pending, setPending] = React.useState<UpdateChannel | null>(null);
@@ -628,8 +625,6 @@ function Channel({ settings, save, setChecking }: { settings: UpdateSettings; sa
   );
 }
 
-// ---------------------------------------------------------------- automatic updates
-
 function Automatic({ data, settings: st, save: write }: { data: UpdatesStatus; settings: UpdateSettings; save: SaveSettings }) {
   const fmt = useFormat();
   // Through the person's clock setting (12 or 24 hour), like every other time in Gluon.
@@ -697,8 +692,6 @@ function Automatic({ data, settings: st, save: write }: { data: UpdatesStatus; s
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- history
 
 function History({ runs }: { runs: UpdateRun[] }) {
   return (

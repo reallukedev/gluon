@@ -29,7 +29,6 @@ const normalHealth = (h: HealthForm): HealthForm => {
   return t.test || t.interval || t.timeout || t.retries || t.startPeriod ? t : NO_HEALTH;
 };
 
-/** Everything a service rarely needs, behind one disclosure that opens itself when something in it is wrong. */
 export function AdvancedGroup({ draft, form: f, names, issues, target }: { draft: Draft; form: ServiceForm; names: string[]; issues: Issue[]; target: BuilderTarget }) {
   const edit = draft.editCompose;
   const base = `services.${f.name}`;

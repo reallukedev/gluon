@@ -60,7 +60,6 @@ div.node { cursor: default; }
 /* Narrow: the container's own text says where it's reached, so the port tags stay out. */
 .ctrWrap { display: block; }
 .ports { display: none; }
-/* Wide: a container's published ports sit on its left edge, where addresses plug in. */
 @container (min-width: 820px) {
   .ctrHead { padding-left: 58px; }
   .ctrWrap { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; }

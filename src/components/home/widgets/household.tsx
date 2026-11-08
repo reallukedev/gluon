@@ -1,5 +1,4 @@
 "use client";
-// Household widgets anyone can use: is the internet up, the guest Wi-Fi code, and photos from this day in past years.
 import * as React from "react";
 import { mutate as mutateGlobal } from "swr";
 import { Eye, EyeClosed, NavArrowLeft, NavArrowRight } from "iconoir-react";
@@ -25,8 +24,6 @@ import { Age, SetUp, WidgetState, spanWords, useBox, useDayStart, useReducedMoti
 import { Preview } from "../previews";
 import h from "./household.module.css";
 
-// ================================================================ Internet
-
 /** Worst first: what a bucket of minutes shows when they differ. */
 const RANK: Record<string, number> = { r: 5, d: 4, l: 3, s: 2, o: 1, "-": 0 };
 const CELL_WORDS: Record<string, string> = { o: "Up", s: "Slow", l: "Unsteady", d: "Down", r: "Down (router)", "-": "Not measured" };
@@ -35,7 +32,6 @@ function useInternet() {
   return useApi<InternetData>("/api/widgets/internet", { refresh: 30_000 });
 }
 
-/** The 24-hour strip in StateLine grammar: solid = answered, dashed = slow or unsteady, short red = down, faint = not measured. */
 function Strip({ data, height, axis, onRead }: { data: InternetData; height: number; axis: boolean; onRead?: (label: string | null) => void }) {
   const fmt = useFormat();
   const [ref, box] = useBox<HTMLDivElement>();
@@ -77,7 +73,6 @@ function Strip({ data, height, axis, onRead }: { data: InternetData; height: num
   const pick = (clientX: number, rect: DOMRect) => read(Math.max(0, Math.min(buckets.length - 1, Math.floor((clientX - rect.left) / Math.max(1, step)))));
   const down = buckets.filter((b) => b.c === "d" || b.c === "r").length;
   const label = `The last 24 hours of internet checks: ${down ? `${down} stretch${down === 1 ? "" : "es"} with the internet down` : "no outages"}. Use the arrow keys to read a moment.`;
-  // Labels every 6 hours from the start of the strip; "Now" closes the row.
   const ticks = axis ? [0, 6, 12, 18].map((hours) => data.strip.start + hours * 3_600_000) : [];
 
   return (
@@ -259,8 +254,6 @@ registerWidget({
   Component: InternetWidget,
   preview: <Preview of="internet" />,
 });
-
-// ================================================================ Guest Wi-Fi
 
 function useGuestWifi() {
   return useApi<GuestWifiData>("/api/widgets/guest-wifi", { refresh: 300_000 });
@@ -473,8 +466,6 @@ registerWidget<WifiConfig>({
   },
   preview: <Preview of="guest-wifi" />,
 });
-
-// ================================================================ On this day (Immich)
 
 interface OnThisDayConfig extends IntegrationConfig {
   cycle?: boolean;

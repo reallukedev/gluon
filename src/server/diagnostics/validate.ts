@@ -3,15 +3,14 @@ import net from "node:net";
 import { z } from "zod";
 
 /**
- * Strict validation for anything that ends up as an argument to dig/ping/traceroute or a socket
- * connect. Hostnames: letters, digits, hyphens (underscores allowed for SRV/TXT-style labels), dots.
- * Never a leading "-" (would be read as an option).
+ * Strict, since these end up as arguments to dig/ping/traceroute. Never a leading "-", which would be
+ * read as an option.
  */
 
 const LABEL = "[A-Za-z0-9_](?:[A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?";
 const HOSTNAME_RE = new RegExp(`^(?=.{1,253}\\.?$)(?:${LABEL}\\.)*${LABEL}\\.?$`);
 
-/** Normalise a hostname or IP address; returns null when it isn't one. */
+/** null when it isn't a hostname or IP address. */
 export function normalizeHost(input: string): string | null {
   let h = String(input ?? "").trim();
   if (h.startsWith("[") && h.endsWith("]")) h = h.slice(1, -1);

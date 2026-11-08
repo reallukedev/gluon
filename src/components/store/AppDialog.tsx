@@ -16,7 +16,6 @@ import s from "./store.module.css";
 
 interface Props {
   entry: StoreEntry | null;
-  /** A deep link to an app no store lists. */
   missingId: string | null;
   installedInfo: (e: StoreEntry) => InstalledInfo | null;
   runs: Record<string, InstallRun>;
@@ -25,11 +24,9 @@ interface Props {
   onInstall: (e: StoreEntry) => void;
   onOpenApp: (id: string) => void;
   onClose: () => void;
-  /** The app already answering on a port of this server, if any. */
   portUser: (port: number) => { id: string; name: string } | null;
 }
 
-/** One app from the store: what it is, what it needs, and Install (or Open and Manage). */
 export function AppDialog({ entry, missingId, installedInfo, runs, byId, isInstalled, onInstall, onOpenApp, onClose, portUser }: Props) {
   // Keep the last app on screen while the dialog animates closed.
   const [last, setLast] = React.useState(entry);
@@ -227,7 +224,6 @@ export function AppDialog({ entry, missingId, installedInfo, runs, byId, isInsta
   );
 }
 
-/** Screenshots in a sideways strip. Broken images drop out; if none load, the strip goes. */
 function Gallery({ images, name }: { images: string[]; name: string }) {
   const [failed, setFailed] = React.useState<ReadonlySet<number>>(() => new Set());
   const shots = images.map((src, i) => ({ src, i })).filter((x) => !failed.has(x.i));

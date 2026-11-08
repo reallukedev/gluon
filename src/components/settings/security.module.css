@@ -12,14 +12,12 @@
 .fig { font-variant-numeric: tabular-nums; font-weight: 620; color: var(--ink); }
 .attnText { color: var(--ink); }
 
-/* ---------------------------------------------------------------- two-step status */
 .statusRow { display: flex; align-items: center; gap: 14px; padding: 4px 0 14px; border-bottom: 1px solid var(--line); margin-bottom: 2px; }
 .statusRow:last-child { border-bottom: 0; padding-bottom: 4px; }
 .statusText { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .statusTitle { font-size: var(--text-md); font-weight: 620; }
 .statusSub { font-size: var(--text-sm); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
 
-/* ---------------------------------------------------------------- devices */
 .flagNotice { padding: 14px 18px 0; }
 .axis,
 .device {

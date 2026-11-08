@@ -1,9 +1,6 @@
 import { KIND_INFO, MEMBER_KINDS, type DeliveryEvent, type NotifyKind, type SubscriptionFilter } from "@/lib/alerts-types";
 
-/**
- * Who wants what. Pure, so the rules can be tested without a database: findings map to a kind,
- * subscriptions list the kinds they want, and "only some apps" narrows the kinds that are about apps.
- */
+/** Pure, so the rules can be tested without a database. */
 
 export type Audience = "admin" | "member";
 
@@ -11,7 +8,7 @@ export type Audience = "admin" | "member";
 export const MEMBER_FINDING_KINDS = new Set(["app.broken", "monitor.down"]);
 export const REPORT_FINDING_KIND = "household.report";
 
-/** Which notification kind a finding is. null = never notified (info). */
+/** null means never notified (info). */
 export function findingKind(f: { kind: string; severity: string }): NotifyKind | null {
   if (f.kind === REPORT_FINDING_KIND) return "reports";
   if (f.kind === "signin.new_device") return "signin.new_device";
@@ -39,7 +36,7 @@ function subjectOk(f: Pick<SubscriptionFilter, "subjects">, subject: string | nu
   return !!subject && f.subjects.includes(subject);
 }
 
-/** Does this subscription want this finding? `memberApps` = app ids a member can see (members only). */
+/** `memberApps` are the app ids a member can see. */
 export function wantsFinding(
   role: Audience,
   f: Pick<SubscriptionFilter, "kinds" | "subjects">,
@@ -55,7 +52,6 @@ export function wantsFinding(
   return KIND_INFO[kind].apps ? subjectOk(f, finding.subject) : true;
 }
 
-/** Does this subscription want a noticed event (an update, a sign-in, a chat join)? */
 export function wantsEvent(role: Audience, f: Pick<SubscriptionFilter, "kinds" | "subjects">, ev: { kind: NotifyKind; subject?: string | null }, memberApps: Set<string> | null): boolean {
   if (!has(f, ev.kind)) return false;
   if (role !== "admin") {

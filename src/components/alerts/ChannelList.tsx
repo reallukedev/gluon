@@ -15,8 +15,6 @@ import { KIND_ICON } from "./ChannelDialog";
 import { errorMessage } from "./shared";
 import s from "./alerts.module.css";
 
-/** A list of channels with health, a test button and edit/turn off/remove. */
-/** Who a server-wide channel reaches, from the viewing admin's side. */
 function audienceText(c: ChannelView): React.ReactNode {
   const { people, mine } = c.audience;
   const others = people - (mine ? 1 : 0);
@@ -44,12 +42,10 @@ export function ChannelList({
   onEdit: (c: ChannelView) => void;
   onChange: () => void;
   showOwner?: boolean;
-  /** Say who it sends to (server-wide channels, seen by an admin). */
   showAudience?: boolean;
   highlight?: string | null;
 }) {
   const [busy, setBusy] = React.useState<string | null>(null);
-  /** The last test per channel, shown right under it. */
   const [tests, setTests] = React.useState<Record<string, TestResult & { at: number }>>({});
   const [confirm, confirmNode] = useConfirm();
 

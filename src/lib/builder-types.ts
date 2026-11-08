@@ -1,10 +1,7 @@
 /**
- * Types shared by the app builder's server code and its screens (no server imports).
- *
- * A custom app is a compose file plus the details Umbrel shows (name, icon, description…). The
- * compose text is the source of truth; the form edits it in place. Secret environment values never
- * live in the compose text: they are kept encrypted and written to an env file next to the app when
- * it is published, so they never enter the app store's git history.
+ * Shared by the app builder's server code and its screens. The compose text is the source of truth; the form
+ * edits it in place. Secret env values never live in it: they're kept encrypted and written to an env file at
+ * publish, so they never enter the app store's git history.
  */
 
 export type BuilderSource = "image" | "compose" | "github";
@@ -35,7 +32,6 @@ export interface WebSettings {
   containerPort: number | null;
   /** The port on this server that opens the app (Umbrel's tile, Gluon's link). */
   port: number | null;
-  /** A path to open, e.g. "/admin". */
   path: string;
   /** Umbrel: ask for the Umbrel password before the app opens (its app proxy). */
   umbrelAuth: boolean;
@@ -50,10 +46,8 @@ export interface GithubSource {
   private: boolean;
   /** A token is stored (encrypted). Its value never leaves the server. */
   hasToken: boolean;
-  /** Commit the current images were built from. */
   builtCommit: string | null;
   builtAt: number | null;
-  /** Newest commit on the branch the last time Gluon looked. */
   latestCommit: string | null;
   checkedAt: number | null;
 }
@@ -84,13 +78,11 @@ export interface Issue {
 
 export type CustomAppStatus = "draft" | "published";
 
-/** How the app is doing where it runs (Umbrel state, or the compose stack's state). */
 export interface RuntimeState {
   target: BuilderTarget;
   /** Umbrel's state words, or "running" | "stopped" | "not-installed" for compose. */
   state: string;
   progress: number;
-  /** Version the platform runs, when it says. */
   version: string | null;
   /** Gluon's app id for /apps/<id>, when it's on the Apps page. */
   appsId: string | null;
@@ -125,7 +117,6 @@ export interface JobSnapshot {
   finishedAt: number | null;
   ok: boolean | null;
   events: JobEvent[];
-  /** The FlowSteps plan for this job. */
   stages: { key: string; label: string }[];
 }
 
@@ -142,7 +133,6 @@ export interface CustomAppListItem {
   appId: string | null;
   publishedVersion: string | null;
   publishedAt: number | null;
-  /** The draft differs from what was published. */
   changed: boolean;
   updatedAt: number;
   github: Pick<GithubSource, "owner" | "repo" | "branch" | "builtCommit" | "latestCommit"> | null;
@@ -189,13 +179,11 @@ export interface CustomAppDetail {
   updatedAt: number;
   publishedVersion: string | null;
   publishedAt: number | null;
-  /** The spec as last published, to show what changed. */
   publishedSpec: AppSpec | null;
   versions: PublishedVersion[];
   builds: BuildSummary[];
   runtime: RuntimeState | null;
   job: JobSnapshot | null;
-  /** What the next publish will be called. */
   nextVersion: string;
   /** This server's address on the LAN, for links to the app's port. */
   lanHost: string | null;
@@ -205,16 +193,13 @@ export interface CustomAppDetail {
 
 export interface StoreStatus {
   platform: "umbrel" | "casaos" | "none";
-  /** Umbrel reachable right now. */
   umbrel: "ok" | "unreachable" | "missing";
-  /** Gluon's store exists and Umbrel lists it. */
   registered: boolean;
   /** Registered once, but Umbrel no longer lists it (removed by hand, or Umbrel was reset). */
   lost: boolean;
   storeId: string | null;
   /** The address Umbrel reads the store from, with the secret part hidden. */
   displayUrl: string | null;
-  /** git is missing in Gluon's image. */
   gitMissing: boolean;
   /** Where compose apps go when Umbrel isn't used. */
   composeRoot: string;
@@ -225,7 +210,6 @@ export interface CustomAppsResponse {
   apps: CustomAppListItem[];
 }
 
-/** POST /api/custom-apps/github/inspect */
 export interface RepoInspection {
   owner: string;
   repo: string;
@@ -236,13 +220,11 @@ export interface RepoInspection {
   commit: string;
   htmlUrl: string;
   found: { manifest: string | null; compose: string | null; dockerfile: string | null };
-  /** What Gluon will make of it, in words. */
   plan: string;
   prefill: { details: Partial<AppDetails>; web: Partial<WebSettings>; compose: string };
   notes: string[];
 }
 
-/** GET /api/custom-apps/image */
 export interface ImageLookup {
   ref: string;
   exists: boolean | null;
@@ -257,7 +239,6 @@ export interface ImageLookup {
   description: string | null;
 }
 
-/** GET /api/custom-apps/image/search: Docker Hub repositories for what the person typed. */
 export interface HubRepo {
   /** What goes in image: ("nginx" for official images, "jellyfin/jellyfin" otherwise). */
   ref: string;
@@ -282,7 +263,6 @@ export interface TagInfo {
   size: number | null;
 }
 
-/** GET /api/custom-apps/image/tags: one page of an image's tags, newest first, optionally filtered. */
 export interface TagPage {
   ref: string;
   tags: TagInfo[];
@@ -291,11 +271,9 @@ export interface TagPage {
   error: string | null;
 }
 
-/** GET /api/custom-apps/networks: Docker networks an app can join. */
 export interface DockerNetworkInfo {
   name: string;
   driver: string;
-  /** Compose project that made it, if any. */
   project: string | null;
 }
 

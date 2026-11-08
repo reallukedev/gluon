@@ -4,7 +4,6 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Kbd } from "@/components/ui/Surface";
 import s from "./files.module.css";
 
-/** Every Files shortcut in one place (from the bar's keyboard hint, the view menu, or ?). */
 export function Shortcuts({ open, onClose, mod }: { open: boolean; onClose: () => void; mod: string }) {
   const m = mod.replace("+", "");
   const alt = mod === "⌘" ? "⌥" : "Alt";

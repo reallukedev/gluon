@@ -16,3 +16,12 @@ export function safeNext(raw: string | string[] | undefined, fallback = "/start"
     return fallback;
   }
 }
+
+/** Set by the proxy on every page request (and overwritten there, so a browser can't supply its own). */
+export const REQUESTED_PATH_HEADER = "x-gluon-path";
+
+/** The sign-in page, with a way back to `requested` when it is a page worth returning to. */
+export function loginHref(requested: string | null | undefined): string {
+  const next = safeNext(requested ?? undefined, "/");
+  return next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`;
+}

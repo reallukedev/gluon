@@ -12,7 +12,6 @@ export interface Viewer {
   mfa: boolean;
   zone: "home" | "away";
   mustChangePassword?: boolean;
-  /** The server's two-step rule covers this person here and they haven't set it up. */
   mustSetUpMfa?: boolean;
 }
 
@@ -53,7 +52,6 @@ export function PrefsProvider({
     }
   }, [cookieTz]);
 
-  // Reflect appearance prefs on <html> immediately (no reload).
   React.useEffect(() => {
     const el = document.documentElement;
     for (const [k, v] of Object.entries(htmlAttrs(uiBits(prefs)))) el.setAttribute(k, v);
@@ -89,7 +87,6 @@ export function useViewer() {
   return usePrefs().viewer;
 }
 
-/** Formatters bound to the viewer's unit/clock/date preferences. */
 export function useFormat() {
   const { prefs: raw, timeZone } = usePrefs();
   const prefs = React.useMemo(() => ({ ...raw, timezone: timeZone ?? "UTC" }), [raw, timeZone]);

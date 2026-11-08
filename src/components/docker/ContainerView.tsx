@@ -250,9 +250,6 @@ function Networks({ c }: { c: ContainerInspect }) {
   );
 }
 
-// ---------------------------------------------------------------- run a command
-
-/** A way into the Terminal for this container: type a command here and it runs there, or open a shell. */
 function RunCommand({ c }: { c: ContainerInspect }) {
   const router = useRouter();
   const [command, setCommand] = React.useState("");

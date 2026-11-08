@@ -6,7 +6,6 @@ import { Welcome } from "@/components/onboarding/Welcome";
 
 export const metadata = { title: "Welcome" };
 
-/** First run for a new account. Once finished or skipped it's gone for good: this page sends people Home. */
 export default async function WelcomePage() {
   const { user, session } = await requireUser();
   if (getPrefs(user.id).onboarding === "done") redirect("/");

@@ -2,14 +2,9 @@ import type { AppSpec } from "@/lib/builder-types";
 import { SLUG_RE } from "@/lib/builder/names";
 
 /**
- * A new Mumble server as a builder app. Pure: answers in, the builder's spec and secrets out.
- *
- * The image is pinned to the release Gluon's copy of Mumble's admin API (MumbleServer.ice) was
- * made from, so an update is a choice, not a surprise. Ice is wired for Gluon from the first
- * start: published on 127.0.0.1 only, with secrets that live in the builder's secret store.
- * The admin (SuperUser) password isn't set through the environment, because the image applies
- * MUMBLE_SUPERUSER_PASSWORD again at every start and would undo a later reset; Gluon sets it
- * over Ice once the server is up.
+ * The image is pinned to the release our MumbleServer.ice came from, so an update is a choice, not a
+ * surprise. The SuperUser password is set over Ice, not MUMBLE_SUPERUSER_PASSWORD, because the image
+ * re-applies that at every start.
  */
 
 export const MUMBLE_IMAGE = "mumblevoip/mumble-server:v1.5.915";

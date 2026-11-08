@@ -1,42 +1,14 @@
-/* ------------------------------------------------------------ layout */
-
 .stack { display: grid; gap: 14px; min-width: 0; }
 .spacer { flex: 1; }
 
-/* ------------------------------------------------------------ rail */
-
-/* Phones get Places as a sheet; hide the inline rail before hydration decides, so it never flashes in. */
-
-/* The drive meter: a 4px track, fill at the used share, a 1px tick where it starts to need you. */
-
-/* ------------------------------------------------------------ path bar & toolbar */
-
-/* The chevron between crumbs is a small button: it lists the folders beside the next step. */
-
 @media (max-width: 560px) {
-  
   .toolbar .spacer { display: none; }
-  
 }
-
-/* ------------------------------------------------------------ page header */
-/* One line, always: a long folder name ellipsizes instead of pushing the page down. */
-
-/* Holds the summary line's height while a folder loads, so the page doesn't jump. */
-
-/* ------------------------------------------------------------ floating selection bar */
-
-/* Phones: a solid toolbar along the bottom edge, labels under the icons, thumb-sized. */
-
-/* Room under the list so the last rows can scroll clear of the toolbar. */
 
 /* The tasks tray steps up out of the way while the selection bar is showing. */
 .layout[data-selecting] ~ .tray { translate: 0 -60px; }
 @media (max-width: 900px) { .layout[data-selecting] ~ .tray { translate: 0 -118px; } }
 
-/* ------------------------------------------------------------ listing (list) */
-
-/* Every head cell speaks the same micro-caps; the column classes only set alignment here. */
 .headRow .sizeCol, .headRow .dateCol, .headRow .ownerCol { font: inherit; letter-spacing: inherit; color: inherit; }
 .headRow .sizeCol { display: flex; justify-content: flex-end; }
 
@@ -53,8 +25,6 @@
 .linkNote[data-path] { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 11px; }
 .linkNote[data-broken] { display: inline-flex; align-items: baseline; gap: 6px; flex-shrink: 0; min-width: 0; font-size: var(--text-sm); color: var(--fault); }
 
-/* A folder being measured: a short dashed hairline where its size will appear (same width, no shift). */
-
 @keyframes files-breathe { from { opacity: 0.35; } to { opacity: 1; } }
 
 .sizeCol { text-align: right; font-size: var(--text-md); color: var(--ink-2); }
@@ -62,22 +32,12 @@
 .rowActions { display: flex; justify-content: flex-end; }
 
 @media (max-width: 720px) {
-  
-  
   .row .sizeCol, .row .dateCol { display: none; }
   .nameCell { display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 10px; row-gap: 1px; }
   .nameCell .kindIcon { grid-row: span 2; }
-  
   .linkNote, .linkNote[data-broken] { display: none; }
 }
 
-/* ------------------------------------------------------------ listing (grid) */
-
-/* ------------------------------------------------------------ drop target */
-/* The whole folder is the target: a dashed frame around it, content still visible so a sub-folder
-   under the pointer can light up instead, and a note that says exactly where the files will go. */
-
-/* ------------------------------------------------------------ tables (trash, search) */
 .table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; list-style: none; margin: 0; padding: 0; }
 .trashRow {
   display: grid;
@@ -112,7 +72,6 @@
 .searchRow .nameText { flex-direction: column; gap: 1px; align-items: stretch; }
 .searchRow .linkNote { max-width: 100%; }
 
-/* ------------------------------------------------------------ tray */
 .tray {
   position: fixed;
   right: 16px;
@@ -152,7 +111,6 @@
 .progress[data-state="paused"] > div { background: var(--faint); }
 @media (max-width: 720px) { .tray { right: 8px; left: 8px; bottom: 8px; width: auto; } }
 
-/* ------------------------------------------------------------ preview */
 .previewBody { display: grid; min-height: 200px; }
 .imageStage { display: grid; justify-items: center; gap: 8px; min-width: 0; }
 .imageButton { display: block; max-width: 100%; max-height: min(70dvh, 760px); padding: 0; border: 0; border-radius: 6px; background: var(--sunk); overflow: hidden; cursor: zoom-in; }
@@ -177,7 +135,6 @@
 .textPreview > .readPane { max-height: min(62dvh, 680px); overflow-y: auto; padding: 18px 22px; background: var(--panel); }
 @media (max-width: 640px) { .textPreview > .readPane { padding: 14px 14px; } }
 
-/* ------------------------------------------------------------ dialogs */
 .conflictCard { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
 .conflictIcon { flex: none; width: 22px; height: 22px; color: var(--muted); }
 .conflictText { display: grid; gap: 2px; min-width: 0; font-size: var(--text-md); }
@@ -237,7 +194,6 @@
 
 .sampleList { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: var(--text-sm); color: var(--ink-2); }
 
-/* ------------------------------------------------------------ keyboard shortcuts */
 .keys { display: grid; gap: 18px; }
 .keysLabel { margin-bottom: 8px; }
 .keys dl { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 18px; margin: 0; align-items: baseline; font-size: var(--text-md); }

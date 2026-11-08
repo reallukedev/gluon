@@ -75,7 +75,6 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
   const entries = React.useMemo(() => (data ? buildEntries(data, status.data, exposure.data, apps.data) : null), [data, status.data, exposure.data, apps.data]);
   const entry = detailsKey && entries ? entries.find((e) => e.key === detailsKey) : undefined;
 
-  // ---- deep links: act once, then drop the query so a reload doesn't reopen anything.
   const landed = React.useRef(false);
   React.useEffect(() => {
     if (landed.current || !landing) return;
@@ -150,7 +149,6 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     }
   }
 
-  // ---- actions on the picture
   const failed = (what: string) => (e: unknown) => {
     if (!(e instanceof ApiError && e.code === "stale")) toast.error(what, { description: e instanceof Error ? e.message : undefined });
   };
@@ -280,7 +278,6 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     else setFlow(r?.type === "redirect" ? { mode: "redirect", id } : { mode: "edit", id });
   };
 
-  // ---- the header sentence: state first.
   let summary: React.ReactNode = "Checking your apps on the internet…";
   if (routes.error && !data) summary = "Can't read your public addresses right now.";
   else if (entries) {
@@ -348,7 +345,6 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     }
   }
 
-  // ---- the map
   const dns = dnsHop(status.data);
   const mapModel: MapModel | null = data
     ? {

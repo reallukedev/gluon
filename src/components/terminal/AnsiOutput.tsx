@@ -36,10 +36,7 @@ const Line = React.memo(
   (a, b) => a.rev === b.rev && a.runs === b.runs,
 );
 
-/**
- * A command's output as the terminal drew it, in the theme's colours. Lines are grouped in chunks
- * the browser can skip laying out while they're off screen, so a long output stays quick.
- */
+/** Lines are grouped in chunks the browser can skip laying out while off screen, so a long output stays quick. */
 export function AnsiOutput({ screen, version, label }: { screen: AnsiScreen; version: number; label: string }) {
   void version;
   const n = screen.lineCount;

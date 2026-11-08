@@ -45,9 +45,8 @@ export interface SearchResult {
 }
 
 /**
- * Name matches under one folder a person may read, handed over in batches. GNU find on the server
- * (no link following, so results stay inside the folder a member may see); where find has no
- * -printf (a Mac running the dev server) a Node walk with the same rules and limits.
+ * GNU find on the server, with no link following so results stay inside what a member may see. Where
+ * find has no -printf (a Mac dev server) a Node walk with the same rules.
  */
 export async function runSearch(user: User, q: SearchQuery, onBatch: (hits: SearchHit[]) => void, signal?: AbortSignal): Promise<SearchResult> {
   const t = await authorize(user, q.path, "read");
@@ -158,8 +157,8 @@ export async function runSearch(user: User, q: SearchQuery, onBatch: (hits: Sear
 }
 
 /**
- * Several roots searched at once, sharing one limit (the first `limit` hits win, the rest stop).
- * A root that can't be searched is skipped; when none can, the first reason is thrown.
+ * The roots share one limit. A root that can't be searched is skipped; when none can, the first
+ * reason is thrown.
  */
 export async function runSearchMany(user: User, roots: string[], q: Omit<SearchQuery, "path">, onBatch: (hits: SearchHit[]) => void, signal?: AbortSignal): Promise<SearchResult> {
   const limit = Math.min(Math.max(q.limit ?? 500, 1), 2000);
@@ -203,7 +202,7 @@ export async function runSearchMany(user: User, roots: string[], q: Omit<SearchQ
   return { count, truncated, timedOut };
 }
 
-/** SSE over one or several roots: "hits" { items } batches, then "done" { count, truncated, timedOut }. */
+/** Sends "hits" { items } batches, then "done" { count, truncated, timedOut }. */
 export function searchStream(req: NextRequest, user: User, roots: string[], q: Omit<SearchQuery, "path">): Response {
   return sse(req, async (send, close) => {
     const ctrl = new AbortController();
@@ -222,10 +221,7 @@ async function searchRoots(user: User): Promise<string[]> {
   return list.filter((a) => !list.some((b) => b !== a && a.startsWith(`${b}/`)));
 }
 
-/**
- * Names matching `q` in the folders this person may use (all of them when `root` is null), for
- * universal search. Same engine and permission checks as Files' own search; stops at `limit`.
- */
+/** Same engine and permission checks as Files' own search; all roots when `root` is null. */
 export async function searchNames(user: User, root: string | null, q: string, opts: { limit?: number; signal?: AbortSignal; depth?: number; type?: "file" | "dir" | "any" } = {}): Promise<SearchHit[]> {
   const limit = Math.min(Math.max(opts.limit ?? 40, 1), 500);
   const roots = root ? [root] : await searchRoots(user);

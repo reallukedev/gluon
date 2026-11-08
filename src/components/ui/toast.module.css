@@ -1,9 +1,4 @@
-/*
- * Toasts rise from the bottom edge and leave through it (or the way they were swiped), on
- * transitions so a burst retargets instead of restarting: in over 400ms (the Sonner feel), out in 250ms.
- * Older toasts tuck behind the newest (scale 0.94 steps, 8px peek) and fan out on hover or focus.
- * Reduced motion: toasts fade in place; swiping still follows the finger.
- */
+/* On transitions so a burst retargets instead of restarting. */
 .viewport {
   position: fixed;
   z-index: 70;

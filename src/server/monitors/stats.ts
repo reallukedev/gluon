@@ -3,9 +3,8 @@ import { all, now, one, run } from "../db";
 import type { MonitorCheck, StripBucket } from "@/lib/alerts-types";
 
 /**
- * Check history and the numbers derived from it. Raw checks live in monitor_checks (90 days);
- * monitor_hours keeps an hourly roll-up (400 days) so uptime over long windows and the history
- * strips never scan raw rows.
+ * monitor_hours keeps an hourly roll-up (400 days) so long uptime windows and the history strips
+ * never scan raw rows (90 days).
  */
 
 const HOUR = 3_600_000;
@@ -58,7 +57,6 @@ export function recentChecks(monitorId: string, limit = 200): MonitorCheck[] {
   return all<CheckRow>("SELECT at, ok, latency_ms, status, error FROM monitor_checks WHERE monitor_id = ? ORDER BY at DESC LIMIT ?", monitorId, limit).map(toCheck);
 }
 
-/** Failures in a row, counting back from the latest check. */
 export function trailingFailures(monitorId: string): number {
   const rows = all<{ ok: number }>("SELECT ok FROM monitor_checks WHERE monitor_id = ? ORDER BY at DESC LIMIT 60", monitorId);
   let n = 0;
@@ -69,7 +67,6 @@ export function trailingFailures(monitorId: string): number {
   return n;
 }
 
-/** Successes in a row, counting back from the latest check. */
 export function trailingSuccesses(monitorId: string): number {
   const rows = all<{ ok: number }>("SELECT ok FROM monitor_checks WHERE monitor_id = ? ORDER BY at DESC LIMIT 20", monitorId);
   let n = 0;
@@ -81,8 +78,8 @@ export function trailingSuccesses(monitorId: string): number {
 }
 
 /**
- * When did the current up/down run start? The hourly table finds the last hour that had the opposite
- * result, so this never scans more than an hour of raw checks.
+ * The hourly table finds the last hour with the opposite result, so this never scans more than an
+ * hour of raw checks.
  */
 export function stateSince(monitorId: string, currentOk: boolean): number | null {
   const hour = one<{ hour: number | null }>(
@@ -113,8 +110,6 @@ export function flips(monitorId: string, windowMs = HOUR): number {
   return n;
 }
 
-// ---------------------------------------------------------------- uptime & strips
-
 interface HourRow {
   monitor_id: string;
   hour: number;
@@ -133,7 +128,6 @@ export interface Uptime {
 
 const pct = (ok: number, n: number) => (n > 0 ? Math.round((ok / n) * 100_000) / 1000 : null);
 
-/** Uptime percentages for every monitor in one pass over the hourly table. */
 export function uptimeAll(): Map<string, Uptime> {
   const t = now();
   const h24 = hourStart(t - DAY) + HOUR;
@@ -169,7 +163,6 @@ function bucketState(checks: number, ok: number): StripBucket["state"] {
   return "partial";
 }
 
-/** Hourly buckets for the last `hours` hours (oldest first), for every monitor. */
 export function stripsAll(hours = 48, only?: string): Map<string, StripBucket[]> {
   const end = hourStart(now());
   const start = end - (hours - 1) * HOUR;
@@ -216,7 +209,7 @@ function percentile(sorted: number[], p: number): number | null {
 
 const pctCache = new Map<string, { at: number; value: { p50: number | null; p95: number | null; p99: number | null } }>();
 
-/** Response-time percentiles over successful checks in the last 24 h (cached 30 s). */
+/** Cached 30 s. */
 export function latencyPercentiles(monitorId: string, windowMs = DAY): { p50: number | null; p95: number | null; p99: number | null } {
   const hit = pctCache.get(monitorId);
   if (hit && now() - hit.at < 30_000) return hit.value;
@@ -230,7 +223,6 @@ export function latencyPercentiles(monitorId: string, windowMs = DAY): { p50: nu
   return value;
 }
 
-/** Outages (runs of consecutive failures) in the last `windowMs`, newest first. */
 export function incidents(monitorId: string, windowMs = 30 * DAY, limit = 50): { start: number; end: number | null; checks: number; error: string | null }[] {
   const rows = all<{ at: number; ok: number; error: string | null }>(
     "SELECT at, ok, error FROM monitor_checks WHERE monitor_id = ? AND at > ? ORDER BY at",

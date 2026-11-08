@@ -1,4 +1,3 @@
-/* Machine widgets for admins: Running out of space, Power, Coming up. */
 .body { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); overflow: hidden; }
 .headline { flex: none; display: flex; align-items: center; gap: 10px; margin: 0; font-size: var(--text-lg); font-weight: 620; line-height: 1.25; min-width: 0; }
 .headline > span:last-child { min-width: 0; overflow-wrap: anywhere; }
@@ -11,7 +10,6 @@
 .age { position: absolute; right: var(--px, 16px); top: var(--pt, 16px); }
 .form { display: grid; gap: 16px; }
 
-/* ---------------------------------------------------------------- Space */
 /* Whole rows only: hidden ones stay in the layout (so counting stays exact) but aren't shown. */
 .list { flex: 1 1 auto; list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .list > li { flex: none; }
@@ -27,7 +25,6 @@
 .disk[data-size="m"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); align-items: center; column-gap: 16px; padding: 6px 0; }
 .disk[data-size="m"] .diskMeta { display: none; }
 
-/* ---------------------------------------------------------------- Power */
 .power { position: relative; height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); overflow: hidden; }
 .powerHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .figure { font-size: var(--figure, 1.625rem); font-weight: 520; font-family: var(--font-display); font-stretch: 80%; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -40,18 +37,15 @@
 .note { margin-top: auto; font-size: var(--text-xs); color: var(--muted); line-height: 1.45; }
 .note .link { margin: 0; font-size: inherit; }
 .power[data-size="s"] { --figure: 1.5rem; gap: 6px; }
-/* Wide sizes: figure, line and numbers in one row, the note underneath. */
 .power[data-size="m"], .power[data-size="w"] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto 1fr; align-items: center; column-gap: 24px; }
 .power[data-size="m"] .note, .power[data-size="w"] .note { grid-column: 1 / -1; align-self: end; }
 .power[data-size="m"] .stats, .power[data-size="w"] .stats { flex-wrap: nowrap; }
-/* Phones: wide tiles are two short rows: figure and numbers on the left, the line on the right. */
 @media (max-width: 720px) {
   .power[data-size="m"], .power[data-size="w"] { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; row-gap: 4px; }
   .power[data-size="m"] > svg, .power[data-size="w"] > svg { grid-column: 2; grid-row: 1 / 3; }
   .power[data-size="m"] .note, .power[data-size="w"] .note { display: none; }
 }
 
-/* ---------------------------------------------------------------- Coming up */
 .schedule { flex: 1 1 auto; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .schedule > li { flex: none; }
 .schedule > [aria-hidden] { visibility: hidden; }

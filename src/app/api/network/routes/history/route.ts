@@ -3,7 +3,6 @@ import { route } from "@/server/api";
 import { listHistory } from "@/server/caddy/routes";
 import { restoreRoutes } from "@/server/network/routes-service";
 
-/** Snapshots taken before each save (newest first). */
 export const GET = route({ auth: "admin" }, () => ({ entries: listHistory() }));
 
 const body = z.object({

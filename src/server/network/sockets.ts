@@ -96,8 +96,6 @@ export async function hostEstablished(): Promise<SsSocket[]> {
   return parseSs(stdout);
 }
 
-// ---------------------------------------------------------------- /proc/<pid>/net/{tcp,udp}{,6}
-
 function hexToIpv4(hex: string): string {
   // Little-endian 32-bit word.
   const n = parseInt(hex, 16);

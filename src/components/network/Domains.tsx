@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import Link from "next/link";
 import { NavArrowRight } from "iconoir-react";
 import { LinkButton } from "@/components/ui/Button";
@@ -12,14 +11,8 @@ import type { RoutesConfigT } from "@/lib/network-types";
 import { CLOUDFLARE_ICON } from "@/components/settings/Cloudflare";
 import d from "./domains.module.css";
 
-/**
- * The domains public addresses live under. With Cloudflare connected, every domain the token can
- * see, each opening its full DNS records; without it, one line saying what connecting would do.
- */
-
 const inZone = (h: string, z: string) => h === z || h.endsWith(`.${z}`);
 
-/** The most specific domain holding `host`. */
 export function zoneOfHost(zones: CloudflareZoneT[], host: string): CloudflareZoneT | null {
   return zones.filter((z) => inZone(host, z.name)).sort((a, b) => b.name.length - a.name.length)[0] ?? null;
 }

@@ -52,7 +52,6 @@ export class MarkerFilter {
     return { text: out, markers };
   }
 
-  /** Whatever was held back, once the stream has ended. */
   flush(): string {
     const p = this.pending;
     this.pending = "";

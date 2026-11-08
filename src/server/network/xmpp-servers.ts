@@ -8,7 +8,6 @@ import type { ChatServerCandidate } from "@/lib/network-types";
 const CHAT_IMAGE = /(^|\/)(prosody|prosodyim|snikket|ejabberd|openfire)[^/]*(:|$)|\/(prosody|ejabberd|snikket-server)(:|$)/i;
 const isChatImage = (image: string) => CHAT_IMAGE.test(image) || QUARK_IMAGE_RE.test(image);
 
-/** Containers on this server that look like an XMPP chat server, for the Network editor. */
 export async function chatServerCandidates(): Promise<ChatServerCandidate[]> {
   const list = await docker().listContainers({ all: true });
   return list

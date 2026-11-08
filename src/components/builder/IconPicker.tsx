@@ -7,10 +7,6 @@ import { Input } from "@/components/ui/Field";
 import { iconError, MAX_ICON_BYTES } from "@/lib/builder/names";
 import s from "./builder.module.css";
 
-/**
- * The app's icon: upload an image (scaled to 256 px and kept inside the app, so Umbrel shows it
- * without fetching anything), or point at an https address. SVGs are kept as they are.
- */
 export function IconPicker({ value, name, onChange, suggestions = [] }: { value: string | null; name: string; onChange: (v: string | null) => void; suggestions?: { label: string; value: string }[] }) {
   const file = React.useRef<HTMLInputElement>(null);
   const [mode, setMode] = React.useState<"idle" | "url">("idle");

@@ -1,7 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import { StreamLanguage, type StreamParser } from "@codemirror/language";
 
-/** Languages the editor can highlight. Each loads on demand so the editor itself stays small. */
+/** Each loads on demand so the editor itself stays small. */
 export type CodeLanguage =
   | "yaml" | "json" | "markdown" | "ini" | "sh" | "toml" | "dockerfile" | "python" | "javascript" | "typescript"
   | "css" | "xml" | "html" | "sql" | "lua" | "go" | "ruby" | "diff" | "nginx" | "caddyfile" | "text";

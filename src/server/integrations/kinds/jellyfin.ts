@@ -79,9 +79,8 @@ function http(ctx: KindContext<Config>) {
 }
 
 /**
- * The person whose view "recently added" and library counts follow. None chosen means the API key's own view,
- * which sees every library: picking "the first admin" by default hid everything whenever that account had
- * no library access (or Jellyfin's library folders had drifted from its items).
+ * None chosen means the API key's own view, which sees every library. Defaulting to the first admin
+ * hid everything whenever that account had no library access.
  */
 function userId(ctx: KindContext<Config>): string | null {
   return ctx.config.userId ?? null;
@@ -326,8 +325,6 @@ async function visibility(ctx: KindContext<Config>): Promise<string | null> {
   return null;
 }
 
-// ------------------------------------------------------------------ universal search
-
 /** What a search hit is, for the palette's icon and the hint's first word. */
 const SEARCH_TYPES: Record<string, { type: string; word: string; rank: number }> = {
   Movie: { type: "film", word: "Film", rank: 0 },
@@ -340,7 +337,6 @@ const SEARCH_TYPES: Record<string, { type: string; word: string; rank: number }>
   MusicVideo: { type: "video", word: "Music video", rank: 2 },
 };
 
-/** One Jellyfin item → a search hit linking to its page in Jellyfin's web app. */
 export function searchHit(ctx: KindContext<Config>, it: Item): KindSearchHit | null {
   const id = str(it.Id);
   const t = SEARCH_TYPES[String(it.Type)];

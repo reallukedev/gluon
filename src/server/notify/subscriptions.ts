@@ -11,8 +11,6 @@ import { subscriptionFilterSchema } from "@/lib/alerts-schemas";
 import { allChannels, getChannel, type Channel } from "./channels";
 import { wantsFinding } from "./filter";
 
-// ---------------------------------------------------------------- time zones & quiet hours
-
 export function validTz(tz: string): boolean {
   if (!tz) return false;
   try {
@@ -24,7 +22,6 @@ export function validTz(tz: string): boolean {
 }
 
 const fmtCache = new Map<string, Intl.DateTimeFormat>();
-/** Wall-clock parts of `ts` in `tz`. */
 export function localParts(ts: number, tz: string): { date: string; hour: number; minute: number } {
   const zone = validTz(tz) ? tz : "UTC";
   let f = fmtCache.get(zone);
@@ -41,7 +38,7 @@ const toMin = (hhmm: string) => {
   return (h ?? 0) * 60 + (m ?? 0);
 };
 
-/** Is it quiet time now, and when does it end? A window like 22:00–07:00 crosses midnight. */
+/** A window like 22:00 to 07:00 crosses midnight. */
 export function quietState(filter: Pick<SubscriptionFilter, "quiet" | "tz">, ts: number): { quiet: boolean; endsAt: number | null } {
   const q = filter.quiet;
   if (!q) return { quiet: false, endsAt: null };
@@ -63,8 +60,6 @@ export function defaultTz(userId: string): string {
   const sys = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return sys && validTz(sys) ? sys : "UTC";
 }
-
-// ---------------------------------------------------------------- storage
 
 interface SubRow {
   user_id: string;
@@ -122,7 +117,7 @@ export async function listSubscriptions(user: User): Promise<SubscriptionsRespon
   };
 }
 
-/** Clean a filter for this person: members only get "my apps" alerts and report replies. */
+/** Members only get "my apps" alerts and report replies. */
 async function sanitize(user: User, input: Partial<SubscriptionFilter>): Promise<SubscriptionFilter> {
   const parsed = subscriptionFilterSchema.safeParse(input);
   if (!parsed.success) {
@@ -170,8 +165,6 @@ export function removeSubscription(user: User, channelId: string) {
   run("DELETE FROM subscriptions WHERE user_id = ? AND channel_id = ?", user.id, channelId);
 }
 
-// ---------------------------------------------------------------- dispatch helpers
-
 export interface ActiveSub {
   userId: string;
   role: "admin" | "member";
@@ -180,7 +173,7 @@ export interface ActiveSub {
   filter: SubscriptionFilter;
 }
 
-/** Subscriptions whose person is enabled and whose channel is on (and still theirs to use). */
+/** Only enabled people, channels that are on and still theirs to use. */
 export function activeSubscriptions(): ActiveSub[] {
   const rows = all<SubRow & { role: "admin" | "member"; display_name: string }>(
     `SELECT s.*, u.role, u.display_name FROM subscriptions s JOIN users u ON u.id = s.user_id JOIN channels c ON c.id = s.channel_id
@@ -199,7 +192,6 @@ export function activeSubscriptions(): ActiveSub[] {
   return out;
 }
 
-/** Does this subscription want this finding? `memberApps` = app ids the member can see (members only). */
 export function wants(sub: ActiveSub, f: Pick<Finding, "kind" | "severity" | "subject">, memberApps: Set<string> | null): boolean {
   return wantsFinding(sub.role, sub.filter, f, memberApps);
 }

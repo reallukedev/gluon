@@ -3,9 +3,8 @@ import type { DdnsStatus } from "@/lib/network-types";
 import { inZone } from "./plan";
 
 /**
- * Moving from cloudflare-ddns to Gluon, name by name. Pure: the updater's status and Gluon's last
- * sync in, a verdict out. "Safe" means stopping the updater would change nothing in DNS, so it's
- * only said when every one of its names is Gluon's to keep and already holds what Gluon would write.
+ * "Safe" means stopping cloudflare-ddns would change nothing in DNS, so it's only said when every one
+ * of its names is Gluon's to keep and already holds what Gluon would write.
  */
 
 const norm = (n: string) => n.trim().toLowerCase().replace(/\.$/, "");

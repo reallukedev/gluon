@@ -14,10 +14,6 @@ import s from "./checkup.module.css";
 
 const ROWS = SECURITY_GROUPS.map((g) => g.label);
 
-/**
- * The Security tab: the security checkup on its own page. Shows the run in progress or the last one,
- * with the area rows as the instrument, and earlier runs to compare against.
- */
 export function SecurityTab({ initial, autostart }: { initial: SecurityState | null; autostart: boolean }) {
   const router = useRouter();
   const state = useApi<SecurityState>(SECURITY_URL, { fallbackData: initial ?? undefined, refresh: 30_000 });

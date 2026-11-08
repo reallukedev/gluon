@@ -5,7 +5,6 @@ import { getChannel } from "@/server/notify/channels";
 import { listSubscriptions, quietState, removeSubscription, setSubscription } from "@/server/notify/subscriptions";
 import type { SubscriptionView } from "@/lib/alerts-types";
 
-/** The viewer's own subscriptions, the channels they may use, and app choices for the subjects picker. */
 export const GET = route({ auth: "user" }, ({ user }) => listSubscriptions(user));
 
 const put = z.object({

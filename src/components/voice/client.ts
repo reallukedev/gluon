@@ -11,7 +11,6 @@ export const voiceUrl = (appId: string, rest = "") => `/api/voice/${encodeURICom
 /** The person closed the "confirm it's you" prompt: not an error worth a toast. */
 export const quiet = (e: unknown) => e instanceof ApiError && e.code === "reauth_cancelled";
 
-/** One live change on the server. Toasts the outcome; throws for dialogs that show errors inline. */
 export async function act(appId: string, op: VoiceOp, opts: { inline?: boolean } = {}): Promise<boolean> {
   try {
     const r = await api.post<{ message: string }>(voiceUrl(appId, "/act"), op);
@@ -25,10 +24,7 @@ export async function act(appId: string, op: VoiceOp, opts: { inline?: boolean }
   }
 }
 
-/**
- * Follows a server job (letting Gluon manage the server, removing the join password) over its
- * NDJSON stream. The job belongs to the server: leaving stops reading, not the work.
- */
+/** The job belongs to the server: leaving stops reading, not the work. */
 export function useVoiceJob(onFinished: () => void) {
   const [view, setView] = React.useState<JobView | null>(null);
   const [running, setRunning] = React.useState(false);
@@ -74,13 +70,10 @@ export function useVoiceJob(onFinished: () => void) {
   return { view, running, error, start, reset };
 }
 
-/** "3 people", "1 person". */
 export const people = (n: number) => `${n.toLocaleString()} ${n === 1 ? "person" : "people"}`;
 
-/** First letter for a person's mark. */
 export const initial = (name: string) => (Array.from(name.trim())[0] ?? "?").toUpperCase();
 
-/** 75 → "1 min", 4000 → "1 h 6 min". */
 export function shortDuration(secs: number): string {
   if (secs < 60) return `${Math.max(0, Math.floor(secs))} s`;
   const m = Math.floor(secs / 60);

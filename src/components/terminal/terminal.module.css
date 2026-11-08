@@ -1,6 +1,3 @@
-/* Terminal: a page that fills the window, a header, and one workspace panel holding either the
-   command blocks with their prompt, or the xterm.js terminal. */
-
 .page {
   display: flex;
   flex-direction: column;
@@ -11,7 +8,6 @@
   margin: 0 auto;
   padding: 28px var(--gutter) 24px;
 }
-/* Settles in after a click like any page (Shell sets data-nav). */
 :global(:root[data-nav="enter"]) .page { animation: pageIn var(--dur-fast) var(--ease-out); }
 @keyframes pageIn { from { opacity: 0.5; transform: translateY(calc(4px * var(--motion))); } }
 @media (max-width: 900px) {
@@ -35,8 +31,7 @@
   .pickSub { display: none; }
 }
 
-/* The workspace and the colours output is drawn in. ANSI's 16 slots come from the plate's own
-   tokens, so light and dark (and the contrast setting) carry through to programs' colours. */
+/* ANSI's 16 slots come from the plate's own tokens, so light, dark and contrast carry through to programs' colours. */
 .workspace {
   --term-bg: var(--panel);
   --ansi-0: var(--ink);
@@ -85,8 +80,6 @@
   }
 }
 
-/* ---------------------------------------------------------------- Commands */
-
 .commands { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .commands[hidden], .termPane[hidden] { display: none; }
 
@@ -120,7 +113,6 @@
   .example:hover:not(:disabled) { background: var(--panel-2); color: var(--ink); }
 }
 
-/* A block: the command, what it printed, how it ended. */
 .block + .block { border-top: 1px solid var(--line); }
 .blockHead {
   position: sticky;
@@ -212,7 +204,6 @@
   .output { font-size: 12.5px; }
 }
 
-/* The dock: where you are, and the prompt. */
 .dock { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 12px calc(12px + env(safe-area-inset-bottom)) 18px; border-top: 1px solid var(--line); background: var(--panel); }
 .askRow { padding-bottom: 4px; }
 .dockHead { display: flex; align-items: center; gap: 10px; min-height: 28px; font-size: var(--text-xs); color: var(--muted); }
@@ -294,8 +285,6 @@
   .suggestFoot { display: none; }
 }
 
-/* ---------------------------------------------------------------- the target picker */
-
 .pickTrigger {
   display: inline-flex;
   align-items: center;
@@ -352,8 +341,6 @@
 .pickItemName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 13px; }
 .pickItemWhy { font-size: var(--text-xs); color: var(--muted); }
 .pickEmpty { padding: 14px 14px 10px; font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
-
-/* ---------------------------------------------------------------- Terminal mode */
 
 .termPane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .termBar { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 5px 8px 5px 18px; border-bottom: 1px solid var(--line); }

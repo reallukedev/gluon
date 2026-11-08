@@ -24,9 +24,8 @@ export function guessLevel(text: string, stream: "out" | "err"): LogLine["level"
 }
 
 /**
- * Docker's multiplexed log stream (non-TTY containers): 8-byte headers [stream, 0,0,0, size(4)].
- * TTY containers send raw bytes. Returns a function you push chunks into. A character split
- * across chunks or frames is put back together before it's decoded.
+ * Non-TTY containers send 8-byte headers [stream, 0,0,0, size(4)]; TTY containers send raw bytes. A
+ * character split across chunks or frames is put back together before decoding.
  */
 export function demuxer(tty: boolean, onLine: (stream: "out" | "err", raw: string) => void) {
   let buf = Buffer.alloc(0);
@@ -68,7 +67,6 @@ function parseLine(container: string, stream: "out" | "err", raw: string): LogLi
   return { t: Number.isFinite(ts) ? ts : Date.now(), container, stream, text, level: guessLevel(text, stream) };
 }
 
-/** Recent lines for one container (non-following). */
 export async function tailLogs(containerId: string, name: string, opts: { tail?: number; since?: number } = {}): Promise<LogLine[]> {
   const c = docker().getContainer(containerId);
   const info = await c.inspect();
@@ -87,7 +85,7 @@ export async function tailLogs(containerId: string, name: string, opts: { tail?:
   return out;
 }
 
-/** Follow logs; returns a stop function. */
+/** Returns a stop function. */
 export async function followLogs(containerId: string, name: string, onLine: (l: LogLine) => void, opts: { since?: number } = {}): Promise<() => void> {
   const c = docker().getContainer(containerId);
   const info = await c.inspect();

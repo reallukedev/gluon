@@ -1,6 +1,4 @@
 "use client";
-// Integration widgets (media, downloads, home accessories, weather, calendar, feeds…), registered with the
-// widget store. Each reads its data through one batched POST to /api/widgets/data.
 import dynamic from "next/dynamic";
 import { registerWidget } from "../widgetStore";
 import type { ImmichConfig, ImmichRecentConfig, IntegrationConfig, RecentConfig } from "./live/media";

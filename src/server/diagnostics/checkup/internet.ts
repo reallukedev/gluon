@@ -6,8 +6,6 @@ import { lookupPublicIpv4 } from "../../network/probes";
 import { defaultGateways, hostNameservers, pingSeries } from "./probes";
 import { fail, go, kv, ms, ok, skip, warn, type CheckCtx, type CheckSpec } from "./core";
 
-/** Is this server on the internet? Gateway, name lookups, outbound HTTPS, and whether DNS points here. */
-
 export const PROBE_NAME = "cloudflare.com";
 export const TRACE_URL = "https://www.cloudflare.com/cdn-cgi/trace";
 
@@ -112,7 +110,6 @@ export function httpsCheck(group: string, hop = false): CheckSpec {
   };
 }
 
-/** Does the public DNS of every name in routes.json point at this network? */
 export function publicIpCheck(group: string): CheckSpec {
   return {
     id: "internet.public-ip",

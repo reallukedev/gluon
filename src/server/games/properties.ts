@@ -1,6 +1,6 @@
 /**
- * Java .properties, the format of a Minecraft server's server.properties: `key=value` lines, `#`
- * comments, backslash escapes (the MOTD's § is often written §) and continued lines.
+ * Java .properties: `key=value`, `#` comments, backslash escapes (the MOTD's § is often escaped) and
+ * continued lines.
  */
 export function parseProperties(text: string): Map<string, string> {
   const out = new Map<string, string>();

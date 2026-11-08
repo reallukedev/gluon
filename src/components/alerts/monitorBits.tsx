@@ -5,7 +5,6 @@ import type { LineState } from "@/lib/types";
 import { useFormat } from "@/components/PrefsProvider";
 import s from "./trace.module.css";
 
-/** Uptime as people read it: 100%, 99.93%, 97.4%. */
 export function pct(v: number | null | undefined): string {
   if (v === null || v === undefined) return "No data";
   if (v >= 99.995) return "100%";
@@ -52,19 +51,11 @@ interface TraceProps {
   bucketMs: number;
   /** Buckets that end before this weren't watched yet, so nothing is drawn for them. */
   since?: number;
-  /** Accessible name: "Jellyfin, last 24 hours". */
   label: string;
-  /** Draw the response-time line above the ticks. */
   latency?: boolean;
-  /** Tall variant for the detail view. */
   tall?: boolean;
 }
 
-/**
- * A monitor's history drawn as a status-page strip: one hairline tick per bucket (faint = every check
- * passed, short red = checks failed, dashed = nothing was checked), with the response time as a thin
- * line on the same time axis above it. Hover or use the arrow keys to read any tick.
- */
 export function Trace({ buckets, bucketMs, since = 0, label, latency = true, tall }: TraceProps) {
   const fmt = useFormat();
   const [ref, width] = useWidth<HTMLDivElement>();
@@ -184,7 +175,6 @@ export function Trace({ buckets, bucketMs, since = 0, label, latency = true, tal
   );
 }
 
-/** The legend under a trace: what each mark means, drawn with the marks themselves. */
 export function TraceLegend({ latency = true }: { latency?: boolean }) {
   return (
     <div className={s.legend} aria-hidden>

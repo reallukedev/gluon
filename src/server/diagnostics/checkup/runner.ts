@@ -19,8 +19,8 @@ import { targetedPlan, type Plan } from "./targeted";
 import { diffRuns, previousRun, saveRun } from "./history";
 
 /**
- * Runs checkups. One run per kind+target at a time: a second request for the same thing attaches to
- * the run in progress (and gets everything so far). A run stops when nobody is watching any more.
+ * One run per kind+target at a time: a second request attaches to the run in progress. A run stops
+ * when nobody is watching any more.
  */
 
 const MAX_ACTIVE = 4;
@@ -235,7 +235,6 @@ async function execute(a: Active) {
   active().delete(a.meta.id);
 }
 
-/** Start a checkup, or attach to the same one already running. */
 export async function startOrAttach(kind: CheckupKind, target: string | null, user: User, where: { ip: string; zone: string }): Promise<{ run: Active; attached: boolean }> {
   const k = key(kind, target);
   const existing = [...active().values()].find((a) => a.key === k && !a.summary);
@@ -270,8 +269,8 @@ export async function startOrAttach(kind: CheckupKind, target: string | null, us
 }
 
 /**
- * Follow a run until it finishes or `signal` aborts. When the last watcher leaves, the run is
- * stopped after a short grace period (a reload re-attaches in time).
+ * When the last watcher leaves, the run is stopped after a short grace period, so a reload
+ * re-attaches in time.
  */
 export function follow(a: Active, attached: boolean, emit: (e: CheckupEvent) => void, signal: AbortSignal): Promise<void> {
   emit({ type: "start", meta: a.meta, plan: a.plan, results: a.plan.map((p) => a.results.get(p.id)).filter((r): r is CheckResult => !!r), running: [...a.running], attached });
@@ -308,7 +307,7 @@ export function follow(a: Active, attached: boolean, emit: (e: CheckupEvent) => 
   });
 }
 
-/** Stop a run now (the Stop button), regardless of other watchers. */
+/** The Stop button: stops regardless of other watchers. */
 export function stopRun(id: string): boolean {
   const a = active().get(id);
   if (!a || a.summary) return false;

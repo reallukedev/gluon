@@ -1,16 +1,11 @@
 "use client";
 import * as React from "react";
 
-/**
- * The Files clipboard: ⌘C / ⌘X in one folder, ⌘V in another. It lives for the tab (moving between
- * folders keeps it) and never touches the system clipboard, which can't hold server paths anyway.
- */
+/** Lives for the tab and never touches the system clipboard, which can't hold server paths anyway. */
 export interface Clip {
   mode: "copy" | "cut";
   paths: string[];
-  /** Name of the first item, for "Paste Photos" / "Paste 3 items". */
   first: string;
-  /** Folder they came from. */
   from: string;
 }
 

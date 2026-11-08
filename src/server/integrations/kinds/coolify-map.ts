@@ -1,4 +1,4 @@
-// Coolify: turning API responses into what the Deployments widget draws. Pure, so it can be tested on recorded shapes.
+// Pure, so it can be tested on recorded shapes.
 import type { LineState } from "@/lib/types";
 import type { CoolifyDeployment, CoolifyDeploymentStatus, CoolifyResource } from "@/lib/widgets-types";
 

@@ -1,6 +1,5 @@
 import type { LineState } from "@/lib/types";
 
-/** Just enough of an app to say what state it's in. */
 interface Stateful {
   line: LineState;
   summary: string;
@@ -9,13 +8,9 @@ interface Stateful {
   umbrel?: { state: string } | null;
 }
 
-/** "part" or "parts": a container, in words a household member would use. */
 export const parts = (n: number) => (n === 1 ? "1 part" : `${n} parts`);
 
-/**
- * What's wrong with an app, in plain words, or null when nothing is. Docker's words (unhealthy,
- * restarting, containers) stay on the detail page and in tooltips.
- */
+/** Docker's words (unhealthy, restarting, containers) stay on the detail page and in tooltips. */
 export function trouble(a: Stateful): string | null {
   if (a.line !== "unhealthy" || a.copyOf) return null;
   const n = a.containers.length;
@@ -30,7 +25,6 @@ export function trouble(a: Stateful): string | null {
   return bad.length === 1 ? `1 of ${parts(n)} ${what}` : `${bad.length} of ${n} parts ${restarting ? "keep restarting" : stopped === bad.length ? "stopped" : "aren't responding"}`;
 }
 
-/** The state word for a row or a header: the plain trouble when there is some, otherwise the server's word. */
 export function stateWord(a: Stateful): string {
   return trouble(a) ?? a.summary;
 }

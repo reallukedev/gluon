@@ -27,20 +27,16 @@ import type { Zone } from "./net-zone";
 import { mfaRequired } from "./auth/policy";
 
 /**
- * First run. Which steps apply is decided here, from real state, each time /welcome loads:
- *  - updates: only for admins, and only while nobody has chosen how Gluon updates (it's server-wide).
- *  - people:  only for the admin who set the server up; admins who were invited join a household
- *             that already exists.
- *  - security: only when Gluon is published to the internet or this admin is signed in from away,
- *             and they don't have two-step yet.
- * Alerts are per person, so every admin gets that step.
+ * Which steps apply is decided from real state each time /welcome loads: updates only while nobody
+ * has chosen (it's server-wide), people only for the admin who set the server up, security only when
+ * Gluon is on the internet or this admin is away without two-step.
  */
 
 const GLUON_PORT = Number(process.env.PORT ?? "8130");
 
 /**
- * Gluon's own public address: the public name in Settings → Server, else a route pointing at it.
- * Pass the routes when they've just been read, so they aren't read again.
+ * The public name in Settings, else a route pointing at Gluon. Pass the routes when they've just been
+ * read.
  */
 export function gluonPublicAddress(routes?: RoutesConfig | null): string | null {
   const host = getSetting("publicHost").trim();
@@ -101,8 +97,8 @@ export function planFor(user: User, zone: Zone): Plan {
 }
 
 /**
- * Accounts made while Gluon started people with only Home in the sidebar (and a picker on Home to add
- * the rest) still have that sidebar. The picker is gone, so give them the whole sidebar back, once.
+ * Accounts from when new people only got Home in the sidebar (with a picker that's since gone) get
+ * the whole sidebar back, once.
  */
 export function releaseLegacySidebar(userId: string) {
   const p = getPrefs(userId);
@@ -111,8 +107,6 @@ export function releaseLegacySidebar(userId: string) {
   const hidden = new Set(p.sidebarHidden);
   if (hidden.size === legacy.length && legacy.every((id) => hidden.has(id))) updatePrefs(userId, { sidebarHidden: [] });
 }
-
-// ---------------------------------------------------------------- first look
 
 export async function inventoryApps(): Promise<InventoryApps> {
   const [apps, platform] = await Promise.all([listApps(), activePlatform().catch(() => "none" as const)]);
@@ -151,8 +145,6 @@ export function inventoryAttention(): InventoryAttention {
   const c = counts();
   return { fault: c.fault, attention: c.attention, top: listOpen().slice(0, 3).map((f) => ({ id: f.id, title: f.title, severity: f.severity })) };
 }
-
-// ---------------------------------------------------------------- the last admin screen
 
 interface InviteRow {
   display_name: string | null;

@@ -51,7 +51,6 @@ export function db(): Database.Database {
   return g.__gluonDb;
 }
 
-/** Typed helpers so call sites stay readable. */
 export function one<T>(sql: string, ...params: unknown[]): T | undefined {
   return db().prepare(sql).get(...params) as T | undefined;
 }

@@ -2,12 +2,9 @@
 import * as React from "react";
 
 export interface AddressChoice {
-  /** Publish the web page on the internet. Off until the person turns it on. */
   on: boolean;
   label: string;
-  /** They read that anyone with the address reaches the app. */
   ack: boolean;
-  /** Set once the address is saved, so a reload doesn't add it twice. */
   saved: { host: string } | null;
 }
 
@@ -25,10 +22,7 @@ function read(id: string): AddressChoice {
   }
 }
 
-/**
- * The public address choice lives in this tab until the app runs (it isn't part of the app's
- * files), so a reload in the middle of the flow keeps it.
- */
+/** Kept in this tab (it isn't part of the app's files), so a reload mid-flow keeps it. */
 export function useAddressChoice(id: string) {
   const [choice, setChoice] = React.useState<AddressChoice>(EMPTY);
   React.useEffect(() => setChoice(read(id)), [id]);

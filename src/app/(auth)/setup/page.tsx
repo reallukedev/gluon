@@ -11,7 +11,7 @@ import s from "../auth.module.css";
 
 export const metadata = { title: "Set up" };
 
-/** How Gluon is installed decides where its log (and so the setup code) is. Never slows the page much. */
+/** Where the log (and so the setup code) is depends on how Gluon is installed. */
 async function whereIsTheCode(): Promise<CodeWhere> {
   const found = await Promise.race([detectInstall().catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), 2500))]);
   if (!found) return { kind: "unknown" };
@@ -38,7 +38,7 @@ export default async function SetupPage() {
     // Claiming a fresh server is only possible from the home network (the API refuses it too).
     return (
       <div className={s.form}>
-        <h2>Finish setting up at home</h2>
+        <h1>Finish setting up at home</h1>
         <ZoneLine zone="away" serverName={serverName}>
           The first admin account can only be made from the home network.
         </ZoneLine>

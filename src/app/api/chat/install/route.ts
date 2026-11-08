@@ -3,7 +3,6 @@ import { route } from "@/server/api";
 import { installPlan, startChatInstall } from "@/server/chat/install";
 import { installBody, toInstall } from "@/server/chat/install-schema";
 
-/** Chat servers already here, ports in use, and Network's base domain, for the install flow. */
 export const GET = route({ auth: "admin", query: z.object({ domain: z.string().max(253).optional(), server: z.enum(["quark", "prosody"]).default("quark") }) }, async ({ query }) => installPlan(query.domain ?? null, query.server));
 
 /** Create the app; the client then runs the builder's publish stream, then /finish. */

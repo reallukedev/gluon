@@ -1,21 +1,17 @@
-// Following a Start, Stop or Restart until Crafty reports the server got there. Crafty queues the command and
-// answers at once, then saves fresh stats when the server starts or stops and every 30 seconds while it runs, so
-// "done" is read from the server's state, never from the command's answer.
+// Crafty queues the command and answers at once, so "done" is read from the server's state, never from the command's
+// answer.
 import type { CraftyAction, CraftyServer } from "@/lib/widgets-types";
 
 export interface Pending {
   action: CraftyAction;
   since: number;
-  /** The run marker before the command, so a restart is done only once a new run answers. */
   run: string | null;
 }
 
 export type Verdict =
   | { kind: "wait" }
   | { kind: "done" }
-  /** It went wrong: say what Crafty reports. */
   | { kind: "failed"; message: string }
-  /** It's taking longer than it should: say so, and keep watching in case it gets there. */
   | { kind: "slow"; message: string };
 
 /** A big modpack can take a few minutes to start; past this, say so instead of spinning. */
@@ -55,9 +51,8 @@ export function settle(p: Pending, s: CraftyServer, now: number): Verdict {
 }
 
 /**
- * When to ask Crafty again, or null to stop asking. Each poll costs Crafty two reads, so a command that's taking
- * long is asked about less and less often: every 2 s for the first half minute, then 5 s, 10 s and 30 s, and not
- * at all once it has been slow past the five-minute mark (its message stays; the widget's own refresh carries on).
+ * Each poll costs Crafty two reads, so a slow command is asked about less and less often, and not at all once it's past
+ * the five-minute mark.
  */
 export function pollDelay(p: Pending, v: Verdict, now: number): number | null {
   if (v.kind === "done" || v.kind === "failed") return null;
@@ -71,7 +66,6 @@ export function pollDelay(p: Pending, v: Verdict, now: number): number | null {
   return 30_000;
 }
 
-/** "0:42", "3:05": how long an action has been going, for the row while it settles. */
 export function clock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

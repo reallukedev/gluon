@@ -37,18 +37,14 @@ import type {
 type Where = { ip?: string; zone?: string };
 const STORE_NAME = "Made with Gluon";
 
-// ---------------------------------------------------------------- where apps go
-
 /**
- * New apps run with Docker Compose from Gluon's own apps folder, on Umbrel too: Gluon starts,
- * updates and removes them directly instead of going through Umbrel's store. Apps already
- * published to Umbrel keep their target (r.target) and keep updating there.
+ * New apps run with Docker Compose from Gluon's own apps folder, on Umbrel too. Apps already
+ * published to Umbrel keep their target and keep updating there.
  */
 export async function currentTarget(): Promise<BuilderTarget> {
   return "compose";
 }
 
-/** Where compose apps live when Gluon runs them itself (see src/server/apps/root.ts). */
 export const composeRoot = appsRoot;
 
 /** This app's folder: where it was published before (in any apps root), else a new one. */
@@ -56,8 +52,6 @@ const folderFor = (project: string, id: string) => appFolder(project, (m) => m =
 
 const gluonUrl = (id: string) => `${publicBaseUrl()}/apps/custom/${id}`;
 const repoUrl = (gh: AppRow["github"]) => (gh ? `https://github.com/${gh.owner}/${gh.repo}${gh.path ? `/tree/${gh.branch}/${gh.path}` : ""}` : null);
-
-// ---------------------------------------------------------------- the store
 
 async function storeUrl(): Promise<{ url: string; base: string } | null> {
   const row = getStoreRow();
@@ -100,7 +94,7 @@ export async function storeStatus(): Promise<StoreStatus> {
   return status;
 }
 
-/** A store id no other store in Umbrel uses (app ids must start with it). */
+/** Umbrel app ids must start with the store id. */
 async function pickStoreId(): Promise<string> {
   const taken = new Set((await registry().catch(() => [])).map((r) => r.meta.id));
   for (const id of ["gluon", "gluonapps", ...Array.from({ length: 20 }, (_, i) => `gluon${i + 2}`)]) if (!taken.has(id) && STORE_ID_RE.test(id)) return id;
@@ -120,9 +114,8 @@ function storeContents(override?: { appId: string; files: Record<string, string>
 }
 
 /**
- * Get the store ready without touching Umbrel: create its id and token, write the repository, and
- * ask Umbrel's container whether it can fetch it (a read-only HTTP GET). The setup dialog shows the
- * result before anything is registered.
+ * Doesn't touch Umbrel: it only asks Umbrel's container whether it can fetch the store (a read-only
+ * GET), so the setup dialog can show the result before anything is registered.
  */
 export async function prepareStore(): Promise<{ address: string; reachable: boolean | null; detail: string | null; storeId: string }> {
   if ((await activePlatform()) !== "umbrel") throw new AppError("platform", "Gluon's app store is for Umbrel, and Gluon isn't working with Umbrel.", 409);
@@ -186,9 +179,8 @@ export async function removeStore(user: User, where: Where) {
 }
 
 /**
- * Make Umbrel read the store now. Umbrel only re-reads stores every five minutes and has no call
- * to do it sooner, but adding a store clones it on the spot, so a refresh is remove + add. If the
- * add fails (Umbrel restarting), it's retried; the store's status then shows it needs repairing.
+ * Umbrel only re-reads stores every five minutes and has no call to do it sooner, but adding a store
+ * clones it on the spot, so a refresh is remove + add.
  */
 async function refreshUmbrel(emit: Emit, expect?: { appId: string; version: string } | { appId: string; gone: true }) {
   const row = getStoreRow();
@@ -229,8 +221,6 @@ async function refreshUmbrel(emit: Emit, expect?: { appId: string; version: stri
   throw new AppError("store_stale", "Umbrel read Gluon's store but doesn't list the new version yet. Try publishing again in a minute.", 502);
 }
 
-// ---------------------------------------------------------------- reading apps
-
 async function runtimes(rows: AppRow[]): Promise<Map<string, RuntimeState>> {
   const out = new Map<string, RuntimeState>();
   const published = rows.filter((r) => r.status === "published" && r.appId);
@@ -260,7 +250,6 @@ async function runtimes(rows: AppRow[]): Promise<Map<string, RuntimeState>> {
   return out;
 }
 
-/** Which custom app a compose folder belongs to (its .gluon-app marker), if any. */
 function folderOwner(dir: string): string | null {
   try {
     return fs.readFileSync(hostPath(`${dir}/.gluon-app`), "utf8").trim() || null;
@@ -349,8 +338,6 @@ export async function appDetail(id: string): Promise<CustomAppDetail> {
   };
 }
 
-// ---------------------------------------------------------------- drafts
-
 /** The web page's port, moved off ports something already uses (and off the privileged range). */
 async function freeWebPort(spec: AppSpec, target: BuilderTarget): Promise<AppSpec> {
   if (!spec.web.service || !spec.web.port) return spec;
@@ -418,7 +405,6 @@ export function deleteDraft(user: User, where: Where, id: string) {
   audit(user, { action: "builder.delete", target: id, summary: `Deleted the draft app ${r.name}` }, where);
 }
 
-/** The latest commit on the app's branch, saved for the list's "new commits" note. */
 export async function checkCommits(id: string): Promise<{ latest: string; built: string | null }> {
   const r = getAppRow(id);
   if (!r?.github) throw notFound("That app's repository");
@@ -426,8 +412,6 @@ export async function checkCommits(id: string): Promise<{ latest: string; built:
   saveGithub(id, { ...r.github, latestCommit: latest, checkedAt: Date.now() });
   return { latest, built: r.github.builtCommit };
 }
-
-// ---------------------------------------------------------------- checks
 
 export async function checkApp(id: string, opts: { images?: boolean } = {}) {
   const r = getAppRow(id);
@@ -458,8 +442,6 @@ class Failed extends AppError {
     super("publish_failed", message, 400, { lines });
   }
 }
-
-// ---------------------------------------------------------------- publishing
 
 const UMBREL_STAGES = (build: boolean, update: boolean) => [
   { key: "check", label: "Check" },
@@ -594,7 +576,6 @@ async function publishUmbrel(id: string, user: User, where: Where, emit: Emit, o
   throw new Failed(`${r.spec.details.name} ${version} is in the store, but Umbrel couldn't ${action} it. ${why}`, log.length ? log : [why]);
 }
 
-
 async function appUrl(spec: AppSpec, _appId: string): Promise<string | null> {
   if (!spec.web.service || !spec.web.port) return null;
   const host = await lanHost().catch(() => null);
@@ -680,8 +661,6 @@ async function publishCompose(id: string, user: User, where: Where, emit: Emit, 
   return { ok: true, message: `${r.spec.details.name} ${version} is running${url ? ` at ${url}` : ""}.` };
 }
 
-// ---------------------------------------------------------------- building on its own
-
 export function startBuild(id: string, user: User, where: Where) {
   const r = getAppRow(id);
   if (!r) throw notFound("That app");
@@ -695,8 +674,6 @@ export function startBuild(id: string, user: User, where: Where) {
     return { ok: true, message: `Built ${res.commit.slice(0, 7)}. Publish to run it${r.status === "published" ? " in place of the current version" : ""}.` };
   });
 }
-
-// ---------------------------------------------------------------- removing
 
 export async function startRemove(id: string, user: User, where: Where, opts: { keepData: boolean; forget: boolean }) {
   const r = getAppRow(id);
@@ -804,8 +781,6 @@ function finishRemoval(r: AppRow, user: User, where: Where, opts: { forget: bool
 }
 
 export { headCommit };
-
-// ---------------------------------------------------------------- preview
 
 /** Exactly what the next publish would write (secrets never included), for the Files tab. */
 export async function previewFiles(id: string): Promise<{ target: BuilderTarget; appId: string; version: string; files: Record<string, string>; published: Record<string, string> | null; error: string | null; secretFiles: string[] }> {

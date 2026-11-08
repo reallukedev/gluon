@@ -63,14 +63,11 @@ export type TreeAction =
 interface Props {
   tree: SiteTree | undefined;
   selected: string | null;
-  /** Files with edits that aren't saved. */
   dirty: ReadonlySet<string>;
   onOpen: (path: string) => void;
   onAction: (a: TreeAction) => void;
   onDrop: (dir: string, dt: DataTransfer) => void;
-  /** Shown under the files while uploads run. */
   footer?: React.ReactNode;
-  /** A folder to open (with the folders above it), e.g. where files were just uploaded. */
   reveal?: { path: string } | null;
 }
 
@@ -80,7 +77,6 @@ export const uploadEntries = (dir: string, onAction: (a: TreeAction) => void): M
   { label: "Unpack a .zip here", icon: <Archive />, onSelect: () => onAction({ kind: "upload", dir, what: "zip" }) },
 ];
 
-/** The draft's files. Folders open in place; every row has its actions on a menu, a right-click and a long press. */
 export function FileTree({ tree, selected, dirty, onOpen, onAction, onDrop, footer, reveal }: Props) {
   const nodes = React.useMemo(() => (tree ? build(tree) : null), [tree]);
   const [open, setOpen] = React.useState<Set<string>>(() => new Set());

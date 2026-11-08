@@ -1,8 +1,4 @@
-/**
- * Checks a custom app before it's published, and the fixes Gluon can make itself. Everything here
- * is local and instant (runs as the person types); checks that need the server (ports in use,
- * registries, Umbrel's app list) live in server/appstore/checks.ts and return the same Issue shape.
- */
+/** Local, instant checks (run as the person types). Checks that need the server live in server/appstore/checks.ts. */
 import { YAMLMap, isMap, isSeq, type Document } from "yaml";
 import type { AppSpec, BuilderSource, BuilderTarget, Issue, SecretNames, WebSettings } from "@/lib/builder-types";
 import {
@@ -72,7 +68,6 @@ const UMBREL_VARS = new Set([
   "APP_PROXY_PORT", "APP_MANIFEST_FILE", "DEVICE_HOSTNAME", "DEVICE_DOMAIN_NAME", "NETWORK_IP", "TOR_PROXY_IP", "TOR_PROXY_PORT",
   "TOR_DATA_DIR", "UMBREL_ROOT",
 ]);
-/** What Gluon's .env gives a compose app it runs itself. */
 const COMPOSE_VARS = new Set(["APP_DATA_DIR", "APP_ID"]);
 
 const SENSITIVE_HOST = [/^\/$/, /^\/etc(\/|$)/, /^\/root(\/|$)/, /^\/boot(\/|$)/, /^\/proc(\/|$)/, /^\/sys(\/|$)/, /^\/dev\/?$/];
@@ -102,7 +97,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
     return { parsed, services: [], issues };
   }
 
-  // ------------------------------------------------ top level
   const top = doc.contents as YAMLMap;
   for (const p of top.items) {
     const key = scalarText(p.key) ?? "";
@@ -120,7 +114,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
 
   const declaredNets = new Set(readNetworks(doc).map((n) => n.name));
 
-  // ------------------------------------------------ services
   const names = serviceNames(doc);
   const forms = names.map((n) => readService(doc, n));
   const hostPorts = new Map<string, string>();
@@ -144,7 +137,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
       continue;
     }
 
-    // image / build
     if (f.build) {
       if (ctx.source !== "github") {
         issues.push({ id: `build-${f.name}`, level: "error", message: `“${f.name}” builds from a folder. Umbrel can only run published images, so use an image, or start from a GitHub repository and Gluon builds it for you.`, line: at("build"), field: field("image") });
@@ -170,7 +162,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
     if (f.privileged) issues.push({ id: `priv-${f.name}`, level: "warning", message: `“${f.name}” runs privileged: it can do anything on this server.`, line: at("privileged"), field: field("advanced") });
     if (f.networkMode && f.networkMode !== "host" && f.networkMode !== "bridge") issues.push({ id: `netmode-${f.name}`, level: "info", message: `“${f.name}” uses network_mode: ${f.networkMode}.`, line: at("network_mode") });
 
-    // ports
     f.ports.forEach((p, i) => {
       const portSeq = node.get("ports", true);
       const line = lineOf(isSeq(portSeq) ? portSeq.items[i] : undefined, lines);
@@ -192,7 +183,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
       }
     });
 
-    // volumes
     const volSeq = node.get("volumes", true);
     f.volumes.forEach((v, i) => {
       const line = lineOf(isSeq(volSeq) ? volSeq.items[i] : undefined, lines);
@@ -229,7 +219,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
       issues.push({ id: `vol-pending-${f.name}-${t}`, level: "error", message: `Choose a folder for ${t}${forms.length > 1 ? ` (“${f.name}”)` : ""}.`, line: at(PENDING_KEY), field: `${field("volumes")}.pending` });
     }
 
-    // environment
     const secrets = secretSet(f.name);
     const seen = new Set<string>();
     f.env.forEach((e, i) => {
@@ -294,7 +283,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
     if ((ctx.secrets[svc]?.length ?? 0) > 0 && !names.includes(svc)) issues.push({ id: `secret-orphan-${svc}`, level: "warning", message: `Secret variables are saved for “${svc}”, which isn't a service any more. They won't be used.` });
   }
 
-  // ------------------------------------------------ web page
   const w = ctx.web;
   if (w.service) {
     const svc = forms.find((f) => f.name === w.service);
@@ -311,7 +299,6 @@ export function analyze(text: string, ctx: AnalyzeContext): Analysis {
     issues.push({ id: "web-none", level: "info", message: "The app has no web page, so its tile in Umbrel won't open anything.", field: "web.service" });
   }
 
-  // ------------------------------------------------ variables
   const known = umbrel ? UMBREL_VARS : COMPOSE_VARS;
   for (const v of variablesIn(text)) {
     if (known.has(v.name) || v.hasDefault || fromEnv.has(v.name)) continue;
@@ -333,14 +320,11 @@ const relName = (p: string) =>
     .replace(/(^|\/)\.+/g, "$1")
     .replace(/\/+$/, "") || "files";
 
-// ---------------------------------------------------------------- fixes
-
 export interface FixResult {
   text: string;
   web?: Partial<WebSettings>;
   /** Variables to add as secrets (empty values the person fills in). */
   secrets?: SecretNames;
-  /** What it did, in words. */
   said: string;
 }
 
@@ -467,7 +451,6 @@ function dropUnusedVolumes(doc: Document) {
   if (top.items.length === 0) doc.delete("volumes");
 }
 
-/** Apply every fix that has one, repeatedly (fixes can reveal others). */
 /** Fixes "Fix all" makes. Container names stay: some apps are reached by them on purpose. */
 export const autoFixable = (i: Issue) => !!i.fix && !i.fix.id.startsWith("rm-container-name");
 
@@ -500,7 +483,6 @@ export function mergeSecrets(a: SecretNames, b: SecretNames): SecretNames {
   return out;
 }
 
-/** Details and web settings, for fields outside the compose file. */
 export function detailIssues(spec: AppSpec, published: boolean): Issue[] {
   const d = spec.details;
   const out: Issue[] = [];

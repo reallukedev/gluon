@@ -17,10 +17,6 @@ const PROTOCOLS: { value: GameProtocol; label: string }[] = [
   { value: "both", label: "Both" },
 ];
 
-/**
- * A game that needs its own port. Presets fill in the usual ports; the public port defaults to
- * the same number, and the address to the domain the Minecraft addresses use.
- */
 export function GamePortDialog({ open, onOpenChange, st, edit, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; st: GamesStatus; edit: GamePort | null; onDone: (st: GamesStatus, name: string) => void }) {
   const [game, setGame] = React.useState(CUSTOM);
   const [name, setName] = React.useState("");

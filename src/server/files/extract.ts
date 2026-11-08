@@ -42,7 +42,6 @@ function formatOf(name: string): Format | null {
   return null;
 }
 
-/** A tool from the container image, or failing that from the host. */
 function findTool(names: string[]): { cmd: string; where: "local" | "host" } | null {
   for (const n of names) for (const dir of ["/usr/bin", "/usr/local/bin", "/bin"]) if (fs.existsSync(/*turbopackIgnore: true*/ path.join(/*turbopackIgnore: true*/ dir, n))) return { cmd: path.join(/*turbopackIgnore: true*/ dir, n), where: "local" };
   for (const n of names) for (const dir of ["/usr/bin", "/usr/local/bin", "/bin"]) if (fs.existsSync(hostPath(path.posix.join(dir, n)))) return { cmd: path.posix.join(dir, n), where: "host" };
@@ -64,8 +63,8 @@ function run(cmd: string, args: string[], where: "local" | "host", stdin: "pipe"
 }
 
 /**
- * Stop an extraction that is about to fill the drive (an archive can inflate far beyond its own
- * size, and extraction runs as root, which may use the space reserved for the system).
+ * An archive can inflate far beyond its own size, and extraction runs as root, which may use the
+ * space reserved for the system.
  */
 interface SpaceWatch {
   path: string;
@@ -131,9 +130,8 @@ async function zipTotals(file: string): Promise<{ files: number; bytes: number }
 }
 
 /**
- * Give everything extracted to the owner of the folder it lands in, and (for household members)
- * drop links that would point outside the folders shared with them once the result is in place.
- * Each folder is opened without following links, so nothing outside the extraction is touched.
+ * For household members, also drops links that would point outside their shared folders. Each folder
+ * is opened without following links, so nothing outside the extraction is touched.
  */
 export async function settle(temp: string, rootRel: string, finalReal: string, uid: number, gid: number, scope: Scope, ctx: JobContext): Promise<number> {
   const stack = [temp];
@@ -171,9 +169,8 @@ export async function settle(temp: string, rootRel: string, finalReal: string, u
 }
 
 /**
- * Extract an archive next to itself: "Album.zip" → "Album/". If the archive holds a single top
- * folder, that folder becomes the result (no "Album/Album"). Extraction happens in a hidden temp
- * folder that is renamed into place at the end, so a failure never leaves half an extraction.
+ * "Album.zip" becomes "Album/", or the archive's single top folder. Extraction happens in a hidden
+ * temp folder renamed into place at the end, so a failure never leaves half an extraction.
  */
 export async function extractArchive(user: User, p: string, where: Where): Promise<FileJob> {
   const t = await authorize(user, p, "read");

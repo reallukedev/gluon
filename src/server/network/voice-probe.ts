@@ -16,7 +16,6 @@ export interface DirectTls {
   tls: TlsResult | null;
 }
 
-/** Connect, finish a TLS handshake for `servername` and read the certificate presented. */
 export function probeDirectTls(host: string, port: number, servername: string, certDays: number, who: string, timeoutMs = 4000): Promise<DirectTls> {
   const target = localBackendHost(host);
   const t0 = Date.now();

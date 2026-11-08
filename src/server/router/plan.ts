@@ -1,9 +1,6 @@
 import type { Protocol, RouterForward, RouterService } from "./bgw-pages";
 
-/**
- * Which ports Gluon's apps need from the internet, and how they stand on the router: forwarded to
- * this server, forwarded to another device, or not at all. Pure, so it's tested without a router.
- */
+/** Pure, so it's tested without a router. */
 
 /**
  * The longest custom service name Gluon gives the router. No public source states the BGW's limit,
@@ -96,11 +93,6 @@ export interface Step {
   service: string;
 }
 
-/**
- * What to do for the needs that are missing: add a custom service when none carries the ports
- * (named after the need, made unique), then forward it to this server. Needs going to another
- * device are left alone: moving them is the person's call.
- */
 /** A name of at most `max` characters, with " 2", " 3"… cut in when it's taken. */
 export function serviceName(label: string, taken: Set<string>, max = SERVICE_NAME_MAX): string {
   const base = label.trim().replace(/\s+/g, " ");
@@ -111,6 +103,7 @@ export function serviceName(label: string, taken: Set<string>, max = SERVICE_NAM
   }
 }
 
+/** Needs going to another device are left alone: moving them is the person's call. */
 export function planFixes(states: NeedState[], existingNames: string[], max = SERVICE_NAME_MAX): Step[] {
   const taken = new Set(existingNames.map((n) => n.toLowerCase()));
   const steps: Step[] = [];

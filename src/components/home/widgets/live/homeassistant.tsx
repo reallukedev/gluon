@@ -1,5 +1,4 @@
 "use client";
-// Home Assistant widgets: the things a household picks (lights, scenes, sensors), and who's home.
 import * as React from "react";
 import {
   Battery75,
@@ -55,8 +54,6 @@ import { TitleField, type IntegrationConfig } from "./media";
 import l from "./live.module.css";
 import h from "./homeassistant.module.css";
 
-// ---------------------------------------------------------------- words and numbers
-
 const ICONS: Record<HaIcon, React.ComponentType<{ className?: string }>> = {
   light: LightBulb,
   switch: PlugTypeA,
@@ -108,7 +105,6 @@ function reading(v: number | null, unit: string | null, fmt: Fmt): string | null
   return `${n.toLocaleString()}${unit ? ` ${unit}` : ""}`;
 }
 
-/** The one line under a tile's name. Times are left to <Time> so they stay current. */
 function stateText(e: HomeAssistantEntity, fmt: Fmt): string | null {
   if (e.unavailable) return e.words;
   if (e.domain === "climate" || e.domain === "water_heater") {
@@ -120,7 +116,6 @@ function stateText(e: HomeAssistantEntity, fmt: Fmt): string | null {
   return [e.words, reading(e.value, e.unit, fmt)].filter(Boolean).join(" · ") || null;
 }
 
-/** What pressing does, said as the button's name. */
 function actionFor(e: HomeAssistantEntity): { action: HaAction; label: string } | null {
   switch (e.control) {
     case "toggle":
@@ -136,7 +131,6 @@ function actionFor(e: HomeAssistantEntity): { action: HaAction; label: string } 
   }
 }
 
-/** How a tile looks while its press is on its way to Home Assistant. */
 function expected(e: HomeAssistantEntity, action: HaAction): HomeAssistantEntity {
   switch (action) {
     case "turn_on":
@@ -154,8 +148,6 @@ function expected(e: HomeAssistantEntity, action: HaAction): HomeAssistantEntity
 
 const isAdmin = (role: string) => role === "admin";
 
-// ---------------------------------------------------------------- controls
-
 export interface HaEntitiesConfig extends IntegrationConfig {
   only?: string[];
   /** Admin's unsaved "household can see / press" choices, sent to the connection when the settings are saved. */
@@ -167,8 +159,7 @@ type Pending = { action: HaAction; entity: HomeAssistantEntity };
 type Settled = { entity: HomeAssistantEntity; seen: number };
 
 /**
- * Presses go straight to Home Assistant; the tile shows the expected state at once and the real one when
- * Home Assistant answers. A failed press puts the tile back and says why.
+ * The tile shows the expected state at once and the real one when Home Assistant answers; a failed press puts it back.
  */
 function useControls(integration: string | null, refetch: () => void, fetchedAt: number) {
   const [pending, setPending] = React.useState<Record<string, Pending>>({});
@@ -376,8 +367,6 @@ export function HaEntities({ item, size, openSettings }: WidgetProps<HaEntitiesC
   );
 }
 
-// ---------------------------------------------------------------- settings
-
 const DOMAIN_WORD: Record<string, string> = {
   light: "Light",
   switch: "Switch",
@@ -403,7 +392,6 @@ const DOMAIN_WORD: Record<string, string> = {
   valve: "Valve",
 };
 
-/** The connection a widget reads from, also when it's on "Automatic". */
 function useResolvedId(configured: string | undefined): string | null {
   const s = useSource("homeassistant", configured);
   return s.state === "ok" ? s.ref.id : null;
@@ -599,7 +587,6 @@ const split = (m: Record<string, boolean>) => ({
   deny: Object.keys(m).filter((k) => !m[k]),
 });
 
-/** Saving the settings: send an admin's "household can see / press" choices to the connection, then keep only the layout part. */
 export async function saveHaEntities(config: HaEntitiesConfig): Promise<HaEntitiesConfig> {
   const { household, ...rest } = config;
   if (!household) return rest;
@@ -610,8 +597,6 @@ export async function saveHaEntities(config: HaEntitiesConfig): Promise<HaEntiti
   }
   return rest;
 }
-
-// ---------------------------------------------------------------- who's home
 
 function useMinute() {
   const [now, setNow] = React.useState(() => Date.now());
@@ -714,7 +699,6 @@ export function HaPeople({ item, size }: WidgetProps<IntegrationConfig>) {
 }
 
 export interface HaPeopleConfig extends IntegrationConfig {
-  /** Admin's unsaved "show where people are" choice, sent to the connection when the settings are saved. */
   places?: { integration: string; show: boolean };
 }
 
@@ -745,7 +729,6 @@ export function HaPeopleSettings({ config, onChange }: SettingsProps<HaPeopleCon
   );
 }
 
-/** Saving Who's home: send an admin's places choice to the connection, then keep only the layout part. */
 export async function saveHaPeople(config: HaPeopleConfig): Promise<HaPeopleConfig> {
   const { places, ...rest } = config;
   if (places) await api.put(`/api/integrations/${encodeURIComponent(places.integration)}/show-places`, { show: places.show });

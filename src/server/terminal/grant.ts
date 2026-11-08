@@ -3,10 +3,9 @@ import { hasRecentAuth, type Session } from "../auth/session";
 import { AppError } from "../errors";
 
 /**
- * Confirming it's you once covers a stretch of terminal work: after a re-auth, this sign-in session
- * can keep running commands while it stays busy (30 minutes between commands), for up to 4 hours.
- * Everything else that needs a recent sign-in keeps the normal 10-minute window. In memory, so a
- * Gluon restart asks again.
+ * After a re-auth this session can keep running commands while it stays busy (30 minutes between
+ * commands), for up to 4 hours. Everything else keeps the normal 10-minute window. In memory, so a
+ * restart asks again.
  */
 
 const IDLE_MS = 30 * 60_000;

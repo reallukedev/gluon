@@ -2,7 +2,7 @@ import "server-only";
 import { all, db, one, run } from "../../db";
 import type { CheckPlanItem, CheckResult, CheckupDiffItem, CheckupKind, CheckupMeta, CheckupRun, CheckupRunRow, CheckupSummary, CheckState } from "@/lib/diagnostics-types";
 
-/** Stored checkup runs (at most KEEP), so people can compare with last time. */
+/** At most KEEP runs, so people can compare with last time. */
 
 const KEEP = 50;
 
@@ -132,7 +132,6 @@ export function getRun(id: string): CheckupRun | null {
   return r ? toRun(r) : null;
 }
 
-/** The most recent finished run of one kind (targetless kinds only). */
 export function latestOf(kind: CheckupKind): CheckupRun | null {
   ensureTable();
   const r = one<Row>("SELECT * FROM checkup_runs WHERE kind = ? AND status = 'done' ORDER BY started_at DESC LIMIT 1", kind);

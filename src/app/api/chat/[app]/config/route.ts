@@ -5,7 +5,6 @@ import { audit } from "@/server/audit";
 import { withAppLock } from "@/server/apps/lock";
 import { chatTarget, checkChatConfig, readChatConfig, saveChatConfig, serverName } from "@/server/chat/backend";
 
-/** The chat server's own config file (Prosody's Lua, Quark's TOML), for editing by hand. */
 export const GET = route({ auth: "admin" }, async ({ params }) => readChatConfig(param(params.app)));
 
 const text = z.string().max(256 * 1024, "That config is too big.");

@@ -5,7 +5,6 @@ import { commandStart } from "./tokenize";
  * show well. Commands mode offers to open them in the terminal instead of hanging.
  */
 
-/** Always full-screen. */
 const SCREEN = new Set([
   "vi", "vim", "nvim", "view", "vimdiff", "nano", "pico", "micro", "emacs", "joe", "mcedit",
   "htop", "btop", "bpytop", "atop", "nmon", "glances", "iftop", "iotop", "nethogs", "bmon", "nload", "ctop", "lazydocker", "lazygit", "tig",
@@ -117,7 +116,6 @@ function check(words: string[]): Interactive | null {
   return null;
 }
 
-/** The first program in the line that needs a real terminal, or null when a command block is fine. */
 export function interactiveProgram(line: string): Interactive | null {
   const parts = splitCommands(line);
   // A pager at the end of a pipe (`journalctl | less`) still takes the screen, so check every part.

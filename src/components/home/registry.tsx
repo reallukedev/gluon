@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import type { WidgetDef } from "./types";
 import {
   ClockWidget,

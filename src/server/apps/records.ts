@@ -3,13 +3,9 @@ import { all, one, run, tx } from "../db";
 import { appItemId } from "@/lib/home";
 
 /**
- * After a move, everything Gluon keeps about an app under its id goes with it to the new id:
- * its settings, who in the household can open it, Home pins and cards, monitors and their open
- * findings, open reports, live announcements, integrations, and the `app` of its public addresses.
- *
- * `planRecordMove` is pure: it reads a snapshot and returns the statements to run. `carryRecords`
- * runs the SQLite part in one transaction, so a failure halfway leaves every record where it was.
- * Public addresses live in routes.json and are saved afterwards through the routes service.
+ * `planRecordMove` is pure; `carryRecords` runs the SQLite part in one transaction so a failure
+ * halfway leaves every record where it was. Public addresses live in routes.json and are saved
+ * afterwards through the routes service.
  */
 
 export interface PrefRow {
@@ -212,8 +208,6 @@ export function planRecordMove(snap: RecordSnapshot, from: string, to: string, o
   return { statements: st, routes: snap.routes, summary };
 }
 
-// ---------------------------------------------------------------- reading and running
-
 /** What's stored under either id right now. `routes` comes from routes.json. */
 export function snapshotRecords(from: string, to: string, routes: { routes: { id: string; app?: string | null }[]; fallback?: { app?: string | null } } | null, now: number): RecordSnapshot {
   const like = `%${JSON.stringify(from).slice(1, -1)}%`;
@@ -235,7 +229,6 @@ export function snapshotRecords(from: string, to: string, routes: { routes: { id
   };
 }
 
-/** Run the SQLite part of a plan as one transaction: all of it, or none of it. */
 export function applyRecordPlan(plan: RecordPlan): void {
   tx(() => {
     for (const s of plan.statements) run(s.sql, ...s.params);

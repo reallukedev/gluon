@@ -6,9 +6,9 @@ import type { User } from "../auth/users";
 import { audit } from "../audit";
 
 /**
- * Checks look at the machine and call raise()/resolve() from ../findings. Remedies are named
- * server-side actions a finding can offer ("Make permanent", "Free 4.9 GB"). Feature modules register
- * both; the engine schedules checks and runs remedies with auditing.
+ * Checks call raise()/resolve() from ../findings; remedies are named server-side actions a finding
+ * can offer. Feature modules register both; the engine schedules checks and runs remedies with
+ * auditing.
  */
 
 interface Check {

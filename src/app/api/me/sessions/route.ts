@@ -6,7 +6,6 @@ import { acknowledgeDevice, newDeviceFindingId } from "@/server/auth/devices";
 import { resolve } from "@/server/findings";
 import { audit } from "@/server/audit";
 
-/** Where you're signed in: one row per session, newest activity first. */
 export const GET = route({ auth: "user" }, ({ user, session }) => {
   const list = listSessionsWithDevices(user.id);
   const mine = list.find((s) => s.idHash === session.idHash)?.deviceHash ?? null;

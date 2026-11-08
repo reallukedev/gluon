@@ -12,14 +12,11 @@ export interface QuarkPorts {
   s2s: number;
   /** Web chat, file uploads and invite pages, reached through Caddy. Container port 5280. */
   http: number;
-  /** The call relay's TURN port, TCP and UDP. */
   turn: number;
-  /** The UDP range calls are relayed on. */
   relayMin: number;
   relayMax: number;
 }
 
-/** What Quark listens on inside its container. */
 export const QUARK_CONTAINER_PORTS = { c2s: 5222, tls: 5223, s2s: 5269, http: 5280 } as const;
 
 export const QUARK_PORTS: QuarkPorts = { c2s: 5222, tls: 5223, s2s: 5269, http: 5280, turn: 3478, relayMin: 49160, relayMax: 49200 };
@@ -34,11 +31,7 @@ export const QUARK_PORT_SETS: readonly QuarkPorts[] = [QUARK_PORTS, ...QUARK_ALT
 
 export const isStandardPorts = (p: QuarkPorts) => (Object.keys(QUARK_PORTS) as (keyof QuarkPorts)[]).every((k) => p[k] === QUARK_PORTS[k]);
 
-/**
- * The first port set nothing on the server uses yet. `conflicts` says what's in the way of one
- * set (empty when it's free). When every set is taken, the answer carries the standard set's
- * conflicts so the person hears about the ports they'd expect.
- */
+/** When every set is taken, the answer carries the standard set's conflicts: the ports the person would expect. */
 export async function pickPortSet<T>(sets: readonly T[], conflicts: (set: T) => Promise<string[]>): Promise<{ ports: T | null; conflicts: string[] }> {
   let first: string[] | null = null;
   for (const set of sets) {
@@ -49,7 +42,6 @@ export async function pickPortSet<T>(sets: readonly T[], conflicts: (set: T) => 
   return { ports: null, conflicts: first ?? [] };
 }
 
-/** The DNS records chat apps and other servers need to find Quark on non-standard ports. */
 export function srvRecords(domain: string, p: QuarkPorts): { name: string; port: number }[] {
   return [
     { name: `_xmpp-client._tcp.${domain}`, port: p.c2s },
@@ -58,7 +50,6 @@ export function srvRecords(domain: string, p: QuarkPorts): { name: string; port:
   ];
 }
 
-/** What the person has to do when Quark gets the alternate ports: in sentences, for the flow and the final notes. */
 export function alternatePortNotes(domain: string, p: QuarkPorts): string[] {
   const srv = srvRecords(domain, p)
     .map((r) => `${r.name} pointing at ${domain} port ${r.port}`)

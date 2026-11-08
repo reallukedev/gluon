@@ -1,13 +1,8 @@
-/**
- * Names for apps as people say them. Store and installer names carry vendor prefixes ("Big Bear
- * CasaOS User Management") and ids carry the server's name ("homeserver-appstore"); both are noise in
- * a tight label.
- */
+// Store and installer names carry vendor prefixes and ids carry the server's name; both are noise in a tight label.
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 const SOURCE_NAME: Record<string, string> = { gluon: "Gluon", casaos: "CasaOS", umbrel: "Umbrel", compose: "Compose", docker: "Container" };
 
-/** Where an install came from, in words ("CasaOS"). */
 export const sourceName = (source: string) => SOURCE_NAME[source] ?? source;
 
 /**

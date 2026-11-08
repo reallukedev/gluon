@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MoreHoriz, Folder, Search, EditPencil, Eject, Lock } from "iconoir-react";
@@ -25,7 +24,6 @@ export function mountedRows(disks: DiskView[]): Row[] {
   return rows.sort((a, b) => (a.vol.primaryMount ?? "~").localeCompare(b.vol.primaryMount ?? "~"));
 }
 
-/** What happens after a restart, in words, with the state line. */
 export function Persistence({ vol, disk, onPersist, disabled }: { vol: VolumeView; disk: DiskView; onPersist?: () => void; disabled?: boolean }) {
   if (vol.swapActive && !vol.primaryMount) return <span className={s.muted}>{vol.fstabLines.length ? "In /etc/fstab" : "Turned on by hand"}</span>;
   const p = vol.persistence;

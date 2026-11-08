@@ -1,8 +1,4 @@
-/*
- * The mood coil. Colour carries the mood second; the form carries it first: two open loops (calm) or three
- * tight ones (tense). Switching mood crossfades the two forms while the leaving one squeezes or stretches
- * toward the other, so the coil reads as winding up or letting go.
- */
+/* The form carries the mood first, colour second: two open loops (calm) or three tight ones (tense). */
 .coil {
   display: block;
   width: 100%;

@@ -41,7 +41,6 @@ function options(pick: NonNullable<Symptom["pick"]>, t: CheckupTargets) {
   return t.disks.map((d) => ({ value: d.id, label: `${d.title} · ${d.name}${d.model ? ` · ${d.model}` : ""}` }));
 }
 
-/** "Check something specific": one row per plain-language symptom; the ones about one thing ask which. */
 export function Symptoms({ targets, busy, onRun }: { targets: CheckupTargets | null; busy: boolean; onRun: (kind: Targeted, target: string | null) => void }) {
   const [picked, setPicked] = React.useState<Partial<Record<Targeted, string>>>({});
   return (
@@ -110,7 +109,6 @@ function HistoryRow({ r, current, hrefFor }: { r: CheckupRunRow; current: string
   );
 }
 
-/** Recent checkups, newest first; the one on screen is marked. */
 export function History({ runs, current, hrefFor, title = "Recent checkups" }: { runs: CheckupRunRow[]; current: string | null; hrefFor: (id: string) => string; title?: string }) {
   return (
     <Panel title={title} meta={runs.length ? <span className="num">{runs.length}</span> : undefined} flush>

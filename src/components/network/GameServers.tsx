@@ -26,10 +26,8 @@ const quiet = (e: unknown) => e instanceof ApiError && e.code === "reauth_cancel
 const FILTER_FROM = 9;
 
 /**
- * Network → Game servers. Minecraft Java servers share port 25565 through mc-router, which sends
- * each player to a server by the address they typed; this lists those addresses, checks each one
- * the way a player's server list does, and edits mc-router's routes file. Other games get a port
- * of their own, which the router's Port forwarding panel then forwards.
+ * Minecraft Java servers share port 25565 through mc-router, which routes each player by the address they typed. Other
+ * games get a port of their own.
  */
 export function GameServers() {
   const { data, error, mutate } = useApi<GamesStatus>(GAMES_URL, { refresh: 60_000 });
@@ -59,7 +57,6 @@ export function GameServers() {
     }
   }
 
-  /** After a change to mc-router's file: what it answers now, and a way back. */
   function changed(r: McChangeResult, title: string) {
     void mutate(r.status, { revalidate: false });
     void router.mutate();
@@ -196,8 +193,6 @@ export function GameServers() {
     </Panel>
   );
 }
-
-// ------------------------------------------------------------------ Minecraft Java
 
 function Minecraft({ st, fwd, onAdd, onEdit, onRemove, onFallback, onHistory }: { st: GamesStatus; fwd: Forwarding; onAdd: () => void; onEdit: (r: McRoute) => void; onRemove: (r: McRoute) => void; onFallback: () => void; onHistory: () => void }) {
   const r = st.mcRouter;
@@ -410,8 +405,6 @@ function ForwardState({ f }: { f: Forwarding }) {
     </span>
   );
 }
-
-// ------------------------------------------------------------------ other games
 
 function OtherGames({ st, fwd, onAdd, onEdit, onRemove }: { st: GamesStatus; fwd: (key: string) => Forwarding; onAdd: () => void; onEdit: (p: GamePort) => void; onRemove: (p: GamePort) => void }) {
   return (

@@ -4,11 +4,6 @@ import tls from "node:tls";
 import { certResult, explainConnectError, localBackendHost, resolver } from "./probes";
 import type { SrvRecord, SrvResult, TlsResult, XmppPortResult } from "@/lib/network-types";
 
-/**
- * Chat server (XMPP) probes. Like the other probes they never throw and always time out:
- * failures come back as data with a sentence a person can act on.
- */
-
 const NS_STREAM = "http://etherx.jabber.org/streams";
 const PROBE_FROM = "status-check.gluon.invalid";
 const NS_TLS = "urn:ietf:params:xml:ns:xmpp-tls";
@@ -25,7 +20,6 @@ export function streamHeader(domain: string, kind: "client" | "server", from?: s
   return `<?xml version='1.0'?><stream:stream xmlns='jabber:${kind}' xmlns:stream='${NS_STREAM}' to='${domain}'${kind === "server" && from ? ` from='${from}'` : ""} version='1.0'>`;
 }
 
-/** What a <stream:features/> block offers. */
 export function parseFeatures(xml: string): { starttls: boolean; register: boolean } {
   const m = xml.match(FEATURES_RE);
   const f = m ? m[0] : "";
@@ -59,9 +53,8 @@ export interface XmppHandshake extends XmppPortResult {
 }
 
 /**
- * Open an XMPP stream to the chat server, upgrade it with STARTTLS and read the certificate it
- * presents for `domain`. Client streams restart once encrypted, as apps do, to see whether anyone
- * can sign up; every stream is closed politely, so the chat server logs an ordinary short session.
+ * Client streams restart once encrypted, as apps do, to see whether anyone can sign up. Every stream
+ * is closed politely, so the server logs an ordinary short session.
  */
 export function probeXmpp(opts: { host: string; port: number; domain: string; kind: "client" | "server"; certDays: number; timeoutMs?: number; from?: string }): Promise<XmppHandshake> {
   const { port, domain, kind, certDays } = opts;
@@ -175,8 +168,8 @@ type G = typeof globalThis & { __gluonXmppProbes?: Map<string, { at: number; val
 const probeCache = () => ((globalThis as G).__gluonXmppProbes ??= new Map());
 
 /**
- * probeXmpp, reused for a few minutes. The Network page polls every 30 seconds; the chat server
- * shouldn't see a session that often. Concurrent callers share one probe.
+ * Reused for a few minutes: the Network page polls every 30 seconds and the chat server shouldn't see
+ * a session that often.
  */
 export function probeXmppCached(opts: Parameters<typeof probeXmpp>[0], maxAgeMs = 3 * 60_000): Promise<XmppHandshake> {
   const key = `${opts.kind}|${opts.host}|${opts.port}|${opts.domain}`;
@@ -187,11 +180,9 @@ export function probeXmppCached(opts: Parameters<typeof probeXmpp>[0], maxAgeMs 
   return value;
 }
 
-// ---------------------------------------------------------------- SRV
-
 /**
- * Judge the SRV records for a service. No record is fine when the server listens on the standard
- * port at the domain itself, since that's where apps look next.
+ * No record is fine when the server listens on the standard port at the domain itself, since that's
+ * where apps look next.
  */
 export function judgeSrv(name: string, records: SrvRecord[], domain: string, expectedPort: number | null, standardPort: number, label: string, who = "Apps"): SrvResult {
   if (expectedPort === null) {

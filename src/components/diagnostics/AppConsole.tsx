@@ -8,11 +8,7 @@ import { AppIcon } from "@/components/apps/AppIcon";
 import { useAppUsage } from "@/components/apps/Meters";
 import c from "./appConsole.module.css";
 
-/**
- * The server as a mixing desk, for experts: one channel strip per app with a live processor
- * meter, a peak-hold tick for the last 30 seconds, and memory underneath. Levels use a log scale
- * so a 0.5% app still reads, and a busy one still fits.
- */
+/** Levels use a log scale so a 0.5% app still reads, and a busy one still fits. */
 
 const PEAK_SAMPLES = 6; // container samples arrive every 5 s
 const MARKS = [100, 50, 10, 1] as const;

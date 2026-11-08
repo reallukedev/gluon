@@ -8,8 +8,6 @@ import { netStatus } from "./internet";
 import { act, fail, go, kv, ms, ok, skip, warn, type CheckCtx, type CheckSpec, type Outcome } from "./core";
 import type { CheckFix } from "@/lib/diagnostics-types";
 
-/** Public addresses: Caddy itself, every route answering over HTTPS, and certificates. */
-
 export const apps = (ctx: CheckCtx) => ctx.memo("apps", () => listApps().catch(() => [] as AppSummary[]));
 export const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 export const addressHref = (id: string) => `/network?tab=addresses&route=${encodeURIComponent(id)}`;
@@ -32,7 +30,6 @@ function isStopped(a: AppSummary | undefined) {
   return !!a && a.containers.length > 0 && a.containers.every((c) => c.state !== "running");
 }
 
-/** Turn a route's probe results into a checkup outcome, with the right fix. */
 export function routeOutcome(r: RouteStatus, list: AppSummary[]): Outcome {
   const where = displayUrl(r.url);
   const evidence = kv([

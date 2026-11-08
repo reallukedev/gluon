@@ -4,16 +4,14 @@ import path from "node:path";
 import { AppError } from "../errors";
 import { safeFetch, NetError } from "../integrations/net";
 import { git, gitAvailable } from "./repo";
-import { newCompose, parseCompose, stringify, addService, setBuild, setPorts, setVolumes, serviceNames } from "@/lib/builder/compose";
+import { newCompose, parseCompose, stringify, setBuild, setPorts, setVolumes, serviceNames } from "@/lib/builder/compose";
 import { SERVICE_RE, slugify, BRANCH_RE, GITHUB_OWNER_RE, GITHUB_REPO_RE, repoPathError } from "@/lib/builder/names";
 import { pickWebPort } from "@/lib/builder/start";
 import type { RepoInspection } from "@/lib/builder-types";
 
 /**
- * Reading a GitHub repository: what's in it (GitHub's API, fast, no clone), its newest commit
- * (git ls-remote), and a shallow clone for building. A token for private repositories is sent as
- * an HTTP header through git's environment (GIT_CONFIG_*), never on a command line, so it doesn't
- * show up in the process list of this host.
+ * A token for private repositories goes to git as an HTTP header through its environment
+ * (GIT_CONFIG_*), never on a command line, so it doesn't show up in the host's process list.
  */
 
 export interface RepoRef {
@@ -283,7 +281,6 @@ export function dockerfileHints(text: string): { ports: { port: number; proto: "
   return { ports, volumes };
 }
 
-/** The newest commit on a branch, without cloning. */
 export async function latestCommit(ref: { owner: string; repo: string; branch: string }, token: string | undefined): Promise<string> {
   if (await gitAvailable()) {
     try {
@@ -304,7 +301,7 @@ export async function latestCommit(ref: { owner: string; repo: string; branch: s
   return r.text.trim();
 }
 
-/** Shallow-clone a branch into `dir`; returns the commit it got. */
+/** Returns the commit it got. */
 export async function cloneRepo(ref: { owner: string; repo: string; branch: string }, token: string | undefined, dir: string, onLine: (l: string) => void): Promise<string> {
   if (!(await gitAvailable())) throw new AppError("git_missing", "Gluon's image doesn't include git, which building from GitHub needs. Update Gluon to a newer image.", 500);
   fs.rmSync(dir, { recursive: true, force: true });

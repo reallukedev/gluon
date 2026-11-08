@@ -1,9 +1,6 @@
 import { isLocalImage, parseImage } from "@/lib/builder/names";
 
-/**
- * Is there a newer image for an app? Pure decisions only: which images can be checked at all, and
- * what the registry's answer means. The network side is in apps.ts.
- */
+/** Pure; the network side is in apps.ts. */
 
 export type ImagePlan =
   | { check: true; registry: string; repository: string; tag: string; local: string[] }

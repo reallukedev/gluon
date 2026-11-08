@@ -23,15 +23,10 @@ import s from "./shell.module.css";
 const Lightbox = dynamic(() => import("./Lightbox").then((m) => m.Lightbox), { ssr: false });
 const Preview = dynamic(() => import("./Preview").then((m) => m.Preview), { ssr: false });
 
-// Files: a front page of what you keep (Shelves), folders as columns or a grid (Browser), and one
-// command bar on every screen to find, jump and act. This component owns where you are, what's
-// selected, the shared actions and quick look; the screens draw.
-
 export type Screen = "front" | "browse" | "trash";
 
 export interface Selected {
   entries: FileEntry[];
-  /** The folder they're in. */
   dir: string | null;
   writable: boolean;
 }
@@ -41,7 +36,6 @@ interface FilesState {
   places: Places | undefined;
   screen: Screen;
   path: string | null;
-  /** Go to a folder (null for the front page). `select` names an item to land on inside it. */
   go: (path: string | null, opts?: { select?: string; replace?: boolean }) => void;
   openTrash: () => void;
   /** Full path of an item to land on once its folder is listed (from ?select= or a search result). */
@@ -53,14 +47,12 @@ interface FilesState {
   actions: FileActions;
   look: (e: FileEntry, siblings?: (FileEntry | SearchHit)[]) => void;
   lookHit: (h: SearchHit, siblings?: SearchHit[]) => void;
-  /** Called after anything changes files, so every visible folder, the places and the trash refresh. */
   refresh: () => void;
   onRefresh: (fn: () => void) => () => void;
   browser: React.RefObject<BrowserApi | null>;
   showKeys: () => void;
 }
 
-/** What the bar needs to know about the folder on screen; changes as the selection does. */
 interface BarState {
   here: ListingT | undefined;
   selection: Selected;
@@ -127,7 +119,6 @@ export function Files({ initialPlaces }: { initialPlaces: Places | null }) {
   }, [screen]);
 
   const { actions, nodes } = useFileActions({ here, places: places.data, refresh });
-  // ---- quick look: photos and video in the lightbox, everything else in the preview (which edits text)
   const [look, setLook] = React.useState<{ entry: FileEntry; siblings: (FileEntry | SearchHit)[] } | null>(null);
   const lookAt = React.useCallback((entry: FileEntry, siblings: (FileEntry | SearchHit)[] = []) => {
     if (isDirLike(entry)) return;

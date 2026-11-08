@@ -21,7 +21,6 @@ import s from "./app.module.css";
 
 export interface AppConfig {
   appId?: string;
-  /** The app's name when it was picked, so edit mode can say which tile this is. */
   name?: string;
 }
 
@@ -42,7 +41,6 @@ export function appHints(apps: ApiApp[]) {
   return hints;
 }
 
-/** Docker's "Up 3 days (healthy)" → "3 days". */
 export function uptimeOf(app: ApiApp): string | null {
   const c = app.containers?.find((x) => x.state === "running");
   const m = c ? /^Up\s+(.+?)(\s*\(.*\))?$/i.exec(c.status) : null;
@@ -50,7 +48,6 @@ export function uptimeOf(app: ApiApp): string | null {
   return m[1]!.replace(/^About an? /i, "1 ").replace(/^Less than a second$/i, "a moment");
 }
 
-/** CPU (% of the machine) and memory for an app's containers over the live window. */
 function useAppSeries(names: string[]) {
   const { containers, status } = useLive();
   const key = names.join("\u0000");
@@ -74,7 +71,6 @@ function useAppSeries(names: string[]) {
   return { series, status };
 }
 
-/** A 1.25px line over the live window, ending in a marked "now". Pure SVG, no axes: the figure above it says the value. */
 function Trace({ values, max, label }: { values: number[]; max: number; label: string }) {
   const h = 24;
   if (values.length < 2) return <span className={s.traceEmpty} aria-hidden />;
@@ -110,6 +106,7 @@ export function Vitals({ app, name }: { app: ApiApp; name: string }) {
   const cpuMax = Math.max(5, ...series.map((p) => p.cpu)) * 1.15;
   const memMax = Math.max(...series.map((p) => p.mem)) * 1.15;
   const [memValue, memUnit] = fmt.bytes(last.mem).split(" ");
+  const span = fmt.plural(Math.max(1, Math.round((last.t - series[0]!.t) / 60_000)), "minute");
   return (
     <div className={s.vitals}>
       <div className={s.vital}>
@@ -118,7 +115,7 @@ export function Vitals({ app, name }: { app: ApiApp; name: string }) {
           {last.cpu < 0.05 ? "0" : last.cpu < 10 ? last.cpu.toFixed(1) : Math.round(last.cpu)}
           <small>%</small>
         </span>
-        <Trace values={series.map((p) => p.cpu)} max={cpuMax} label={`${name} CPU over the last ${Math.max(1, Math.round((last.t - series[0]!.t) / 60_000))} minutes`} />
+        <Trace values={series.map((p) => p.cpu)} max={cpuMax} label={`${name} CPU over the last ${span}`} />
       </div>
       <div className={s.vital}>
         <span className="label">Memory</span>
@@ -126,7 +123,7 @@ export function Vitals({ app, name }: { app: ApiApp; name: string }) {
           {memValue}
           <small> {memUnit}</small>
         </span>
-        <Trace values={series.map((p) => p.mem)} max={memMax} label={`${name} memory over the last ${Math.max(1, Math.round((last.t - series[0]!.t) / 60_000))} minutes`} />
+        <Trace values={series.map((p) => p.mem)} max={memMax} label={`${name} memory over the last ${span}`} />
       </div>
     </div>
   );
@@ -284,7 +281,6 @@ export function AppSettings({ config, onChange }: SettingsProps<AppConfig>) {
   );
 }
 
-/** Catalog preview for the App tile: the same miniature tile as every other preview, with the app's real icon. */
 export function AppPreview({ icon, name }: { icon?: string | null; name?: string }) {
   return (
     <span className={s.preview}>

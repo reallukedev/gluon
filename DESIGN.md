@@ -320,7 +320,7 @@ A warm neutral plate in two themes, one attention colour that means only "needs 
 
 A fixed 236px sidebar (collapsible to a 64px icon rail) on the ground colour, and a main column capped at 1480px with a 40px gutter (28px in compact density, 16px on phones). Pages open with 28px top padding, a header of title plus summary on the left and actions on the right, 26px above the first panel.
 
-Panels arrange in two-column grids (for example 1.25fr / 1fr on Status) that collapse to one column under 1080px. Data tables are single panels with a 38px micro-caps head row and 60px rows; under 980px they restack into two-line rows. Sections sit 36px apart; panel bodies pad 16px 18px.
+Panels arrange in two-column grids (for example 1.25fr / 1fr) that collapse to one column under 1080px. Data tables are single panels with a 38px micro-caps head row and 60px rows; under 980px they restack into two-line rows. Sections sit 36px apart; panel bodies pad 16px 18px.
 
 Under 900px the sidebar becomes a solid top bar (56px plus the safe area) with a swipeable drawer. Under 720px rows grow to 48px for thumbs. On touch screens controls are 40px (small ones 32px) and every one has a tap area at least 44px tall: an invisible `::before` that grows up and down, and sideways only into half the gap, so neighbours never cover each other. Under 640px dialogs become bottom sheets and their footer buttons share the width.
 
@@ -358,7 +358,7 @@ Gluon is calm and a little playful, and never cute. The personality lives in a f
 - **The status hero** says the problem as a person would ("Proxy needs a hand."), gives the why in one sentence and puts the fix beside it as the one filled button on the page. All clear reads warm ("All 9 apps are happy.").
 - **App icons carry the colour.** They lead lists and launchers, without a box around each one. A broken app's icon goes grey and tips 6° (scaled by `--motion`) next to the doubled sodium mark and its fix. With a fine pointer, icons lift 2px on hover.
 - **Success settles.** A fix that worked says so ("Back up") for a moment, and the doubled mark settles into one.
-- **Every page names the same problem with the same word** (`lib/finding-words`): a web check that fails while Docker says running is "Not answering" on Home, Status and Apps alike.
+- **Every page names the same problem with the same word** (`lib/finding-words`): a web check that fails while Docker says running is "Not answering" on Home, Apps and Diagnostics alike.
 
 - **Readings are real numbers you can read** (`charts/Reading`, one source in `charts/readings`): the figure leads (13%, 11.4 GB, 20 ms), one context line in numbers sits under it ("of 34 GB · 23 GB free", "usually 21 ms"), and a live graph sits under that with its top value and 0 on the right edge and "6 min ago … now" below. No adjectives in place of numbers ("Relaxed", "Plenty free"): the context line is what makes a figure understandable.
 

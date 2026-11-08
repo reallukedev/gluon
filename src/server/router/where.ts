@@ -25,9 +25,8 @@ function nicFor(gw: string): { ip: string; mac: string } | null {
 let cached: { at: number; value: Here } | null = null;
 
 /**
- * This server on the home network: the router's address, its own address, MAC and name. On the
- * server that's the host's default route. GLUON_ROUTER_GATEWAY overrides the router's address
- * (for development), and on a Mac, where there's no `ip`, `route` answers instead.
+ * GLUON_ROUTER_GATEWAY overrides the router's address (for development), and on a Mac, where there's
+ * no `ip`, `route` answers instead.
  */
 export async function whereAmI(): Promise<Here> {
   if (cached && Date.now() - cached.at < 30_000) return cached.value;

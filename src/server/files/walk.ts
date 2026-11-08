@@ -7,10 +7,8 @@ import type { FileKind, SearchHit } from "@/lib/files-types";
 import { kindOf } from "./kinds";
 
 /**
- * Name search without `find`. The server runs GNU find (fast, and the default); this walker is only
- * used where find has no -printf, which in practice means a Mac running the dev server. It keeps the
- * same rules as the find command in search.ts: breadth first, no links followed, the trash and the
- * kernel's virtual folders skipped, and the same depth, count and time limits.
+ * Only used where find has no -printf (in practice a Mac dev server). Keeps the same rules and limits
+ * as the find command in search.ts.
  */
 
 export interface WalkOptions {
@@ -47,7 +45,6 @@ export interface WalkResult {
   timedOut: boolean;
 }
 
-/** Walk `fsRoot` (a path this process can open), calling `onBatch` with hits as they're found. */
 export function walkTree(fsRoot: string, o: WalkOptions, onBatch: (hits: WalkHit[]) => void): { done: Promise<WalkResult>; stop: () => void } {
   let stopped = false;
   let timedOut = false;
@@ -148,8 +145,6 @@ export function globToRegExp(q: string): RegExp {
   return /[*?]/.test(term) ? new RegExp(`^${body}$`, "i") : new RegExp(body, "i");
 }
 
-// ---------------------------------------------------------------- which engine
-
 export type Engine = "find" | "walk";
 type Probe = () => Promise<boolean>;
 
@@ -182,8 +177,8 @@ export function probeFindPrintf(spawnFind: (args: string[]) => ChildProcess): Pr
 }
 
 /**
- * Which engine to use, decided once per chooser. find on Linux, always: the server's GNU find is
- * the fast path and a failed probe must never demote it. Elsewhere find only if it answers -printf.
+ * find on Linux always: the server's GNU find is the fast path and a failed probe must never demote
+ * it. Elsewhere find only if it answers -printf.
  */
 export function engineChooser(probe: Probe, platform: NodeJS.Platform = process.platform): () => Promise<Engine> {
   let chosen: Promise<Engine> | null = null;

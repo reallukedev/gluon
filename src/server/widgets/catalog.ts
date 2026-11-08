@@ -6,7 +6,6 @@ import { installedApps } from "./installed";
 import { localAvailability } from "./local";
 import { WIDGET_LABELS, WIDGET_REFRESH_MS, WIDGET_SOURCE, WIDGET_TYPES, type IntegrationRef, type WidgetCatalog } from "@/lib/widgets-types";
 
-/** Integrations this person may use, with browser links and the state of the app they read from. */
 export function refsFor(user: Pick<User, "role">, apps: AppSummary[]): IntegrationRef[] {
   const recs: IntegrationRecord[] = usableRecords(user);
   const byId = new Map(apps.map((a) => [a.id, a]));

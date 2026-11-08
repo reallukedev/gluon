@@ -3,7 +3,7 @@ import { IntentLink } from "./IntentLink";
 import { NavArrowLeft } from "iconoir-react";
 import s from "./surface.module.css";
 
-/** `pending` marks a loading.tsx stand-in: it doesn't settle (its skeletons fade in on their own) and Shell waits for the page that replaces it. */
+/** `pending` marks a loading.tsx stand-in: it doesn't settle, and Shell waits for the page that replaces it. */
 export function Page({ children, narrow, pending }: { children: React.ReactNode; narrow?: boolean; pending?: boolean }) {
   return (
     <div className={`${s.page} ${narrow ? s.pageNarrow : ""}`} data-pending={pending ? "" : undefined}>
@@ -14,13 +14,15 @@ export function Page({ children, narrow, pending }: { children: React.ReactNode;
 
 interface PageHeaderProps {
   title: React.ReactNode;
-  /** One plain sentence of state: "Everything is running. 3 things need you." */
   summary?: React.ReactNode;
   actions?: React.ReactNode;
   back?: { href: string; label: string };
+  /** 2 where the page's own title is elsewhere (the Settings list on /settings). */
+  level?: 1 | 2;
 }
 
-export function PageHeader({ title, summary, actions, back }: PageHeaderProps) {
+export function PageHeader({ title, summary, actions, back, level = 1 }: PageHeaderProps) {
+  const Title = level === 1 ? "h1" : "h2";
   return (
     <header className={s.header}>
       <div className={s.headerText}>
@@ -30,7 +32,7 @@ export function PageHeader({ title, summary, actions, back }: PageHeaderProps) {
             {back.label}
           </IntentLink>
         )}
-        <h1 className={s.title}>{title}</h1>
+        <Title className={s.title}>{title}</Title>
         {summary && <p className={s.summary}>{summary}</p>}
       </div>
       {actions && <div className={s.headerActions}>{actions}</div>}
@@ -79,7 +81,6 @@ export function Section({ title, meta, children, id }: { title: React.ReactNode;
   );
 }
 
-/** Empty states teach: what this place is for and how to fill it. */
 export function Empty({ title, children, action, center }: { title: string; children?: React.ReactNode; action?: React.ReactNode; center?: boolean }) {
   return (
     <div className={`${s.empty} ${center ? s.emptyCenter : ""}`}>
@@ -124,7 +125,6 @@ export function Notice({
   );
 }
 
-/** A usage bar that turns attention/fault past thresholds. Accessible as a meter. */
 export function UsageBar({
   value,
   max = 100,

@@ -1,0 +1,13 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  caddy:
+    <<: *stand-in
+    image: caddy:2.10.2
+    command: [port=80, mb=30]
+    ports: ["80:80"]
+    volumes: ["/srv/apps/proxy/data:/data"]

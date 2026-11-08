@@ -32,7 +32,7 @@ const PRIVATE = (() => {
 
 /**
  * Cloudflare's edge (https://www.cloudflare.com/ips/, same list the Caddyfile trusts). When a name is
- * proxied through Cloudflare, the hop right before Caddy is one of these; it is never the visitor.
+ * proxied, the hop right before Caddy is one of these, never the visitor.
  */
 const CDN = (() => {
   const list = new net.BlockList();
@@ -94,7 +94,6 @@ function blockList(): net.BlockList {
   return list;
 }
 
-/** Forget the cached home ranges (after the setting changes). */
 export function resetZoneCache() {
   cache = null;
 }
@@ -132,12 +131,10 @@ const isPrivate = (a: string) => PRIVATE.check(a, family(a)!);
 const isCdn = (a: string) => CDN.check(a, family(a)!);
 
 /**
- * The visitor's address from an X-Forwarded-For chain that a trusted hop handed us.
- *
- * Entries are appended left to right by each proxy, so only the right end is trustworthy: walk
- * from the right past our own private hops, then past at most one Cloudflare edge hop, and the
- * next entry is the visitor. Whatever the visitor wrote themselves sits further left and is never
- * read. A malformed entry at that position means the chain was forged: "unknown".
+ * Each proxy appends on the right, so only the right end is trustworthy: walk past our own private
+ * hops, then at most one Cloudflare edge hop, and the next entry is the visitor. Anything the visitor
+ * wrote sits further left and is never read; a malformed entry at that position means the chain was
+ * forged.
  */
 function fromChain(xff: string): string | null | "invalid" {
   const chain = xff
@@ -161,15 +158,10 @@ function fromChain(xff: string): string | null | "invalid" {
 }
 
 /**
- * The client's address and whether they are at home.
- *
- * In production `docker/gluon-server.cjs` stamps the TCP peer on every request and drops any
- * forwarding headers that did not come from a private hop. So:
- * - a peer outside the home network (someone reaching :8130 directly) is the client, full stop;
- * - a private peer (Caddy on its Docker network, loopback, the LAN) may tell us who it is
- *   forwarding for, read from the right end of X-Forwarded-For.
- * A private peer can only claim to be another address it could already act as (home) or "away",
- * so trusting it grants nothing. Without the peer stamp in production we fail closed: away.
+ * In production `docker/gluon-server.cjs` stamps the TCP peer and drops forwarding headers that
+ * didn't come from a private hop. A peer outside the home network is the client, full stop; a private
+ * peer may say who it forwards for, but can only claim an address it could already act as (home) or
+ * "away", so trusting it grants nothing. Without the peer stamp in production, fail closed: away.
  */
 export function clientInfo(headers: Headers): { ip: string; zone: Zone } {
   const stamped = parseAddr(headers.get(PEER_HEADER));
@@ -200,10 +192,7 @@ export function clientInfo(headers: Headers): { ip: string; zone: Zone } {
   return { ip, zone: home ? "home" : "away" };
 }
 
-/**
- * Whether the browser reached Gluon over HTTPS. `X-Forwarded-Proto` only survives from private hops
- * (Caddy); Next fills it from the socket otherwise.
- */
+/** `X-Forwarded-Proto` only survives from private hops (Caddy); Next fills it from the socket otherwise. */
 export function isHttpsRequest(headers: Headers): boolean {
   return (headers.get("x-forwarded-proto") ?? "").split(",")[0]?.trim().toLowerCase() === "https";
 }

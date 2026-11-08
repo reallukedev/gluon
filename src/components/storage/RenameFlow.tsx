@@ -20,7 +20,6 @@ import s from "./storage.module.css";
 
 type Phase = "choose" | "review" | "run";
 
-/** Put `?job=` in the address bar while a job runs, so a reload reattaches to it. */
 export function useJobParam() {
   const router = useRouter();
   const pathname = usePathname();
@@ -37,7 +36,6 @@ export function useJobParam() {
   );
 }
 
-/** Compact before/after lines for a small change. */
 export function LineDiff({ changes }: { changes: { line: number; before: string; after: string }[] }) {
   return (
     <div className={s.diff} role="group" aria-label="Changes">

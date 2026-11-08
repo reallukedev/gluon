@@ -2,10 +2,7 @@ import { EDITABLE_TYPES, type DnsRecordInput } from "@/lib/cloudflare-types";
 import type { RecordBody } from "./api";
 import { MARK } from "./plan";
 
-/**
- * The DNS editor's rules, kept pure so they can be tested: turn what someone typed into the record
- * Cloudflare gets, or say plainly what's wrong with it.
- */
+/** Pure so it can be tested. */
 
 export class RecordError extends Error {
   constructor(

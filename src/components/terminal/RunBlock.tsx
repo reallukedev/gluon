@@ -52,7 +52,6 @@ function ending(b: Block): string | null {
   return why ? `Exit code ${b.exit.code}: ${why}.` : `Exit code ${b.exit.code}.`;
 }
 
-/** One command and what it printed: how it ended, how long it took, copy, run again, stop. */
 export const RunBlock = React.memo(function RunBlock({ block: b, version, onStop, onAgain, onOpenTerminal }: { block: Block; version: number; onStop: (b: Block) => void; onAgain: (b: Block) => void; onOpenTerminal: (b: Block) => void }) {
   const fmt = useFormat();
   const [now, setNow] = React.useState(() => Date.now());

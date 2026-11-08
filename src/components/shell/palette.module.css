@@ -19,7 +19,6 @@
   touch-action: manipulation;
 }
 
-/* ---- search box */
 .inputRow { display: flex; align-items: center; gap: 10px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); flex: none; }
 .searchIcon { width: 18px; height: 18px; color: var(--muted); flex: none; }
 .input {
@@ -62,7 +61,6 @@
 }
 .cancel:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 6px; }
 
-/* ---- where to search */
 .scopes {
   display: flex;
   gap: 2px;
@@ -91,14 +89,12 @@
 .scope[aria-selected="true"] { color: var(--ink); }
 .scope[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; background: var(--ink); }
 
-/* ---- results */
 .list { overflow-y: auto; padding: 4px 6px 6px; flex: 1; min-height: 0; overscroll-behavior: contain; }
 .group + .group { margin-top: 2px; }
 .groupHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 10px 6px; min-width: 0; }
 .groupLabel { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .groupMeta { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; }
 .groupFail { display: inline-flex; align-items: baseline; gap: 7px; font-size: var(--text-xs); color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The unhealthy state line, small: a short red stroke sitting on the baseline. */
 .failMark { flex: none; display: inline-block; width: 2px; height: 7px; background: var(--fault); align-self: center; }
 
 .option {
@@ -124,7 +120,6 @@
 .optExt { width: 14px; height: 14px; color: var(--faint); flex: none; }
 .option[aria-selected="true"] .optExt { color: var(--muted); }
 
-/* Loading rows: shaped like results, still. */
 .skeletons { padding: 0 0 2px; }
 .skeletonRow { display: flex; align-items: center; gap: 12px; min-height: 42px; padding: 6px 10px; }
 .skeletonTile { width: 28px; height: 28px; border-radius: 7px; background: var(--sunk); flex: none; }
@@ -146,7 +141,6 @@
 .emptyTitle { color: var(--ink); font-weight: 600; margin-bottom: 4px; overflow-wrap: anywhere; }
 .status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ---- keys */
 .foot {
   display: flex;
   gap: 18px;

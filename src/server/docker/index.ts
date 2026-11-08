@@ -20,17 +20,12 @@ function post(a: AppSummary, action: "start" | "stop" | "restart"): SearchAction
 /** Words that ask for an app action, and the action they mean. */
 const VERBS: Record<string, string> = { restart: "restart", reboot: "restart", stop: "stop", start: "start", open: "open", launch: "open", logs: "logs", log: "logs" };
 
-/** What you can do to an app from the palette. Anything that interrupts people asks first. */
-/** Actions that interrupt people: never the best match when it isn't clear which app was meant. */
-const INTERRUPTS = new Set(["restart", "stop"]);
 /** Below the palette's "best match" bar (0.75), so Enter can't pick one of two look-alikes. */
 const AMBIGUOUS_CAP = 0.7;
 
 /**
- * Actions for the apps that clearly match. When the query starts with a verb ("restart jelly") the
- * asked-for action of the one best app becomes the best match, so Enter does what was typed (Restart
- * and Stop still confirm). When two apps match about as well (the same app installed twice), none
- * of them is lifted: both sets of actions are listed, told apart by where each runs.
+ * With a leading verb ("restart jelly") the best app's action becomes the best match, so Enter does
+ * what was typed (Restart and Stop still confirm). When two apps match about as well, none is lifted.
  */
 export function actionsFor(strong: { a: AppSummary; score: number }[], zone: "home" | "away", verb: string | null): ProviderItem[] {
   if (!strong.length) return [];

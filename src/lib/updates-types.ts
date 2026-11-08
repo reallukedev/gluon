@@ -1,5 +1,3 @@
-/** Settings → Updates: what's running, what's available, and how Gluon can update itself. */
-
 /** Stable: tagged GitHub releases. Nightly: every commit pushed to main. */
 export type UpdateChannel = "stable" | "nightly";
 export type UpdateMethod = "github" | "umbrel" | "casaos";
@@ -18,20 +16,16 @@ export function isNightlyVersion(v: string): boolean {
   return /-nightly\./.test(v) || /^main-[0-9a-f]{7,}$/.test(v);
 }
 
-/** "1.3.0-nightly.20260928.1a2b3c4" → "1.3.0"; null for names without one ("main-1a2b3c4"). */
 export function baseVersion(v: string): string | null {
   return v.replace(/^v/, "").match(/^\d+\.\d+\.\d+/)?.[0] ?? null;
 }
 
 export interface UpdateSettings {
-  /** Install updates on their own. */
   auto: boolean;
   channel: UpdateChannel;
   /** Local hour (0–23) automatic updates may start in (Stable, or Nightly once a day). */
   hour: number;
-  /** Where automatic updates come from. */
   method: UpdateMethod;
-  /** Nightly only: how soon an automatic update follows a new commit. */
   nightlyTiming: NightlyTiming;
 }
 
@@ -41,7 +35,6 @@ export interface RunningBuild {
   commit: string | null;
   /** A store version ("2026.09.26-1717") or "github" for builds the updater made. */
   build: string | null;
-  /** Which channel this build came from, judged by its name. */
   channel: UpdateChannel;
   startedAt: number;
 }
@@ -59,10 +52,8 @@ export interface GithubTarget {
   channel: UpdateChannel;
   /** A tag ("v1.2.0") or a commit sha: what gets downloaded. */
   ref: string;
-  /** Version name for the build ("1.2.0", or "1.3.0-nightly.20260928.1a2b3c4"). */
   version: string;
   commit: string;
-  /** Release name, or the commit's first line for a nightly. */
   title: string;
   notes: string;
   url: string;
@@ -79,13 +70,10 @@ export type UpdateRelation = "newer" | "current" | "ahead";
 
 export interface UpdateOption {
   method: UpdateMethod;
-  /** Plain sentence: "Download 1.2.0 from GitHub and build it here (a few minutes)." */
   label: string;
   available: boolean;
-  /** Why it can't be used, when it can't. */
   reason: string | null;
   target: GithubTarget | null;
-  /** For store updates: the version the store offers. */
   storeVersion: string | null;
 }
 
@@ -111,20 +99,16 @@ export interface UpdatesStatus {
   repo: string;
   settings: UpdateSettings;
   checkedAt: number | null;
-  /** Error from the last check, in words. */
   checkError: string | null;
-  /** Newest build on the chosen channel. */
   latest: GithubTarget | null;
   /** null until a check has found something. */
   relation: UpdateRelation | null;
-  /** True when `latest` is newer than what's running. */
   updateAvailable: boolean;
   /**
    * Stable, while running a build ahead of the newest release: that release, when this install can
    * go back to it (POST /api/updates/apply { method: "github", allowOlder: true }).
    */
   goBack: GithubTarget | null;
-  /** Can Gluon replace itself here at all (a Compose, CasaOS or Umbrel install)? */
   canSelfUpdate: boolean;
   options: UpdateOption[];
   current: UpdateRun | null;

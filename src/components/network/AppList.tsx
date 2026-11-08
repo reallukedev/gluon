@@ -12,11 +12,6 @@ import type { AppEntry, LoginWords } from "./model";
 import { bare, redirectTarget } from "./shared";
 import s from "./network.module.css";
 
-/**
- * One row per app on the internet, answering the page's four questions in its columns: which app and
- * at what address, is it working, does a login protect it, and is it on the internet at all.
- */
-
 interface Props {
   entries: AppEntry[] | null;
   baseDomain: string;

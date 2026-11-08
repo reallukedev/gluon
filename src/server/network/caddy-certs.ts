@@ -6,10 +6,7 @@ import { readTar, type TarEntry } from "./tarball";
 import { pickCaddyPair } from "./xmpp-cert-choice";
 import { readOwnCert } from "./own-certs";
 
-/**
- * Caddy's side of certificates: where its container sees Gluon's Caddy folder, which user it runs
- * as (so keys Gluon writes are readable to it), and the certificate it serves for a name.
- */
+/** Caddy's side of certificates. Which user it runs as matters so keys Gluon writes are readable to it. */
 
 export const CADDY_CONTAINER = (process.env.GLUON_CADDY_CONTAINER ?? process.env.TEND_CADDY_CONTAINER) ?? "caddy";
 const CADDY_CERTS = "/data/caddy/certificates";
@@ -27,7 +24,6 @@ export async function readArchive(container: string, path: string): Promise<TarE
   }
 }
 
-/** Caddy's whole certificate store, read once per caller. */
 export const readCaddyStore = () => readArchive(CADDY_CONTAINER, CADDY_CERTS);
 
 interface CaddySide {
@@ -37,10 +33,7 @@ interface CaddySide {
 }
 let side: { at: number; value: CaddySide } | null = null;
 
-/**
- * Where Caddy's container mounts the folder Gluon writes the Caddyfile to: the Caddy mount whose
- * host folder is the one Gluon has at CADDY_DIR. Falls back to /etc/caddy, the usual place.
- */
+/** The Caddy mount whose host folder is Gluon's CADDY_DIR; falls back to /etc/caddy. */
 export async function caddySide(maxAgeMs = 10 * 60_000): Promise<CaddySide> {
   if (side && Date.now() - side.at < maxAgeMs) return side.value;
   const value: CaddySide = { mount: DEFAULT_CADDY_MOUNT, uid: null };
@@ -73,9 +66,8 @@ export interface CaddyCertificate {
 }
 
 /**
- * The certificate and key web visitors get for `host`: the person's own when the address uses one,
- * otherwise the longest-lasting trusted one in Caddy's store. Null when there isn't one (yet), or
- * when the address is plain HTTP or has no web side, so Caddy holds none.
+ * The person's own certificate when the address uses one, else the longest-lasting trusted one in
+ * Caddy's store. Null for plain HTTP or no web side, where Caddy holds none.
  */
 export async function caddyCertificateFor(host: string): Promise<CaddyCertificate | null> {
   const h = host.toLowerCase();

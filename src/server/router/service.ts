@@ -17,17 +17,8 @@ import { serverNames, whereAmI } from "./where";
 import type { RouterStatus } from "@/lib/router-types";
 
 /**
- * The router's settings behind its access code, changed from Gluon. Today: AT&T BGW gateways
- * (BGW320, BGW210), through their own admin pages.
- *
- * Port forwarding: Gluon works out which ports its apps need from the internet, reads what the
- * router forwards, and adds what's missing, re-reading the router after every step. It only
- * removes services it made itself.
- *
- * Restart: presses the router's own Restart button, then waits for it to come back with a fresh
- * uptime before calling it done.
- *
- * Every write checks the page is the one Gluon expects (its own form, the named fields and
+ * Only AT&T BGW gateways today, through their own admin pages. Gluon only removes services it made
+ * itself, and every write checks the page is the one it expects (its own form, the named fields and
  * buttons) and refuses with a plain message when it isn't, rather than guessing.
  */
 
@@ -78,14 +69,11 @@ async function readRouter(r: RouterPages) {
   return out;
 }
 
-// ---------------------------------------------------------------- the stored code, used carefully
-
 const rejectedError = () => new AppError("router_code_rejected", "The router no longer accepts the access code Gluon has. Enter it again.", 409, { field: "code" });
 
 /**
- * Run `fn` signed in with the stored code. The code is read when the job reaches the front of
- * the queue (a code entered meanwhile wins), and a code the router refused isn't tried again
- * until someone enters it again or REJECTED_PAUSE_MS passes.
+ * The code is read when the job reaches the front of the queue (a code entered meanwhile wins), and a
+ * refused code isn't tried again until it's re-entered or REJECTED_PAUSE_MS passes.
  */
 function withStoredCode<T>(gateway: string, fn: (r: RouterPages, a: Access) => Promise<T>): Promise<T> {
   return withRouter(gateway, null, async (r) => {
@@ -105,8 +93,6 @@ function withStoredCode<T>(gateway: string, fn: (r: RouterPages, a: Access) => P
   });
 }
 
-// ---------------------------------------------------------------- what the router forwards, cached
-
 /** Port forwarding is read at most this often; pages poll it and every read costs a sign-in. */
 const FRESH_MS = 2 * 60_000;
 interface Snap {
@@ -118,7 +104,7 @@ interface Snap {
 type GS = typeof globalThis & { __gluonForwarding?: { snap: Snap | null; reading: Promise<Snap> | null } };
 const remembered = () => ((globalThis as GS).__gluonForwarding ??= { snap: null, reading: null });
 
-/** The router's services and forwards: from the last read when it's fresh, else one shared read. */
+/** From the last read when it's fresh, else one shared read. */
 async function forwarding(gateway: string): Promise<Snap> {
   const m = remembered();
   if (m.snap && m.snap.gateway === gateway && now() - m.snap.at < FRESH_MS) return m.snap;
@@ -173,7 +159,7 @@ export async function connectRouter(user: User, where: Where, code: string): Pro
   return routerStatus();
 }
 
-/** Forget the access code for every router Gluon has one for. Doesn't talk to the router. */
+/** Doesn't talk to the router. */
 export function forgetRouter(user: User, where: Where): { forgotten: string[] } {
   const gateways = storedGateways();
   for (const gw of gateways) {
@@ -193,9 +179,8 @@ const nameLimit = (page: Page) => {
 };
 
 /**
- * Forward what's missing (all of it, or just `keys`). Nothing is changed if any of it would
- * collide with a port already in use. Each step re-reads the router and checks the change is
- * there before the next, so a refused or silently dropped change stops the run.
+ * Nothing is changed if any of it would collide with a port in use. Each step re-reads the router and
+ * checks the change is there, so a refused or silently dropped change stops the run.
  */
 export async function fixForwarding(user: User, where: Where, keys: string[] | null): Promise<{ done: string[]; status: RouterStatus }> {
   const me = await whereAmI();
@@ -255,9 +240,8 @@ export async function fixForwarding(user: User, where: Where, keys: string[] | n
 }
 
 /**
- * Stop forwarding a need, or a service Gluon made that nothing needs any more. Only services
- * Gluon made, and only while they go to this server: the forward first (the router won't
- * delete a service in use), then the service.
+ * Only services Gluon made, and only while they go to this server: the forward first (the router
+ * won't delete a service in use), then the service.
  */
 export async function removeForwarding(user: User, where: Where, target: { key: string } | { service: string }): Promise<RouterStatus> {
   const me = await whereAmI();
@@ -299,9 +283,8 @@ export async function removeForwarding(user: User, where: Where, target: { key: 
 }
 
 /**
- * Restart the router with its own Restart button (on Restart Device, or on Resets in newer
- * firmware). The answer never comes (the router goes down mid-reply), so the check is afterwards:
- * the monitor waits for it to answer with a fresh uptime.
+ * The answer never comes (the router goes down mid-reply), so the monitor checks afterwards for a
+ * fresh uptime.
  */
 export async function restartRouter(user: User, where: Where): Promise<{ requestedAt: number }> {
   const me = await whereAmI();

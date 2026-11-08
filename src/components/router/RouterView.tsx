@@ -75,7 +75,6 @@ function RestartNotice({ o, onDismiss }: { o: RouterOverview; onDismiss: () => v
   );
 }
 
-/** Network → Router: everything the home router says about the connection and the home network. */
 export function RouterView({ initial }: { initial: RouterOverview | null }) {
   const fmt = useFormat();
   const [hidden, setHidden] = React.useState<number | null>(null);
@@ -204,7 +203,6 @@ export function RouterView({ initial }: { initial: RouterOverview | null }) {
   );
 }
 
-/** While the server asks the router for the first time: the page's title and what's happening. */
 export function RouterSkeleton() {
   return (
     <Page pending>

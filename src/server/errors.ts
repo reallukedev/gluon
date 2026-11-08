@@ -17,7 +17,7 @@ export const forbidden = (msg = "You don't have access to that.") => new AppErro
 export const conflict = (msg: string) => new AppError("conflict", msg, 409);
 export const badRequest = (msg: string, details?: Record<string, unknown>) => new AppError("bad_request", msg, 400, details);
 
-/** The schema's own message for a zod issue, or null for zod's defaults ("Too small: expected…"), which read as code. */
+/** null for zod's defaults ("Too small: expected..."), which read as code. */
 export const ownIssueMessage = (m: string | undefined): string | null =>
   m && !/^(Invalid|Too (small|big)|Unrecognized key|Expected |Required)/.test(m) ? m : null;
 

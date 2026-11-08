@@ -6,7 +6,6 @@ import { disposition } from "@/server/files/stream";
 import { draftDir, siteRow, walk } from "@/server/sites/store";
 import { siteId } from "../../_shared";
 
-/** The whole draft as a .zip, streamed. */
 export const GET = route({ auth: "admin" }, ({ params }) => {
   const id = siteId(params);
   const site = siteRow(id);

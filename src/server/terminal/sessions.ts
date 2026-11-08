@@ -12,9 +12,8 @@ import { HOST_PATH, startProc, type Proc } from "./proc";
 import { probeTarget, type Resolved } from "./targets";
 
 /**
- * Running commands and terminal sessions, held in memory (on globalThis so dev reloads keep them).
- * Each one belongs to the admin who opened it, streams to the request that opened it, and is
- * killed when that stream closes, when it's stopped, or when it sits idle too long.
+ * On globalThis so dev reloads keep them. Each is killed when the stream that opened it closes, when
+ * it's stopped, or when it sits idle too long.
  */
 
 export type Mode = "run" | "shell";
@@ -44,9 +43,8 @@ const SHELL_IDLE_MS = 60 * 60_000;
 const SHELL_MAX_MS = 12 * 60 * 60_000;
 
 /**
- * Commands mode: start in the folder we were in, say our pid, run the command with `eval` (so `cd`
- * and variables behave as typed), then report the exit code and the folder we ended up in.
- * The command arrives as an argument, never pasted into the script.
+ * `eval` makes `cd` and variables behave as typed. The command arrives as an argument, never pasted
+ * into the script.
  */
 const RUN_SCRIPT = `__g_n=$1; __g_c=$3
 cd -- "$2" 2>/dev/null || cd 2>/dev/null
@@ -88,8 +86,8 @@ function auditCommand(command: string): string {
 }
 
 /**
- * Start a command or a shell and stream it. Everything that can fail with a message (no shell, too
- * many open) fails before the stream starts, so it comes back as an ordinary error.
+ * Everything that can fail with a message fails before the stream starts, so it comes back as an
+ * ordinary error.
  */
 export async function open(o: OpenInput): Promise<{ id: string; stream: (emit: (e: TermEvent) => void, signal: AbortSignal) => Promise<void> }> {
   if (countFor(o.user.id) >= MAX_PER_USER) {
@@ -253,10 +251,7 @@ export function resize(s: Session, rows: number, cols: number) {
   s.proc.resize(rows, cols);
 }
 
-/**
- * Stop it: Ctrl-C first (what a person would press), then hang up and terminate the whole process
- * group, then kill it. Resolves once it's gone or we've given up waiting.
- */
+/** Ctrl-C first (what a person would press), then hang up and terminate the process group, then kill. */
 export async function stop(s: Session, reason: ExitReason) {
   if (!sessions.has(s.id)) return;
   s.close(reason);

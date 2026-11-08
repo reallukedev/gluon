@@ -14,11 +14,7 @@ const body = z.object({
   nightlyTiming: z.enum(["asap", "hour"]).default("hour"),
 });
 
-/**
- * Save how Gluon updates, and answer with the fresh status (UpdatesStatus). Switching channel
- * forgets the last check and asks GitHub again straight away. Automatic updates install code from
- * the internet as root, so changing any of this asks for the password again.
- */
+/** Automatic updates install code from the internet as root, so changing any of this asks for the password again. */
 export const PUT = route({ auth: "admin", body, recent: true }, async ({ user, body, ip, zone }) => {
   const before = getSetting("updates");
   const after = setSetting("updates", body);

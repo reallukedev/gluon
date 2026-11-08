@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 
 type Router = ReturnType<typeof useRouter>;
 
-/** Gluon's own pages only. */
 const isPage = (href: string | undefined): href is string => !!href && href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/api/");
 
 /**
@@ -20,7 +19,6 @@ export function prefetchPage(router: Router, href: string | undefined) {
 // Long enough that sweeping the pointer across a list doesn't fetch every page it crosses.
 const HOVER_INTENT_MS = 70;
 
-/** Handlers for a link: a short hover or keyboard focus fetches its page; a press or touch fetches it at once. */
 export function useIntentPrefetch(href: string | undefined) {
   const router = useRouter();
   const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);

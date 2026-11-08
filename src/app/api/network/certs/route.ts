@@ -10,8 +10,5 @@ const body = z.union([
   z.object({ host, files: z.object({ cert: path, key: path }) }),
 ]);
 
-/**
- * Check a certificate for an address before saving: pasted text, or files on this server. Stores
- * nothing and returns only what's safe to show (names, issuer, dates, fingerprint), never the key.
- */
+/** Checks a certificate before saving. Stores nothing and never returns the key. */
 export const POST = route({ auth: "admin", body, burst: { limit: 30, windowMs: 60_000 } }, ({ body }) => ({ info: previewCert(body.host, "files" in body ? { files: body.files } : { cert: body.cert, key: body.key }) }));

@@ -31,7 +31,6 @@ interface ServiceProps {
   onFix: (id: string) => void;
 }
 
-/** One service in full, as the builder's Services tab shows it. */
 export function ServiceEditor({ names, source, ...p }: ServiceProps & { names: string[]; source: BuilderSource }) {
   const { draft, form: f, issues, target } = p;
   const isWeb = draft.spec.web.service === f.name;
@@ -110,10 +109,6 @@ export function ServiceEditor({ names, source, ...p }: ServiceProps & { names: s
   );
 }
 
-/**
- * The setup step's view of a service: just what it needs to run here (its folders and its
- * settings). Ports and everything else stay in the builder.
- */
 export function ServiceEssentials(p: ServiceProps) {
   const { draft, form: f, issues } = p;
   const lookup = useImageLookup(f.build ? "" : f.image);
@@ -135,7 +130,6 @@ export function ServiceEssentials(p: ServiceProps) {
   );
 }
 
-/** The image (with what the registry says it needs), or the build settings for repository apps. */
 function ImageSection({ draft, form: f, issues, target, source, lookup, isWeb }: ServiceProps & { source: BuilderSource; lookup: ImageLookupState; isWeb: boolean }) {
   const base = `services.${f.name}`;
   const edit = draft.editCompose;

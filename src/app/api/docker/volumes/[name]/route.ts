@@ -5,7 +5,6 @@ import { audit } from "@/server/audit";
 import { AppError } from "@/server/errors";
 import { param } from "../../params";
 
-/** Remove a volume nothing uses, and everything in it. */
 export const DELETE = route({ auth: "admin", recent: true, body: z.object({ confirm: z.string().max(200).optional() }) }, async ({ params, body, user, ip, zone }) => {
   const name = param(params.name);
   try {

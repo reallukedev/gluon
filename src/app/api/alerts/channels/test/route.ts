@@ -4,10 +4,7 @@ import { AppError } from "@/server/errors";
 import { CHANNEL_KINDS } from "@/lib/alerts-types";
 import { testChannel } from "@/server/notify/channels";
 
-/**
- * Send a test message. Either a saved channel (`id`, optionally with unsaved edits in `config`) or a
- * channel that isn't saved yet (`kind` + `config`). Nothing is stored; the only effect is the send.
- */
+/** A saved channel (`id`, with any unsaved edits in `config`) or an unsaved one (`kind` + `config`). Stores nothing. */
 const body = z.object({
   id: z.string().max(64).optional(),
   kind: z.enum(CHANNEL_KINDS).optional(),

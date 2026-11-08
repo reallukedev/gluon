@@ -25,9 +25,8 @@ import { caddySide } from "./caddy-certs";
 import type { CertUploads, DriftInfo, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
 
 /**
- * Saving public addresses. Optimistic concurrency: the client sends the `rev` it loaded; if routes.json
- * changed since (another tab, the admin by hand, another tool) the save is refused with 409 and the
- * current rev, so nothing is silently clobbered. Saves are serialised in-process.
+ * The client sends the `rev` it loaded; if routes.json changed since, the save is refused with 409 so
+ * nothing is silently clobbered. Saves are serialised in-process.
  */
 
 let chain: Promise<unknown> = Promise.resolve();
@@ -51,11 +50,7 @@ export async function routesResponse(): Promise<RoutesResponse> {
   return { config: cfg, rev: configRev(cfg), drift, driftInfo: drift ? driftInfo(cfg) : null, caddyRunning: running, ...meta };
 }
 
-/**
- * What differs between the Caddyfile on disk and Gluon's version, in terms a person can act on:
- * who wrote it (its header usually says, e.g. the older Domains app) and whether anything other
- * than comments differs.
- */
+/** Who wrote it (its header usually says) and whether anything other than comments differs. */
 export function driftInfo(cfg: RoutesConfig): DriftInfo {
   let disk = "";
   try {
@@ -164,11 +159,7 @@ export function restoreRoutes(user: User, where: Where, body: { id: string; rev:
   return save(user, where, body.rev, { routes: snap.routes, fallback: snap.fallback }, `Restored snapshot ${body.id} by ${user.username} in Gluon`, "network.routes.restore", `Restored public addresses from ${body.id}`);
 }
 
-/**
- * Point every public address (and the fallback) that names app `from` at app `to`, after Gluon
- * moves an app. Goes through the same checked, audited save as the Network page. Returns how many
- * addresses changed; 0 (and no save) when none name the app.
- */
+/** After Gluon moves an app. Returns how many addresses changed; 0 (and no save) when none name the app. */
 export async function reassignRouteApp(user: User, where: Where, from: string, to: string): Promise<number> {
   const current = currentConfig();
   const ids = current.routes.filter((r) => r.app === from).map((r) => r.id);
@@ -179,10 +170,7 @@ export async function reassignRouteApp(user: User, where: Where, from: string, t
   return ids.length + (fallback ? 1 : 0);
 }
 
-/**
- * Point a chat address's web side (BOSH, WebSocket, file sharing) at the chat server's HTTP port,
- * or turn it off with null. Same checked, audited save as the Network page.
- */
+/** The web side is BOSH, WebSocket and file sharing; null turns it off. */
 export async function setChatWebPort(user: User, where: Where, routeId: string, port: number | null): Promise<RoutesSaveResponse> {
   const current = currentConfig();
   const r = current.routes.find((x) => x.id === routeId);
@@ -192,9 +180,8 @@ export async function setChatWebPort(user: User, where: Where, routeId: string, 
 }
 
 /**
- * Add, change or remove the address of a site from Sites, through the same checked, audited save
- * as the Network page. `change` gets the current routes and returns the new list. A save that races
- * another (a second tab, the Network page) is tried once more on the fresh routes.
+ * `change` gets the current routes and returns the new list. A save that races another is tried once
+ * more on the fresh routes.
  */
 export async function saveSiteRoutes(user: User, where: Where, change: (routes: RoutesConfig["routes"]) => RoutesConfig["routes"], reason: string, summary: string, certs: CertUploads = {}): Promise<RoutesSaveResponse> {
   for (let attempt = 0; ; attempt++) {

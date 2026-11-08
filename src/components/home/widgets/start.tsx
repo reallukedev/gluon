@@ -1,5 +1,4 @@
 "use client";
-// Things that open a Home page or sit on it as one line: the greeting, the search bar, a folder, a link.
 import * as React from "react";
 import Link from "next/link";
 import { Folder } from "iconoir-react";
@@ -16,8 +15,6 @@ import { Preview } from "../previews";
 import { SetUp } from "./kit";
 import { useHome } from "../context";
 import st from "./start.module.css";
-
-// ================================================================ greeting
 
 function useToday() {
   const [now, setNow] = React.useState<number | null>(null);
@@ -60,8 +57,6 @@ registerWidget({
   preview: <Preview of="greeting" />,
 });
 
-// ================================================================ search
-
 function SearchWidget() {
   return (
     <div className={st.searchWrap}>
@@ -84,14 +79,11 @@ registerWidget({
   preview: <Preview of="search" />,
 });
 
-// ================================================================ folder
-
 export interface FolderConfig {
   path?: string;
   label?: string;
 }
 
-/** Is `p` the same as or inside `root`? */
 const within = (p: string, root: string) => root === "/" || p === root || p.startsWith(root.endsWith("/") ? root : `${root}/`);
 
 export const filesHref = (path: string) => `/files?path=${encodeURIComponent(path)}`;
@@ -204,8 +196,6 @@ registerWidget<FolderConfig>({
   Settings: FolderSettings,
   preview: <Preview of="folder" />,
 });
-
-// ================================================================ link
 
 export interface LinkConfig {
   url?: string;

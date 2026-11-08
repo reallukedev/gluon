@@ -6,19 +6,11 @@ import { envLine, interpolate, learnVars, splitColons, varsIn } from "./vars";
 import { norm, relativeTo, resolveFrom, slugify, usersOf, within, type BindUse } from "./paths";
 
 /**
- * Turns an app's compose file into one Gluon runs from its own folder. Pure: everything it needs
- * to know about the server (real mount paths, volumes, who uses what) comes in as data.
- *
- * - Bind mounts inside the old app's own folders are copied into the new folder and written as
- *   ./relative paths. Everything else (media libraries, /home, sockets) stays where it is and is
- *   written as the absolute path it resolved to.
- * - Named volumes only this app uses become folders under ./volumes (copied), so the app's data
- *   all lives in one folder. Volumes other apps share, or that aren't plain local volumes, are
- *   used in place as external volumes.
- * - container_name goes (the stopped original still holds those names); each old name becomes a
- *   network alias so the app's services, and anything else on its networks, still find each other.
- * - Umbrel: app_proxy is dropped and its port published on the app directly; Umbrel's network and
- *   fixed addresses go; Umbrel's variables resolve through a .env next to the file.
+ * Pure: everything it needs about the server comes in as data. Bind mounts inside the old app's
+ * folders are copied in as ./relative paths; volumes only this app uses become folders under
+ * ./volumes; container_name goes (the stopped original still holds those names) and each old name
+ * becomes a network alias so services still find each other. Umbrel's app_proxy is dropped and its
+ * port published on the app directly.
  */
 
 export interface RuntimeMount {
@@ -44,7 +36,6 @@ export interface VolumeInfo {
   driver: string;
   /** driver_opts or labels that make it more than a plain local volume (nfs, a bind in disguise). */
   hasOptions: boolean;
-  /** Names of every container that mounts it. */
   usedBy: string[];
 }
 
@@ -65,7 +56,6 @@ export interface AppMeta {
 export interface RewriteInput {
   source: Exclude<MoveSource, "docker">;
   appId: string;
-  /** The old Compose project. */
   project: string;
   newProject: string;
   newDir: string;
@@ -111,7 +101,6 @@ const str = (v: unknown): string | null => (typeof v === "string" ? v : typeof v
 const ANON = /^[0-9a-f]{64}$/;
 const UMBREL_NETWORK = "umbrel_main_network";
 
-/** Collects what a rewrite copies, keeps and warns about. */
 export class Collector {
   copies = new Map<string, PlannedCopy>();
   stays = new Map<string, MoveStay>();
@@ -158,8 +147,6 @@ export class Collector {
   }
 }
 
-// ---------------------------------------------------------------- ports
-
 /** Host ports a service publishes, from short ("127.0.0.1:8080:80/udp") or long syntax. */
 export function publishedPorts(service: string, ports: unknown, vars: Record<string, string> = {}): MovePort[] {
   if (!Array.isArray(ports)) return [];
@@ -187,8 +174,6 @@ export function publishedPorts(service: string, ports: unknown, vars: Record<str
   }
   return out;
 }
-
-// ---------------------------------------------------------------- volumes
 
 interface VolEntry {
   source: string | null;
@@ -227,8 +212,6 @@ function writeVolume(e: VolEntry, source: string, type: "bind" | "volume"): unkn
 const looksLikePath = (s: string) => s.startsWith("/") || s.startsWith(".") || s.startsWith("~");
 
 export const anonFolder = (service: string, target: string) => `./volumes/${slugify(service)}-${slugify(target.replace(/\//g, "-"), "data")}`;
-
-// ---------------------------------------------------------------- the rewrite
 
 export function rewriteCompose(input: RewriteInput): Rewritten {
   const c = new Collector(input.newDir);
@@ -337,7 +320,6 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
     const rt = runtimeOf.get(name);
     if (svc.extends) c.block(`“${name}” extends another file, which Gluon can't rewrite yet.`);
 
-    // Paths the service reads from the server.
     const placePath = (raw: string, what: "folder" | "file", readOnly = what === "file"): string | null => {
       const r = interpolate(raw, known);
       if (r.missing.length) {
@@ -365,7 +347,6 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
       return relativeTo(input.newDir, dest);
     };
 
-    // Volumes.
     const vols = Array.isArray(svc.volumes) ? svc.volumes : [];
     const outVols: unknown[] = [];
     const covered = new Set<string>();
@@ -400,7 +381,6 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
         }
         continue;
       }
-      // A named volume.
       const key = interp.value;
       const def = isObj(topVolumes[key]) ? (topVolumes[key] as Obj) : null;
       const declaredName = def ? (str(def.name) ?? (def.external ? key : null)) : null;
@@ -430,7 +410,6 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
     if (outVols.length) svc.volumes = outVols;
     else delete svc.volumes;
 
-    // env_file, build context, configs.
     if (svc.env_file !== undefined) {
       const list = Array.isArray(svc.env_file) ? svc.env_file : [svc.env_file];
       svc.env_file = list.map((f) => {
@@ -457,7 +436,6 @@ export function rewriteCompose(input: RewriteInput): Rewritten {
       }
     }
 
-    // Names and networks.
     const oldName = str(svc.container_name) ? interpolate(str(svc.container_name)!, known).value : null;
     delete svc.container_name;
     const mode = str(svc.network_mode);

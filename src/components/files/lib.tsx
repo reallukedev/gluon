@@ -95,7 +95,6 @@ export const KIND_LABEL: Record<FileKind, string> = {
   other: "File",
 };
 
-/** Saved sort pref → API sort key, with the natural direction for each. */
 export function sortFromPref(p: Prefs["filesSort"]): { sort: SortKey; order: "asc" | "desc" } {
   switch (p) {
     case "modified":
@@ -112,7 +111,6 @@ export function prefFromSort(s: SortKey): Prefs["filesSort"] {
   return s === "mtime" ? "modified" : s === "size" ? "size" : s === "kind" || s === "type" ? "kind" : "name";
 }
 
-/** Trigger a browser download without leaving the page. */
 export function downloadUrl(url: string) {
   const a = document.createElement("a");
   a.href = url;
@@ -125,7 +123,6 @@ export function downloadUrl(url: string) {
 
 export const DRAG_MIME = "application/x-gluon-paths";
 
-/** Props that make an element accept Gluon items dragged from the listing (move, or copy with ⌥/Ctrl). */
 export function useDropTarget(path: string | null, onDrop: (sources: string[], dest: string, copy: boolean) => void, enabled = true) {
   const [over, setOver] = React.useState(false);
   const depth = React.useRef(0);
@@ -179,16 +176,11 @@ export function useMediaQuery(q: string) {
   return m;
 }
 
-/** Image types the server can make thumbnails of. */
 export const THUMBABLE = /\.(jpe?g|png|webp|gif|avif|tiff?|bmp|heic|heif)$/i;
 /** Video types browsers can usually decode, so a poster frame can be taken from them. */
 export const POSTERABLE = /\.(mp4|m4v|webm|mov|ogv)$/i;
 
-/**
- * The grid's folder: a drawn folder in the hairline language, its tab on the left, with an optional
- * second sheet peeking out when it holds something (we don't count children, so it's drawn open
- * only for links and shared roots). Scales with the tile.
- */
+/** Drawn open only for links and shared roots: children aren't counted. */
 export function FolderGlyph({ className, link }: { className?: string; link?: boolean }) {
   return (
     <svg viewBox="0 0 64 52" className={className} aria-hidden fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round">
@@ -198,8 +190,6 @@ export function FolderGlyph({ className, link }: { className?: string; link?: bo
     </svg>
   );
 }
-
-// ---------------------------------------------------------------- video posters
 
 const posters = new Map<string, string | null>();
 const posterWaiters = new Map<string, ((v: string | null) => void)[]>();
@@ -244,10 +234,7 @@ function takePoster(url: string): Promise<string | null> {
   });
 }
 
-/**
- * A still frame from a video, taken in the browser (the server has no ffmpeg): at most two at a
- * time, remembered for the session, so scrolling a movie folder doesn't re-read files.
- */
+/** Taken in the browser (the server has no ffmpeg), two at a time, remembered for the session. */
 export function useVideoPoster(key: string | null, url: string): string | null {
   const [src, setSrc] = React.useState<string | null>(() => (key ? (posters.get(key) ?? null) : null));
   React.useEffect(() => {
@@ -285,13 +272,11 @@ export function useVideoPoster(key: string | null, url: string): string | null {
   return src;
 }
 
-/** "⌘" on Apple devices, "Ctrl+" elsewhere, for shortcut hints in menus (menus render on the client only). */
 export function modKey(): string {
   if (typeof navigator === "undefined") return "Ctrl+";
   return /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl+";
 }
 
-/** "⌥" on Apple devices, "Alt+" elsewhere. */
 export function altKey(): string {
   if (typeof navigator === "undefined") return "Alt+";
   return /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent) ? "⌥" : "Alt+";

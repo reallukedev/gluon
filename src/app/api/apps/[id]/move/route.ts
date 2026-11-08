@@ -4,10 +4,7 @@ import { AppError } from "@/server/errors";
 import { followMove, movePlan, moveJob, moveRunning, startMove } from "@/server/apps/move";
 import type { MoveEvent } from "@/lib/app-move-types";
 
-/**
- * What moving the app to Gluon would do (nothing changes), plus a move that's running or just
- * ended. `?only=job` skips the plan (measuring folders takes a while) for following a move.
- */
+/** `?only=job` skips the plan (measuring folders takes a while) when only following a move. */
 export const GET = route({ auth: "admin", query: z.object({ only: z.enum(["job"]).optional() }) }, async ({ params, query }) => {
   const id = decodeURIComponent(String(params.id));
   const job = moveJob(id);
@@ -22,7 +19,7 @@ export const GET = route({ auth: "admin", query: z.object({ only: z.enum(["job"]
 
 const body = z.object({ planId: z.string().regex(/^[a-f0-9]{20}$/, "Review the move again.") });
 
-/** Run a reviewed plan, streaming its progress. The move carries on if the page closes. */
+/** The move carries on if the page closes. */
 export const POST = route({ auth: "admin", recent: true, body }, async ({ req, params, body, user, ip, zone }) => {
   const id = decodeURIComponent(String(params.id));
   await startMove(id, body.planId, user, { ip, zone });

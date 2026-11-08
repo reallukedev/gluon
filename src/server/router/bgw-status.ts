@@ -1,10 +1,9 @@
 import type { BroadbandT, DeviceT, FirewallT, OpticalT, RouterFactsT, WifiBand, WifiNetworkT } from "@/lib/router-types";
 
 /**
- * Reading the AT&T BGW pages anyone on the home network can open (sysinfo, broadbandstatistics,
- * fiberstat, home, devices, firewall). Pure: HTML in, plain data out. The pages are tables of
- * `<th scope="row">label</th><td>value</td>`, often with tags left open, so labels and values are
- * paired straight from the markup rather than through a DOM, and every value is optional.
+ * Pure: HTML in, plain data out. The pages are `<th scope="row">label</th><td>value</td>` tables,
+ * often with tags left open, so labels and values are paired straight from the markup rather than
+ * through a DOM.
  */
 
 const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", "#39": "'" };
@@ -92,9 +91,8 @@ export function parseUptime(v: string | null): number | null {
 }
 
 /**
- * The router keeps local time without a zone ("2026-10-25T15:47:22"). Comparing it with when the
- * page was read gives its offset from UTC (to the nearest quarter hour), which turns its other
- * local times into real instants.
+ * The router keeps local time without a zone, so comparing it with when the page was read gives its
+ * UTC offset (to the nearest quarter hour).
  */
 export function routerOffset(localNow: string | null, readAt: number): number | null {
   const t = localNow?.trim();
@@ -115,8 +113,6 @@ export function routerTime(v: string | null, offset: number | null): number | nu
   if (month < 0) return null;
   return Date.UTC(Number(m[6]), month, Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5])) - offset;
 }
-
-// ---------------------------------------------------------------- System Information
 
 export interface Sysinfo extends RouterFactsT {
   uptimeS: number | null;
@@ -141,8 +137,6 @@ export function readSysinfo(html: string, readAt: number): Sysinfo {
     offset: routerOffset(blank(pick(ps, "Current Date/Time")), readAt),
   };
 }
-
-// ---------------------------------------------------------------- Broadband Status
 
 export function readBroadband(html: string): BroadbandT {
   const sec = sections(content(html));
@@ -174,8 +168,6 @@ export function readBroadband(html: string): BroadbandT {
     pon: blank(pick(pon, "PON Link Status")),
   };
 }
-
-// ---------------------------------------------------------------- Fiber Status
 
 /** One "Rx Power  Currently -179" block: the value and its alarm and warning thresholds. */
 function measure(html: string, name: string): { now: number; alarm: [number, number] | null; warn: [number, number] | null } | null {
@@ -223,8 +215,6 @@ export function readOptical(html: string): OpticalT {
   };
 }
 
-// ---------------------------------------------------------------- Firewall Status
-
 export function readFirewall(html: string): FirewallT {
   const ps = pairs(content(html));
   return {
@@ -234,8 +224,6 @@ export function readFirewall(html: string): FirewallT {
     advanced: onOff(pick(ps, "Firewall Advanced")),
   };
 }
-
-// ---------------------------------------------------------------- Status (home.ha): Wi-Fi and the quick device table
 
 const bandOf = (s: string | null): WifiBand | null => {
   const m = s?.match(/\b(2\.4|5|6)\s*GHz/i);
@@ -296,7 +284,6 @@ function addressName(v: string): { ipv4: string | null; name: string | null } {
   return { ipv4: null, name: v.trim() || null };
 }
 
-/** Home Network Devices on the Status page: every device in one line each. */
 export function readQuickDevices(html: string): QuickDevice[] {
   const body = content(html);
   const t = body.match(/<table[^>]*summary="LAN Host Discovery Table"[^>]*>([\s\S]*?)<\/table>/i);
@@ -322,8 +309,6 @@ export function readQuickDevices(html: string): QuickDevice[] {
   return out;
 }
 
-// ---------------------------------------------------------------- Device List (devices.ha)
-
 export interface ServerIds {
   mac: string | null;
   ip: string | null;
@@ -332,8 +317,8 @@ export interface ServerIds {
 const MAC = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
 
 /**
- * Device List: one block per device, separated by rules. Merged with the Status page's table,
- * which on some firmware lists devices the Device List leaves out (this server, for one).
+ * Merged with the Status page's table, which on some firmware lists devices the Device List leaves
+ * out (this server, for one).
  */
 export function readDevices(devicesHtml: string, homeHtml: string | null, offset: number | null, me: ServerIds): DeviceT[] {
   const body = content(devicesHtml);

@@ -4,10 +4,7 @@ import { latestContainers } from "../metrics/sampler";
 import { listApps } from "../docker/apps";
 import type { MemoryBreakdown } from "@/lib/system-types";
 
-/**
- * Memory split by app: each app's containers (from the metrics sampler, page cache excluded like
- * `docker stats`), and everything else the machine uses. Real numbers only; no estimates.
- */
+/** Page cache is excluded like `docker stats`. Real numbers only; no estimates. */
 export async function memoryBreakdown(): Promise<MemoryBreakdown> {
   const mem = memInfo();
   const sample = latestContainers();

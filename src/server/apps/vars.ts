@@ -24,7 +24,11 @@ function parts(s: string): Part[] {
 /** The variable names a string refers to (not counting $$ escapes). */
 export function varsIn(s: string): string[] {
   const names = new Set<string>();
-  for (const p of parts(s)) if ("name" in p) names.add(p.name);
+  for (const p of parts(s)) {
+    if (!("name" in p)) continue;
+    names.add(p.name);
+    if (p.op) for (const n of varsIn(p.arg)) names.add(n);
+  }
   return [...names];
 }
 
@@ -53,9 +57,8 @@ export function interpolate(s: string, vars: Record<string, string>): { value: s
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * Work out variable values by lining a template up with what it became, e.g. a compose file's
- * `${APP_DATA_DIR}/data/config` against the container's real mount `/srv/umbrel/app-data/x/data/config`.
- * Returns null when the two don't line up or the template is ambiguous (two variables side by side).
+ * Lines a template up with what it became (`${APP_DATA_DIR}/data/config` against
+ * `/srv/umbrel/app-data/x/data/config`). null when they don't line up or the template is ambiguous.
  */
 export function learnVars(template: string, actual: string): Record<string, string> | null {
   const ps = parts(template);
@@ -93,6 +96,9 @@ export function learnVars(template: string, actual: string): Record<string, stri
 /** Escape a literal value for a compose file, so `$` isn't read as a variable. */
 export const escapeDollars = (s: string) => s.replace(/\$/g, "$$$$");
 
+/** Escapes compose-go's dotenv undoes inside double quotes (one pass, left to right); others stay as written. */
+const DQ_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t", a: "\x07", b: "\b", f: "\f", v: "\v" };
+
 /** A simple `.env` reader: KEY=value lines, optional quotes, # comments. */
 export function parseEnvFile(text: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -105,7 +111,7 @@ export function parseEnvFile(text: string): Record<string, string> {
     if ((v.startsWith('"') && v.endsWith('"') && v.length > 1) || (v.startsWith("'") && v.endsWith("'") && v.length > 1)) {
       const q = v[0];
       v = v.slice(1, -1);
-      if (q === '"') v = v.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+      if (q === '"') v = v.replace(/\\([\\"$abfnrtv])/g, (_, c: string) => DQ_ESCAPES[c] ?? c);
     } else {
       v = v.replace(/\s+#.*$/, "");
     }
@@ -115,12 +121,13 @@ export function parseEnvFile(text: string): Record<string, string> {
 }
 
 /**
- * One `.env` line compose reads literally: single quotes, or double quotes with \\, \", \n and \$
+ * One `.env` line compose reads literally: single quotes, or double quotes with \\, \", \n, \r and \$
  * escaped when the value holds a quote or a newline (the same rules as the builder's env files).
+ * compose-go reads a backslash before the closing single quote as escaping it, so a trailing backslash needs double quotes too.
  */
 export function envLine(k: string, v: string): string {
-  if (!v.includes("'") && !/[\r\n]/.test(v)) return `${k}='${v}'`;
-  return `${k}="${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, "\\n").replace(/\$/g, "\\$")}"`;
+  if (!v.includes("'") && !/[\r\n]/.test(v) && !v.endsWith("\\")) return `${k}='${v}'`;
+  return `${k}="${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, "\\n").replace(/\r/g, "\\r").replace(/\$/g, "\\$")}"`;
 }
 
 /** Split a short-syntax volume ("${A:-/x}:/data:ro") on colons outside ${...}. */

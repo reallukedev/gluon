@@ -13,16 +13,8 @@ import { batchMessage, digestMessage, problemMessage, reportReplyMessage, resolv
 import { deliver, DeliveryError, type MessageLevel, type OutMessage } from "./transports";
 
 /**
- * The notification pipeline, all backed by the notify_deliveries table (queue + history):
- *
- *   fanOut     new findings (needsNotification) → one row per interested channel, delayed past quiet
- *              hours unless it's a fault and the person lets faults through; then markNotified.
- *   followUps  problem rows whose finding cleared → cancel if unsent, else queue a "resolved" row.
- *   digests    once a day per subscribed channel at settings.digest.hour in the subscriber's zone.
- *   sendDue    deliver due rows; 4+ at once to a channel are combined; failures back off and retry.
- *
- * Dedupe: dedupe_key is UNIQUE (channel | event | finding | episode), so two admins subscribed to
- * the same channel get one message, and restarts never resend.
+ * Backed by notify_deliveries (queue and history). dedupe_key is UNIQUE (channel event finding
+ * episode), so two admins subscribed to one channel get one message and restarts never resend.
  */
 
 const TICK_MS = 15_000;
@@ -57,8 +49,6 @@ export interface DeliveryRow {
   sent_at: number | null;
   followed_up: number;
 }
-
-// ---------------------------------------------------------------- queue helpers
 
 function enqueue(d: { channel: Channel; userId: string | null; event: DeliveryEvent; findingId?: string | null; episode?: number | null; dedupe: string; msg: Composed; notBefore: number }): boolean {
   const t = now();
@@ -113,8 +103,6 @@ function byChannel(subs: ActiveSub[]): Map<string, ActiveSub[]> {
   return m;
 }
 
-// ---------------------------------------------------------------- app names (for member wording)
-
 let appNames = new Map<string, string>();
 async function refreshAppNames() {
   try {
@@ -124,8 +112,6 @@ async function refreshAppNames() {
   }
 }
 const appName = (subject: string | null) => (subject ? (appNames.get(subject) ?? null) : null);
-
-// ---------------------------------------------------------------- fan out
 
 async function memberAppsOf(subs: ActiveSub[]): Promise<Map<string, Set<string>>> {
   const memberApps = new Map<string, Set<string>>();
@@ -167,8 +153,6 @@ async function fanOut() {
     markNotified(f.id);
   }
 }
-
-// ---------------------------------------------------------------- follow-ups (resolved)
 
 interface FollowRow {
   id: number;
@@ -225,8 +209,6 @@ export function followUps() {
   }
 }
 
-// ---------------------------------------------------------------- digest
-
 function digests() {
   const d = getSetting("digest");
   if (!d.enabled) return;
@@ -247,9 +229,6 @@ function digests() {
   }
 }
 
-// ---------------------------------------------------------------- report replies
-
-/** Tell the person who reported a problem that an admin replied. */
 export function notifyReportReply(report: { id: string; userId: string | null; appName: string | null; reply: string; repliedAt: number }, adminName: string) {
   if (!report.userId) return;
   const subs = activeSubscriptions().filter((s) => s.userId === report.userId && hasKind(s, "reports"));
@@ -267,8 +246,6 @@ export function notifyReportReply(report: { id: string; userId: string | null; a
   kick();
 }
 
-// ---------------------------------------------------------------- noticed events (updates, sign-ins, chat)
-
 export interface Notice {
   kind: NotifyKind;
   /** What makes this event itself: the same kind + key is only ever sent once per channel. */
@@ -283,10 +260,7 @@ export interface Notice {
   severity: "attention" | "info";
 }
 
-/**
- * Queue a noticed event for every channel whose subscribers want it. Never breaks through quiet
- * hours. Returns how many channels it was queued for.
- */
+/** Never breaks through quiet hours. Returns how many channels it was queued for. */
 export async function notifyEvent(n: Notice): Promise<number> {
   const subs = activeSubscriptions();
   const memberApps = await memberAppsOf(subs.filter((s) => s.role !== "admin"));
@@ -309,8 +283,6 @@ export async function notifyEvent(n: Notice): Promise<number> {
   if (queued) kick(500);
   return queued;
 }
-
-// ---------------------------------------------------------------- sending
 
 function level(r: Pick<DeliveryRow, "event" | "severity">): MessageLevel {
   if (r.event === "resolved") return "resolved";
@@ -453,8 +425,6 @@ async function sendDue() {
   await Promise.all([...groups].map(([id, rs]) => sendGroup(id, rs).catch((e) => console.error("[gluon] notify: channel send failed", e))));
 }
 
-// ---------------------------------------------------------------- tick
-
 let running = false;
 let lastPrune = 0;
 export async function tick() {
@@ -476,7 +446,7 @@ export async function tick() {
 }
 
 let kickTimer: ReturnType<typeof setTimeout> | null = null;
-/** Run a tick soon (debounced), e.g. right after a finding opens. */
+/** Debounced. */
 export function kick(delayMs = 2000) {
   if (kickTimer) return;
   kickTimer = setTimeout(() => {

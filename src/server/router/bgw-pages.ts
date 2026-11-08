@@ -1,10 +1,9 @@
 import { parse, type HTMLElement } from "node-html-parser";
 
 /**
- * Reading an AT&T BGW gateway's admin pages (BGW320, BGW210): the forms a browser would submit and
- * the tables of custom services and forwards. Pure: HTML in, plain data out. Firmware versions
- * differ in names and buttons (Remove_<n> on some, Edit/Delete on others), so everything is found
- * by what it is (a select offering TCP and UDP, a column called Protocol) rather than by one name.
+ * Pure: HTML in, plain data out. Firmware versions differ in names and buttons, so everything is
+ * found by what it is (a select offering TCP and UDP, a column called Protocol) rather than by one
+ * name.
  */
 
 export interface Button {
@@ -109,8 +108,6 @@ export function parsePage(html: string): Page {
   };
 }
 
-// ---------------------------------------------------------------- what the pages hold
-
 export type Protocol = "tcp" | "udp" | "both";
 
 export interface RouterService {
@@ -143,7 +140,6 @@ export function protocolOf(s: string): Protocol | null {
 const col = (headers: string[], ...want: string[]) => headers.findIndex((h) => want.some((w) => norm(h).includes(w)));
 const removeOf = (r: Row) => r.buttons.find((b) => /delete|remove/i.test(b.value) || /^(delete|remove)/i.test(b.name)) ?? null;
 
-/** Custom Services: the list (name, global port range, protocol, host port). */
 export function readServices(page: Page): RouterService[] {
   const t = page.tables.find((x) => col(x.headers, "protocol") >= 0 && col(x.headers, "portrange", "globalport", "port") >= 0 && col(x.headers, "name", "service") >= 0);
   if (!t) return [];
@@ -165,7 +161,6 @@ export function readServices(page: Page): RouterService[] {
   return out;
 }
 
-/** NAT/Gaming: which services are forwarded to which device. */
 export function readForwards(page: Page): RouterForward[] {
   const t = page.tables.find((x) => col(x.headers, "service", "application") >= 0 && col(x.headers, "device", "neededby", "host") >= 0);
   if (!t) return [];
@@ -179,8 +174,6 @@ export function readForwards(page: Page): RouterForward[] {
     .filter((f) => f.service && f.device);
 }
 
-// ---------------------------------------------------------------- the forms that change them
-
 export interface ServiceForm {
   form: Form;
   name: string;
@@ -191,7 +184,7 @@ export interface ServiceForm {
   add: Button;
 }
 
-/** The Add form on Custom Services: the one with a protocol select offering TCP and UDP. */
+/** The one with a protocol select offering TCP and UDP. */
 export function serviceForm(page: Page): ServiceForm | null {
   for (const form of page.forms) {
     const protocol = form.selects.find((s) => s.options.some((o) => protocolOf(o.label) === "tcp" || o.value.toLowerCase() === "tcp") && s.options.some((o) => protocolOf(o.label) === "udp" || o.value.toLowerCase() === "udp"));
@@ -225,7 +218,7 @@ export interface ForwardForm {
 
 const MAC = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i;
 
-/** The Add form on NAT/Gaming: a service select and a device select (options keyed by MAC). */
+/** Device select options are keyed by MAC. */
 export function forwardForm(page: Page): ForwardForm | null {
   for (const form of page.forms) {
     const device = form.selects.find((s) => s.options.some((o) => MAC.test(o.value)));
@@ -248,8 +241,8 @@ export function deviceOption(sel: Select, mac: string): { value: string; label: 
 }
 
 /**
- * What a browser would post for this form, as rendered, with some fields changed and one button
- * pressed: data fields, checked boxes, selects' chosen options, then the form's nonces.
+ * Data fields, checked boxes, selects' chosen options, then the form's nonces, as a browser would
+ * post them.
  */
 export function formPayload(form: Form, changes: Record<string, string>, pressed: Button): [string, string][] {
   const out: [string, string][] = [];
@@ -275,9 +268,8 @@ export function ownForm(page: Page, name: string): Form | null {
 }
 
 /**
- * The plain restart on Restart Device (restart.ha) or Resets (reset.ha): a button named exactly
- * "Restart" showing "Restart" or "Restart Device". Its neighbours on Resets ("Reset", "WReset",
- * "FReset", "ResetIP", "ResetConn") wipe settings, so nothing else is ever matched.
+ * Matches only a button named exactly "Restart": its neighbours on Resets ("Reset", "WReset",
+ * "FReset", "ResetIP", "ResetConn") wipe settings.
  */
 export function restartButton(page: Page): { form: Form; button: Button } | null {
   for (const form of page.forms) {

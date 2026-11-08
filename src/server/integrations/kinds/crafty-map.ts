@@ -1,5 +1,4 @@
-// Crafty Controller 4: turning API v2 answers into what the Minecraft servers widget draws. Pure, so it can be
-// tested on shapes recorded from a real Crafty 4.11.0.
+// Pure, so it can be tested on shapes recorded from a real Crafty 4.11.0.
 import type { LineState } from "@/lib/types";
 import type { CraftyServer, CraftyServerState } from "@/lib/widgets-types";
 
@@ -107,10 +106,7 @@ export interface MapContext {
   lastVersion?: string | null;
 }
 
-/**
- * One server from GET /api/v2/servers (`item`) and GET /api/v2/servers/{id}/stats (`stats`, which also nests the
- * server row as `server_id`). Either may be missing; the result is still drawable.
- */
+/** `stats` also nests the server row as `server_id`. Either may be missing; the result is still drawable. */
 export function toServer(item: unknown, stats: unknown, ctx: MapContext): CraftyServer | null {
   const st = obj(stats);
   const row = { ...obj(st.server_id), ...obj(item) };

@@ -40,7 +40,6 @@ export interface ShellProps {
   initial: ShellData;
 }
 
-/** Which pages a household member may open beyond their own (admins: all). Settings reads it to list the right pages. */
 const NavAccess = React.createContext<{ memberFiles: boolean }>({ memberFiles: true });
 export const useNavAccess = () => React.useContext(NavAccess);
 
@@ -69,11 +68,7 @@ function initials(name: string) {
 
 type NavInput = "pointer" | "key" | "in-page";
 
-/**
- * Sets data-nav on the root until the page itself (not a loading stand-in, nor nothing yet) is in #main, then
- * `hold` ms more, so a settle plays once on real content and arrivals already on screen can't replay it.
- * Returns the cleanup.
- */
+/** Held until the real page (not a loading stand-in) is in #main, so a settle plays once on real content. */
 function navWindow(mode: "enter" | "still", hold: number) {
   const root = document.documentElement;
   const main = document.getElementById("main");
@@ -96,10 +91,8 @@ function navWindow(mode: "enter" | "still", hold: number) {
 }
 
 /**
- * The navigation window (globals.css holds arrival fades back while it's open): "enter" settles a clicked
- * page in over 150ms, "still" keeps a keyboard jump still. It sits before the page in the tree so its layout
- * effect runs before the page's own: a page that measures itself on mount would otherwise style its
- * arrivals (and start their fades) before the window is open.
+ * Sits before the page in the tree so its layout effect runs first: a page that measures itself on mount would
+ * otherwise start its fades before the window is open.
  */
 function NavWindow({ pathname, input }: { pathname: string; input: React.RefObject<NavInput> }) {
   // A first load whose page is still streaming in behind its skeleton arrives still too, once it's here.
@@ -160,7 +153,6 @@ export function Shell({ children, memberFiles, initial }: ShellProps) {
     return map;
   }, [chordKey, isAdmin]);
 
-  // Close the mobile drawer on navigation.
   React.useEffect(() => setDrawerOpen(false), [pathname]);
 
   // A new page settles in when a click took you there. Keyboard jumps, palette picks, query-only
@@ -190,7 +182,6 @@ export function Shell({ children, memberFiles, initial }: ShellProps) {
     return () => window.removeEventListener("gluon:palette", open);
   }, []);
 
-  // ⌘K / Ctrl+K opens the palette. "g h/s/a/f…" style chords jump to sections (keys in lib/nav).
   React.useEffect(() => {
     let chord: string | null = null;
     let chordTimer: ReturnType<typeof setTimeout> | undefined;
@@ -230,7 +221,7 @@ export function Shell({ children, memberFiles, initial }: ShellProps) {
     };
   }, [prefs.shortcuts, router, chords]);
 
-  /** The one problems count lives on Home, where the Needs you widget lists them. (Household problem reports show on the account button: they're in Settings → People.) */
+  /** The one problems count lives on Home, where the Needs you widget lists them. */
   const badgeFor = (id: string): { node: React.ReactNode; text: string } | null => {
     if (viewer.role !== "admin") return null;
     if (id === "home") {
@@ -439,7 +430,6 @@ export function Shell({ children, memberFiles, initial }: ShellProps) {
   );
 }
 
-/** Marks the link while its page is on the way, so a click answers at once even when the server is slow. */
 function NavPending() {
   const { pending } = useLinkStatus();
   return <span className={s.linkPending} data-on={pending ? "" : undefined} aria-hidden />;
@@ -460,7 +450,6 @@ function NavLink({
   id: string;
   active: boolean;
   badge?: React.ReactNode;
-  /** Rail tooltip, when it should say more than the label (the count is hidden on the rail). */
   tooltip?: string;
   collapsed: boolean;
   external?: boolean;

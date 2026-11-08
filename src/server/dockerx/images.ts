@@ -19,8 +19,6 @@ interface RawImage {
   Labels?: Record<string, string> | null;
 }
 
-// ---------------------------------------------------------------- references
-
 /** Split "registry:5000/a/b:tag" into repository and tag (the colon after the last slash). */
 export function splitRef(ref: string): { repo: string; tag: string | null; digest: string | null } {
   const at = ref.indexOf("@");
@@ -38,7 +36,7 @@ const TAG = String.raw`[\w][\w.-]{0,127}`;
 const DIGEST = String.raw`sha256:[a-f0-9]{64}`;
 const REF_RE = new RegExp(`^(?:${DOMAIN}/)?${COMPONENT}(?:/${COMPONENT})*(?::${TAG})?(?:@${DIGEST})?$`);
 
-/** Check and tidy an image reference someone typed. Returns it with ":latest" when it had no tag. */
+/** Returns it with ":latest" when it had no tag. */
 export function normalizeRef(input: string): string {
   const ref = input.trim().replace(/^docker\.io\/library\//, "").replace(/^docker\.io\//, "");
   if (!ref) throw new AppError("invalid", "Type the name of an image, like jellyfin/jellyfin:latest.", 400, { field: "ref" });
@@ -52,19 +50,16 @@ export function normalizeRef(input: string): string {
 const isDigestRef = (r: string) => r.includes("@");
 const realTag = (t: string) => t && t !== "<none>:<none>" && !isDigestRef(t);
 
-/** The best name for an image in a sentence. */
 export function imageLabel(i: Pick<DockerImage, "tags" | "repo" | "short">): string {
   return i.tags[0] ?? (i.repo ? `${i.repo} (untagged)` : `untagged image ${i.short}`);
 }
-
-// ---------------------------------------------------------------- listing
 
 const GLUON_REPO = /(^|\/)([a-z0-9]+-)?gluon(-gluon|-dev)?$|^tend(-dev)?$/;
 const UMBREL_REPO = /^(ghcr\.io\/)?(getumbrel\/|dockurr\/umbrel$)/;
 
 let totalCache: { at: number; value: number | null } | null = null;
 
-/** Everything Docker keeps for images, counted once. From its disk-usage report (can be slow). */
+/** From Docker's disk-usage report, which can be slow. */
 export async function imagesTotal(maxWaitMs = 1500): Promise<number | null> {
   if (totalCache && Date.now() - totalCache.at < 30_000) return totalCache.value;
   const p = dial<{ LayersSize?: number }>({ path: "/system/df", method: "GET", query: { type: "image" } })
@@ -179,15 +174,10 @@ export async function getImage(id: string): Promise<DockerImage> {
   return img;
 }
 
-// ---------------------------------------------------------------- can it come back?
-
 const remoteCache = new Map<string, { at: number; value: RemoteState }>();
 export type RemoteState = { status: "same" | "newer" | "missing" | "unknown"; digest: string | null; message?: string };
 
-/**
- * Ask the registry (through Docker) what a tag points at now: whether it can be downloaded again
- * and whether it's newer than the copy here. Cached for 30 minutes.
- */
+/** Through Docker. Cached for 30 minutes. */
 export async function remoteState(ref: string, localIds: string[], fresh = false): Promise<RemoteState> {
   const key = `${ref}|${localIds.join(",")}`;
   const hit = remoteCache.get(key);
@@ -214,8 +204,6 @@ export function localDigests(i: DockerImage): string[] {
   return [i.id, ...i.digests.map((d) => d.split("@")[1] ?? "")].filter(Boolean);
 }
 
-// ---------------------------------------------------------------- removing
-
 interface RemoveOptions {
   /** Remove only this one tag (when the image has others). */
   tag?: string;
@@ -238,9 +226,8 @@ async function usersNow(id: string): Promise<ContainerRef[]> {
 }
 
 /**
- * Remove an image by deleting each of its references without force, so Docker itself refuses if
- * a container starts using it in the meantime. Containers are only removed when asked, when all
- * of them are stopped, and never Gluon's or Umbrel's own.
+ * Each reference is deleted without force, so Docker itself refuses if a container starts using it
+ * meanwhile. Containers are only removed when asked, all stopped, and never Gluon's or Umbrel's own.
  */
 export async function removeImage(id: string, opts: RemoveOptions = {}): Promise<{ message: string; freed: number; removedContainers: string[] }> {
   const img = await getImage(id);
@@ -322,8 +309,6 @@ export function afterChange() {
   publish("docker.resources", { at: Date.now() });
 }
 
-// ---------------------------------------------------------------- pulling
-
 interface RawPull {
   status?: string;
   id?: string;
@@ -343,8 +328,8 @@ export function pullErrorText(msg: string, ref: string): string {
 }
 
 /**
- * Download an image, reporting each layer. Docker sends a JSON line per change; these are folded
- * into one event per layer phase, at most every 200 ms per layer.
+ * Docker sends a JSON line per change; these are folded into one event per layer phase, at most every
+ * 200 ms per layer.
  */
 export async function pullImage(input: string, emit: (e: PullEvent) => void, signal: AbortSignal): Promise<{ ok: boolean; message: string; changed: boolean; imageId: string | null; users: ContainerRef[] }> {
   const ref = normalizeRef(input);

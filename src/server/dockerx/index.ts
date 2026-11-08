@@ -6,7 +6,6 @@ import { listImages } from "./images";
 import { listVolumes } from "./volumes";
 import { listNetworks } from "./networks";
 
-/** ⌘K finds images, volumes and networks by name (admins only). */
 registerSearch({
   key: "docker",
   name: "Docker",

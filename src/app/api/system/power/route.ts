@@ -3,14 +3,12 @@ import { route } from "@/server/api";
 import { audit } from "@/server/audit";
 import { cancelScheduled, powerNow, powerStatus, schedulePower } from "@/server/system/power";
 
-/** Pending scheduled restart/shutdown, whether an update is running, and reboot-required. */
 export const GET = route({ auth: "admin" }, () => powerStatus());
 
 const body = z.object({
   action: z.enum(["restart", "shutdown"]),
   /** "now" (in 3 seconds) or "HH:MM" (server time, next occurrence within 24 h). */
   when: z.union([z.literal("now"), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Choose a time like 03:30.")]).default("now"),
-  /** Go ahead even though updates are being installed. */
   force: z.boolean().optional(),
 });
 
@@ -32,7 +30,6 @@ export const POST = route({ auth: "admin", recent: true, body }, async ({ body, 
   return { ok: true, scheduled };
 });
 
-/** Cancel a scheduled restart/shutdown. */
 export const DELETE = route({ auth: "admin", recent: true }, async ({ user, ip, zone }) => {
   const cancelled = await cancelScheduled();
   if (cancelled) audit(user, { action: "system.power.cancel", target: "server", summary: "Cancelled the scheduled restart" }, { ip, zone });

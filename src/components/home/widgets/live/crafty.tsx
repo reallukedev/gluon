@@ -1,6 +1,4 @@
 "use client";
-// Crafty Controller: every game server, who's on, and Start, Stop and Restart for admins. After a command the row
-// follows the server until Crafty reports it got there, and says so plainly when it doesn't.
 import * as React from "react";
 import { mutate } from "swr";
 import { MoreHoriz } from "iconoir-react";
@@ -28,7 +26,6 @@ function plural(n: number, one: string, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-/** "Steve, Alex and notch", "Steve, Alex and 4 more". */
 function names(p: NonNullable<CraftyServer["players"]>, max = 3): string {
   const shown = p.names.slice(0, max);
   const rest = Math.max(p.online - shown.length, 0);
@@ -37,7 +34,6 @@ function names(p: NonNullable<CraftyServer["players"]>, max = 3): string {
   return `${shown.join(", ")} and ${rest} more`;
 }
 
-/** The sentence over the list: how many are up and how many people are on. */
 function summary(list: CraftyServer[]): string {
   const up = list.filter((s) => s.state === "running").length;
   const coming = list.filter((s) => s.line === "starting").length;
@@ -53,10 +49,7 @@ function summary(list: CraftyServer[]): string {
   return parts.join(" · ");
 }
 
-/**
- * Up (or coming up, or in trouble) first, then stopped, by name within each. While a command settles the rows
- * keep the order they had, so the one being pressed never slides away.
- */
+/** While a command settles the rows keep their order, so the one being pressed never slides away. */
 function ordered(list: CraftyServer[], keep: string[] | null): CraftyServer[] {
   if (keep?.length) {
     const at = new Map(keep.map((id, i) => [id, i]));
@@ -80,7 +73,6 @@ interface Tracked extends Pending {
   verdict: Exclude<Verdict, { kind: "done" }>;
   /** Still being followed. False once the back-off gives up: the message stays, the row shows the widget's data. */
   watching: boolean;
-  /** Latest answer while following it. */
   server: CraftyServer | null;
 }
 
@@ -90,15 +82,10 @@ interface Commands {
   settled: Record<string, Settled>;
 }
 
-/**
- * Commands and their progress for one Crafty connection, shared by every Minecraft servers widget on the page so
- * two of them never disagree. While any command is unsettled the store polls each such server through Gluon every
- * two seconds; once one settles its row keeps that answer until the widget's own data is at least as new.
- */
+/** Shared by every widget on the page for one connection, so two of them never disagree. */
 class CommandStore {
   state: Commands = { tracked: {}, settled: {} };
   private listeners = new Set<() => void>();
-  /** One pending poll per server, each on its own back-off (pollDelay). */
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private hidden = false;
   constructor(private readonly integration: string) {}
@@ -145,7 +132,6 @@ class CommandStore {
     this.set({ tracked: rest });
   }
 
-  /** Ask about one server after `delay` (default: its back-off). Stops for good when the back-off says so. */
   private schedule(id: string, delay?: number) {
     clearTimeout(this.timers.get(id));
     this.timers.delete(id);
@@ -183,7 +169,6 @@ class CommandStore {
     if (this.state.tracked[id]?.since === p.since) this.schedule(id);
   }
 
-  /** Send a command. Throws (with Crafty's or Gluon's reason) so a confirmation dialog can show it. */
   run = async (s: CraftyServer, action: CraftyAction) => {
     const since = Date.now();
     this.set({ tracked: { ...this.state.tracked, [s.id]: { action, since, run: s.run, verdict: { kind: "wait" }, server: null, watching: true } } });
@@ -209,7 +194,6 @@ const storeFor = (integration: string) => {
 const EMPTY: Commands = { tracked: {}, settled: {} };
 const noop = () => () => {};
 
-/** Every Minecraft servers widget reading this connection fetches again. */
 function refreshWidgets(integration: string) {
   return mutate((key) => Array.isArray(key) && key[0] === "widget" && key[1] === "crafty.servers" && key[2] === integration);
 }
@@ -276,13 +260,10 @@ interface RowProps {
   s: CraftyServer;
   t: Tracked | undefined;
   admin: boolean;
-  /** Commands are off while the shown state may be old (Crafty not answering). */
   live: boolean;
   wide: boolean;
   tall: boolean;
-  /** The only server: room to name everyone who's on. */
   solo: boolean;
-  /** Doesn't fit the widget: kept in the layout (so it can be measured) but not shown or reachable. */
   hidden?: boolean;
   now: number;
   href: string | null;
@@ -418,7 +399,6 @@ function confirmCopy(s: CraftyServer, action: CraftyAction) {
   }
 }
 
-/** "4 more servers, 2 running": what the rows that didn't fit are doing, so nothing running goes unseen. */
 function moreLine(rest: CraftyServer[]): string {
   const up = rest.filter((s) => s.line !== "stopped").length;
   const head = `${rest.length} more ${rest.length === 1 ? "server" : "servers"}`;
@@ -426,10 +406,7 @@ function moreLine(rest: CraftyServer[]): string {
   return up === rest.length ? `${head}, ${rest.length === 1 ? "running" : "all running"}` : `${head}, ${up} running`;
 }
 
-/**
- * The rows that fit, whole: a row that would be cut is hidden (useFit) and counted in a "more" line that opens
- * every server in a sheet, the way the uptime and needs-you widgets count what they couldn't show.
- */
+/** A row that would be cut is hidden and counted in a "more" line instead. */
 function ServerList({ list, dense, tall, row }: { list: CraftyServer[]; dense: boolean; tall: boolean; row: (s: CraftyServer, o?: { hidden?: boolean; inSheet?: boolean }) => React.ReactNode }) {
   const [listRef, fit] = useFit<HTMLUListElement>(list.length);
   const [open, setOpen] = React.useState(false);
@@ -495,7 +472,6 @@ export function CraftyServers({ item, size }: WidgetProps<IntegrationConfig>) {
 
   const wide = size === "w" || size === "x" || size === "l";
   const tall = size === "t" || size === "l" || size === "x";
-  // The short wide sizes put each server on one line, so three fit where two would.
   const dense = size === "m" || size === "w";
   const fetchedAt = q.response?.fetchedAt ?? 0;
   // Crafty itself is still coming up: nothing answers yet, but it will in a moment.

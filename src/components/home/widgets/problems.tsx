@@ -1,7 +1,4 @@
 "use client";
-// Every open problem on admins' Home, worst first, each with its fix and a way to put it off. Links to a
-// problem (alerts, search, monitors, the status hero) land here by its id.
-import * as React from "react";
 import { registerWidget } from "../widgetStore";
 import type { WidgetProps } from "../types";
 import type { StatusPayload } from "@/server/status";

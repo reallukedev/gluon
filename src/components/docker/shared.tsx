@@ -13,19 +13,16 @@ import s from "./docker.module.css";
 export const appHref = (a: AppRef) => `/apps/${encodeURIComponent(a.id)}`;
 export const containerHref = (c: { id: string }) => `/apps/containers/${c.id.slice(0, 12)}`;
 
-/** "Immich" or "Immich from CasaOS" when the source matters (Umbrel and CasaOS own their apps). */
 export function appWords(a: AppRef): string {
   return a.source === "umbrel" || a.source === "casaos" ? `${a.name} (${sourceName(a.source)})` : a.name;
 }
 
 export type InitialError = { code: string; message: string } | null;
 
-/** The server page's own error, until the client's first answer replaces it. */
 export function firstError(data: unknown, initial: InitialError): ApiError | undefined {
   return !data && initial ? new ApiError(initial.code, initial.message, initial.code === "not_found" ? 404 : initial.code === "docker_down" ? 503 : 500) : undefined;
 }
 
-/** An error from a list endpoint, with what to do about it. */
 export function LoadError({ error, what, onRetry, retrying }: { error: unknown; what: string; onRetry: () => void; retrying?: boolean }) {
   const e = error instanceof ApiError ? error : null;
   const down = e?.code === "docker_down";
@@ -51,7 +48,6 @@ export function LoadError({ error, what, onRetry, retrying }: { error: unknown; 
   );
 }
 
-/** Who uses a resource: a state line for the busiest container, and the apps by name. */
 export function UsedBy({ refs, empty, note }: { refs: ContainerRef[]; empty: React.ReactNode; note?: React.ReactNode }) {
   if (!refs.length) {
     return (
@@ -63,7 +59,6 @@ export function UsedBy({ refs, empty, note }: { refs: ContainerRef[]; empty: Rea
   }
   const running = refs.filter((r) => r.state === "running");
   const line = running.length ? (running.some((r) => r.line === "unhealthy") ? "unhealthy" : "running") : refs.some((r) => r.line === "unhealthy") ? "unhealthy" : "stopped";
-  // One entry per app; containers without an app by name.
   const seen = new Set<string>();
   const parts: React.ReactNode[] = [];
   const appNames = new Map<string, Set<string>>();
@@ -130,7 +125,6 @@ export function SortHead<T extends string>({ k, label, sort, setSort, asc, end }
   );
 }
 
-/** Rows of hairline skeletons shaped like a table's rows. */
 export function TableSkeleton({ columns, rows = 6, check }: { columns: string; rows?: number; check?: boolean }) {
   return (
     <div className={s.table} aria-busy="true" aria-label="Loading">
@@ -153,7 +147,6 @@ export function TableSkeleton({ columns, rows = 6, check }: { columns: string; r
   );
 }
 
-/** Row selection that forgets ids which are no longer selectable. */
 export function useSelection(selectable: string[]) {
   const [sel, setSel] = React.useState<Set<string>>(new Set());
   const key = selectable.join("|");
@@ -176,7 +169,7 @@ export function useSelection(selectable: string[]) {
   return { selected: sel, setSelected: setSel, toggle };
 }
 
-/** Keep `?q=` in the address so a search from ⌘K lands filtered, without adding history entries. */
+/** Keeps `?q=` in the address so a search from ⌘K lands filtered, without adding history entries. */
 export function useQueryParam(initial: string) {
   const [q, setQ] = React.useState(initial);
   React.useEffect(() => {

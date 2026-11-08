@@ -15,9 +15,8 @@ import { firstTime, getState, setState } from "./state";
 import { XMPP_SENDER as SENDER } from "./xmpp-format";
 
 /**
- * Change detectors for the notifications that aren't problems: Gluon and app updates, sign-ins
- * and the chat server. Each remembers what it has seen (notify_state), the first look only takes a
- * baseline, and each event is announced once (firstTime + the delivery dedupe key).
+ * Each remembers what it has seen (notify_state); the first look only takes a baseline, and each
+ * event is announced once.
  */
 
 const base = () => publicBaseUrl();
@@ -27,8 +26,6 @@ async function announce(n: Notice) {
   if (!firstTime(`${n.kind}|${n.key}`)) return;
   await notifyEvent(n);
 }
-
-// ---------------------------------------------------------------- the activity log (sign-ins and security)
 
 interface AuditRow {
   id: number;
@@ -83,8 +80,6 @@ async function auditWatch() {
     }
   }
 }
-
-// ---------------------------------------------------------------- Gluon's own updates
 
 interface SelfUpdateRow {
   id: string;
@@ -144,8 +139,6 @@ async function gluonAvailableWatch() {
     severity: "info",
   });
 }
-
-// ---------------------------------------------------------------- apps
 
 interface AppSeen {
   /** Umbrel's installed version. */
@@ -235,8 +228,6 @@ async function registryWatch() {
   }
 }
 
-// ---------------------------------------------------------------- chat server
-
 const ACCOUNTS_LUA = `local um=require"core.usermanager"; local out={};
 for name,h in pairs(prosody.hosts) do if h.type=="local" and name~="localhost" then local us={}; for u in um.users(name) do us[#us+1]=u end; out[#out+1]={host=name, users=us} end end;
 return out`;
@@ -282,8 +273,6 @@ async function chatWatch() {
   }
 }
 
-// ---------------------------------------------------------------- schedule
-
 const EVERY: { name: string; ms: number; fn: () => Promise<unknown> }[] = [
   { name: "audit", ms: 0, fn: auditWatch },
   { name: "self-updates", ms: 0, fn: selfUpdateWatch },
@@ -298,7 +287,7 @@ const last = ((globalThis as G).__gluonNotifyWatch ??= new Map());
 
 const busy = new Set<string>();
 
-/** Start whatever is due. Each watcher runs on its own, at most one at a time, and fails on its own. Resolves when the ones it started finish. */
+/** Each watcher runs on its own, at most one at a time, and fails on its own. */
 export function runWatchers(): Promise<unknown> {
   const t = Date.now();
   const started: Promise<unknown>[] = [];

@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { route } from "@/server/api";
 import { badRequest } from "@/server/errors";
 
-/** QR code (SVG) for an invite link, so a phone can scan it off the admin's screen. Only invite links. */
+/** Only invite links are encoded. */
 const body = z.object({ url: z.string().max(400) });
 
 export const POST = route({ auth: "admin", body }, async ({ body }) => {

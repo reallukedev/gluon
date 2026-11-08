@@ -11,15 +11,12 @@ import { Time } from "@/components/ui/Time";
 import type { LineState } from "@/lib/types";
 import s from "./diagram.module.css";
 
-// ---------------------------------------------------------------- model
-
 interface AddrNode {
   id: string;
   kind: "public" | "home";
   label: string;
   href: string;
   note?: string;
-  /** Container it reaches, and on which host port. */
   target: { ctr: string; port: number } | null;
 }
 
@@ -110,7 +107,6 @@ function buildModel(app: AppDetail) {
     addrs.push({ id: "a:home", kind: "home", label: app.urls.home.replace(/^https?:\/\//, ""), href: app.urls.home, note: "On your home network", target: servesPort(Number.isFinite(port) ? port : null) });
   }
 
-  // Storage: one node per source, however many containers share it.
   const byKey = new Map<string, StoreNode>();
   for (const d of app.details) {
     for (const m of d.mounts) {
@@ -162,19 +158,12 @@ function buildModel(app: AppDetail) {
   return { addrs, ctrs, groups, edges };
 }
 
-// ---------------------------------------------------------------- view
-
 export interface DiagramActions {
   onContainer: (name: string, action: "restart" | "stop" | "start") => void;
   busy: string | null;
   logsHref: (container: string) => string;
 }
 
-/**
- * How an app is put together: its addresses on the left, its containers in the middle (each with
- * the ports it publishes), and the folders and volumes they keep data in on the right. Hover or
- * focus any box to trace its connections; containers open their actions.
- */
 export function StackDiagram({ app, actions }: { app: AppDetail; actions: DiagramActions }) {
   const model = React.useMemo(() => buildModel(app), [app]);
   const stats = useContainerStats();

@@ -3,7 +3,6 @@ import { DOMAIN_RE, installSettings } from "./recipe";
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 
-/** What the chat server install flow sends. */
 export const installBody = z.object({
   /** Quark unless the person picks Prosody. */
   server: z.enum(["quark", "prosody"]).default("quark"),

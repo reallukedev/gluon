@@ -50,10 +50,6 @@ export function ResultRow({ r, item, groupLabel, compact, applied, onApplied }: 
 
 const ORDER = { fail: 0, warn: 1, ok: 2, skip: 3 } as const;
 
-/**
- * Problems first (broken, then worth a look) with their fixes; the checks that passed fold away under
- * one line so the list stays about what needs attention.
- */
 export function ResultList({ plan, groups, results, showGroups, openPassed, setOpenPassed, emptyNote }: { plan: CheckPlanItem[]; groups: CheckupGroup[]; results: CheckResult[]; showGroups: boolean; openPassed: boolean; setOpenPassed: (v: boolean) => void; emptyNote?: React.ReactNode }) {
   const [applied, setApplied] = React.useState<Set<string>>(() => new Set());
   const onApplied = React.useCallback((id: string) => setApplied((a) => new Set(a).add(id)), []);

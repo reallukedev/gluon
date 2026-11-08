@@ -17,9 +17,8 @@ import { MUMBLE_PORT, mumbleLink, slugFor, voiceRecipe, type VoiceAnswers } from
 import type { InstallDefaults } from "./types";
 
 /**
- * Installing a new voice server, the way the chat installer does it: create a builder draft from
- * the recipe (the page then publishes it and follows the builder's job), then finish: wait for
- * Mumble's admin connection and set a random admin (SuperUser) password, shown once.
+ * Like the chat installer: a builder draft from the recipe (the page publishes it), then wait for Ice
+ * and set a random SuperUser password, shown once.
  */
 
 type Where = { ip?: string; zone?: string };
@@ -49,7 +48,7 @@ async function freeSlug(base: string): Promise<string> {
   throw new AppError("invalid", "Couldn't find a free id for that name. Pick another name.", 409, { field: "name" });
 }
 
-/** Check the answers and make the builder draft. Ice's secrets are saved for the app it becomes. */
+/** Ice's secrets are saved for the app the draft becomes. */
 export async function startVoiceInstall(a: VoiceAnswers, user: User, where: Where): Promise<{ draftId: string; appId: string }> {
   const taken = await takenPorts();
   for (const proto of ["tcp", "udp"] as const) {
@@ -76,7 +75,6 @@ export interface InstallDone {
   superuser: string;
 }
 
-/** Once the publish has run: wait for Mumble, then give it a random admin password and hand that over once. */
 export async function finishVoiceInstall(draftId: string, user: User, where: Where): Promise<InstallDone> {
   const d = await appDetail(draftId);
   const appId = d.appId;

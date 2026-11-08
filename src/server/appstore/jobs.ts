@@ -5,9 +5,9 @@ import { publish as publishEvent } from "../events";
 import type { JobEvent, JobKind, JobSnapshot } from "@/lib/builder-types";
 
 /**
- * Long builder operations (publish, build, remove) run as jobs that outlive the request that
- * started them: closing the tab doesn't stop an install halfway. Each job keeps its events so a
- * page opened later shows the whole run, and a second click attaches instead of starting again.
+ * Jobs outlive the request that started them, so closing the tab doesn't stop an install halfway.
+ * Each keeps its events so a page opened later shows the whole run, and a second click attaches
+ * instead of starting again.
  */
 
 interface Job extends JobSnapshot {
@@ -47,10 +47,7 @@ export function clearJob(appId: string) {
   if (j?.finishedAt) jobs.delete(appId);
 }
 
-/**
- * Start a job, or refuse when one is running. `run` returns the final message; throwing an
- * AppError ends it as a failure with that message.
- */
+/** `run` returns the final message; throwing an AppError ends it as a failure with that message. */
 export function startJob(appId: string, kind: JobKind, stages: { key: string; label: string }[], run: (emit: Emit) => Promise<{ ok: boolean; message: string; detail?: string[] }>): Job {
   const existing = jobs.get(appId);
   if (existing && !existing.finishedAt) throw conflict(existing.kind === kind ? "That's already running." : `Wait for the ${existing.kind === "build" ? "build" : existing.kind === "remove" ? "removal" : "publish"} to finish first.`);
@@ -79,7 +76,7 @@ export function startJob(appId: string, kind: JobKind, stages: { key: string; la
   return job;
 }
 
-/** Stream a job's events (from the start) as NDJSON until it ends or the client leaves. */
+/** From the start, as NDJSON. */
 export function streamJob(appId: string, signal: AbortSignal): Response {
   const job = jobs.get(appId);
   return ndjson(async (emit) => {

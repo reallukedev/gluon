@@ -106,8 +106,8 @@ async function isBindMountedFile(real: string): Promise<boolean> {
 }
 
 /**
- * Save a small text file. `expectedMtime` must match the file on disk (someone may have edited it
- * by hand since it was opened); pass null with `create` to make a new file.
+ * `expectedMtime` must match the file on disk, since someone may have edited it by hand since it was
+ * opened.
  */
 export async function saveText(
   user: User,

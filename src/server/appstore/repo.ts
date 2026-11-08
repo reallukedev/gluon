@@ -7,10 +7,9 @@ import { local, CommandError } from "../host/exec";
 import { AppError } from "../errors";
 
 /**
- * Gluon's Umbrel app store: a bare git repository in Gluon's data folder. Commits are made with
- * git's plumbing from a freshly written tree each time (no working copy to drift), and `main` is
- * moved with a compare-and-swap update-ref, so a reader (Umbrel cloning over HTTP) always sees a
- * whole commit.
+ * Commits are made with git's plumbing from a freshly written tree (no working copy to drift), and
+ * `main` moves by compare-and-swap update-ref, so Umbrel cloning over HTTP always sees a whole
+ * commit.
  */
 
 export const STORE_DIR = path.join(DATA_DIR, "appstore");
@@ -79,10 +78,7 @@ export async function headCommit(): Promise<string | null> {
 
 const SAFE_PATH = /^(?!\.{1,2}(\/|$))[A-Za-z0-9._-]+(\/(?!\.{1,2}(\/|$))[A-Za-z0-9._-]+)*$/;
 
-/**
- * Write the whole store (every app folder) as the next commit. Returns the commit; when nothing
- * changed, the current one.
- */
+/** Returns the commit; when nothing changed, the current one. */
 export async function commitStore(storeId: string, storeName: string, apps: Record<string, Record<string, string>>, message: string): Promise<string> {
   const stage = path.join(STORE_DIR, `.stage-${crypto.randomBytes(6).toString("hex")}`);
   const index = `${stage}.index`;

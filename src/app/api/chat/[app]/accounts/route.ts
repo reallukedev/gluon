@@ -17,7 +17,7 @@ const body = z.object({
   role: z.enum(["member", "admin"]).default("member"),
 });
 
-/** Create a chat account. A made-up password comes back once, for the admin to pass on. */
+/** A made-up password comes back once, for the admin to pass on. */
 export const POST = route({ auth: "admin", recent: true, body, burst: { limit: 30, windowMs: 60_000 } }, async ({ params, body, user, ip, zone }) => {
   const appId = param(params.app);
   const { t } = await targetAndHost(appId, body.host);

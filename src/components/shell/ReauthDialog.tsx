@@ -8,11 +8,7 @@ import { clock, retryAfterOf, useCountdown } from "@/components/auth/useCountdow
 import { api, ApiError, setReauthHandler } from "@/lib/client/api";
 import { useViewer } from "@/components/PrefsProvider";
 
-/**
- * Risky actions (power, disks, deleting things, security changes) need a fresh password (and a
- * two-step code when that's on). The API client calls this, waits for the answer, then retries the
- * original request. Confirming covers the next 10 minutes.
- */
+/** The API client calls this, waits for the answer, then retries the original request. */
 export function ReauthDialog() {
   const viewer = useViewer();
   const [open, setOpen] = React.useState(false);

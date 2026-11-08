@@ -6,10 +6,6 @@ import { host, local, CommandError } from "../../host/exec";
 import { readHostFileOr } from "../../host/paths";
 import { LOCAL_HOST } from "../../network/probes";
 
-/** Small read-only probes the checkup needs beyond the ones other modules already have. */
-
-// ---------------------------------------------------------------- routing and resolvers
-
 export interface Gateway {
   gateway: string;
   dev: string | null;
@@ -39,8 +35,6 @@ export function hostNameservers(): string[] {
     .filter((x): x is string => !!x)
     .slice(0, 3);
 }
-
-// ---------------------------------------------------------------- ping with a chosen interval
 
 export interface PingSeries {
   target: string;
@@ -86,8 +80,6 @@ export async function pingSeries(target: string, count: number, intervalS = 0.2,
   const s = summarizeRtts(rtts);
   return { target, sent, received, lossPct: sent ? Math.round(((sent - received) / sent) * 1000) / 10 : 100, rtts, min: s.min, avg: s.avg, max: s.max, jitter: s.jitter, raw: stdout.trim().split("\n").slice(-3).join("\n"), error };
 }
-
-// ---------------------------------------------------------------- HTTP
 
 export interface HttpAnswer {
   status: number | null;
@@ -180,8 +172,6 @@ export function download(url: string, maxBytes: number, capMs: number, signal?: 
     const timer = setTimeout(() => finish(bytes ? null : "timed out"), capMs);
   });
 }
-
-// ---------------------------------------------------------------- pressure, CPU, swap
 
 export interface Pressure {
   some10: number;

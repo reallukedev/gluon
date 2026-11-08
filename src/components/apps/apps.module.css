@@ -1,8 +1,4 @@
-/*
- * The toolbar and table share a size container, so columns follow the width the table really has
- * (sidebar open or collapsed, compact or not), not the window. As it narrows: the CPU trace goes
- * (under 1080px), then the memory bar (under 960px), then rows restack onto two lines (under 700px).
- */
+/* Columns follow the width the table really has (sidebar open or collapsed), not the window. */
 .list { container: apps / inline-size; min-width: 0; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
 .filter {
@@ -45,7 +41,6 @@
 @container apps (max-width: 959px) {
   .headRow, .row { grid-template-columns: minmax(150px, 1.7fr) minmax(130px, 1.6fr) 60px 72px minmax(124px, 1.3fr) 36px; gap: 12px; }
 }
-/* Every head cell shares one style: micro-caps, muted, 0.14em. */
 .headRow {
   height: 38px;
   border-bottom: 1px solid var(--line);
@@ -87,7 +82,6 @@
 .row:active:not(:has(a:active, button:active)) { background: color-mix(in oklab, var(--ink) 5%, transparent); }
 .row[data-hidden] .appCell, .row[data-hidden] .stateCell { opacity: 0.6; }
 
-/* An old copy hangs under the app it copies, joined by a hairline elbow. */
 .row[data-nested] { border-top-color: transparent; }
 .row[data-nested] .appCell { padding-left: 28px; }
 .row[data-nested]::before {
@@ -104,10 +98,6 @@
 .row[data-copy] .appName { color: var(--ink-2); font-weight: 560; }
 .row[data-copy] .icon { opacity: 0.7; }
 
-/*
- * The icon carries the row's mood. Broken: it greys and tips over a little, beside the doubled mark and
- * its fix; when the fix works it rights itself. On a fine pointer it lifts as the row is hovered.
- */
 .icon { display: flex; flex: none; transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
 .row[data-broken] .icon { transform: rotate(calc(-6deg * var(--motion))); opacity: 0.85; filter: grayscale(1); }
 @media (hover: hover) and (pointer: fine) {
@@ -120,7 +110,6 @@
 .appName { font-size: var(--text-md); font-weight: 620; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) { .appName:hover { text-decoration: underline; text-underline-offset: 0.2em; } }
 .appSub { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* "4 parts": the containers are named in its tooltip. */
 .parts { text-decoration: underline dotted var(--line-strong); text-underline-offset: 0.25em; cursor: default; }
 .stateCell { min-width: 0; display: grid; gap: 4px; justify-items: start; }
 .stateLine { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
@@ -129,21 +118,18 @@
 .meterCell { min-width: 0; display: flex; align-items: center; }
 .addrCell { min-width: 0; }
 .actions { display: flex; justify-content: flex-end; gap: 2px; }
-/* The figures are for the curious: present, but a step quieter than the name and state. */
 .meterCell { color: var(--muted); }
 
 .copyNote { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
 .copyText { font-size: var(--text-sm); color: var(--muted); min-width: 0; }
 .copyNote > button { margin-left: -10px; }
 
-/* Umbrel's own progress, from its app state. */
 .progress { display: grid; gap: 6px; width: 100%; max-width: 180px; }
 .progressTrack { position: relative; display: block; height: 3px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
 .progressTrack > span { position: absolute; inset: 0; background: var(--ink-2); transform-origin: left; transition: transform var(--dur-slow) var(--ease-out); }
 .progressTrack > span[data-indeterminate] { right: 65%; animation: sweep 1400ms var(--ease-in-out) infinite; }
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 
-/* Restacked: name and actions; then the state (and its fix); where it opens; then the quiet figures. */
 @container apps (max-width: 699px) {
   .headRow { display: none; }
   .row {

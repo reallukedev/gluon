@@ -1,4 +1,3 @@
-/* "Put an app on the internet" */
 .flow { display: grid; gap: 18px; min-width: 0; }
 /* A stable stage so the dialog doesn't jump as steps change height. */
 .stage { min-height: 330px; min-width: 0; }
@@ -13,7 +12,6 @@
 .row2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 @media (max-width: 640px) { .row2 { grid-template-columns: 1fr; } }
 
-/* App picker */
 .pickHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .filter { position: relative; width: min(220px, 100%); }
 .filter svg { position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
@@ -41,7 +39,6 @@
 .pickSub { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pickOther { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px; border: 1px dashed var(--line-strong); font-family: var(--font-mono); font-stretch: var(--mono-stretch); color: var(--muted); }
 
-/* Choice cards (lane, scope) */
 .lanes, .scope { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 560px) { .lanes, .scope { grid-template-columns: 1fr; } }
 .choice {
@@ -69,7 +66,6 @@
 .choiceExample { font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .choiceText { font-size: var(--text-sm); color: var(--muted); line-height: 1.45; }
 
-/* Address + live preview */
 .nameBlock { display: grid; gap: 10px; }
 .preview { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--radius-control); background: var(--sunk); min-width: 0; }
 .previewUrl { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-base); color: var(--ink); overflow-wrap: anywhere; line-height: 1.35; }
@@ -79,7 +75,6 @@
 .shortLink { display: grid; gap: 12px; }
 .more { display: grid; gap: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--panel-2); }
 
-/* Protection */
 .loginCard { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 14px 16px; border-radius: var(--radius-control); border: 1px solid var(--line); background: var(--panel-2); }
 .loginIcon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: var(--sunk); color: var(--ink-2); }
 .loginIcon svg { width: 18px; height: 18px; }
@@ -90,7 +85,6 @@
 .loginFix { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
 .ack { margin-top: 10px; display: grid; gap: 6px; }
 
-/* Review */
 .reviewUrl { font-size: var(--text-lg); font-weight: 500; overflow-wrap: anywhere; }
 .lane {
   list-style: none;
@@ -135,7 +129,6 @@
   .recapRow > :last-child { grid-column: 2; grid-row: 1 / span 2; }
 }
 
-/* Address: the name, then the domain it sits in (a picker once Cloudflare is connected). */
 .address { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
 .address > :first-child { flex: 1 1 auto; min-width: 0; }
 .domainPick { flex: 0 1 auto; max-width: 55%; min-width: 132px; font-family: var(--font-mono); font-size: 0.93em; }

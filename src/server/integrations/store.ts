@@ -23,7 +23,6 @@ interface Row {
   updated_at: number;
 }
 
-/** Decrypted integration for server-side use only. */
 export interface IntegrationRecord {
   id: string;
   kind: IntegrationKind;
@@ -38,8 +37,6 @@ export interface IntegrationRecord {
   updatedAt: number;
 }
 
-// ------------------------------------------------------------------ status (in memory)
-
 type G = typeof globalThis & { __gluonIntegrationStatus?: Map<string, IntegrationStatus> };
 const g = globalThis as G;
 const statuses = (g.__gluonIntegrationStatus ??= new Map());
@@ -48,8 +45,6 @@ export function noteStatus(id: string, ok: boolean, message: string | null) {
   statuses.set(id, { ok, message, checkedAt: Date.now() });
 }
 const statusOf = (id: string): IntegrationStatus => statuses.get(id) ?? { ok: null, message: null, checkedAt: null };
-
-// ------------------------------------------------------------------ helpers
 
 export const nameSchema = z.string().trim().min(1, "Give it a name.").max(60, "Keep the name under 60 characters.");
 function parseName(v: string): string {
@@ -74,7 +69,6 @@ function hint(key: string, v: string): string | null {
   return `••••${v.slice(-4)}`;
 }
 
-/** Split a config into what may be shown and the state of each secret. */
 export function maskConfig(kind: IntegrationKind, config: Record<string, unknown> | null): { config: Record<string, unknown>; secrets: Record<string, SecretState> } {
   const def = KINDS[kind];
   const shown: Record<string, unknown> = { ...(config ?? {}) };
@@ -185,8 +179,6 @@ function toAdminView(rec: IntegrationRecord): Integration {
   };
 }
 
-// ------------------------------------------------------------------ queries
-
 export function getRecord(id: string): IntegrationRecord | null {
   const r = one<Row>("SELECT * FROM integrations WHERE id = ?", id);
   return r ? toRecord(r) : null;
@@ -214,12 +206,10 @@ export function refOf(
   return { id: rec.id, kind: rec.kind, name: rec.name, widgets: KINDS[rec.kind]?.widgets ?? [], links, appId: app?.id ?? rec.appId, appLine: app?.line ?? null };
 }
 
-/** Last known health of a saved connection (tests and widget fetches). */
 export function statusFor(rec: IntegrationRecord): IntegrationStatus {
   return rec.configError ? { ok: false, message: rec.configError, checkedAt: null } : statusOf(rec.id);
 }
 
-/** Integrations this person may use in widgets. */
 export function usableRecords(user: Pick<User, "role">): IntegrationRecord[] {
   return listRecords().filter((r) => r.config && (user.role === "admin" || r.shared));
 }
@@ -237,8 +227,6 @@ export function contextFor(rec: IntegrationRecord): KindContext<Record<string, u
   if (!rec.config) throw new AppError("integration_broken", rec.configError ?? "This connection needs to be set up again.", 409);
   return { id: rec.id, name: rec.name, baseUrl: rec.baseUrl, config: rec.config, version: rec.updatedAt };
 }
-
-// ------------------------------------------------------------------ mutations
 
 export interface CreateInput {
   kind: IntegrationKind;

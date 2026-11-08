@@ -12,10 +12,7 @@ import { Time } from "@/components/ui/Time";
 import { Disclosure } from "@/components/ui/Disclosure";
 import s from "./network.module.css";
 
-/**
- * Everything else on this server that answers connections, which only devices at home can reach
- * (the router forwards web traffic to the web server alone). Problems first, the full list folded.
- */
+/** Only devices at home can reach these: the router forwards web traffic to the web server alone. */
 
 const SCOPE: Record<ListenScope, string> = {
   all: "Every device at home",

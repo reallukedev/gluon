@@ -10,8 +10,7 @@ import { spaceData } from "./widgets/space";
 import { activityPage } from "./audit";
 
 /**
- * The answers Home's widgets would fetch right after hydration, keyed by the URL each one asks for, so Home's
- * first paint is the finished page instead of skeletons that fill in a moment later. Only what's cheap and local:
+ * So Home's first paint is the finished page instead of skeletons. Only what's cheap and local;
  * anything that asks another machine (the router) still loads on the client.
  */
 export async function homePrefetch(user: User, layout: HomeLayout): Promise<Record<string, unknown>> {

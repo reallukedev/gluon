@@ -21,10 +21,6 @@ interface Line {
   where: { href: string; label: string };
 }
 
-/**
- * Admin, last: how things stand, read back from the server (not from what was clicked), with where
- * each one lives for later. Things left alone say so plainly.
- */
 export function Summary() {
   const plan = useAdminPlan();
   const { finish, leaving } = useFlow();

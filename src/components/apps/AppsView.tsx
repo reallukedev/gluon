@@ -118,7 +118,6 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const primaries = apps.filter((a) => !a.copyOf && !a.hidden);
   const copies = apps.filter((a) => a.copyOf && !a.hidden);
   const problems = apps.filter(needsHand);
-  const stopped = primaries.filter((a) => a.line === "stopped");
   // "All running" is only true when each one is: paused, unknown or busy apps aren't running.
   const runningCount = primaries.filter((a) => a.line === "running").length;
   const counts = { problems: problems.length, stopped: apps.filter((a) => a.line === "stopped").length, public: apps.filter((a) => a.routes.some((r) => r.enabled)).length };
@@ -132,7 +131,6 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
     setBusy((m) => new Map(m).set(a.id, action));
     say(`${{ start: "Starting", stop: "Stopping", restart: "Restarting" }[action]} ${a.name}…`);
     try {
-      // The row says it all: a dashed "Stopping…" line that settles into the new state.
       await api.post(`/api/apps/${encodeURIComponent(a.id)}/action`, { action });
       const fresh = (await mutate())?.find((x) => x.id === a.id);
       if (action !== "stop" && fresh?.line === "running") setSettled({ id: a.id, word: action === "restart" ? "Back up" : "Running" });
@@ -232,7 +230,6 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
     </>
   );
 
-  /** Moving and uninstalling, for the apps Gluon can do that for. */
   function appMenuTail(a: AppSummary): MenuEntry[] {
     const out: MenuEntry[] = [];
     if (!a.self && a.source !== "gluon" && !a.copyOf) {
@@ -522,7 +519,6 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
 
 }
 
-/** Umbrel installing / updating / removing, with its real percentage when Umbrel gives one. */
 function UmbrelProgress({ app }: { app: AppSummary }) {
   const u = app.umbrel!;
   const verb = { installing: "Installing", updating: "Updating", uninstalling: "Removing" }[u.state as "installing" | "updating" | "uninstalling"];
@@ -536,7 +532,6 @@ function UmbrelProgress({ app }: { app: AppSummary }) {
   );
 }
 
-/** What an old copy is, and the one thing to do about it. */
 function CopyNote({ app, of, onRemove, onStop, onHide }: { app: AppSummary; of: AppSummary | undefined; onRemove: () => void; onStop: () => void; onHide: () => void }) {
   const running = app.line !== "stopped";
   const name = of?.name ?? app.copyOf!.name;

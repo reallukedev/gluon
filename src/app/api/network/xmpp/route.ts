@@ -15,7 +15,6 @@ function syncStates(): Record<string, XmppCertSync> {
   return out;
 }
 
-/** Chat servers Gluon can see on this host, and where each chat address's certificate sync stands. */
 export const GET = route({ auth: "admin" }, async () => ({ servers: await chatServerCandidates(), sync: syncStates() }));
 
 /** Compare and copy certificates now instead of waiting for the next scheduled check. */

@@ -16,8 +16,8 @@ const schema = z
 type Config = z.infer<typeof schema>;
 
 /**
- * slskd signs its web UI in at /api/v0/session and hands back a JWT; Gluon does the same, keeps the
- * token in memory per connection version, and signs in again a minute before it expires or after a 401.
+ * Tokens from /api/v0/session are kept in memory per connection version, renewed a minute before they
+ * expire or after a 401.
  */
 type G = typeof globalThis & { __gluonSlskdTokens?: Map<string, { token: string; exp: number }> };
 const g = globalThis as G;
@@ -162,13 +162,11 @@ async function transfers(ctx: KindContext<Config>, params: Record<string, unknow
   };
 }
 
-// ------------------------------------------------------------------ universal search
-
 const STATE_WORD: Record<SlskdTransfer["state"], string> = { active: "Downloading", queued: "Queued", done: "Downloaded", failed: "Didn't finish" };
 
 /**
- * Only what slskd already has: files it downloaded (or is downloading) and searches someone ran
- * before. Never starts a Soulseek search, which would go out to the network.
+ * Never starts a Soulseek search, which would go out to the network: only downloads and searches
+ * slskd already has.
  */
 export function searchHits(ctx: KindContext<Config>, downloads: unknown, searches: unknown, q: string, limit: number): KindSearchHit[] {
   const query = prepare(q);

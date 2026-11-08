@@ -15,10 +15,6 @@ import { Thumb, type ThumbItem } from "./Thumb";
 import { PlaceIcon, baseName, parentOf, thumbUrl } from "./lib";
 import s from "./front.module.css";
 
-// The front page: what you keep, by what it is, across every drive. Collections load one after
-// another (so they don't crowd the connection), places sit in a rack with their meters, and
-// anything opens in quick look or in its folder.
-
 const COVER = /^(poster|cover|folder|front)\.(jpe?g|png|webp)$/i;
 /** Where apps and backups keep their own files (caches, databases, repositories): not anyone's photos or films. */
 const APP_STUFF = /\/(appdata|app-data|cache|caches|config|metadata|transcodes?|thumbnails?|postgres|pgdata|restic|borg|\.[^/]+)\//i;
@@ -75,7 +71,6 @@ function Shelf({ title, state, sort, filter, covers, group, withFolder, empty, l
   const id = React.useId();
   let hits = state.hits.filter((h) => h.type === "file" && personal(h) && (!filter || filter(h)));
   hits = sort === "mtime" ? hits.toSorted((a, b) => b.mtime - a.mtime) : hits.toSorted((a, b) => a.path.localeCompare(b.path));
-  // A show's episodes are one tile (its folder); a film is its own tile, with its poster.
   type Tile = { item: ThumbItem; cover: string | null; sub: React.ReactNode; hit?: SearchHit };
   const coverFor = (dir: string) => {
     const c = covers?.find((x) => COVER.test(x.name) && parentOf(x.path) === dir);
@@ -165,7 +160,6 @@ function Shelf({ title, state, sort, filter, covers, group, withFolder, empty, l
   );
 }
 
-/** What's taking the space: the biggest files anywhere, each with a size rule and a way to its folder. */
 function Largest({ state }: { state: SearchState & { retry: () => void } }) {
   const f = useFiles();
   const fmt = useFormat();

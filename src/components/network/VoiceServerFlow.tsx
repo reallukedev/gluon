@@ -16,8 +16,8 @@ import f from "./flow.module.css";
 import c from "./chat.module.css";
 
 /**
- * A voice server (Mumble) at an address. Voice apps connect straight to Mumble's port; the web
- * server keeps a certificate for the name and shows browsers a page with a mumble:// link.
+ * Voice apps connect straight to Mumble's port; the web server keeps a certificate for the name and shows browsers a
+ * mumble:// link.
  */
 
 export type VoiceTarget = { mode: "new" } | { mode: "edit"; id: string } | { mode: "convert"; id: string };

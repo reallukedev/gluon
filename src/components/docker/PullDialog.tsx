@@ -27,10 +27,6 @@ const PHASE_TEXT: Record<Phase, string> = {
   exists: "Already here",
 };
 
-/**
- * Download an image, or check a tag for a newer version: a name field, then one row per layer with
- * its own bar, then the result in words. With `ref` set it skips the form (re-pull from a row).
- */
 export function PullDialog({ open, onClose, imageRef: fixedRef, onDone }: { open: boolean; onClose: () => void; imageRef?: string | null; onDone?: () => void }) {
   const fmt = useFormat();
   const [name, setName] = React.useState("");
@@ -103,7 +99,7 @@ export function PullDialog({ open, onClose, imageRef: fixedRef, onDone }: { open
     [fixedRef, reset],
   );
 
-  // Each time the dialog opens: start the download straight away for a known tag, else show the form.
+  // Each time the dialog opens: start straight away for a known tag, else show the form.
   const runRef = React.useRef(run);
   runRef.current = run;
   React.useEffect(() => {

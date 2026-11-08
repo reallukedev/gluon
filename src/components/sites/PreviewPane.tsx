@@ -12,7 +12,6 @@ import e from "./editor.module.css";
 /** The sandbox the frame gets. The server sends the same one as a header, so opening a page on its own is no different. */
 export const FRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 
-/** A preview link for the draft, renewed before it runs out. */
 export function usePreview(siteId: string) {
   const [preview, setPreview] = React.useState<SitePreview | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -45,24 +44,24 @@ interface Props {
   page: string;
   pages: string[];
   onPage: (p: string) => void;
-  /** Bumped after every save, which reloads the frame. */
   nonce: number;
   onReload: () => void;
 }
 
 const pageUrl = (p: SitePreview, page: string) => `${p.base}/${page.split("/").map(encodeURIComponent).join("/")}`;
 
-/**
- * The draft as visitors will see it, in a sandboxed frame: its scripts run, but with no origin of
- * their own they can't read Gluon's cookies, call its API or move this page.
- */
+/** Its scripts run, but with no origin of their own they can't read Gluon's cookies, call its API or move this page. */
 export function PreviewPane({ preview, error, page, pages, onPage, nonce, onReload }: Props) {
   const [width, setWidth] = React.useState<"full" | "phone">("full");
   const [loaded, setLoaded] = React.useState(false);
   const src = preview ? `${pageUrl(preview, page)}${nonce ? `?r=${nonce}` : ""}` : null;
   // The placeholder shows while a different page loads, not on every reload after a save.
   const shown = preview ? pageUrl(preview, page) : null;
-  React.useEffect(() => setLoaded(false), [shown]);
+  const [loadedFor, setLoadedFor] = React.useState(shown);
+  if (loadedFor !== shown) {
+    setLoadedFor(shown);
+    setLoaded(false);
+  }
   const options = (pages.includes(page) ? pages : [page, ...pages]).map((p) => ({ value: p, label: p }));
 
   return (

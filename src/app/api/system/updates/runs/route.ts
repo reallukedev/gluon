@@ -7,5 +7,5 @@ const query = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
-/** Past update runs, newest first (without logs). Default excludes the daily list refreshes. */
+/** Default excludes the daily list refreshes. */
 export const GET = route({ auth: "admin", query }, ({ query }) => ({ runs: listRuns(query) }));

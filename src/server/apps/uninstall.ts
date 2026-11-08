@@ -183,10 +183,7 @@ async function uninstallLocked(app: AppSummary, mode: "keep" | "everything", pla
   return { message, failed };
 }
 
-/**
- * What "delete everything" deletes: what the person ticked (when the dialog says), else the
- * default list. Only ever things the plan says may go; folders ticked by hand must be optional ones.
- */
+/** Only ever things the plan says may go; folders ticked by hand must be optional ones. */
 export function pickRemovals(m: UninstallPlan["everything"], picked: string[] | undefined): UninstallItem[] {
   if (!picked) return m.removes;
   const want = new Set(picked);

@@ -10,12 +10,12 @@ import { findById, toUser, type User } from "./users";
 import { DEVICE_COOKIE, DEVICE_COOKIE_SECURE, DEVICE_MAX_AGE_S, deviceHash, newDeviceToken, pruneDeviceFindings, sessionDevices } from "./devices";
 import { mfaRequired, sessionEndsAt } from "./policy";
 import { AppError } from "../errors";
+import { loginHref, REQUESTED_PATH_HEADER } from "@/lib/safe-next";
 
 /**
- * Session cookies. Over HTTPS (the public address, behind Caddy) the cookie is `__Host-` prefixed:
- * the browser then insists on Secure, Path=/ and no Domain, so a sibling subdomain can't plant or
- * overwrite it. Plain-HTTP LAN addresses keep the old name (a Secure cookie can't be set there). The
- * two never meet: a cookie belongs to the address it was set on.
+ * Over HTTPS the cookie is `__Host-` prefixed, so the browser insists on Secure, Path=/ and no Domain
+ * and a sibling subdomain can't plant or overwrite it. Plain-HTTP LAN addresses can't set a Secure
+ * cookie, so they keep the plain name.
  */
 export const SESSION_COOKIE = "gluon_session";
 export const SESSION_COOKIE_SECURE = "__Host-gluon_session";
@@ -72,7 +72,7 @@ const toSession = (r: SessionRow): Session => ({
   zone: (r.zone as Zone) ?? "home",
 });
 
-/** Inactivity before signing in again. Sessions used from outside home get the shorter of the two. */
+/** Sessions used from outside home get the shorter of the two. */
 export function lifetimeMs(zone: Zone): number {
   const home = getSetting("sessionDays");
   const days = zone === "away" ? Math.min(home, getSetting("awaySessionDays")) : home;
@@ -96,7 +96,7 @@ async function writeCookie(raw: string, expires: number) {
   jar.set(cookieName(https), raw, { httpOnly: true, sameSite: "lax", secure: https, path: "/", expires: new Date(expires) });
 }
 
-/** The browser's device id (hashed), creating the long-lived device cookie if it has none. */
+/** Hashed. Creates the long-lived device cookie if there's none. */
 export async function currentDevice(): Promise<string> {
   const [jar, { https }] = await Promise.all([cookies(), requestInfo()]);
   const name = https ? DEVICE_COOKIE_SECURE : DEVICE_COOKIE;
@@ -110,8 +110,8 @@ export async function currentDevice(): Promise<string> {
 }
 
 /**
- * Start a session for this browser. Whatever session the browser had before is ended first, so an
- * identifier planted before sign-in can never become a signed-in one. Returns the new id hash.
+ * Whatever session the browser had is ended first, so an identifier planted before sign-in can never
+ * become a signed-in one.
  */
 export async function createSession(userId: string, opts: { pending: Pending } | { mfaPending: boolean }): Promise<string> {
   const pending: Pending = "pending" in opts ? opts.pending : opts.mfaPending ? "code" : "none";
@@ -140,10 +140,7 @@ export async function createSession(userId: string, opts: { pending: Pending } |
   return idHash;
 }
 
-/**
- * Upgrade a pending session to a full one after the second step. The session gets a new identifier
- * (the pre-second-step one stops working). Returns the new id hash.
- */
+/** The session gets a new identifier; the pre-second-step one stops working. */
 export async function completeMfa(idHash: string): Promise<string> {
   const { zone, ip } = await requestInfo();
   const t = now();
@@ -206,24 +203,24 @@ async function readSession(): Promise<{ session: Session; user: User } | null> {
   return { session, user: toUser(userRow) };
 }
 
-/** The signed-in user for this request (deduplicated per request). Excludes pending sessions. */
+/** Deduplicated per request. Excludes pending sessions. */
 export const currentAuth = cache(async () => {
   const s = await readSession();
   if (!s || s.session.mfaPending) return null;
   return s;
 });
 
-/** Includes pending sessions (used by the second-step and set-up-two-step endpoints). */
+/** Used by the second-step and set-up-two-step endpoints. */
 export const pendingAuth = cache(readSession);
 
-/** Signed in, nothing more: for the shell itself, which shows the two-step setup when it's due. */
+/** For the shell itself, which shows the two-step setup when it's due. */
 export async function requireSignedIn(): Promise<{ session: Session; user: User }> {
   const a = await currentAuth();
-  if (!a) redirect("/login");
+  if (!a) redirect(loginHref((await headers()).get(REQUESTED_PATH_HEADER)));
   return a;
 }
 
-/** Signed in and allowed to see pages: someone who must set up two-step sign-in first goes there. */
+/** Someone who must set up two-step sign-in first is sent there. */
 export async function requireUser(): Promise<{ session: Session; user: User }> {
   const a = await requireSignedIn();
   const { zone } = await requestInfo();
@@ -232,9 +229,8 @@ export async function requireUser(): Promise<{ session: Session; user: User }> {
 }
 
 /**
- * The two-step policy (Settings → Server) applies to this person here and they haven't set it up.
- * Checked on every request, not only at sign-in: a session started before the rule, or a cookie
- * taken elsewhere, must not carry on without it.
+ * Checked on every request, not only at sign-in: a session started before the rule, or a cookie taken
+ * elsewhere, must not carry on without it.
  */
 export function mustSetUpMfa(user: User, zone: Zone): boolean {
   return !user.mfa && mfaRequired(user.role, zone);

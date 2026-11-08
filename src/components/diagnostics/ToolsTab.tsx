@@ -50,8 +50,6 @@ export function ToolsTab() {
   );
 }
 
-// ---------------------------------------------------------------- DNS
-
 const TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "PTR", "SRV", "CAA"] as const;
 
 function DnsTool() {
@@ -131,8 +129,6 @@ function DnsTool() {
   );
 }
 
-// ---------------------------------------------------------------- ping
-
 function PingTool() {
   const t = useTool<PingToolResult>("/api/diagnostics/tools/ping");
   const [host, setHost] = React.useState("");
@@ -190,8 +186,6 @@ function PingTool() {
   );
 }
 
-// ---------------------------------------------------------------- port
-
 function PortTool() {
   const t = useTool<PortToolResult>("/api/diagnostics/tools/port");
   const [host, setHost] = React.useState("");
@@ -229,8 +223,6 @@ function PortTool() {
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- traceroute
 
 function TraceTool() {
   const t = useTool<TracerouteToolResult>("/api/diagnostics/tools/traceroute");
@@ -284,8 +276,6 @@ function TraceTool() {
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- HTTP
 
 function HttpTool() {
   const t = useTool<HttpToolResult>("/api/diagnostics/tools/http");
@@ -382,7 +372,6 @@ function HttpTool() {
 
 function Hop({ h, max }: { h: HttpHop; max: number }) {
   const t = h.timing;
-  // Cumulative marks → segments.
   const marks: { seg: string; from: number; to: number }[] = [];
   let prev = 0;
   const push = (seg: string, at: number | null) => {

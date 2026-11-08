@@ -12,12 +12,10 @@ import type { Access } from "@/lib/files-types";
 import { containerToHost, hostAliases, isMountPoint, mountsBelow } from "./mounts";
 
 /**
- * Every Files request goes through here:
- *   1. normalise the path (absolute, no NUL),
- *   2. resolve every symlink ourselves in *host* path space (the kernel would resolve absolute links
- *      against this container's root when walking /proc/1/root, which is wrong),
- *   3. check the resolved path is inside a root the person may use (members: their grants),
- *   4. for changes, refuse system folders, mount points and Gluon's own data.
+ * Every Files request goes through here: normalise, resolve every symlink ourselves in host path
+ * space (the kernel would resolve absolute links against this container's root when walking
+ * /proc/1/root), check it's inside a root the person may use, and for changes refuse system
+ * folders, mount points and Gluon's own data.
  */
 
 export const TRASH_DIR = ".gluon-trash";
@@ -113,8 +111,6 @@ export async function resolveHost(p: string, opts: { followLast?: boolean } = {}
   return { real: cur, exists: true, stat };
 }
 
-// ---------------------------------------------------------------- scope
-
 export interface Root {
   id: string;
   label: string;
@@ -196,10 +192,7 @@ function inTrash(p: string) {
   return p.split("/").some(isTrashDirName);
 }
 
-/**
- * Resolve and authorise a path for a person. Throws human errors for missing paths, paths outside
- * their folders, and write attempts on read-only shares.
- */
+/** Throws human errors for missing paths, paths outside their folders, and writes to read-only shares. */
 export async function authorize(
   user: Pick<User, "id" | "role">,
   raw: unknown,
@@ -231,12 +224,10 @@ function isWithinAnyLogical(scope: Scope, p: string) {
   return scope.roots.some((r) => isWithin(p, r.path));
 }
 
-/** Can this person open `real` (already resolved)? Used for link targets and search results. */
+/** Used for link targets and search results. */
 export function canSee(scope: Scope, real: string): boolean {
   return scope.admin || !!accessFor(scope, real);
 }
-
-// ---------------------------------------------------------------- protection
 
 const SYSTEM_TREES = ["/etc", "/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/boot", "/proc", "/sys", "/dev", "/run", "/var/lib/dpkg", "/var/lib/apt", "/var/lib/systemd"];
 
@@ -294,7 +285,6 @@ export async function protectionReason(real: string, verb = "change"): Promise<s
   return null;
 }
 
-/** A protected folder somewhere inside `real` (for recursive operations), or null. */
 export async function protectedInside(real: string): Promise<string | null> {
   for (const p of await protectedTrees()) {
     if (p.path !== real && isWithin(p.path, real)) return p.path;
@@ -345,8 +335,6 @@ export async function assertRemovable(t: Pick<Target, "real" | "root" | "scope">
   }
 }
 
-// ---------------------------------------------------------------- helpers
-
 /** "file (2).mkv", "file (3).mkv"…: a free name in `dirReal` (host path). */
 export async function freeName(dirReal: string, name: string, style: "copy" | "restored" = "copy"): Promise<string> {
   const exists = async (n: string) => {
@@ -374,7 +362,7 @@ export function splitName(name: string): { stem: string; ext: string } {
   return { stem: m[1]!, ext: m[2]! };
 }
 
-/** Map a resolved host path back under the path the person used (keeps their breadcrumbs). */
+/** Keeps the person's breadcrumbs. */
 export function logicalChild(t: Pick<Target, "path">, name: string) {
   return t.path === "/" ? `/${name}` : `${t.path}/${name}`;
 }

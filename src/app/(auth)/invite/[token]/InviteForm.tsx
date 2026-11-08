@@ -74,7 +74,7 @@ export function InviteForm({ token, displayName, role, serverName, mustEnrol, re
     return (
       <div className={`${s.form} appear`} data-wide="">
         <FlowSteps steps={ENROL_STEPS} current="codes" label="Joining as an admin" />
-        <h2>Save your recovery codes</h2>
+        <h1>Save your recovery codes</h1>
         <p className={s.lede}>Two-step sign-in is on. If you lose your phone, one of these gets you in.</p>
         <RecoveryCodes codes={codes} username={f.username} serverName={serverName} />
         <Button variant="primary" size="lg" block onClick={finish}>
@@ -88,7 +88,7 @@ export function InviteForm({ token, displayName, role, serverName, mustEnrol, re
     return (
       <div className={`${s.form} appear`} data-wide="">
         <FlowSteps steps={ENROL_STEPS} current="enrol" label="Joining as an admin" />
-        <h2>Link your phone</h2>
+        <h1>Link your phone</h1>
         <p className={s.lede}>
           Your account is ready. Admins signing in from away need a code from their phone, so link it now to finish.
         </p>
@@ -109,7 +109,7 @@ export function InviteForm({ token, displayName, role, serverName, mustEnrol, re
   return (
     <form className={s.form} onSubmit={submit} noValidate data-wide={mustEnrol ? "" : undefined}>
       {mustEnrol && <FlowSteps steps={ENROL_STEPS} current="account" label="Joining as an admin" />}
-      <h2>{displayName ? `Welcome, ${displayName}` : `Join ${serverName}`}</h2>
+      <h1>{displayName ? `Welcome, ${displayName}` : `Join ${serverName}`}</h1>
       <p className={s.lede}>
         {role === "admin" ? `You've been invited to help run ${serverName}.` : `You've been invited to use the apps on ${serverName}.`}
         {mustEnrol && " Admins joining from away also link an authenticator app."}

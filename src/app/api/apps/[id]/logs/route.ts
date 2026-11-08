@@ -9,7 +9,6 @@ const query = z.object({
   tail: z.coerce.number().int().min(10).max(5000).default(400),
 });
 
-/** Recent lines from each container (merged by time), then live lines as they arrive. */
 export const GET = route({ auth: "admin", query }, async ({ req, params, query }) => {
   const app = await getApp(decodeURIComponent(String(params.id)));
   if (!app) throw notFound("That app");

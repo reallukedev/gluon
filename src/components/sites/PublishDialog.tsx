@@ -33,9 +33,7 @@ interface Props {
   site: SiteDetail;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  /** Open on the address fields, to move a published site. */
   changeAddress?: boolean;
-  /** Something to do before publishing, like saving the open file. */
   beforePublish?: () => Promise<boolean>;
   unsavedFile: string | null;
   /** The draft has an index.html at the top; without one there's no front page to publish. */
@@ -43,10 +41,6 @@ interface Props {
   onPublished: (d: SiteDetail) => void;
 }
 
-/**
- * Publishing: the first time, choose the address (the same rules and HTTPS choices as Network);
- * after that, one button that copies the draft live. The address can be changed here too.
- */
 export function PublishDialog({ site, open, onOpenChange, changeAddress, beforePublish, unsavedFile, hasIndex, onPublished }: Props) {
   const fmt = useFormat();
   const base = site.baseDomain ?? "";

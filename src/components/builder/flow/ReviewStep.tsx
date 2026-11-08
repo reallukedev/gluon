@@ -27,7 +27,6 @@ interface Preview {
   secretFiles: string[];
 }
 
-/** The last look: what's wrong (with fixes), where it will run, and the exact files that will run. */
 export function ReviewStep({ draft, detail: d, issues, checking, checkError, onRecheck, target, store, address, onFix, onBack, onSetUpStore, onStart }: { draft: Draft; detail: CustomAppDetail; issues: Issue[]; checking: boolean; checkError: string | null; onRecheck: () => void; target: BuilderTarget; store: StoreStatus | null; address: AddressChoice; onFix: (id: string) => void; onBack: () => void; onSetUpStore: () => void; onStart: () => void }) {
   const errors = issues.filter((i) => i.level === "error");
   const shown = issues.filter((i) => i.level !== "info" || i.fix);
@@ -88,7 +87,6 @@ export function ReviewStep({ draft, detail: d, issues, checking, checkError, onR
   );
 }
 
-/** The files exactly as the start writes them, from the server's own renderer. */
 function Files({ id, rev, saving }: { id: string; rev: number; saving: boolean }) {
   // rev in the key: a new saved state is a new answer, fetched once.
   const { data, error } = useApi<Preview>(`/api/custom-apps/${id}/files?rev=${rev}`, { revalidateOnFocus: false, keepPreviousData: true });

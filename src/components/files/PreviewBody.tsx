@@ -16,10 +16,6 @@ import s from "./look.module.css";
 
 const CodeEditor = dynamic(() => import("@/components/code/CodeEditor").then((m) => m.CodeEditor), { ssr: false, loading: () => <Skeleton height={240} radius={8} /> });
 
-/**
- * What a file looks like, at whatever size the surface gives it: a photo fitted to the box, a
- * player, a PDF, text or a formatted README, or a plain explanation and a download for the rest.
- */
 export function PreviewBody({ entry, fit = "contain", textHeight = "min(56dvh, 520px)", canExtract, onExtract }: { entry: FileEntry; fit?: "contain" | "cover"; textHeight?: string; canExtract?: boolean; onExtract?: (e: FileEntry) => void }) {
   const fmt = useFormat();
   if (entry.link?.broken) {
@@ -148,7 +144,6 @@ function TextView({ entry, height }: { entry: FileEntry; height: string }) {
   );
 }
 
-/** The plain facts about an item, owner and permissions only for admins (they mean nothing to others). */
 export function Facts({ entry, admin, extra }: { entry: FileEntry; admin: boolean; extra?: [React.ReactNode, React.ReactNode][] }) {
   const fmt = useFormat();
   const dir = isDirLike(entry);
@@ -184,10 +179,6 @@ export function Facts({ entry, admin, extra }: { entry: FileEntry; admin: boolea
   );
 }
 
-/**
- * The size rule: a hairline whose length is this item's share of the biggest thing beside it, so
- * what's taking the space is visible before any number is read.
- */
 export function SizeRule({ share, className }: { share: number | null; className?: string }) {
   if (share === null || !Number.isFinite(share)) return <span className={`${s.rule} ${className ?? ""}`} aria-hidden data-empty="" />;
   return (
@@ -197,7 +188,7 @@ export function SizeRule({ share, className }: { share: number | null; className
   );
 }
 
-/** Rename in place: the name is selected without its extension, so typing replaces just the name. */
+/** The name is selected without its extension, so typing replaces just the name. */
 export function RenameField({ entry, initial, onCommit, onCancel, className }: { entry: FileEntry; initial?: string; onCommit: (name: string) => void; onCancel: () => void; className?: string }) {
   const [value, setValue] = React.useState(initial || entry.name);
   const done = React.useRef(false);

@@ -182,6 +182,55 @@ describe("publicPorts", () => {
   });
 });
 
+describe("an address that publishes only some paths", () => {
+  const music = (extra: Record<string, unknown> = {}) => ({ id: "music", type: "subdomain", name: "Navidrome", enabled: true, host: "music.example.test", backend: local(4533), only_paths: ["/rest/*", "/share/*"], ...extra });
+  const text = renderCaddyfile(cleanConfig({ routes: [music()] }, base));
+  const snippet = text.slice(text.indexOf("\n(not_published) {\n"), text.indexOf("\n}\n", text.indexOf("\n(not_published) {\n")) + 2);
+  const page = snippet.slice(snippet.indexOf("respond <<HTML\n") + 15, snippet.indexOf("\t\tHTML 404\n"));
+
+  test("sends the published paths to the app and everything else to the shared not-found answer", () => {
+    const site = block(text, "music.example.test");
+    expect(site).toContain("\t@published path /rest/* /share/*\n\thandle @published {\n\t\treverse_proxy host.docker.internal:4533\n\t}\n");
+    expect(site).toContain("\thandle {\n\t\timport not_published music.example.test\n\t}\n");
+    expect(site.match(/reverse_proxy/g)).toHaveLength(1);
+    // Defined once, before the first site that imports it.
+    expect(text.match(/^\(not_published\) \{$/gm)).toHaveLength(1);
+    expect(text.indexOf("(not_published) {")).toBeLessThan(text.indexOf("import not_published"));
+  });
+
+  test("browsers get an HTML page with a 404 that is never cached or indexed", () => {
+    expect(snippet).toContain("\theader Cache-Control no-store\n\theader X-Robots-Tag noindex\n");
+    expect(snippet).toContain("\t@browser {\n\t\tmethod GET HEAD\n\t\theader Accept *text/html*\n\t}\n");
+    expect(snippet).toContain('\thandle @browser {\n\t\theader Content-Type "text/html; charset=utf-8"\n');
+    expect(snippet).toMatch(/\n\t\tHTML 404\n/);
+    expect(page).toMatch(/^\t\t<!doctype html><html lang="en">/);
+    expect(page.match(/<h1>/g)).toHaveLength(1);
+    expect(page).toContain('<meta name="viewport"');
+    expect(page).toContain("<title>");
+  });
+
+  test("API clients and other methods keep an empty 404", () => {
+    expect(snippet).toMatch(/\n\thandle \{\n\t\trespond 404\n\t\}\n\}$/);
+  });
+
+  test("the page names nothing behind the address, and the host comes from Gluon, not the request", () => {
+    for (const secret of ["Navidrome", "4533", "/rest", "/share", "host.docker.internal", "Gluon", "music.example.test"]) expect(snippet).not.toContain(secret);
+    expect(page).toContain("{args[0]}");
+    expect(page).not.toMatch(/\{(host|http\.|path|uri|query|header)/);
+    // Self-contained: nothing loaded from anywhere, and every line lives inside the heredoc's indent.
+    expect(page).not.toMatch(/\b(src|href)=|@import|url\(|<script/);
+    for (const line of page.trimEnd().split("\n")) expect(line.startsWith("\t\t")).toBe(true);
+    expect(page.replace("<!doctype", "")).not.toMatch(/—|!/);
+    expect(page.length).toBeLessThan(2500);
+  });
+
+  test("isn't written into Caddyfiles that don't need it", () => {
+    const plain = renderCaddyfile(cleanConfig({ routes: [web()] }, base));
+    expect(plain).not.toContain("not_published");
+    expect(block(plain, "photos.other.test")).toContain("\thandle {\n\t\treverse_proxy host.docker.internal:2283\n\t}\n");
+  });
+});
+
 describe("ports that chat and voice apps reach directly", () => {
   const cfg = cleanConfig(
     {

@@ -1,4 +1,3 @@
-/* Settings → Activity: the timeline and its filters. */
 .view { min-width: 0; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
 .filter {
@@ -21,7 +20,6 @@
 .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .live { margin-left: auto; font-size: var(--text-sm); }
 
-/* New entries that arrived while the person was reading further down. */
 .heldWrap { position: sticky; top: 16px; z-index: 5; display: flex; justify-content: center; height: 0; overflow: visible; }
 .held { box-shadow: var(--shadow-pop); transform: translateY(-6px); }
 @media (max-width: 900px) { .heldWrap { top: calc(66px + env(safe-area-inset-top)); } }
@@ -41,7 +39,6 @@
 .time { display: grid; gap: 1px; padding-top: 5px; color: var(--muted); font-size: var(--text-sm); }
 .timeFrom { font-size: var(--text-xs); color: var(--faint); white-space: nowrap; }
 .actor { display: grid; place-items: center; }
-/* The server is a square plate; people are round. The shape says who acted, colour isn't needed. */
 .serverTile { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; border: 1px dashed var(--line-strong); color: var(--muted); background: var(--panel); }
 .serverTile svg { width: 15px; height: 15px; }
 .main { min-width: 0; display: grid; gap: 3px; padding-top: 3px; }
@@ -85,7 +82,7 @@
   .filter { max-width: none; }
 }
 
-/* Less to read: "only this" and "Details" wait until the row is pointed at or focused. Touch keeps them. */
+/* Less to read: these wait for hover or focus. Touch keeps them. */
 @media (hover: hover) and (pointer: fine) {
   .row .only { opacity: 0; transition: opacity var(--dur-fast) ease; }
   .row .inlineDisclosure > button { opacity: 0; transition: opacity var(--dur-fast) ease; }

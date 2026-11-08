@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import type { HomeLayout } from "@/lib/home";
 import { useApi } from "@/lib/client/api";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +8,6 @@ import { APPS_URL, HOME_URL, appsOnHome, type MemberApp } from "./memberApps";
 import { Bond } from "../Bond";
 import o from "../onboarding.module.css";
 
-/** Household member, last: what their Home now holds (read back from the server) and what to do if something breaks. */
 export function Ready() {
   const plan = useMemberPlan();
   const { finish, leaving } = useFlow();

@@ -1,11 +1,10 @@
 "use client";
-// Admin widgets that read this machine: which disk fills up first, what the processor draws, and what's scheduled.
 import * as React from "react";
 import Link from "next/link";
 import { registerWidget } from "../widgetStore";
 import type { SettingsProps, WidgetProps } from "../types";
 import { useApi } from "@/lib/client/api";
-import { usePrefs, useFormat } from "@/components/PrefsProvider";
+import { useFormat } from "@/components/PrefsProvider";
 import { AffixInput, Field, Input } from "@/components/ui/Field";
 import { Skeleton, UsageBar } from "@/components/ui/Surface";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -16,6 +15,7 @@ import type { PowerData, ScheduleData, ScheduleItem, SpaceData, SpaceDisk } from
 import { Age, WidgetState, useDayStart, useDriveNames, useFit } from "./kit";
 import { Preview } from "../previews";
 import m from "./machine.module.css";
+import { plural } from "@/lib/format";
 
 function Retry({ onClick }: { onClick: () => void }) {
   return (
@@ -40,11 +40,8 @@ function Rows({ n = 3 }: { n?: number }) {
   );
 }
 
-// ================================================================ Running out of space
-
-/** "in about 9 days", "in about 5 hours", "in about 3 months", or null past a year (not worth worrying about). */
 function fillsIn(days: number): string | null {
-  if (days < 1) return `in about ${Math.max(1, Math.round(days * 24))} hours`;
+  if (days < 1) return `in about ${plural(Math.max(1, Math.round(days * 24)), "hour")}`;
   if (days < 1.5) return "in about a day";
   if (days < 45) return `in about ${Math.round(days)} days`;
   if (days < 365) return `in about ${Math.round(days / 30)} months`;
@@ -159,15 +156,12 @@ registerWidget({
   preview: <Preview of="space" />,
 });
 
-// ================================================================ Power
-
 interface PowerConfig {
   /** Price of a kilowatt-hour, in the currency below. */
   price?: number;
   currency?: string;
 }
 
-/** A sensible currency symbol from the browser's region until the admin picks one. */
 function guessCurrency(): string {
   if (typeof navigator === "undefined") return "";
   const region = (navigator.language.split("-")[1] ?? "").toUpperCase();
@@ -189,7 +183,6 @@ function money(v: number, currency: string) {
 function PowerWidget({ item, size, openSettings }: WidgetProps<PowerConfig>) {
   const dayStart = useDayStart();
   const { data, error, mutate } = useApi<PowerData>(`/api/widgets/power?dayStart=${dayStart}`, { refresh: 10_000 });
-  const fmt = useFormat();
   const price = item.config.price && item.config.price > 0 ? item.config.price : null;
   const currency = item.config.currency ?? guessCurrency();
   if (!data) {
@@ -320,8 +313,6 @@ registerWidget<PowerConfig>({
   preview: <Preview of="power" />,
 });
 
-// ================================================================ Coming up
-
 function ScheduleRow({ it }: { it: ScheduleItem }) {
   const fmt = useFormat();
   const failed = it.lastResult === "failed";
@@ -347,7 +338,6 @@ function ScheduleRow({ it }: { it: ScheduleItem }) {
   );
 }
 
-/** "Today", "Tomorrow", or the weekday and date: one heading per day. */
 function dayLabel(ts: number, today: number, fmt: ReturnType<typeof useFormat>) {
   const d = Math.floor((ts - today) / 86_400_000);
   if (d <= 0) return "Today";

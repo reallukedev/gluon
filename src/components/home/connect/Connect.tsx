@@ -14,14 +14,12 @@ import type { AppService, Integration, IntegrationField, IntegrationKindInfo, In
 import type { LineState } from "@/lib/types";
 import c from "./connect.module.css";
 
-/** What the connect step needs to know about the app it connects. */
 export interface ConnectTarget {
   appId: string | null;
   appName: string;
   icon: string | null;
   line: LineState;
   service: AppService;
-  /** Reconnect: replace the key of this saved connection. */
   integrationId?: string | null;
 }
 
@@ -37,7 +35,6 @@ const USER_LABEL: Record<string, string> = {
   immich: "Immich email",
 };
 
-/** Refresh everything that lists connections, so widgets on the page pick the new one up straight away. */
 export async function refreshConnections() {
   await Promise.all([mutate("/api/widgets/catalog"), mutate("/api/integrations"), mutate("/api/integrations/suggestions")]);
 }
@@ -50,10 +47,7 @@ const hostOf = (u: string) => {
   }
 };
 
-/**
- * The compact "connect this app" step. Jellyfin and Immich default to signing in once (Gluon makes its own key);
- * other apps ask for their key or login right here. Used inside the widget catalog, from a widget, and in Settings.
- */
+/** Jellyfin and Immich default to signing in once (Gluon makes its own key); other apps ask for their key or login. */
 export function ConnectForm({
   target,
   onConnected,
@@ -343,7 +337,6 @@ export function ConnectForm({
   );
 }
 
-/** The connect step in its own dialog (from a widget or Settings). */
 export function ConnectDialog({
   target,
   open,

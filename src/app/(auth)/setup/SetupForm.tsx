@@ -25,7 +25,6 @@ function Command({ cmd }: { cmd: string }) {
   );
 }
 
-/** Exactly where to look, for the way this server runs Gluon. */
 function WhereToLook({ where }: { where: CodeWhere }) {
   switch (where.kind) {
     case "umbrel":
@@ -59,10 +58,7 @@ function WhereToLook({ where }: { where: CodeWhere }) {
   }
 }
 
-/**
- * Claim a fresh server: the one-time code from the log (proves you can reach the machine), then the
- * admin account. After this, the first run at /welcome takes over.
- */
+/** The one-time code from the log proves you can reach the machine; then the first admin account. */
 export function SetupForm({ where, serverName }: { where: CodeWhere; serverName: string }) {
   const router = useRouter();
   const [f, setF] = React.useState<Form>({ code: "", displayName: "", username: "", password: "", confirm: "" });
@@ -107,7 +103,7 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
   if (claimed) {
     return (
       <div className={`${s.form} appear`}>
-        <h2>Gluon is already set up</h2>
+        <h1>Gluon is already set up</h1>
         <p className={s.lede}>Someone finished setting up {serverName}, maybe in another window. Sign in with that account.</p>
         <LinkButton href="/login" variant="primary" size="lg" block>
           Sign in
@@ -121,7 +117,7 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
 
   return (
     <form className={s.form} onSubmit={submit} noValidate data-wide="">
-      <h2>Let&apos;s set up {serverName}</h2>
+      <h1>Let&apos;s set up {serverName}</h1>
       <p className={s.lede}>First the code from its log, so we know it&apos;s yours. Then your account.</p>
 
       <div className={s.codeGroup}>

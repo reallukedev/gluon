@@ -22,7 +22,6 @@ export function copyText(text: string, what = "Path") {
   void copyToClipboard(text).then((ok) => (ok ? toast.success(`${what} copied`) : toast.error("Couldn't copy. Select the text and copy it by hand.")));
 }
 
-/** Everything about one file or folder: size, dates, owner, drive, and which apps use it. */
 export function Properties({ path, focus, onClose, onFixOwnership }: { path: string | null; focus?: "apps" | "size"; onClose: () => void; onFixOwnership?: (path: string) => void }) {
   const fmt = useFormat();
   const viewer = useViewer();

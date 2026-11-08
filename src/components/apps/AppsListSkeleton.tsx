@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/Surface";
 import s from "@/components/apps/routeStates.module.css";
 
-/** Just the toolbar and rows, for a tab change inside Apps (the title and tabs are already there). */
 export function AppsListBodySkeleton() {
   return (
     <div role="status" aria-label="Loading" className={s.bodyOnly} data-pending="">

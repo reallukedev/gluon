@@ -107,7 +107,6 @@ const portOf = (u: string) => {
 };
 const isLocal = (u: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(u);
 
-/** One app service Gluon can talk to, found from the running containers. */
 export interface Detected {
   key: string;
   kind: IntegrationKind;
@@ -122,8 +121,8 @@ export interface Detected {
 }
 
 /**
- * Umbrel puts most apps behind its own app proxy: the app's container publishes nothing and the proxy
- * publishes the web port. When that's the case, the proxy's port reaches the app.
+ * Umbrel puts most apps behind its own app proxy, which publishes the web port instead of the app's
+ * container.
  */
 function proxyPort(app: AppSummary): number | null {
   if (!app.webPort) return null;
@@ -131,7 +130,6 @@ function proxyPort(app: AppSummary): number | null {
   return proxied ? app.webPort : null;
 }
 
-/** Every service Gluon recognises in the given apps, best candidate per app and kind first. */
 export function detectServices(apps: AppSummary[]): Detected[] {
   const found: (Detected & { rank: number })[] = [];
   for (const app of apps) {
@@ -169,7 +167,6 @@ export function detectServices(apps: AppSummary[]): Detected[] {
     .map(({ rank: _rank, ...d }) => d);
 }
 
-/** The saved connection that talks to this service, if any. */
 export function matchRecord<T extends { kind: IntegrationKind; baseUrl: string; appId: string | null }>(
   d: Pick<Detected, "kind" | "baseUrl" | "port" | "app">,
   records: T[],

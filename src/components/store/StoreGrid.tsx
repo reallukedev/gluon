@@ -13,7 +13,7 @@ import s from "./store.module.css";
 const MIN_CARD = 280;
 const GAP = 12;
 
-/** The store's app cards, virtualised by row: the official store alone lists hundreds of apps. */
+/** Virtualised by row: the official store alone lists hundreds of apps. */
 export function StoreGrid({
   entries,
   installedInfo,

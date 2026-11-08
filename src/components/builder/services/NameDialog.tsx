@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { serviceNameError } from "@/lib/builder/names";
 
-/** Name a new service, or rename one. */
 export function NameDialog({ open, onOpenChange, title, confirm, taken, initial, description, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; confirm: string; taken: string[]; initial: string; description?: string; onDone: (name: string) => void | Promise<void> }) {
   const [name, setName] = React.useState(initial);
   React.useEffect(() => {

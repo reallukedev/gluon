@@ -26,11 +26,6 @@ function State({ st, server }: { st: NeedStateT; server: string }) {
   return <StateLine state="unknown" label="Not checked" />;
 }
 
-/**
- * Network → Port forwarding: the ports Gluon's apps need from the internet and, on routers Gluon
- * can manage (AT&T BGW gateways), whether each is forwarded to this server, with the fix one click
- * away. On other routers it's the list to set up by hand.
- */
 export function PortForwarding({ onRouterPage }: { onRouterPage?: boolean } = {}) {
   const { data, error, mutate, isLoading } = useApi<RouterStatus>(URL, { refresh: 120_000 });
   const [connecting, setConnecting] = React.useState(false);

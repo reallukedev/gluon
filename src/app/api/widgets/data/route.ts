@@ -10,11 +10,7 @@ const one = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
-/**
- * Widget data. One widget (`WidgetRequest`) answers with its `WidgetResponse`; a batch
- * (`{ widgets: [...] }`, up to 40) answers per widget, so one failing app never blanks the rest.
- * POST keeps personal addresses (calendars, feeds) out of logs and browser history.
- */
+/** A batch answers per widget, so one failing app never blanks the rest. POST keeps personal addresses (calendars, feeds) out of logs. */
 const body = z.union([z.object({ widgets: z.array(one).max(40, "That's more widgets than one page can ask for at once.") }), one]);
 
 export const POST = route({ auth: "user", body }, async ({ user, body }) => {

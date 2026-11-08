@@ -23,14 +23,12 @@ const ICON: Record<string, React.ReactNode> = {
   about: <InfoCircle />,
 };
 
-/** The section in a /settings path, or null on /settings itself. */
 export function sectionOf(pathname: string): string | null {
   return pathname.split("/")[2] || null;
 }
 
 /**
- * The Settings list and the frame around a section. It lives in settings/layout.tsx, so moving between
- * sections swaps only the content: the list stays mounted and keeps keyboard focus on the item clicked.
+ * Lives in settings/layout.tsx, so moving between sections swaps only the content and the list keeps keyboard focus.
  */
 export function SettingsFrame({ sections, children }: { sections: SettingsSection[]; children: React.ReactNode }) {
   const pathname = usePathname();
@@ -43,12 +41,14 @@ export function SettingsFrame({ sections, children }: { sections: SettingsSectio
   // Problem reports waiting for a reply (the sidebar's account button shows the same count).
   const { data: shell } = useApi<{ reports: number }>("/api/shell");
   const reports = shell?.reports ?? 0;
+  const NavTitle = section ? "h2" : "h1";
 
   return (
     <div className={s.frame}>
       <div className={s.layout} data-section={section ? "" : undefined} data-wide={wide ? "" : undefined}>
         <nav className={s.nav} aria-label="Settings">
-          <h1 className={s.navTitle}>Settings</h1>
+          {/* The page's title on /settings; beside a section, that section's header is. */}
+          <NavTitle className={s.navTitle}>Settings</NavTitle>
           {GROUPS.map((g) => {
             const items = sections.filter((x) => x.group === g.id);
             if (!items.length) return null;

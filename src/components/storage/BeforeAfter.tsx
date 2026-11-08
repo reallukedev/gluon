@@ -8,15 +8,10 @@ import s from "./storage.module.css";
 
 export interface Side {
   state: LineState;
-  /** One plain line: "Connected at /mnt/hdd2 until the next restart". */
   text: React.ReactNode;
   detail?: React.ReactNode;
 }
 
-/**
- * A change drawn as now → after: two short states side by side (stacked on phones), each with its
- * state line, so the person sees what's different before they press the button.
- */
 export function BeforeAfter({ before, after }: { before: Side; after: Side }) {
   return (
     <div className={s.ba} role="group" aria-label="What changes">
@@ -45,7 +40,6 @@ export function BeforeAfter({ before, after }: { before: Side; after: Side }) {
   );
 }
 
-/** One line added to (or changed in) the startup list, as a diff. */
 export function FstabChange({ line, before, after }: { line: number | null; before: string | null; after: string }) {
   return (
     <div className={s.stack}>
@@ -74,7 +68,6 @@ export function FstabChange({ line, before, after }: { line: number | null; befo
   );
 }
 
-/** The apps that keep files on a volume, as links, in a sentence. */
 export function AppsUsing({ users, lead }: { users: VolumeUser[]; lead: (names: React.ReactNode, count: number) => React.ReactNode }) {
   const apps = [...new Map(users.map((u) => [u.appId, u])).values()];
   if (!apps.length) return null;

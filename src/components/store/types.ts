@@ -3,27 +3,23 @@ import type { UmbrelAppState, UmbrelStore, UmbrelStoreApp } from "@/server/platf
 
 export type { UmbrelStore, UmbrelStoreApp };
 
-/** GET /api/store */
 export interface StoreResponse {
   platform: Platform;
   stores: UmbrelStore[];
   installed: Record<string, { state: UmbrelAppState; version: string }>;
 }
 
-/** One app as listed in one store (the same app can appear in more than one). */
 export interface StoreEntry {
   key: string;
   app: UmbrelStoreApp;
   store: UmbrelStore;
 }
 
-/** What Gluon knows about an installed app, merged from the store listing and the app list. */
 export interface InstalledInfo {
   state: UmbrelAppState;
   version: string;
   latest: string | null;
   url: string | null;
-  /** Umbrel's own percentage while it installs or updates, when it gives one. */
   progress: number | null;
 }
 

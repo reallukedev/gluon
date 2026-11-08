@@ -1,9 +1,6 @@
 "use client";
 
-/**
- * Copy text to the clipboard. Gluon is often opened over plain http on the home network, where
- * `navigator.clipboard` does not exist, so this falls back to a hidden textarea + execCommand.
- */
+/** Plain http on the home network has no `navigator.clipboard`, so this falls back to a hidden textarea and execCommand. */
 export async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard && window.isSecureContext) {

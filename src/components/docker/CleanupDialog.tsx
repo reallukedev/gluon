@@ -42,10 +42,6 @@ const COPY: Record<CleanupKind, { title: string; lead: string; noun: [string, st
   },
 };
 
-/**
- * The preview for every Docker cleanup: exactly what would go, what it frees, what is kept and
- * why. The person ticks what goes; the server checks each item again before removing it.
- */
 export function CleanupDialog({ kind, open, onClose, onDone }: { kind: CleanupKind; open: boolean; onClose: () => void; onDone?: (r: CleanupResult) => void }) {
   const fmt = useFormat();
   const { data: plan, error, isLoading, isValidating, mutate } = useApi<CleanupPlan>(open ? `/api/docker/cleanup?kind=${kind}` : null, { revalidateOnFocus: false, keepPreviousData: false, dedupingInterval: 0 });
