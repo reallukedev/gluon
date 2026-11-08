@@ -32,6 +32,8 @@ interface Strip {
   peak: number | null;
   mem: number | null;
   tone: "running" | "stopped" | "fault" | "attention";
+  /** The app isn't running, whatever its tone. */
+  off: boolean;
   note: string;
 }
 
@@ -57,6 +59,7 @@ export function Console({ apps, findings }: { apps: StatusApp[]; findings: Findi
       peak,
       mem: u?.mem ?? null,
       tone,
+      off: a.line === "stopped",
       note: tone === "fault" ? (f?.title.replace(/\.$/, "") ?? a.summary) : tone === "attention" ? (f?.title.replace(/\.$/, "") ?? "Needs you") : stopped ? "Stopped" : a.summary,
     };
   });
@@ -92,7 +95,7 @@ export function Console({ apps, findings }: { apps: StatusApp[]; findings: Findi
                 >
                   <AppIcon src={s.icon} name={s.name} size={24} />
                   <Meter value={s.cpu} peak={s.peak} />
-                  <span className={`${c.read} num`}>{s.cpu !== null ? fmt.percent(s.cpu, s.cpu < 10 ? 1 : 0) : s.tone === "running" ? "…" : "off"}</span>
+                  <span className={`${c.read} num`}>{s.cpu !== null ? fmt.percent(s.cpu, s.cpu < 10 ? 1 : 0) : s.off ? "off" : "…"}</span>
                   <span className={`${c.mem} num`}>{s.mem !== null && s.tone !== "stopped" ? fmt.bytes(s.mem, 0) : " "}</span>
                   <span className={c.name}>
                     {(s.tone === "fault" || s.tone === "attention") && <i className={c.mark} aria-hidden />}

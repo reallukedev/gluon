@@ -61,7 +61,7 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
   const router = useRouter();
   const { viewer } = usePrefs();
   const { data: status, mutate: mutateStatus } = useApi<StatusPayload>(STATUS_KEY, { refresh: STATUS_REFRESH });
-  const { data: app = initial, mutate } = useApi<AppDetail>(`/api/apps/${encodeURIComponent(initial.id)}`, { refresh: 8000, fallbackData: initial });
+  const { data: app = initial, error: appError, mutate } = useApi<AppDetail>(`/api/apps/${encodeURIComponent(initial.id)}`, { refresh: 8000, fallbackData: initial });
   const movedFrom = app.gluon?.movedFrom ?? null;
   const { data: allApps } = useApi<AppSummary[]>(app.copyOf || movedFrom ? "/api/apps" : null, { refresh: 30_000 });
   const [moveOpen, setMoveOpen] = React.useState(false);
@@ -107,9 +107,16 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
       await api.post(`${apiBase}/action`, { action });
       const fresh = await mutate();
       if (action !== "stop" && fresh?.line === "running") setSettled(action === "restart" ? "Back up" : "Running");
-      say(`${app.name} ${{ start: "started", stop: "stopped", restart: "is back up" }[action]}.`);
+      // Say what the fresh state shows, not what was asked for.
+      const now = fresh?.line;
+      say(
+        action === "stop"
+          ? `${app.name} ${now === "stopped" ? "stopped" : "is stopping"}.`
+          : `${app.name} ${now === "running" ? { start: "started", restart: "is back up" }[action] : "is starting"}.`,
+      );
     } catch (e) {
       say("");
+      if (e instanceof ApiError && e.code === "reauth_cancelled") return;
       toast.error(`Couldn't ${action} ${app.name}`, { description: e instanceof Error ? e.message : undefined });
     } finally {
       setBusy(null);
@@ -136,7 +143,12 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
     setStreamOpen(true);
     setRunning(true);
     try {
-      await streamPost<StreamEvent>(`${apiBase}/update`, {}, (e) => setStream((st) => reduce(st, e)));
+      let ended = false;
+      await streamPost<StreamEvent>(`${apiBase}/update`, {}, (e) => {
+        if (e.type === "done" || e.type === "error") ended = true;
+        setStream((st) => reduce(st, e));
+      });
+      if (!ended) setStream((st) => reduce(st, { type: "error", message: "Lost the connection before the update finished. It may still be running; this page shows the app's state." }));
     } catch (e) {
       const message = e instanceof ApiError && e.code === "reauth_cancelled" ? "Cancelled. Nothing was changed." : e instanceof Error ? e.message : "The update failed.";
       setStream((st) => reduce(st, { type: "error", message }));
@@ -350,6 +362,13 @@ export function AppDetailView({ initial, tab: asked, container, members }: { ini
         }
       />
 
+      {appError && (
+        <div className={s.banner}>
+          <Notice tone="fault" title={`Couldn't refresh ${app.name}`} action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+            {appError.message} What&apos;s shown may be out of date.
+          </Notice>
+        </div>
+      )}
       {moving ? (
         <div className={s.banner}>
           <Notice
@@ -529,7 +548,7 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
   const fmt = useFormat();
   const stats = useContainerStats();
   const [range, setRange] = React.useState<"1h" | "24h" | "7d">("24h");
-  const { data: hist } = useApi<Record<string, [number, number][]>>(`/api/apps/${encodeURIComponent(app.id)}/metrics?range=${range}`, { refresh: 60_000 });
+  const { data: hist, error: histError } = useApi<Record<string, [number, number][]>>(`/api/apps/${encodeURIComponent(app.id)}/metrics?range=${range}`, { refresh: 60_000 });
   const windowMs = { "1h": 3_600_000, "24h": 86_400_000, "7d": 7 * 86_400_000 }[range];
   const base = `/apps/${encodeURIComponent(app.id)}`;
 
@@ -539,8 +558,11 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
     for (const c of app.containers) for (const [t, v] of hist?.[`ctr.${c.name}.${suffix}`] ?? []) m.set(t, (m.get(t) ?? 0) + v);
     return [...m.entries()].sort((a, b) => a[0] - b[0]);
   };
-  const liveCpu = app.containers.reduce((a, c) => a + (stats.get(c.name)?.cpu ?? 0), 0);
-  const liveMem = app.containers.reduce((a, c) => a + (stats.get(c.name)?.mem ?? 0), 0);
+  // No sample for any of its containers (stream down, or not measured yet) is no reading, not zero.
+  const sampled = app.containers.map((c) => stats.get(c.name)).filter((x) => x !== undefined);
+  const liveCpu = sampled.length ? sampled.reduce((a, x) => a + x.cpu, 0) : null;
+  const liveMem = sampled.length ? sampled.reduce((a, x) => a + x.mem, 0) : null;
+  const noHistory = <p className={s.faint}>Couldn&apos;t load its history. Trying again.</p>;
   const publicRoutes = app.routes.filter((r) => r.enabled);
 
   return (
@@ -609,9 +631,11 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
           <div>
             <div className={s.chartHead}>
               <span className="label">CPU</span>
-              <strong className="num">{fmt.percent(liveCpu, 1)}</strong>
+              <strong className="num">{liveCpu === null ? "No reading" : fmt.percent(liveCpu, 1)}</strong>
             </div>
-            {hist ? (
+            {!hist && histError ? (
+              noHistory
+            ) : hist ? (
               <TimeChart series={[{ key: "cpu", label: "CPU", points: sum("cpu"), area: true }]} format={(v) => fmt.percent(v, 1)} formatTime={(t) => (range === "7d" ? fmt.date(t) : fmt.time(t))} windowMs={windowMs} live height={150} label={`${app.name} CPU use`} />
             ) : (
               <Skeleton height={150} />
@@ -620,9 +644,11 @@ function Overview({ app, busy, onContainer }: { app: AppDetail; busy: string | n
           <div>
             <div className={s.chartHead}>
               <span className="label">Memory</span>
-              <strong className="num">{fmt.bytes(liveMem)}</strong>
+              <strong className="num">{liveMem === null ? "No reading" : fmt.bytes(liveMem)}</strong>
             </div>
-            {hist ? (
+            {!hist && histError ? (
+              noHistory
+            ) : hist ? (
               <TimeChart series={[{ key: "mem", label: "Memory", points: sum("mem"), area: true }]} format={(v) => fmt.bytes(v)} formatTime={(t) => (range === "7d" ? fmt.date(t) : fmt.time(t))} windowMs={windowMs} live height={150} label={`${app.name} memory use`} />
             ) : (
               <Skeleton height={150} />

@@ -59,6 +59,7 @@ export function PullDialog({ open, onClose, imageRef: fixedRef, onDone }: { open
       setRunning(true);
       const ac = new AbortController();
       abort.current = ac;
+      let ended = false;
       try {
         await streamPost<PullEvent>(
           "/api/docker/images/pull",
@@ -76,12 +77,17 @@ export function PullDialog({ open, onClose, imageRef: fixedRef, onDone }: { open
                 return copy;
               });
             else if (e.type === "done") {
+              ended = true;
               setResult({ ok: e.ok, message: e.message });
               if (e.ok) onDoneRef.current?.();
-            } else if (e.type === "error") setResult({ ok: false, message: e.message });
+            } else if (e.type === "error") {
+              ended = true;
+              setResult({ ok: false, message: e.message });
+            }
           },
           ac.signal,
         );
+        if (!ended) setResult({ ok: false, message: "Lost the connection before the download finished. Check Images to see whether it arrived." });
       } catch (e) {
         if (ac.signal.aborted) setResult({ ok: false, message: "Stopped. Layers that finished stay on the server." });
         else if (e instanceof ApiError && e.field === "ref" && !fixedRef) {

@@ -290,6 +290,11 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     const attn = live.filter((e) => e.health.state === "attention");
     const unsure = live.filter((e) => e.login.tone === "unknown");
     const count = (k: number) => `${k} app${k === 1 ? "" : "s"}`;
+    // Only a passing check makes an app "working"; one not checked yet, or still getting its certificate, isn't.
+    const working = live.filter((e) => e.health.state === "running").length;
+    const certPending = live.filter((e) => e.health.state === "starting");
+    const unchecked = live.filter((e) => !e.health.state || e.health.state === "unknown");
+    const names = (list: typeof live) => (list.length <= 2 ? list.map((e) => e.name).join(" and ") : `${list.length} apps`);
     const at = (
       <>
         Your apps can be reached from the internet at <b className="mono">{data?.config.base_domain}</b>.
@@ -299,13 +304,13 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
     else if (broken.length)
       summary = (
         <>
-          <b>{broken.length === 1 ? `${broken[0]!.name} can't be reached from the internet.` : `${broken.length} ${what} can't be reached from the internet.`}</b> {n - brokenApps.length > 0 ? `The other ${count(n - brokenApps.length)} ${n - brokenApps.length === 1 ? "is" : "are"} fine.` : ""}
+          <b>{broken.length === 1 ? `${broken[0]!.name} can't be reached from the internet.` : `${broken.length} ${what} can't be reached from the internet.`}</b> {working > 0 ? (working === n - brokenApps.length ? `The other ${count(working)} ${working === 1 ? "is" : "are"} working.` : `${count(working)} ${working === 1 ? "is" : "are"} working.`) : ""}
         </>
       );
     else if (open.length)
       summary = (
         <>
-          <b>{open.length === 1 ? `${open[0]!.name} is on the internet without a login.` : `${open.length} apps are on the internet without a login.`}</b> {count(n)} in total, all reachable.
+          <b>{open.length === 1 ? `${open[0]!.name} is on the internet without a login.` : `${open.length} apps are on the internet without a login.`}</b> {count(n)} in total.
         </>
       );
     else if (attn.length)
@@ -314,7 +319,15 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
           <b>{attn.length === 1 ? `${attn[0]!.name} needs a look.` : `${attn.length} apps need a look.`}</b> The rest are working.
         </>
       );
-    else if (!status.data) summary = <>{at} Checking each one…</>;
+    else if (!status.data) summary = status.error ? <>{at} Couldn&apos;t check whether they&apos;re reachable.</> : <>{at} Checking each one…</>;
+    else if (certPending.length || unchecked.length)
+      summary = (
+        <>
+          {at} {working ? `${working} of ${n} work. ` : ""}
+          {certPending.length ? `${names(certPending)} ${certPending.length === 1 ? "is" : "are"} still getting a certificate. ` : ""}
+          {unchecked.length ? `${names(unchecked)} ${unchecked.length === 1 ? "hasn't" : "haven't"} been checked yet.` : ""}
+        </>
+      );
     else if (unsure.length) summary = <>{at} {n === 1 ? "It works" : `All ${n} work`}; not sure whether {unsure.map((e) => e.name).join(" and ")} {unsure.length === 1 ? "has" : "have"} a login.</>;
     else {
       const partial = live.filter((e) => e.login.tone === "partial");
@@ -422,9 +435,9 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
             </Panel>
           </div>
 
-          {status.error && !status.data && (
-            <Notice tone="fault" title="Couldn't check the addresses" action={<Button size="sm" onClick={() => void recheck()}>Try again</Button>}>
-              {status.error.message} The list is right; only the live checks are missing.
+          {status.error && (
+            <Notice tone="fault" title="Couldn't check the addresses" action={<Button size="sm" loading={checking} onClick={() => void recheck()}>Try again</Button>}>
+              {status.error.message} {status.data ? "The checks shown are from before it failed." : "The list is right; only the live checks are missing."}
             </Notice>
           )}
 

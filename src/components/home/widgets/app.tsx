@@ -52,9 +52,9 @@ export function uptimeOf(app: ApiApp): string | null {
 
 /** CPU (% of the machine) and memory for an app's containers over the live window. */
 function useAppSeries(names: string[]) {
-  const { containers } = useLive();
+  const { containers, status } = useLive();
   const key = names.join("\u0000");
-  return React.useMemo(() => {
+  const series = React.useMemo(() => {
     const set = new Set(key.split("\u0000"));
     const out: { t: number; cpu: number; mem: number }[] = [];
     for (const sample of containers) {
@@ -71,6 +71,7 @@ function useAppSeries(names: string[]) {
     }
     return out;
   }, [containers, key]);
+  return { series, status };
 }
 
 /** A 1.25px line over the live window, ending in a marked "now". Pure SVG, no axes: the figure above it says the value. */
@@ -89,8 +90,10 @@ function Trace({ values, max, label }: { values: number[]; max: number; label: s
 
 export function Vitals({ app, name }: { app: ApiApp; name: string }) {
   const fmt = useFormat();
-  const series = useAppSeries((app.containers ?? []).map((c) => c.name));
-  const last = series.at(-1);
+  const { series, status } = useAppSeries((app.containers ?? []).map((c) => c.name));
+  // With the stream down the last sample is frozen, and a stream that never came isn't loading.
+  const last = status === "live" ? series.at(-1) : undefined;
+  if (!last && status === "offline") return <p className={s.vitalsOff}>No live reading right now.</p>;
   if (!last) {
     return (
       <div className={s.vitals} aria-busy="true">

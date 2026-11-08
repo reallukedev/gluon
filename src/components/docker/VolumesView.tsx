@@ -169,7 +169,7 @@ export function VolumesView({ initial, initialError, initialQuery }: { initial: 
 
   const menuFor = (v: DockerVolume): MenuEntry[] => [
     ...(v.mountpoint ? [{ label: "Show in Files", icon: <Folder />, href: filesHref(v.mountpoint) }] : []),
-    { label: "Copy name", icon: <Copy />, onSelect: () => void copyText(v.name).then(() => toast.success("Copied the volume name")) },
+    { label: "Copy name", icon: <Copy />, onSelect: () => void copyText(v.name).then((ok) => (ok ? toast.success("Copied the volume name") : toast.error("Couldn't copy", { description: v.name }))) },
     "separator",
     {
       label: "Delete volume…",

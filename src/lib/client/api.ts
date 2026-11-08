@@ -187,6 +187,16 @@ export async function streamPost<E = Record<string, unknown>>(url: string, body:
   const reader = res.body!.getReader();
   const dec = new TextDecoder();
   let buf = "";
+  const emit = (line: string) => {
+    if (!line) return;
+    let e: E;
+    try {
+      e = JSON.parse(line) as E;
+    } catch {
+      return; // a torn or non-JSON line (a proxy's error page) isn't an event
+    }
+    onEvent(e);
+  };
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -195,7 +205,9 @@ export async function streamPost<E = Record<string, unknown>>(url: string, body:
     while ((i = buf.indexOf("\n")) >= 0) {
       const line = buf.slice(0, i).trim();
       buf = buf.slice(i + 1);
-      if (line) onEvent(JSON.parse(line) as E);
+      emit(line);
     }
   }
+  // The last event may arrive without a trailing newline; dropping it can lose the final result.
+  emit((buf + dec.decode()).trim());
 }

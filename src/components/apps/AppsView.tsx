@@ -9,7 +9,7 @@ import type { Platform } from "@/server/platform";
 import { api, useApi, ApiError, STATUS_KEY, STATUS_REFRESH } from "@/lib/client/api";
 import { useLive } from "@/lib/client/live";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
-import { Empty } from "@/components/ui/Surface";
+import { Empty, Notice } from "@/components/ui/Surface";
 import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
 import { NewAppButton } from "@/components/builder/NewAppButton";
 import { StateLine } from "@/components/ui/StateLine";
@@ -48,7 +48,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const fmt = useFormat();
   const { viewer, serverName } = usePrefs();
   const { host } = useLive();
-  const { data: apps = initial, mutate } = useApi<AppSummary[]>("/api/apps", { refresh: 8000, fallbackData: initial });
+  const { data: apps = initial, error: appsError, mutate } = useApi<AppSummary[]>("/api/apps", { refresh: 8000, fallbackData: initial });
   const usage = useAppUsage(apps);
   // Same key and cadence as Home and Status: a web check that fails while Docker says "running" is
   // still a problem here, so every page names the same apps.
@@ -119,6 +119,8 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const copies = apps.filter((a) => a.copyOf && !a.hidden);
   const problems = apps.filter(needsHand);
   const stopped = primaries.filter((a) => a.line === "stopped");
+  // "All running" is only true when each one is: paused, unknown or busy apps aren't running.
+  const runningCount = primaries.filter((a) => a.line === "running").length;
   const counts = { problems: problems.length, stopped: apps.filter((a) => a.line === "stopped").length, public: apps.filter((a) => a.routes.some((r) => r.enabled)).length };
   const busyApps = apps.filter((a) => umbrelBusy(a.umbrel?.state));
   // Where an app came from only tells apps apart when they didn't all come from the same place.
@@ -134,9 +136,15 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
       await api.post(`/api/apps/${encodeURIComponent(a.id)}/action`, { action });
       const fresh = (await mutate())?.find((x) => x.id === a.id);
       if (action !== "stop" && fresh?.line === "running") setSettled({ id: a.id, word: action === "restart" ? "Back up" : "Running" });
-      say(`${a.name} ${{ start: "started", stop: "stopped", restart: "is back up" }[action]}.`);
+      const now = fresh?.line;
+      say(
+        action === "stop"
+          ? `${a.name} ${now === "stopped" ? "stopped" : "is stopping"}.`
+          : `${a.name} ${now === "running" ? { start: "started", restart: "is back up" }[action] : "is starting"}.`,
+      );
     } catch (e) {
       say("");
+      if (e instanceof ApiError && e.code === "reauth_cancelled") return;
       toast.error(`Couldn't ${action} ${a.name}`, { description: e instanceof Error ? e.message : undefined });
     } finally {
       setBusy(null);
@@ -147,7 +155,12 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
     try {
       await api.patch(`/api/apps/${encodeURIComponent(a.id)}/prefs`, { hidden });
       toast.info(hidden ? `${a.name} is hidden from Apps and Status` : `${a.name} shows in lists again`, {
-        action: { label: "Undo", onClick: () => void api.patch(`/api/apps/${encodeURIComponent(a.id)}/prefs`, { hidden: !hidden }).then(() => mutate()) },
+        action: { label: "Undo", onClick: () =>
+            void api.patch(`/api/apps/${encodeURIComponent(a.id)}/prefs`, { hidden: !hidden }).then(
+              () => mutate(),
+              (e: unknown) => toast.error(e instanceof Error ? `Couldn't undo. ${e.message}` : "Couldn't undo. Try again."),
+            ),
+        },
       });
       void mutate();
     } catch (e) {
@@ -200,11 +213,13 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
         <b>
           {listJoin(problems.map((a) => a.name))} {problems.length === 1 ? "needs" : "need"} a hand.
         </b>
-      ) : stopped.length === 0 ? (
+      ) : primaries.length === 0 ? (
+        <b>{apps.length ? "Every app is hidden." : "No apps yet."}</b>
+      ) : runningCount === primaries.length ? (
         <b>{primaries.length === 1 ? "1 app, running." : `${primaries.length} apps, all running.`}</b>
       ) : (
         <b>
-          {primaries.length - stopped.length} of {primaries.length} apps running.
+          {runningCount} of {primaries.length} apps running.
         </b>
       )}
       {counts.public ? ` ${fmt.plural(counts.public, "app")} can be reached from the internet.` : ""}
@@ -250,6 +265,11 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
       <AppsHead summary={summary} actions={apps.length > 0 ? <NewAppButton /> : undefined} />
       <AppsBody>
       <span className="sr-only" role="status">{said}</span>
+      {appsError && (
+        <Notice tone="fault" title="Couldn't refresh the apps" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+          {appsError.message} The list may be out of date.
+        </Notice>
+      )}
 
       {/* The table sizes its columns to this box, not the window, so the sidebar can't push it off the edge. */}
       <div className={s.list}>
@@ -311,9 +331,9 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
           {term
             ? "Try the app's name, a container name or its image."
             : filter === "problems"
-              ? "Every app is running."
+              ? "None are broken or stuck starting."
               : filter === "stopped"
-                ? "Every app is running."
+                ? "Stopped apps show up here."
                 : filter === "public"
                   ? "Publish one from Network to reach it away from home."
                   : platform === "umbrel"

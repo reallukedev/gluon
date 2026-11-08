@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/Surface";
 import { toast } from "@/components/ui/Toast";
 import { MoodCoil, type Mood } from "@/components/brand/MoodCoil";
 import { shortName } from "@/lib/app-names";
+import { listJoin } from "@/lib/format";
 import { Age, WidgetState } from "./kit";
 import { useHome } from "../context";
 import h from "./statusHero.module.css";
@@ -57,8 +58,20 @@ function appsLine(apps: StatusPayload["apps"], nameOf: (id: string) => string | 
   const current = apps.filter((a) => !(a.copyOf && ids.has(a.copyOf.id)));
   const n = current.length;
   if (!n) return null;
-  const stopped = current.filter((a) => a.line === "stopped").length;
-  if (stopped) return `${n - stopped} running, ${stopped} stopped.`;
+  const count = (line: StatusPayload["apps"][number]["line"]) => current.filter((a) => a.line === line).length;
+  const running = count("running");
+  // Only apps that are running are happy: starting, paused, broken or unknown ones are named as such.
+  if (running < n) {
+    const parts = [
+      `${running} running`,
+      count("stopped") && `${count("stopped")} stopped`,
+      count("starting") && `${count("starting")} starting`,
+      count("paused") && `${count("paused")} paused`,
+      count("unhealthy") + count("attention") && `${count("unhealthy") + count("attention")} not working right`,
+      count("unknown") && `${count("unknown")} unknown`,
+    ].filter(Boolean) as string[];
+    return `${listJoin(parts)}.`;
+  }
   return n === 1 ? `${nameOf(current[0]!.id) ?? "Your one app"} is happy.` : `All ${n} apps are happy.`;
 }
 

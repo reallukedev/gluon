@@ -44,7 +44,7 @@ export function AnnouncementsTab() {
   const active = (data ?? []).filter((a) => a.active);
   const ended = (data ?? []).filter((a) => !a.active);
 
-  if (error && !data) return <LoadError what="announcements" error={error} />;
+  if (error && !data) return <LoadError what="announcements" error={error} onRetry={mutate} />;
 
   return (
     <>

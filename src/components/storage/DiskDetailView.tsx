@@ -329,8 +329,9 @@ export function DiskDetailView({ initial }: { initial: Detail }) {
     setChecking(true);
     try {
       await api.post("/api/storage/smart", { disk: disk.id });
-      await mutate();
-      toast.success(disk.smart?.state === "asleep" ? "Still asleep, so it was left alone" : "Health checked");
+      // Judge by the fresh reading, not the one this render started with.
+      const next = await mutate();
+      toast.success(next?.disk.smart?.state === "asleep" ? "Still asleep, so it was left alone" : "Health checked");
     } catch (e) {
       const m = errorText(e);
       if (m) toast.error(m);
@@ -391,7 +392,9 @@ export function DiskDetailView({ initial }: { initial: Detail }) {
 
       {error && (
         <div className={s.banner}>
-          <Notice tone="fault">{error.message} The details below may be out of date.</Notice>
+          <Notice tone="fault" action={<Button size="sm" onClick={refresh}>Try again</Button>}>
+            {error.message} The details below may be out of date.
+          </Notice>
         </div>
       )}
       {running && (

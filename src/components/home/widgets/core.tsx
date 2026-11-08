@@ -293,7 +293,7 @@ export function StorageWidget({ size }: WidgetProps) {
                   {size !== "s" && <span className={s.fsOf}> of {fmt.bytes(f.size)}</span>}
                 </span>
               </div>
-              <UsageBar value={f.pct} attention={85} fault={95} label={`${name ?? f.mount}: ${Math.round(f.pct)}% used`} />
+              <UsageBar value={f.pct} attention={85} fault={95} label={`${name ?? f.mount}: ${fmt.percent(f.pct)} used`} />
             </div>
           );
         })}

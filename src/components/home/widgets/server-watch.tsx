@@ -245,21 +245,29 @@ function DrivesWidget({ size }: WidgetProps) {
   const states = disks.map((d) => ({ d, ...driveState(d) }));
   const bad = states.filter((x) => x.line === "unhealthy");
   const look = states.filter((x) => x.line === "attention");
+  // "Healthy" only for drives whose health was read and is fine; asleep or unreadable ones are said as such.
+  const healthy = states.filter((x) => x.line === "running").length;
+  const unread = states.filter((x) => x.line === "unknown").length;
+  const asleep = states.length - healthy - unread - bad.length - look.length;
   const order = (x: { line: LineState }) => (x.line === "unhealthy" ? 0 : x.line === "attention" ? 1 : 2);
   const max = size === "s" ? 0 : disks.length;
   const hidden = size === "s" ? 0 : disks.length - fit;
   return (
     <div className={w.body}>
       <p className={w.headline}>
-        <StateLine state={bad.length ? "unhealthy" : look.length ? "attention" : "running"} label={false} size={18} />
+        <StateLine state={bad.length ? "unhealthy" : look.length ? "attention" : unread ? "unknown" : "running"} label={false} size={18} />
         <span>
           {bad.length
             ? `${fmt.plural(bad.length, "drive is", "drives are")} failing`
             : look.length
               ? `${fmt.plural(look.length, "drive needs", "drives need")} a look`
-              : disks.length === 1
-                ? "The drive is healthy"
-                : `All ${disks.length} drives are healthy`}
+              : unread
+                ? `Can't read the health of ${unread === disks.length && unread > 1 ? `all ${unread} drives` : fmt.plural(unread, "drive")}`
+                : asleep
+                  ? `${healthy} healthy, ${asleep} asleep`
+                  : disks.length === 1
+                    ? "The drive is healthy"
+                    : `All ${disks.length} drives are healthy`}
         </span>
       </p>
       {size === "s" && <p className={w.sub}>{[...bad, ...look].map((x) => x.d.title).join(", ") || "Checked every 30 minutes"}</p>}

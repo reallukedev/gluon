@@ -184,7 +184,7 @@ export function Preview({ entry: open, siblings, onNavigate, onClose, canWrite, 
             </p>
             <div className={s.previewFallbackActions}>
               <Button variant="primary" icon={<Download />} onClick={() => downloadUrl(rawUrl(entry.path, true))}>
-                Download {fmt.bytes(entry.size ?? 0)}
+                {entry.size === null || entry.size === undefined ? "Download" : `Download ${fmt.bytes(entry.size)}`}
               </Button>
               {isArchive(entry.name) && canWrite && onExtract && (
                 <Button icon={<Archive />} onClick={() => onExtract(entry)}>

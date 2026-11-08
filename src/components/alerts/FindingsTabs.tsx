@@ -118,11 +118,11 @@ function FindingList({
 
 export function HistoryTab() {
   const fmt = useFormat();
-  const { data, error, isLoading } = useApi<Finding[]>("/api/findings?view=history", { refresh: 60_000 });
+  const { data, error, isLoading, mutate } = useApi<Finding[]>("/api/findings?view=history", { refresh: 60_000 });
   if (error && !data) {
     return (
-      <Notice tone="fault" title="Couldn't load the history">
-        {error.message} Try again in a moment.
+      <Notice tone="fault" title="Couldn't load the history" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+        {error.message}
       </Notice>
     );
   }

@@ -103,7 +103,9 @@ export function RenameFlow({ from, onClose, onDone }: { from: string | null; onC
     setRun(emptyRun);
     setRunning(true);
     try {
+      let ended = false;
       await streamPost<JobEvent>("/api/storage/operations", { op: "rename", target: p.from, newPath: p.to, symlink: p.symlink, persist: p.persist, planHash: p.hash }, (e) => {
+        if (e.type === "done" || e.type === "error") ended = true;
         if (e.type === "job") setJobParam(e.job.id);
         setRun((st) => reduceJob(st, e));
         if (e.type === "done") {
@@ -111,6 +113,7 @@ export function RenameFlow({ from, onClose, onDone }: { from: string | null; onC
           onDone();
         }
       });
+      if (!ended) setRun((st) => reduceJob(st, { type: "error", message: "Lost the connection before it finished. It may still be running; Storage history shows how it ends." }));
     } catch (e) {
       const msg = errorText(e);
       if (msg === null) {

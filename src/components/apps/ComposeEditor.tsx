@@ -64,7 +64,13 @@ export function ComposeEditor({ appId, onApplied }: { appId: string; onApplied: 
     setStreamOpen(true);
     setRunning(true);
     try {
-      await streamPost<StreamEvent>(`${url}/apply`, { content: text, hash: data!.hash }, (e) => setStream((st) => reduceStream(st, e)));
+      let ended = false;
+      await streamPost<StreamEvent>(`${url}/apply`, { content: text, hash: data!.hash }, (e) => {
+        if (e.type === "done" || e.type === "error") ended = true;
+        setStream((st) => reduceStream(st, e));
+      });
+      // A stream that closes without a result didn't say the change went in.
+      if (!ended) setStream((st) => reduceStream(st, { type: "error", message: "Lost the connection before Compose finished. Reload to see whether the change went in." }));
       const fresh = await mutate();
       if (fresh) setText(fresh.content);
       onApplied();

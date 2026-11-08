@@ -228,7 +228,7 @@ function SegmentView({ p, disk, pct }: { p: Placed; disk: DiskView; pct: (px: nu
   const title = [
     `${v.name}${v.label ? ` "${v.label}"` : ""}: ${fmt.bytes(v.size)} ${roleWord(v)}`,
     v.primaryMount ? `mounted at ${v.primaryMount}` : v.swapActive ? "active swap" : "not mounted",
-    v.usage ? `${Math.round(used!)}% used, ${fmt.bytes(v.usage.avail)} free` : null,
+    v.usage ? `${fmt.percent(used!)} used, ${fmt.bytes(v.usage.avail)} free` : null,
     notPermanent(v, disk) ? "won't come back after a restart" : null,
   ]
     .filter(Boolean)

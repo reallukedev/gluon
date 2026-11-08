@@ -24,7 +24,7 @@ interface Row {
  */
 export function SpaceWords({ fallback, attention }: { fallback?: FsUsage[]; attention?: Set<string> }) {
   const fmt = useFormat();
-  const { data } = useApi<SpaceData>("/api/widgets/space", { refresh: 60_000 });
+  const { data, error } = useApi<SpaceData>("/api/widgets/space", { refresh: 60_000 });
   const rows: Row[] =
     data?.disks ??
     (fallback ?? [])
@@ -37,7 +37,11 @@ export function SpaceWords({ fallback, attention }: { fallback?: FsUsage[]; atte
         avail: f.avail,
         daysToFull: null,
       }));
-  if (!rows.length) return data ? <p className={w.none}>No drives with space to show.</p> : null;
+  if (!rows.length) {
+    if (data) return <p className={w.none}>No drives with space to show.</p>;
+    // Nothing to fall back on: a failed read must not look like an empty list.
+    return error ? <p className={w.none}>Couldn&apos;t read the drives. Trying again.</p> : null;
+  }
   return (
     <ul className={w.list} role="list">
       {rows.map((r) => {
@@ -50,14 +54,14 @@ export function SpaceWords({ fallback, attention }: { fallback?: FsUsage[]; atte
                 {r.mount}
               </Link>
               <span className={w.val} data-attn={needs ? "" : undefined}>
-                <b className="num">{Math.round(r.pct)}% full</b>
+                <b className="num">{fmt.percent(r.pct)} full</b>
                 <span className="num">
                   {" "}
                   · {fmt.bytes(r.used)} of {fmt.bytes(r.size)} · {left ?? `${fmt.bytes(r.avail)} free`}
                 </span>
               </span>
             </div>
-            <UsageBar value={r.pct} attention={85} fault={95} label={`${r.mount}: ${Math.round(r.pct)}% full${left ? `, ${left}` : ""}`} />
+            <UsageBar value={r.pct} attention={85} fault={95} label={`${r.mount}: ${fmt.percent(r.pct)} full${left ? `, ${left}` : ""}`} />
           </li>
         );
       })}

@@ -43,8 +43,8 @@ export function Notifications() {
 
   if (error && (!subs.data || !channels.data)) {
     return (
-      <Notice tone="fault" title="Couldn't load your notification settings">
-        {error.message} Try again in a moment.
+      <Notice tone="fault" title="Couldn't load your notification settings" action={<Button size="sm" onClick={refresh}>Try again</Button>}>
+        {error.message}
       </Notice>
     );
   }

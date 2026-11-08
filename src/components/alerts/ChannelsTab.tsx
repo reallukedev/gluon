@@ -36,8 +36,8 @@ export function ChannelsTab({ highlight }: { highlight: string | null }) {
 
   if (error && !data) {
     return (
-      <Notice tone="fault" title="Couldn't load channels">
-        {error.message} Try again in a moment.
+      <Notice tone="fault" title="Couldn't load channels" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+        {error.message}
       </Notice>
     );
   }

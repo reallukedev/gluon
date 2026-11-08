@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { Notice } from "@/components/ui/Surface";
+import { Button } from "@/components/ui/Button";
 import s from "./people.module.css";
 
 /** SWR key for the household's problem reports (the People tabs' count and the Reports tab share it). */
@@ -27,10 +28,11 @@ export function device(ua: string | null): string {
 export const errorMessage = (e: unknown, fallback = "That didn't work.") => (e instanceof Error ? e.message : fallback);
 export const roleLabel = (r: "admin" | "member") => (r === "admin" ? "Admin" : "Household");
 
-export function LoadError({ what, error }: { what: string; error: Error }) {
+export function LoadError({ what, error, onRetry }: { what: string; error: Error; onRetry?: () => unknown }) {
   return (
-    <Notice tone="fault" title={`Couldn't load ${what}`}>
-      {errorMessage(error)} Try again in a moment.
+    <Notice tone="fault" title={`Couldn't load ${what}`} action={onRetry ? <Button size="sm" onClick={() => void onRetry()}>Try again</Button> : undefined}>
+      {errorMessage(error)}
+      {onRetry ? "" : " Try again in a moment."}
     </Notice>
   );
 }

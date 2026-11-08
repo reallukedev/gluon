@@ -97,7 +97,9 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
   const [moreError, setMoreError] = React.useState<string | null>(null);
   const fresh = React.useRef(new Set<number>());
 
+  const keyRef = React.useRef(filterKey);
   React.useEffect(() => {
+    keyRef.current = filterKey;
     setLive([]);
     setHeld([]);
     setOlder([]);
@@ -145,6 +147,8 @@ export function ActivityView({ initial, people, initialTarget, initialUser, page
     setMoreError(null);
     try {
       const p = await api.get<ActivityPage>(`/api/activity?${filterKey}${filterKey ? "&" : ""}limit=${pageSize}&before=${cursor}`);
+      // The filter changed while this was loading: these entries belong to the old one.
+      if (keyRef.current !== filterKey) return;
       setOlder((o) => [...o, ...p.items]);
       setNext(p.next);
     } catch (e) {

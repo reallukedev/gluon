@@ -66,8 +66,11 @@ export function AccessMap({ memberId }: { memberId?: string }) {
       setBusy(null);
     }
   }
+  // Each change sends the person's whole list, so an older answer landing last must not win.
+  const appSeq = React.useRef(0);
   async function setApp(userId: string, who: string, appId: string, name: string, on: boolean) {
     if (!data) return;
+    const seq = ++appSeq.current;
     setBusy(`a:${userId}:${appId}`);
     const current = data.apps.filter((a) => a.users.includes(userId)).map((a) => a.id);
     const nextApps = on ? [...new Set([...current, appId])] : current.filter((x) => x !== appId);
@@ -75,7 +78,8 @@ export function AccessMap({ memberId }: { memberId?: string }) {
     void vis.mutate({ ...data, apps: data.apps.map((a) => (a.id === appId ? { ...a, users: on ? [...a.users, userId] : a.users.filter((u) => u !== userId) } : a)) }, { revalidate: false });
     try {
       const next = await api.put<VisibilityResponse>(APPS_URL, { userId, apps: nextApps });
-      void vis.mutate(next, { revalidate: false });
+      if (seq === appSeq.current) void vis.mutate(next, { revalidate: false });
+      else void vis.mutate();
     } catch (e) {
       void vis.mutate();
       if (!quiet(e)) toast.error(errorMessage(e, `Couldn't change what ${who} sees.`));

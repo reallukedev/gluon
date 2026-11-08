@@ -97,12 +97,15 @@ export function MoveDialog({
     if (!open || phase !== "running" || starting) return;
     let misses = 0;
     let pending = false;
+    let stopped = false;
     const t = setInterval(async () => {
       // A slow answer must not stack up polls behind it.
       if (pending) return;
       pending = true;
       const r = await api.get<PlanResponse>(`${base}?only=job`).catch(() => null);
       pending = false;
+      // Closed, or moved on to another phase, while this was in flight.
+      if (stopped) return;
       if (r && !r.job && ++misses >= 3) {
         // The server has no move for this app: it never started, or Gluon restarted mid-move.
         clearInterval(t);
@@ -120,7 +123,10 @@ export function MoveDialog({
         finished.current?.(v.result?.newId ?? null);
       }
     }, 2000);
-    return () => clearInterval(t);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
   }, [open, phase, base, starting, load]);
 
   async function start() {

@@ -169,6 +169,8 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
       setDialog((d) => (d ? { ...d, follow: true } : d));
       return;
     }
+    if (!finished)
+      setPostState((st) => reduceStream(st, { type: "error", message: "Lost the connection before the install started. Check Past updates, then try again." }));
     setRunning(false);
     setSelected(new Set());
     refreshAll();
@@ -245,11 +247,26 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
   const overdue = updatesOverdue(data);
   const waitingDays = data.oldestPendingAt ? Math.floor((Date.now() - data.oldestPendingAt) / DAY) : 0;
 
+  // "Up to date" is a claim about the last check; with no check, or a failed one, it isn't known.
+  const checkedOk = !!data.lastRefresh.at && data.lastRefresh.ok !== false;
   const dialogState = dialog?.follow ? followDialog.state : postState;
   const reconnecting = dialog?.follow && followDialog.status !== "live" && !dialogState.result;
 
   return (
     <div className={s.stack}>
+      {error && (
+        <Notice
+          tone="fault"
+          title="Can't reach the server"
+          action={
+            <Button size="sm" onClick={() => void mutate()}>
+              Try again
+            </Button>
+          }
+        >
+          This is how updates looked at <Time ts={data.checkedAt} kind="time" />.
+        </Notice>
+      )}
       {data.dpkgInterrupted && (
         <Notice
           tone="fault"
@@ -330,7 +347,9 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
       >
         <div className={s.updHead}>
           <p className={s.updSentence}>
-            {data.counts.total === 0 ? (
+            {data.counts.total === 0 && !checkedOk ? (
+              data.lastRefresh.at ? "No updates known." : "Updates haven't been checked yet."
+            ) : data.counts.total === 0 ? (
               <span className={s.upToDate}>
                 <GluonMark className={s.upToDateMark} />
                 Up to date
@@ -356,7 +375,7 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
           </div>
         </div>
         {data.counts.total > 0 && <Impact pkgs={all.length ? all : data.packages} />}
-        {data.counts.total === 0 && <p className={s.updNote}>Checked daily. Security fixes left waiting over three days show up in Needs you.</p>}
+        {data.counts.total === 0 && checkedOk && <p className={s.updNote}>Checked daily. Security fixes left waiting over three days show up in Needs you.</p>}
         {data.removals.length > 0 && <p className={s.updNote}>Installing everything also removes {data.removals.join(", ")}.</p>}
       </Panel>
 

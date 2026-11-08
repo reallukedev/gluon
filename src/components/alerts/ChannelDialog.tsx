@@ -663,7 +663,7 @@ function XmppFields({
   return (
     <>
       {admin && (
-        <Field label="Send from" description={d.xmode === "account" ? "A separate account just for alerts works best." : undefined}>
+        <Field label="Send from" description={d.xmode === "account" ? "A separate account only for alerts works best." : undefined}>
           <Segmented
             aria-label="Send from"
             value={d.xmode}

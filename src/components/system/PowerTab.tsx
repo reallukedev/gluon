@@ -94,7 +94,7 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
               "Someone has to press the power button on the server to turn it back on. Gluon can't do that remotely.",
               ...(away ? ["You're not at home right now, so you can't turn it back on yourself."] : []),
             ],
-      confirmLabel: action === "restart" ? "Restart" : "Shut down",
+      confirmLabel: action === "restart" ? "Restart server" : "Shut down server",
       variant: action === "restart" ? "primary" : "dangerSolid",
       holdMs: 1500,
       onConfirm: async () => {
@@ -151,6 +151,11 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
 
   return (
     <div className={s.stack}>
+      {error && (
+        <Notice tone="fault" title="Can't reach the server" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
+          What&apos;s shown here may be out of date, including any scheduled restart.
+        </Notice>
+      )}
       {blocked && (
         <Notice tone="attention" title="Updates are being installed" action={<LinkButton href="/system?tab=updates">See progress</LinkButton>}>
           Restarting now could leave packages half-installed. Wait for the install to finish.

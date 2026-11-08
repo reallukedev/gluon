@@ -104,8 +104,15 @@ export function SystemView({ tab, unit, initial }: { tab: SystemTab; unit: strin
       <>
         {lead && <b>{lead}</b>} {parts.join(" ")}
       </>
-    ) : u && services.data ? (
-      "Everything is running and up to date."
+    ) : u && services.data && !updates.error && !services.error ? (
+      // "Up to date" only when apt actually answered; a failed or missing check is not a clean bill.
+      u.lastRefresh.ok === false ? (
+        "Everything is running. Couldn't check for updates."
+      ) : !u.lastRefresh.at ? (
+        "Everything is running. Updates haven't been checked yet."
+      ) : (
+        "Everything is running and up to date."
+      )
     ) : (
       unreadSummary(updates.error && !u ? updates.error : null, services.error && !services.data ? services.error : null)
     );
