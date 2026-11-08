@@ -1,3 +1,4 @@
+import "server-only";
 import { z } from "zod";
 import { HA_ENTITY_ID, HA_MAX_PICKED, type WidgetType } from "./widgets-types";
 
