@@ -22,9 +22,9 @@ export interface CheckupStart {
 }
 
 /** The Checkup tab: run a full checkup or a targeted one, watch it live, and look back at past runs. */
-export function CheckupTab({ initial, runId, start }: { initial: CheckupState | null; runId: string | null; start: CheckupStart | null }) {
+export function CheckupTab({ initial, runId, start }: { initial: Promise<CheckupState | null>; runId: string | null; start: CheckupStart | null }) {
   const router = useRouter();
-  const state = useApi<CheckupState>(STATE_URL, { fallbackData: initial ?? undefined, refresh: 30_000 });
+  const state = useApi<CheckupState>(STATE_URL, { fallbackData: React.use(initial) ?? undefined, refresh: 30_000 });
   const live = useCheckupRun();
   const wantsStored = !!runId && live.view?.meta.id !== runId;
   const stored = useApi<CheckupRun>(wantsStored ? `${STATE_URL}/${encodeURIComponent(runId!)}` : null, { revalidateOnFocus: false });
@@ -81,15 +81,7 @@ export function CheckupTab({ initial, runId, start }: { initial: CheckupState | 
       {live.pending && !live.view ? (
         <Starting kind={live.pending.kind} onStop={() => void stopCheckup()} />
       ) : loadingStored || (!state.data && !view) ? (
-        <div className={s.run}>
-          <div className={s.runHead}>
-            <Skeleton width={180} height={16} />
-          </div>
-          <div style={{ padding: 18, display: "grid", gap: 12 }}>
-            <Skeleton width="55%" height={24} />
-            <Skeleton height={170} />
-          </div>
-        </div>
+        <RunSkeleton />
       ) : view ? (
         <RunPanel key={view.meta.id} view={view} streaming={live.streaming && live.view?.meta.id === view.meta.id} isLive={live.view?.meta.id === view.meta.id} onRun={run} onBackToLatest={runId ? () => router.replace("/diagnostics", { scroll: false }) : null} />
       ) : (
@@ -105,6 +97,45 @@ export function CheckupTab({ initial, runId, start }: { initial: CheckupState | 
 }
 
 /** Before anything has run: the rows the checkup will fill, and the button that starts it. */
+function RunSkeleton() {
+  return (
+    <div className={s.run}>
+      <div className={s.runHead}>
+        <Skeleton width={180} height={16} />
+      </div>
+      <div style={{ padding: 18, display: "grid", gap: 12 }}>
+        <Skeleton width="55%" height={24} />
+        <Skeleton height={170} />
+      </div>
+    </div>
+  );
+}
+
+/** The tab while the server reads apps and drives for it: the run panel and both lists in their places. */
+export function CheckupSkeleton() {
+  return (
+    <div className={s.stack} aria-busy>
+      <RunSkeleton />
+      <div className={s.cols}>
+        <Panel title="Check something specific">
+          <div style={{ display: "grid", gap: 14 }}>
+            {[62, 48, 56, 44].map((w, i) => (
+              <Skeleton key={i} height={16} width={`${w}%`} />
+            ))}
+          </div>
+        </Panel>
+        <Panel title="Recent checkups">
+          <div style={{ display: "grid", gap: 14 }}>
+            {[54, 46, 50].map((w, i) => (
+              <Skeleton key={i} height={16} width={`${w}%`} />
+            ))}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
 export function AtRest({ rows, title, cta, busy, onRun }: { rows: string[]; title: string; cta: string; busy: boolean; onRun: () => void }) {
   const id = React.useId();
   return (

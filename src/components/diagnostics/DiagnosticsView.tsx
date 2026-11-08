@@ -1,12 +1,13 @@
 "use client";
+import * as React from "react";
 import type { CheckupKind, CheckupRun, CheckupState, SecurityState } from "@/lib/diagnostics-types";
 import { useApi } from "@/lib/client/api";
 import { useLive } from "@/lib/client/live";
 import { useFormat } from "@/components/PrefsProvider";
-import { Page, PageHeader } from "@/components/ui/Surface";
+import { Page, PageHeader, Skeleton } from "@/components/ui/Surface";
 import { Tabs } from "@/components/ui/Tabs";
 import { Time } from "@/components/ui/Time";
-import { CheckupTab, type CheckupStart } from "./checkup/CheckupTab";
+import { CheckupTab, CheckupSkeleton, type CheckupStart } from "./checkup/CheckupTab";
 import { useCheckupRun, STATE_URL, SECURITY_URL } from "./checkup/useCheckupRun";
 import { SecurityTab } from "./checkup/SecurityTab";
 import { TrafficTab } from "./TrafficTab";
@@ -48,8 +49,8 @@ function CheckupSummary({ kind, latest }: { kind: CheckupKind; latest: CheckupRu
   );
 }
 
-function FullSummary({ initial }: { initial: CheckupState | null }) {
-  const { data } = useApi<CheckupState>(STATE_URL, { fallbackData: initial ?? undefined, refresh: 30_000 });
+function FullSummary({ initial }: { initial: Promise<CheckupState | null> }) {
+  const { data } = useApi<CheckupState>(STATE_URL, { fallbackData: React.use(initial) ?? undefined, refresh: 30_000 });
   return <CheckupSummary kind="full" latest={data?.latest} />;
 }
 
@@ -73,13 +74,30 @@ function LiveSummary() {
   );
 }
 
-export function DiagnosticsView({ tab, logSource, logUnit, checkup, security, runId, start }: { tab: DiagTab; logSource: "kernel" | "journal" | "docker" | null; logUnit: string | null; checkup: CheckupState | null; security: SecurityState | null; runId: string | null; start: CheckupStart | null }) {
+export function DiagnosticsView({ tab, logSource, logUnit, checkup, security, runId, start }: { tab: DiagTab; logSource: "kernel" | "journal" | "docker" | null; logUnit: string | null; checkup: Promise<CheckupState | null> | null; security: SecurityState | null; runId: string | null; start: CheckupStart | null }) {
   return (
     <Page>
-      <PageHeader title="Diagnostics" summary={tab === "checkup" ? <FullSummary initial={checkup} /> : tab === "security" ? <SecuritySummary initial={security} /> : <LiveSummary />} />
+      <PageHeader
+        title="Diagnostics"
+        summary={
+          checkup ? (
+            <React.Suspense fallback={<Skeleton width="min(380px, 80%)" height={12} />}>
+              <FullSummary initial={checkup} />
+            </React.Suspense>
+          ) : tab === "security" ? (
+            <SecuritySummary initial={security} />
+          ) : (
+            <LiveSummary />
+          )
+        }
+      />
       <Tabs value={tab} hrefFor={(v) => (v === "checkup" ? "/diagnostics" : `/diagnostics?tab=${v}`)} items={TAB_ITEMS} aria-label="Diagnostics sections" />
       <div className={s.tabBody}>
-        {tab === "checkup" && <CheckupTab initial={checkup} runId={runId} start={start} />}
+        {checkup && (
+          <React.Suspense fallback={<CheckupSkeleton />}>
+            <CheckupTab initial={checkup} runId={runId} start={start} />
+          </React.Suspense>
+        )}
         {tab === "security" && <SecurityTab initial={security} autostart={start?.kind === "safety"} />}
         {tab === "apps" && <AppsTab />}
         {tab === "traffic" && <TrafficTab />}
