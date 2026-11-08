@@ -430,6 +430,8 @@ export interface DdnsStatus {
     ip4Provider: string | null;
     ip6Provider: string | null;
     updateSchedule: string | null;
+    /** DELETE_ON_STOP: it removes the records it keeps when it stops. */
+    deleteOnStop: boolean;
   };
   ipv4: { address: string; at: number | null } | null;
   ipv6: { addresses: string[]; at: number | null } | null;

@@ -8,7 +8,9 @@ import { edgeCovered, type DnsRecordT, type DnsType } from "@/lib/cloudflare-typ
  * web names go through Cloudflare (orange cloud): the base domain, the wildcard that covers every
  * name one level under it, and any deeper name Cloudflare's free certificate still covers. Chat
  * and voice can't be proxied, and addresses marked "direct" opt out, so they get records of their
- * own that point straight here.
+ * own that point straight here. Game addresses (Minecraft through mc-router, forwarded game ports)
+ * always point straight here, and so do the extra names the admin asks Gluon to keep, unless one
+ * of those is marked as proxied.
  */
 
 /** Written on every record Gluon makes, so it can tell its own records from anyone else's. */
@@ -24,6 +26,18 @@ export interface PlanRoute {
   direct: boolean;
 }
 
+/** A game address: never proxied, since Cloudflare's proxy only carries web traffic. */
+export interface PlanGame {
+  host: string;
+  why: string;
+}
+
+/** A name the admin asked Gluon to keep pointed here, wildcards included. */
+export interface PlanKept {
+  name: string;
+  proxied: boolean;
+}
+
 export interface PlanInput {
   zone: string;
   baseDomain: string;
@@ -32,6 +46,15 @@ export interface PlanInput {
   ipv6: string | null;
   /** Web addresses go through Cloudflare's proxy. */
   proxy: boolean;
+  games?: PlanGame[];
+  kept?: PlanKept[];
+  /**
+   * Names another updater (cloudflare-ddns) is still writing. Gluon plans them but changes nothing
+   * there until it stops, so the two never take turns rewriting the same record.
+   */
+  defer?: string[];
+  /** Something Gluon keeps couldn't be read this time (the game addresses), so nothing is removed. */
+  partial?: boolean;
 }
 
 /** A record as Cloudflare lists it; any type, though Gluon only ever looks at A, AAAA and CNAME. */
@@ -58,7 +81,10 @@ export interface NamePlan {
   why: string;
   want: DnsRecordT[];
   have: DnsRecordT[];
-  state: "ok" | "change" | "conflict";
+  /** deferred: another updater is still writing this name; Gluon takes over when it stops. */
+  state: "ok" | "change" | "conflict" | "deferred";
+  /** Has A, AAAA or CNAME records Gluon didn't make and wasn't handed. */
+  foreign: boolean;
   actions: Action[];
 }
 
@@ -67,6 +93,8 @@ export interface Plan {
   /** Deletes first (a CNAME can't share a name with anything), then updates, then creates. */
   actions: Action[];
   problems: string[];
+  /** Names a wildcard Gluon keeps answers for, with no record of their own needed. */
+  covered: string[];
 }
 
 const TYPES = new Set<DnsType>(["A", "AAAA", "CNAME"]);
@@ -77,22 +105,28 @@ export const inZone = (name: string, zone: string) => name === zone || name.ends
 /** One label under the base domain, so the wildcard covers it. */
 export const underWildcard = (host: string, base: string) => host.endsWith(`.${base}`) && !host.slice(0, -base.length - 1).includes(".");
 
+/** The wildcard name that would answer for `host` (`*.mc.example.com` for `a.mc.example.com`). */
+const wildcardOf = (host: string) => (host.includes(".") ? `*.${host.slice(host.indexOf(".") + 1)}` : null);
+
 /** Through Cloudflare's proxy, as far as Gluon decides it. */
 export function proxiedName(input: Pick<PlanInput, "zone" | "proxy">, host: string, web = true, direct = false): boolean {
   return input.proxy && web && !direct && edgeCovered(host, norm(input.zone));
 }
 
-export function wanted(input: PlanInput): { wants: Want[]; held: string[]; problems: string[]; covered: { name: string; why: string }[] } {
+export function wanted(input: PlanInput): { wants: Want[]; held: string[]; problems: string[]; covered: { name: string; why: string; wildcard: string }[] } {
   const zone = norm(input.zone);
   const base = norm(input.baseDomain);
   const out = new Map<string, Want>();
   // Names Gluon would write but can't (no address to point at): their records stay as they are.
   const held = new Set<string>();
-  // Names left to the wildcard, which plan() still checks for records of their own.
-  const covered: { name: string; why: string }[] = [];
+  // Names left to a wildcard, which plan() still checks for records of their own.
+  const covered: { name: string; why: string; wildcard: string }[] = [];
+  // Wildcards Gluon keeps here, and whether each is proxied (known even without an address).
+  const wilds = new Map<string, boolean>();
 
   const add = (name: string, why: string, proxied: boolean) => {
-    if (!inZone(name, zone) || out.has(name)) return;
+    if (!inZone(name.replace(/^\*\./, ""), zone) || out.has(name) || held.has(name)) return;
+    if (name.startsWith("*.")) wilds.set(name, proxied);
     if (!input.ipv4) {
       held.add(name);
       return;
@@ -103,24 +137,39 @@ export function wanted(input: PlanInput): { wants: Want[]; held: string[]; probl
       records: [{ type: "A", content: input.ipv4, proxied }, ...(input.ipv6 ? [{ type: "AAAA" as const, content: input.ipv6, proxied }] : [])],
     });
   };
+  const kept = (input.kept ?? []).map((k) => ({ name: norm(k.name), proxied: k.proxied && edgeCovered(norm(k.name).replace(/^\*\./, "x."), zone) }));
+  // Every name Gluon may write. A wildcard doesn't answer for a name with anything beneath it, so
+  // such a name (mc.example.com, with *.mc.example.com kept) always needs a record of its own.
+  const everyName = [...kept.map((k) => k.name), ...input.routes.filter((r) => r.enabled).map((r) => norm(r.host)), ...(input.games ?? []).map((x) => norm(x.host))];
+  const hasBelow = (host: string) => everyName.some((n) => n.endsWith(`.${host}`));
+  /** Added, unless a wildcard Gluon keeps already says the same thing for it. */
+  const addCoverable = (host: string, why: string, proxied: boolean) => {
+    const w = wildcardOf(host);
+    if (w && !out.has(host) && wilds.get(w) === proxied && !hasBelow(host)) {
+      if (!covered.some((c) => c.name === host)) covered.push({ name: host, why, wildcard: w });
+      return;
+    }
+    add(host, why, proxied);
+  };
 
-  const wildcardProxied = proxiedName(input, `x.${base}`);
   if (inZone(base, zone)) {
     // The base domain has always gone through Cloudflare, when the certificate allows it.
     add(base, "Base domain", edgeCovered(base, zone));
-    add(`*.${base}`, `Every name under ${base}`, wildcardProxied);
+    add(`*.${base}`, `Every name under ${base}`, proxiedName(input, `x.${base}`));
   }
+  // Kept wildcards first, so the addresses under them can lean on them.
+  for (const k of kept) if (k.name.startsWith("*.")) add(k.name, "Other name", k.proxied);
   for (const r of input.routes) {
     const host = norm(r.host);
     if (!r.enabled || !inZone(host, zone) || host === base) continue;
-    const proxied = proxiedName(input, host, r.web, r.direct);
-    // The wildcard already says the same thing for this name.
-    if (underWildcard(host, base) && proxied === wildcardProxied) {
-      if (!covered.some((c) => c.name === host)) covered.push({ name: host, why: r.name });
-      continue;
-    }
-    add(host, r.name, proxied);
+    addCoverable(host, r.name, proxiedName(input, host, r.web, r.direct));
   }
+  for (const gm of input.games ?? []) {
+    const host = norm(gm.host);
+    if (inZone(host, zone) && host !== base) addCoverable(host, gm.why, false);
+  }
+  // A kept name that's also an address follows the address (a web address stays proxied).
+  for (const k of kept) if (!k.name.startsWith("*.") && !covered.some((c) => c.name === k.name)) add(k.name, "Other name", k.proxied);
   const problems = held.size ? ["Couldn't find this network's internet address, so its records were left as they are."] : [];
   return { wants: [...out.values()], held: [...held], problems, covered: held.size ? [] : covered };
 }
@@ -139,6 +188,7 @@ const strip = (r: ExistingRecord): DnsRecordT => ({ type: r.type as DnsType, con
 export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iterable<string> = []): Plan {
   const { wants, held, problems, covered } = wanted(input);
   const taken = new Set([...adopted].map(norm));
+  const deferred = new Set((input.defer ?? []).map(norm));
   const byName = new Map<string, ExistingRecord[]>();
   for (const r of existing) {
     if (!TYPES.has(r.type as DnsType)) continue;
@@ -147,25 +197,34 @@ export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iter
   }
   for (const n of held) byName.delete(n);
   const mine = (r: ExistingRecord) => r.comment === MARK || taken.has(norm(r.name));
+  const below = (host: string) => existing.some((r) => norm(r.name).endsWith(`.${host}`));
   // A name's own records beat the wildcard. Gluon's own there are only leftovers (removed below),
   // but anyone else's would quietly send that address somewhere else, so it's planned like any name.
-  const wildcard = wants.find((w) => w.name === `*.${norm(input.baseDomain)}`);
+  // So is a name with any record beneath it, which the wildcard no longer answers for.
   for (const c of covered) {
-    if (wildcard && !wants.some((w) => w.name === c.name) && (byName.get(c.name) ?? []).some((r) => r.comment !== MARK)) wants.push({ name: c.name, why: c.why, records: wildcard.records });
+    const wildcard = wants.find((w) => w.name === c.wildcard);
+    if (wildcard && !wants.some((w) => w.name === c.name) && ((byName.get(c.name) ?? []).some((r) => r.comment !== MARK) || below(c.name))) wants.push({ name: c.name, why: c.why, records: wildcard.records });
   }
+  // Another updater's names: never cleaned up from here either.
+  for (const n of deferred) if (!wants.some((w) => w.name === n)) byName.delete(n);
   const names: NamePlan[] = [];
 
   for (const w of wants) {
     const have = byName.get(w.name) ?? [];
     byName.delete(w.name);
     const foreign = have.filter((r) => !mine(r));
+    const row = { name: w.name, why: w.why, want: w.records, have: have.map(strip), foreign: foreign.length > 0, actions: [] as Action[] };
+    if (deferred.has(w.name)) {
+      names.push({ ...row, state: "deferred" });
+      continue;
+    }
     const exact = have.length === w.records.length && w.records.every((d) => have.some((h) => same(h, d)));
     if (exact) {
-      names.push({ name: w.name, why: w.why, want: w.records, have: have.map(strip), state: "ok", actions: [] });
+      names.push({ ...row, state: "ok" });
       continue;
     }
     if (foreign.length) {
-      names.push({ name: w.name, why: w.why, want: w.records, have: have.map(strip), state: "conflict", actions: [] });
+      names.push({ ...row, state: "conflict" });
       continue;
     }
     const actions: Action[] = [];
@@ -185,13 +244,14 @@ export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iter
       } else actions.push({ op: "create", name: w.name, record: d });
     }
     for (const h of left) actions.push({ op: "delete", name: w.name, id: h.id, record: strip(h) });
-    names.push({ name: w.name, why: w.why, want: w.records, have: have.map(strip), state: "change", actions });
+    names.push({ ...row, state: "change", actions });
   }
 
-  // Without an address nothing is rewritten, so nothing Gluon made is taken away either.
-  if (!held.length) {
+  // Without an address nothing is rewritten, so nothing Gluon made is taken away either. Records
+  // handed to Gluon go the same way as its own once it no longer keeps their name.
+  if (!held.length && !input.partial) {
     for (const [name, have] of byName) {
-      const own = have.filter((r) => r.comment === MARK);
+      const own = have.filter(mine);
       if (!own.length) continue;
       names.push({
         name,
@@ -199,6 +259,7 @@ export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iter
         want: [],
         have: have.map(strip),
         state: "change",
+        foreign: own.length < have.length,
         actions: own.map((h) => ({ op: "delete", name, id: h.id, record: strip(h) })),
       });
     }
@@ -207,5 +268,5 @@ export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iter
   const all = names.flatMap((n) => n.actions);
   const order = { delete: 0, update: 1, create: 2 } as const;
   const actions = all.map((a, i) => [a, i] as const).sort((x, y) => order[x[0].op] - order[y[0].op] || x[1] - y[1]).map(([a]) => a);
-  return { names, actions, problems };
+  return { names, actions, problems, covered: covered.map((c) => c.name).filter((c) => !names.some((n) => n.name === c)) };
 }

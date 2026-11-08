@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { Refresh, Code, ClockRotateRight, NavArrowRight } from "iconoir-react";
+import type { CloudflareStatus } from "@/lib/cloudflare-types";
 import type { DdnsStatus, DnsResult, NetworkStatus, RoutesResponse, TlsResult } from "@/lib/network-types";
 import type { LineState } from "@/lib/types";
 import { useFormat } from "@/components/PrefsProvider";
@@ -9,7 +10,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { StateLine } from "@/components/ui/StateLine";
 import { Time } from "@/components/ui/Time";
 import { Disclosure } from "@/components/ui/Disclosure";
-import { certRows } from "./model";
+import { certRows, gluonUpdater } from "./model";
 import { DriftSentence } from "./DriftNotice";
 import s from "./network.module.css";
 
@@ -113,9 +114,10 @@ export function DnsDetails({ status, statusError, onRecheck, checking }: { statu
   );
 }
 
-export function RouterDetails({ status, ddns, ddnsError }: { status: NetworkStatus | undefined; ddns: DdnsStatus | undefined; ddnsError: string | null }) {
+export function RouterDetails({ status, ddns, ddnsError, cf }: { status: NetworkStatus | undefined; ddns: DdnsStatus | undefined; ddnsError: string | null; cf?: CloudflareStatus }) {
   const fmt = useFormat();
   const d = ddns;
+  const gluon = gluonUpdater(cf);
   const v6 = status?.publicIp.v6 ?? d?.ipv6?.addresses ?? [];
   return (
     <div className={s.hopBody}>
@@ -125,6 +127,11 @@ export function RouterDetails({ status, ddns, ddnsError }: { status: NetworkStat
           Open the router page
         </LinkButton>
       </div>
+      {gluon && (
+        <p className={s.hopState}>
+          <StateLine state={gluon.state} label={gluon.sentence} />
+        </p>
+      )}
       {ddnsError && !d ? (
         <Notice tone="fault" title="Couldn't read the address updater">{ddnsError}</Notice>
       ) : !d ? (
@@ -133,11 +140,11 @@ export function RouterDetails({ status, ddns, ddnsError }: { status: NetworkStat
         <>
           {d.container.exists ? (
             <p className={s.hopState}>
-              <StateLine state={d.state === "ok" ? "running" : d.state === "fault" ? "unhealthy" : d.state === "attention" ? "attention" : "unknown"} label={d.summary} />
+              <StateLine state={d.state === "ok" ? "running" : d.state === "fault" ? (gluon ? "stopped" : "unhealthy") : d.state === "attention" ? "attention" : "unknown"} label={d.summary} />
             </p>
-          ) : (
+          ) : gluon ? null : (
             <Empty title="No address updater found">
-              Run a cloudflare-ddns container (favonia/cloudflare-ddns) so DNS follows when your internet address changes.
+              Connect Cloudflare in Settings, Integrations, and Gluon keeps DNS pointed here when your internet address changes.
             </Empty>
           )}
           {d.errors.length > 0 && (

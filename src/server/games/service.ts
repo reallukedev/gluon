@@ -111,8 +111,8 @@ function pickCrafty(list: Listed[], aliases: Map<string, string[]>, router: Rout
   return all.sort((a, b) => score(b) - score(a))[0]!;
 }
 
-async function load(): Promise<Ctx> {
-  const list = await listContainers();
+/** mc-router and the addresses it has, without Crafty or Docker network details. */
+async function readRouter(list: Listed[]): Promise<Pick<Ctx, "router" | "info" | "doc" | "mappings" | "fallback">> {
   const router = await findRouter(list);
   const info: McRouterInfo = { status: "missing", container: null, version: null, file: null, editable: false, reason: null, watch: false, hostPort: null, networks: [], broken: null, rev: null };
   let doc: RoutesDoc | null = null;
@@ -147,12 +147,56 @@ async function load(): Promise<Ctx> {
       }
     }
   }
+  return { router, info, doc, mappings, fallback };
+}
+
+async function load(): Promise<Ctx> {
+  const list = await listContainers();
+  const { router, info, doc, mappings, fallback } = await readRouter(list);
   const aliases = await networkAliases(list, router?.networks ?? []);
   const cc = pickCrafty(list, aliases, router, mappings);
   const read = cc ? await readCrafty(cc).catch(() => ({ servers: [], names: false, live: false })) : null;
   const craftyInfo: CraftyInfo = cc && read ? { status: cc.State === "running" ? "running" : "stopped", container: nameOf(cc), servers: read.servers, names: read.names, live: read.live } : { status: "missing", container: null, servers: [], names: false, live: false };
   return { list, aliases, router, info, doc, mappings, fallback, crafty: cc && read ? { c: cc, read } : null, craftyInfo };
 }
+
+const HOSTNAME = /^([a-z0-9_]([a-z0-9_-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * Every address players type that should lead here: mc-router's Minecraft addresses and the
+ * addresses on forwarded game ports. Gluon's Cloudflare connection keeps their DNS. null when
+ * mc-router's routes file couldn't be read, so a hiccup never looks like every address went away.
+ */
+export async function gameAddresses(): Promise<{ host: string; why: string }[] | null> {
+  try {
+    const { router, doc, mappings } = await readRouter(await listContainers());
+    if (router?.settings.routesConfig && !doc) return null;
+    // mc-router missing, or its routes file gone, is usually a container being recreated or a
+    // volume not mounted yet. Only after half an hour of that do its addresses count as gone.
+    const fileGone = !!router?.file && !fs.existsSync(hostPath(router.file));
+    const st = (g.__gluonGameDns ??= { had: false, missingSince: null });
+    if (!router || fileGone) {
+      st.missingSince ??= Date.now();
+      if (st.had && Date.now() - st.missingSince < 30 * 60_000) return null;
+    } else st.missingSince = null;
+    const out = new Map<string, string>();
+    for (const [h] of mappings) {
+      const host = h.trim().toLowerCase().replace(/\.$/, "");
+      if (HOSTNAME.test(host)) out.set(host, "Minecraft");
+    }
+    for (const p of listGamePorts()) {
+      const host = p.address?.trim().toLowerCase().replace(/\.$/, "");
+      if (host && HOSTNAME.test(host) && !out.has(host)) out.set(host, p.name);
+    }
+    st.had = mappings.length > 0 && !fileGone;
+    return [...out].map(([host, why]) => ({ host, why }));
+  } catch {
+    return null;
+  }
+}
+
+/** DNS follows game addresses, so let Cloudflare know soon after they change. */
+const dnsFollows = () => void import("../cloudflare/service").then((m) => m.scheduleSync()).catch(() => undefined);
 
 function targetOf(ctx: Ctx, backend: string): McTarget {
   const host = backendHost(backend);
@@ -174,7 +218,7 @@ interface Checks {
   publicIp: { v4: string | null; v6: string[] };
 }
 
-type G = typeof globalThis & { __gluonGameChecks?: Checks; __gluonGameChecking?: Promise<Checks> | null; __gluonGameLock?: Promise<unknown>; __gluonJavaNeed?: { at: number; v: Promise<{ hostPort: number; addresses: number } | null> } };
+type G = typeof globalThis & { __gluonGameChecks?: Checks; __gluonGameChecking?: Promise<Checks> | null; __gluonGameLock?: Promise<unknown>; __gluonJavaNeed?: { at: number; v: Promise<{ hostPort: number; addresses: number } | null> }; __gluonGameDns?: { had: boolean; missingSince: number | null } };
 const g = globalThis as G;
 const CHECK_TTL = 90_000;
 /** What a player gets when they type an address mc-router doesn't know. */
@@ -446,6 +490,7 @@ async function change(user: User, where: Where, rev: string, edit: Edit, verb: (
     const undo = snapshot(file, doc.raw, v.summary, user);
     put(file, serialize(data, doc.indent), doc.raw);
     g.__gluonJavaNeed = undefined;
+    dnsFollows();
     const res = await reload(r);
     audit(user, { action: v.action, target: v.target, summary: v.summary, detail: { file, applied: res.applied, note: res.note } }, where);
     const ping = v.checkHost && res.applied ? await pingThroughRouter(r, v.checkHost) : null;
@@ -515,6 +560,7 @@ export function restoreMcHistory(user: User, where: Where, id: number): Promise<
     const undo = snapshot(ctx.info.file, current, `Minecraft: put back the file from ${when}`, user);
     put(ctx.info.file, content, current);
     g.__gluonJavaNeed = undefined;
+    dnsFollows();
     const res = await reload(ctx.router);
     audit(user, { action: "games.mc.restore", target: ctx.info.file, summary: `Minecraft: put back mc-router's routes from ${when}`, detail: { id, applied: res.applied } }, where);
     return { status: await gamesStatus({ force: true }), check: null, applied: res.applied, undo, note: res.note };
@@ -526,6 +572,7 @@ export async function reloadMcRouter(user: User, where: Where): Promise<McChange
   const ctx = await load();
   if (!ctx.router) throw new AppError("no_mc_router", "mc-router isn't installed on this server.", 409);
   const res = await reload(ctx.router);
+  dnsFollows();
   audit(user, { action: "games.mc.reload", target: ctx.info.container, summary: "Minecraft: asked mc-router to reload its routes", detail: { applied: res.applied } }, where);
   return { status: await gamesStatus({ force: true }), check: null, applied: res.applied, undo: null, note: res.note };
 }
@@ -574,6 +621,7 @@ export async function addGamePort(user: User, where: Where, body: GamePortBody):
   if (why) throw new AppError("invalid", why, 400, { field: /public port/i.test(why) ? "publicPort" : "ports" });
   const row = insertGamePort(p);
   g.__gluonJavaNeed = undefined;
+  dnsFollows();
   audit(user, { action: "games.port.add", target: row.id, summary: `Game ports: added ${p.name} (${portText(p)})`, detail: p }, where);
   return gamesStatus();
 }
@@ -585,6 +633,7 @@ export async function editGamePort(user: User, where: Where, id: string, body: G
   const why = clash(p, listGamePorts().filter((x) => x.id !== id), await reserved());
   if (why) throw new AppError("invalid", why, 400, { field: /public port/i.test(why) ? "publicPort" : "ports" });
   updateGamePort(id, p);
+  dnsFollows();
   audit(user, { action: "games.port.update", target: id, summary: `Game ports: changed ${old.name}${old.name !== p.name ? ` (now ${p.name})` : ""} to ${portText(p)}`, detail: { before: old, after: p } }, where);
   return gamesStatus();
 }
@@ -593,6 +642,7 @@ export async function removeGamePort(user: User, where: Where, id: string): Prom
   const old = getGamePort(id);
   if (!old) throw new AppError("not_found", "That game port isn't there any more.", 404);
   deleteGamePort(id);
+  dnsFollows();
   audit(user, { action: "games.port.remove", target: id, summary: `Game ports: removed ${old.name} (${portText(old)})`, detail: old }, where);
   return gamesStatus();
 }

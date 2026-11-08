@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { MoreHoriz, OpenNewWindow, Refresh, Trash, KeyBack, Globe } from "iconoir-react";
+import { MoreHoriz, OpenNewWindow, Refresh, Trash, KeyBack, Globe, Plus } from "iconoir-react";
 import { api, ApiError, useApi } from "@/lib/client/api";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -12,7 +12,7 @@ import { StateLine, type LineState } from "@/components/ui/StateLine";
 import { Notice, Panel, Skeleton } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
 import { toast } from "@/components/ui/Toast";
-import type { CloudflareStatus, DnsRecordT, ManagedName, TokenCheck } from "@/lib/cloudflare-types";
+import { edgeCovered, type CloudflareStatus, type DdnsHandoff, type DnsRecordT, type HandoffReason, type ManagedName, type TokenCheck } from "@/lib/cloudflare-types";
 import c from "./cloudflare.module.css";
 
 export const CLOUDFLARE_ICON = "https://cdn.jsdelivr.net/gh/selfhst/icons/svg/cloudflare.svg";
@@ -47,6 +47,8 @@ export function CloudflarePanel() {
     setConnectingState(m);
   };
   const [busy, setBusy] = React.useState<null | string>(null);
+  const [adding, setAdding] = React.useState(0);
+  const [addOpen, setAddOpen] = React.useState(false);
   const [confirm, confirmNode] = useConfirm();
 
   const run = async (what: string, fn: () => Promise<CloudflareStatus>, done?: (s: CloudflareStatus) => string | null) => {
@@ -125,6 +127,7 @@ export function CloudflarePanel() {
   const zone = data.zone;
   const sync = data.sync;
   const conflicts = sync.names.filter((n) => n.state === "conflict");
+  const handoff = data.handoff;
   const errors = sync.names.filter((n) => n.state === "error");
   const live = sync.names.filter((n) => n.want.length > 0);
   const direct = live.filter((n) => n.want.some((w) => !w.proxied) && n.name !== zone.name);
@@ -150,6 +153,35 @@ export function CloudflarePanel() {
       consequences: [`Names under ${zone.name} point straight at ${sync.ipv4 ?? "this network's address"}, so anyone can see it.`, `${zone.name} itself stays proxied.`],
       confirmLabel: "Stop proxying",
       onConfirm: go,
+    });
+  }
+
+  function takeOver(h: DdnsHandoff) {
+    const go = () =>
+      run("takeover", () => api.post<CloudflareStatus>("/api/cloudflare/takeover"), (st) =>
+        st.handoff?.safe ? (h.running ? `${h.container} can be stopped` : `Gluon keeps every name ${h.container} did`) : "Gluon took over what it could",
+      );
+    // While it runs, Gluon only gets ready; once it has stopped, Gluon starts writing straight away.
+    if (h.running) return void go();
+    confirm({
+      title: `Take over from ${h.container}?`,
+      consequences: [`Gluon starts updating ${h.names.length === 1 ? h.names[0]!.name : `its ${h.names.length} names`} now, and brings their records in line with its own settings.`],
+      confirmLabel: "Take over",
+      onConfirm: go,
+    });
+  }
+
+  function unkeep(name: string) {
+    confirm({
+      title: `Stop keeping ${name}?`,
+      consequences: ["Gluon removes its records from Cloudflare."],
+      confirmLabel: "Stop keeping",
+      variant: "danger",
+      onConfirm: async () => {
+        const st = await api.del<CloudflareStatus>(`/api/cloudflare/names?name=${encodeURIComponent(name)}`);
+        void mutate(st, { revalidate: false });
+        toast.success(`Gluon stopped keeping ${name}`);
+      },
     });
   }
 
@@ -228,11 +260,7 @@ export function CloudflarePanel() {
         </div>
       </div>
 
-      {data.ddnsContainer && (
-        <div className={c.pad}>
-          <Notice title={`${data.ddnsContainer} is still running`}>Gluon updates these records itself now, so it can be stopped from Apps.</Notice>
-        </div>
-      )}
+      {handoff && <Handoff h={handoff} busy={busy === "takeover"} onTakeOver={() => takeOver(handoff)} />}
 
       {data.network && (
         <div className={c.block}>
@@ -248,11 +276,30 @@ export function CloudflarePanel() {
             <NameRow
               key={n.name}
               n={n}
+              waitingOn={handoff?.container ?? "cloudflare-ddns"}
               busy={busy === `adopt:${n.name}`}
               onAdopt={() => run(`adopt:${n.name}`, () => api.post("/api/cloudflare/adopt", { names: [n.name] }), () => `Gluon manages ${n.name}`)}
+              onRemove={n.kept ? () => unkeep(n.name) : undefined}
             />
           ))}
         </ul>
+      )}
+
+      {data.network && (
+        <div className={c.block}>
+          <SettingRow label="Other names" description="Kept pointed here alongside your addresses, like play.example.com or *.mc.example.com.">
+            <Button
+              size="sm"
+              icon={<Plus />}
+              onClick={() => {
+                setAdding((n) => n + 1);
+                setAddOpen(true);
+              }}
+            >
+              Add name
+            </Button>
+          </SettingRow>
+        </div>
       )}
 
       {data.network && (
@@ -268,8 +315,167 @@ export function CloudflarePanel() {
         </div>
       )}
       {dialog}
+      <AddNameDialog
+        key={`add-${adding}`}
+        open={addOpen}
+        cf={data}
+        onClose={() => setAddOpen(false)}
+        onAdded={(st, name) => {
+          setAddOpen(false);
+          void mutate(st, { revalidate: false });
+          toast.success(`Gluon keeps ${name} pointed here`);
+        }}
+      />
       {confirmNode}
     </Panel>
+  );
+}
+
+// ================================================================= cloudflare-ddns
+
+const REASON: Record<Exclude<HandoffReason, "differs">, string> = {
+  "not-kept": "Gluon doesn't keep it yet",
+  foreign: "Its records aren't Gluon's yet",
+  outside: "Gluon's token can't see this domain",
+  "read-only": "Gluon's token can't change this domain's DNS",
+  error: "Cloudflare refused Gluon's last change",
+};
+
+/** What stands between cloudflare-ddns and its removal; "can be stopped" only when nothing does. */
+function Handoff({ h, busy, onTakeOver }: { h: DdnsHandoff; busy: boolean; onTakeOver: () => void }) {
+  const waiting = h.names.filter((n) => n.reason && n.reason !== "differs");
+  const differs = h.names.filter((n) => n.reason === "differs");
+  const where = h.project ? `the ${h.project} compose project` : "its compose file";
+  if (h.safe) {
+    return (
+      <div className={c.pad}>
+        {h.running ? (
+          <Notice title={`${h.container} can be stopped`}>
+            Gluon keeps {h.names.length === 1 ? h.names[0]!.name : `all ${h.names.length} names it updates`}, with the same records, and takes over within a minute of it stopping. Remove it from {where}, or stop it from Apps.
+          </Notice>
+        ) : (
+          <Notice title={`${h.container} is stopped`}>Gluon keeps {h.names.length === 1 ? h.names[0]!.name : `every name ${h.container} updated`}, so it can be removed from {where}.</Notice>
+        )}
+      </div>
+    );
+  }
+  // Only differences left: stopping it works, but changes these records, so say what changes.
+  if (!waiting.length && !h.deleteOnStop && !h.blocked) {
+    return (
+      <div className={c.pad}>
+        <Notice title={`Stopping ${h.container} changes ${differs.length === 1 ? "a record" : `${differs.length} names`}`}>
+          <ul className={c.handoff}>
+            {differs.map((n) => (
+              <li key={n.name}>
+                <span className="mono">{n.name}</span>
+                <span className={c.reason}>
+                  {describe(n.have)} becomes {describe(n.want)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {h.ipv6Differs && <p className={c.after}>Turn on IPv6 below to keep the IPv6 records.</p>}
+        </Notice>
+      </div>
+    );
+  }
+  const title = waiting.length ? `${h.container} keeps ${waiting.length === 1 ? "a name" : `${waiting.length} names`} Gluon doesn't yet` : `Don't stop ${h.container} yet`;
+  return (
+    <div className={c.pad}>
+      <Notice
+        tone="attention"
+        title={title}
+        action={
+          h.canTakeOver ? (
+            <Button size="sm" variant="primary" loading={busy} onClick={onTakeOver}>
+              Take over
+            </Button>
+          ) : undefined
+        }
+      >
+        <ul className={c.handoff}>
+          {waiting.map((n) => (
+            <li key={n.name}>
+              <span className="mono">{n.name}</span>
+              <span className={c.reason}>{REASON[n.reason as Exclude<HandoffReason, "differs">]}</span>
+            </li>
+          ))}
+          {h.deleteOnStop && (
+            <li>
+              <span>It deletes its records when it stops. Remove DELETE_ON_STOP from {where} and recreate it first.</span>
+            </li>
+          )}
+          {h.blocked && (
+            <li>
+              <span>{h.blocked}</span>
+            </li>
+          )}
+        </ul>
+      </Notice>
+    </div>
+  );
+}
+
+// ================================================================= other names
+
+function AddNameDialog({ open, cf, onClose, onAdded }: { open: boolean; cf: CloudflareStatus; onClose: () => void; onAdded: (s: CloudflareStatus, name: string) => void }) {
+  const [name, setName] = React.useState("");
+  const [proxied, setProxied] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const clean = name.trim().toLowerCase().replace(/\.$/, "");
+  const bare = clean.replace(/^\*\./, "");
+  const zone = cf.zones.filter((z) => bare === z.name || bare.endsWith(`.${z.name}`)).sort((a, b) => b.name.length - a.name.length)[0] ?? null;
+  // Cloudflare's free certificate only covers one level under the domain.
+  const canProxy = !!zone && edgeCovered(clean.replace(/^\*\./, "x."), zone.name);
+
+  async function save() {
+    if (!clean) return;
+    setSaving(true);
+    setError(null);
+    try {
+      onAdded(await api.post<CloudflareStatus>("/api/cloudflare/names", { name: clean, proxied: proxied && canProxy }), clean);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't add it.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title="Add name"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={saving} disabled={!clean} onClick={() => void save()}>
+            Add
+          </Button>
+        </>
+      }
+    >
+      <form
+        className={c.form}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <Field label="Name" error={error ?? (clean && !zone ? `Gluon's token can't see ${bare}'s domain.` : null)}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="play.example.com" autoComplete="off" spellCheck={false} mono autoFocus />
+        </Field>
+        {canProxy && (
+          <SettingRow label="Proxy through Cloudflare" description="Only for websites. Games, chat and voice need it off.">
+            <Switch checked={proxied} onChange={setProxied} aria-label="Proxy through Cloudflare" />
+          </SettingRow>
+        )}
+        <button type="submit" hidden />
+      </form>
+    </Dialog>
   );
 }
 
@@ -279,9 +485,9 @@ function describe(r: DnsRecordT[]): string {
   return r.map((x) => (x.type === "CNAME" ? x.content : `${x.content}${x.proxied ? " via Cloudflare" : ""}`)).join(", ");
 }
 
-const NAME_STATE: Record<ManagedName["state"], LineState> = { ok: "running", changed: "running", conflict: "attention", error: "unhealthy" };
+const NAME_STATE: Record<ManagedName["state"], LineState> = { ok: "running", changed: "running", conflict: "attention", error: "unhealthy", deferred: "paused" };
 
-function NameRow({ n, busy, onAdopt }: { n: ManagedName; busy: boolean; onAdopt: () => void }) {
+function NameRow({ n, busy, waitingOn, onAdopt, onRemove }: { n: ManagedName; busy: boolean; waitingOn: string; onAdopt: () => void; onRemove?: () => void }) {
   const removing = n.want.length === 0;
   const text =
     n.state === "conflict"
@@ -290,7 +496,9 @@ function NameRow({ n, busy, onAdopt }: { n: ManagedName; busy: boolean; onAdopt:
         ? (n.message ?? "Cloudflare refused the change.")
         : removing
           ? "Removed"
-          : describe(n.want);
+          : n.state === "deferred"
+            ? describe(n.have.length ? n.have : n.want)
+            : describe(n.want);
   return (
     <li className={c.name} data-state={n.state}>
       <span className={c.nameMain}>
@@ -303,12 +511,17 @@ function NameRow({ n, busy, onAdopt }: { n: ManagedName; busy: boolean; onAdopt:
         <StateLine state={removing && n.state !== "error" ? "stopped" : NAME_STATE[n.state]} size={11} />
         <span className={n.state === "conflict" || n.state === "error" || text === "Tunnel" || removing ? undefined : "mono"}>{text}</span>
         {n.state === "changed" && !removing && <span className={c.updated}>Updated</span>}
+        {n.state === "deferred" && <span className={c.waiting}>{waitingOn} updates it for now</span>}
       </span>
-      {n.state === "conflict" && (
+      {n.state === "conflict" ? (
         <Button size="sm" loading={busy} onClick={onAdopt}>
           Let Gluon manage
         </Button>
-      )}
+      ) : onRemove ? (
+        <IconButton label={`Stop keeping ${n.name}`} size="sm" onClick={onRemove}>
+          <Trash />
+        </IconButton>
+      ) : null}
     </li>
   );
 }
