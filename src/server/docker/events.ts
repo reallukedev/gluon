@@ -1,4 +1,5 @@
 import "server-only";
+import { StringDecoder } from "node:string_decoder";
 import { docker } from "./client";
 import { invalidateApps } from "./apps";
 import { publish } from "../events";
@@ -20,14 +21,33 @@ export interface DockerEvent {
   exitCode: number | null;
 }
 
-interface EvState { recent: DockerEvent[]; dies: Map<string, number[]> }
+interface EvState {
+  recent: DockerEvent[];
+  /** Unrequested deaths of containers Docker restarts, by name: what a crash loop is made of. */
+  dies: Map<string, number[]>;
+  /** When someone last asked a container (by id) to stop: `docker stop`, `restart` and `kill` all send a kill first. */
+  kills: Map<string, number>;
+}
 type G = typeof globalThis & { __gluonDockerEvents?: EvState };
 const g = globalThis as G;
-const st = (): EvState => (g.__gluonDockerEvents ??= { recent: [], dies: new Map<string, number[]>() });
+const st = (): EvState => {
+  const s = (g.__gluonDockerEvents ??= { recent: [], dies: new Map(), kills: new Map() });
+  // A state object left by an older build after a dev reload.
+  s.kills ??= new Map();
+  return s;
+};
+
+/** A die this long after a kill was the stop that was asked for (compose's stop_grace_period can be minutes). */
+const REQUESTED_STOP_MS = 10 * 60_000;
+const RELOAD_SIGNALS = new Set(["1", "10", "12", "28", "HUP", "SIGHUP", "USR1", "SIGUSR1", "USR2", "SIGUSR2", "WINCH", "SIGWINCH"]);
 
 export const recentDockerEvents = () => st().recent;
 
-/** How many times a container died in the last `windowMs`. */
+/**
+ * How many times a container died on its own in the last `windowMs` and Docker started it again.
+ * Stops someone asked for, and containers Docker doesn't restart (restart policy "no", or
+ * "on-failure" after a clean exit, such as a one-off job run on a schedule), don't count.
+ */
 export function recentDies(name: string, windowMs = 15 * 60_000): number {
   const t = Date.now() - windowMs;
   return (st().dies.get(name) ?? []).filter((x) => x > t).length;
@@ -65,8 +85,9 @@ async function follow() {
       backoff = 1000;
       await new Promise<void>((resolve) => {
         let buf = "";
+        const dec = new StringDecoder("utf8");
         stream.on("data", (chunk: Buffer) => {
-          buf += chunk.toString();
+          buf += dec.write(chunk);
           let i: number;
           while ((i = buf.indexOf("\n")) >= 0) {
             const line = buf.slice(0, i);
@@ -84,6 +105,32 @@ async function follow() {
     backoff = Math.min(backoff * 2, 30_000);
   }
 }
+
+/** Read at each death, not remembered: `docker update --restart` (a move does it) changes it in place. */
+async function restartPolicy(id: string): Promise<string | null> {
+  try {
+    const i = await docker().getContainer(id).inspect();
+    return i.HostConfig?.RestartPolicy?.Name || "no";
+  } catch {
+    return null; // gone already (--rm), so Docker won't be restarting it
+  }
+}
+
+async function countDie(ev: DockerEvent) {
+  const policy = await restartPolicy(ev.id);
+  if (!policy || policy === "no" || (policy === "on-failure" && !ev.exitCode)) return;
+  const s = st();
+  const arr = s.dies.get(ev.name) ?? [];
+  arr.push(ev.t);
+  s.dies.set(ev.name, arr.slice(-50));
+}
+
+/** One line of `docker events`. Exported for tests; resolves once the event is fully counted. */
+export async function handleDockerEvent(line: string): Promise<void> {
+  handle(line);
+  await pending;
+}
+let pending: Promise<void> = Promise.resolve();
 
 function handle(line: string) {
   let e: { Action?: string; Actor?: { ID?: string; Attributes?: Record<string, string> }; time?: number; timeNano?: number };
@@ -107,12 +154,19 @@ function handle(line: string) {
   const s = st();
   s.recent.push(ev);
   if (s.recent.length > 500) s.recent.shift();
+  // HUP and USR signals ask for a reload or a log rotation, not a stop.
+  if (action === "kill" && ev.id && !RELOAD_SIGNALS.has(String(attrs.signal ?? "").toUpperCase())) {
+    s.kills.set(ev.id, ev.t);
+    if (s.kills.size > 1000) s.kills.delete(s.kills.keys().next().value!);
+  }
+  if (action === "destroy") s.kills.delete(ev.id);
   if (action === "die") {
-    const arr = s.dies.get(ev.name) ?? [];
-    arr.push(ev.t);
-    s.dies.set(ev.name, arr.slice(-50));
-    // A non-zero exit that wasn't a requested stop is worth recording.
-    if (ev.exitCode && ev.exitCode !== 143 && ev.exitCode !== 0) {
+    const killedAt = s.kills.get(ev.id);
+    const requested = killedAt !== undefined && ev.t - killedAt >= -5000 && ev.t - killedAt < REQUESTED_STOP_MS;
+    s.kills.delete(ev.id);
+    if (!requested) pending = countDie(ev).catch(() => undefined);
+    // A non-zero exit that wasn't a requested stop is worth recording (137 after `docker stop` timed out isn't).
+    if (!requested && ev.exitCode && ev.exitCode !== 143) {
       systemEvent({ action: "container.crashed", target: ev.project ?? ev.name, summary: `${ev.name} ${explainExit(ev.exitCode)}`, outcome: "failed", detail: { exitCode: ev.exitCode } });
     }
   }

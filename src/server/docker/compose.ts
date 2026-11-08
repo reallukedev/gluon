@@ -63,12 +63,14 @@ export async function validateCompose(id: string, content: string): Promise<Vali
     const err = e as { message: string; linePos?: { line: number }[] };
     return { ok: false, message: `YAML error${err.linePos?.[0] ? ` on line ${err.linePos[0].line}` : ""}: ${err.message.split("\n")[0]}` };
   }
-  const file = app.configFile.split(",")[0]!;
+  const [file, ...others] = app.configFile.split(",") as [string, ...string[]];
   const dir = path.posix.dirname(file);
   const tmp = `${dir}/.gluon-validate-${process.pid}-${Date.now()}.yml`;
   fs.writeFileSync(hostPath(tmp), content, { mode: 0o600 });
   try {
-    const { stdout } = await host("docker", ["compose", "-p", app.id, "--project-directory", app.workingDir ?? dir, "-f", tmp, "config", "--services"], { timeoutMs: 30_000 });
+    // The app's other files (overrides) go in too, as `up` will read them.
+    const files = [tmp, ...others].flatMap((f) => ["-f", f]);
+    const { stdout } = await host("docker", ["compose", "-p", app.id, "--project-directory", app.workingDir ?? dir, ...files, "config", "--services"], { timeoutMs: 30_000 });
     return { ok: true, message: "Looks good.", services: stdout.trim().split("\n").filter(Boolean) };
   } catch (e) {
     const msg = (e as { stderr?: string; message: string }).stderr?.trim() || (e as Error).message;

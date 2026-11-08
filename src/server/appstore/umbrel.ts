@@ -197,7 +197,7 @@ export async function followState(
   appId: string,
   settled: (s: UmbrelAppState, seen: Set<UmbrelAppState>) => boolean,
   onChange: (s: UmbrelAppState, progress: number) => void,
-  opts: { timeoutMs?: number; action?: Promise<unknown> } = {},
+  opts: { timeoutMs?: number; action?: Promise<unknown>; signal?: AbortSignal } = {},
 ): Promise<UmbrelAppState> {
   const end = Date.now() + (opts.timeoutMs ?? 45 * 60_000);
   const seen = new Set<UmbrelAppState>();
@@ -206,7 +206,7 @@ export async function followState(
   let actionDone = false;
   opts.action?.finally(() => (actionDone = true));
   let misses = 0;
-  while (Date.now() < end) {
+  while (Date.now() < end && !opts.signal?.aborted) {
     const s = await umbrelAppState(appId).catch(() => null);
     if (s) {
       misses = 0;

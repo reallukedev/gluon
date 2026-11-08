@@ -10,6 +10,7 @@ import { afterChange, imageLabel, listImages, localDigests, remoteState } from "
 import { invalidateVolumeSizes, listVolumes, volumeSizes } from "./volumes";
 import type { CleanupItem, CleanupKind, CleanupPlan, CleanupResult, DockerDisk } from "@/lib/docker-types";
 import { sourceName } from "@/lib/app-names";
+import { unescapeMount } from "../metrics/sampler";
 
 interface DfResponse {
   LayersSize?: number;
@@ -35,20 +36,37 @@ export function invalidateDisk() {
   dfCache = null;
 }
 
-/** The mounted filesystem holding a host path (longest mount point that contains it). */
-function fsFor(path: string): DockerDisk["fs"] {
+/**
+ * The mounted filesystem holding a host path (longest mount point that contains it). Read in the
+ * background with a time limit: statfs on a share whose server is gone (NFS, CIFS, sshfs) blocks
+ * forever. A read still stuck is never started again (it would tie up another worker thread), and
+ * until one answers the space shows as unknown.
+ */
+const statfsPending = new Set<string>();
+
+async function fsFor(path: string): Promise<DockerDisk["fs"]> {
+  let mount = "/";
   try {
     const mounts = fs
       .readFileSync("/proc/1/mounts", "utf8")
       .split("\n")
-      .map((l) => l.split(" ")[1]?.replace(/\\040/g, " "))
-      .filter((m): m is string => !!m && m.startsWith("/"));
-    const mount = mounts.filter((m) => path === m || path.startsWith(m.endsWith("/") ? m : `${m}/`)).sort((a, b) => b.length - a.length)[0] ?? "/";
-    const st = fs.statfsSync(hostPath(path));
-    return { mount, size: st.blocks * st.bsize, free: st.bavail * st.bsize };
+      .map((l) => l.split(" ")[1])
+      .filter((m): m is string => !!m && m.startsWith("/"))
+      .map(unescapeMount);
+    mount = mounts.filter((m) => path === m || path.startsWith(m.endsWith("/") ? m : `${m}/`)).sort((a, b) => b.length - a.length)[0] ?? "/";
   } catch {
     return null;
   }
+  if (statfsPending.has(path)) return null;
+  statfsPending.add(path);
+  const read = new Promise<fs.StatsFs | null>((resolve) =>
+    fs.statfs(hostPath(path), (err, st) => {
+      statfsPending.delete(path);
+      resolve(err ? null : st);
+    }),
+  );
+  const st = await Promise.race([read, new Promise<null>((r) => setTimeout(() => r(null), 3000).unref?.())]);
+  return st ? { mount, size: st.blocks * st.bsize, free: st.bavail * st.bsize } : null;
 }
 
 export async function diskOverview(fresh = false): Promise<DockerDisk> {
@@ -76,7 +94,7 @@ export async function diskOverview(fresh = false): Promise<DockerDisk> {
   const unusedVols = volumes.filter((v) => v.UsageData?.RefCount === 0);
   return {
     root,
-    fs: root ? fsFor(root) : null,
+    fs: root ? await fsFor(root) : null,
     total: imgBytes + ctrBytes + volBytes + buildBytes,
     images: { count: images.length, bytes: imgBytes, unused: images.filter((i) => !i.Containers).length, unusedBytes: images.filter((i) => !i.Containers).reduce((a, i) => a + own(i), 0) },
     containers: { count: containers.length, bytes: ctrBytes, stopped: stopped.length, stoppedBytes: stopped.reduce((a, c) => a + (c.SizeRw ?? 0), 0) },
@@ -220,7 +238,8 @@ const g = globalThis as G;
  * volume, so only the build cache (which has no other way) uses one.
  */
 export async function runCleanup(kind: CleanupKind, ids: string[]): Promise<CleanupResult> {
-  if (kind === "containers" || kind === "volumes") assertNoAppWork(kind === "containers" ? "remove stopped containers" : "remove unused volumes");
+  // Images too: an update or install in progress has images downloaded that no container runs yet.
+  if (kind !== "buildcache") assertNoAppWork({ containers: "remove stopped containers", volumes: "remove unused volumes", images: "remove unused images" }[kind]);
   if (g.__gluonDockerCleanup) throw new AppError("busy", "A Docker cleanup is already running. Wait for it to finish.", 409);
   g.__gluonDockerCleanup = true;
   try {
@@ -235,8 +254,9 @@ export async function runCleanup(kind: CleanupKind, ids: string[]): Promise<Clea
 
 async function run(kind: CleanupKind, ids: string[]): Promise<CleanupResult> {
   if (kind === "buildcache") {
+    // `all`: the preview counts every unused cache entry, and without it Docker only drops dangling ones.
     try {
-      const r = await dial<{ SpaceReclaimed?: number; CachesDeleted?: string[] | null }>({ path: "/build/prune", method: "POST", signal: AbortSignal.timeout(10 * 60_000) });
+      const r = await dial<{ SpaceReclaimed?: number; CachesDeleted?: string[] | null }>({ path: "/build/prune", method: "POST", query: { all: true }, signal: AbortSignal.timeout(10 * 60_000) });
       const freed = r.SpaceReclaimed ?? 0;
       return { message: freed ? `Cleared the build cache, freeing ${formatBytes(freed)}.` : "The build cache had nothing to let go of.", freed, removed: r.CachesDeleted?.length ?? 0, skipped: [] };
     } catch (e) {
