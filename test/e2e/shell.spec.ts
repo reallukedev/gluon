@@ -1,4 +1,4 @@
-import { accessSync, constants } from "node:fs";
+import { accessSync, constants, existsSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { actUntil, clickToOpen, expect, isPhone, open, openMainNav, test } from "./fixtures";
 
@@ -11,6 +11,11 @@ const fstabReadable = (() => {
     return false;
   }
 })();
+
+// Without a Docker daemon, pages that read Docker show their fallback and log the failed request.
+const dockerUp = existsSync("/var/run/docker.sock");
+const DOCKER_NOISE = [/\/api\/apps\b/, /\/api\/terminal\/targets\b/, /react\.dev\/errors\/441/];
+const expectedErrors = (errors: string[]) => (dockerUp ? errors : errors.filter((e) => !DOCKER_NOISE.some((re) => re.test(e))));
 
 const pages: { path: string; heading: string }[] = [
   { path: "/", heading: "Home" },
@@ -67,7 +72,7 @@ test.describe("every page", () => {
 
       const overflow = () => page.evaluate(() => document.scrollingElement!.scrollWidth - window.innerWidth);
       expect(await overflow(), "page is wider than the screen").toBeLessThanOrEqual(0);
-      expect(guard.consoleErrors).toEqual([]);
+      expect(expectedErrors(guard.consoleErrors)).toEqual([]);
     });
   }
 });
