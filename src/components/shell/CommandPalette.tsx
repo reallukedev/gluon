@@ -5,6 +5,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Search, NavArrowRight, OpenNewWindow, Xmark } from "iconoir-react";
 import type { NavItem } from "@/lib/nav";
 import { api, useApi } from "@/lib/client/api";
+import { prefetchPage } from "@/lib/client/prefetch";
 import { prepare } from "@/lib/search-match";
 import type { SearchAction, SearchScope } from "@/lib/search-types";
 import { usePrefs } from "@/components/PrefsProvider";
@@ -117,6 +118,13 @@ export function CommandPalette({ open, onOpenChange, nav, pins }: { open: boolea
     if (!activeKey) return;
     listRef.current?.querySelector<HTMLElement>(`[data-id="${CSS.escape(activeKey)}"]`)?.scrollIntoView({ block: "nearest" });
   }, [activeKey]);
+  // A result that stays highlighted for a moment is likely the pick: fetch its page so Enter lands at once.
+  const activeHref = active && !active.external && !active.action && !active.run ? active.href : undefined;
+  React.useEffect(() => {
+    if (!open || !activeHref) return;
+    const t = setTimeout(() => prefetchPage(router, activeHref), 150);
+    return () => clearTimeout(t);
+  }, [open, activeHref, router]);
 
   function setScopeTo(id: string) {
     const next = scopes.find((x) => x.id === id);
