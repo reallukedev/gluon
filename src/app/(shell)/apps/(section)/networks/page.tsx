@@ -3,7 +3,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { listNetworks } from "@/server/dockerx/networks";
 import { AppError } from "@/server/errors";
 import { NetworksView } from "@/components/docker/NetworksView";
-import AppsTabLoading from "../loading";
+import { AppsTabLoading } from "@/components/apps/AppsTabLoading";
 import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Docker networks" };

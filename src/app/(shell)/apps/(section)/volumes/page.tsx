@@ -3,7 +3,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { listVolumes } from "@/server/dockerx/volumes";
 import { AppError } from "@/server/errors";
 import { VolumesView } from "@/components/docker/VolumesView";
-import AppsTabLoading from "../loading";
+import { AppsTabLoading } from "@/components/apps/AppsTabLoading";
 import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Docker volumes" };
