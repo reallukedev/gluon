@@ -2,15 +2,19 @@ import { Suspense } from "react";
 import { requireAdmin } from "@/server/auth/session";
 import { overview } from "@/server/router/monitor";
 import { RouterView, RouterSkeleton } from "@/components/router/RouterView";
+import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Router" };
 
 export default async function RouterPage() {
+  const at = Date.now();
   await requireAdmin();
   return (
-    <Suspense fallback={<RouterSkeleton />}>
-      <Router />
-    </Suspense>
+    <Seeded at={at}>
+      <Suspense fallback={<RouterSkeleton />}>
+        <Router />
+      </Suspense>
+    </Seeded>
   );
 }
 

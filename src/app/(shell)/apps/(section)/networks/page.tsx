@@ -4,17 +4,21 @@ import { listNetworks } from "@/server/dockerx/networks";
 import { AppError } from "@/server/errors";
 import { NetworksView } from "@/components/docker/NetworksView";
 import AppsTabLoading from "../loading";
+import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Docker networks" };
 
 export default async function NetworksPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const at = Date.now();
   await requireAdmin();
   const sp = await searchParams;
   // Docker answers quickly unless it's busy or restarting; then the tab's place waits, not the page.
   return (
-    <Suspense fallback={<AppsTabLoading />}>
-      <Networks query={typeof sp.q === "string" ? sp.q.slice(0, 200) : ""} />
-    </Suspense>
+    <Seeded at={at}>
+      <Suspense fallback={<AppsTabLoading />}>
+        <Networks query={typeof sp.q === "string" ? sp.q.slice(0, 200) : ""} />
+      </Suspense>
+    </Seeded>
   );
 }
 

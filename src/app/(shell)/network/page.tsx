@@ -2,6 +2,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { routesResponse } from "@/server/network/routes-service";
 import { NetworkView, type Landing } from "@/components/network/NetworkView";
 import type { HopId } from "@/components/network/model";
+import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Network" };
 
@@ -29,9 +30,10 @@ function landing(sp: Params): Landing | null {
 }
 
 export default async function NetworkPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const at = Date.now();
   await requireAdmin();
   const sp = await searchParams;
   // Best effort: if routes.json can't be read the client shows why (and retries).
   const initial = await routesResponse().catch(() => null);
-  return <NetworkView initial={initial} landing={landing(sp)} />;
+  return <Seeded at={at}><NetworkView initial={initial} landing={landing(sp)} /></Seeded>;
 }

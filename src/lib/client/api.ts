@@ -1,6 +1,7 @@
 "use client";
 import useSWR, { useSWRConfig, type SWRConfiguration } from "swr";
 import * as React from "react";
+import { noteServerTime, useSeedAge } from "./seed";
 
 export class ApiError extends Error {
   constructor(
@@ -28,6 +29,7 @@ export function setReauthHandler(h: ReauthHandler | null) {
 
 async function request<T>(method: string, url: string, body?: unknown, retried = false): Promise<T> {
   let res: Response;
+  const sentAt = Date.now();
   try {
     res = await fetch(url, {
       method,
@@ -39,6 +41,9 @@ async function request<T>(method: string, url: string, body?: unknown, retried =
   } catch {
     throw new ApiError("network", "Can't reach the server. Check your connection and try again.", 0);
   }
+  // Date has whole seconds, so the server's clock was at most a second past it.
+  const date = res.headers.get("date");
+  if (date) noteServerTime(Date.parse(date) + 1000, sentAt);
   if (res.status === 401 && typeof window !== "undefined") {
     const next = encodeURIComponent(window.location.pathname + window.location.search);
     window.location.href = `/login?next=${next}`;
@@ -74,30 +79,103 @@ export const api = {
   del: <T = { ok: true }>(url: string, body?: unknown) => request<T>("DELETE", url, body),
 };
 
-const fetcher = (url: string) => api.get<unknown>(url);
+/** When each key last got an answer (or came with the page), so coming back to the tab knows what is out of date. */
+const answeredAt = new Map<string, number>();
+
+const fetcher = async (url: string) => {
+  const data = await api.get<unknown>(url);
+  answeredAt.set(url, Date.now());
+  return data;
+};
 
 /** Everything that reads /api/status outside the Status page polls at one pace, so SWR makes one request. */
 export const STATUS_KEY = "/api/status";
 export const STATUS_REFRESH = 15_000;
 
+/**
+ * Data younger than this isn't refetched when a hook mounts: a few seconds, or half a minute for what the page
+ * only polls every minute or slower anyway. Never longer than the key's own poll.
+ */
+const freshFor = (refresh?: number) => (refresh && refresh >= 60_000 ? 30_000 : Math.min(5000, refresh || 5000));
+/** Coming back to the tab refetches what is older than this, or than the key's poll if that is shorter. */
+const FOCUS_STALE = 15_000;
+
+/**
+ * The mounted keys, each with how stale it may get and a way to revalidate it. One listener for all of them, so
+ * coming back to Gluon refetches what is out of date, once per key, instead of every hook on the page at once.
+ */
+type FocusWatch = { stale: number; revalidate: () => void };
+const focusKeys = new Map<string, FocusWatch[]>();
+
+function onFocus() {
+  if (document.visibilityState !== "visible") return;
+  const now = Date.now();
+  for (const [key, watches] of focusKeys) {
+    if (now - (answeredAt.get(key) ?? 0) < Math.min(...watches.map((w) => w.stale))) continue;
+    answeredAt.set(key, now);
+    watches[0]!.revalidate();
+  }
+}
+
+function watchFocus(key: string, watch: FocusWatch) {
+  if (!focusKeys.size) {
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+  }
+  const watches = focusKeys.get(key) ?? [];
+  watches.push(watch);
+  focusKeys.set(key, watches);
+  return () => {
+    watches.splice(watches.indexOf(watch), 1);
+    if (!watches.length) focusKeys.delete(key);
+    if (!focusKeys.size) {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    }
+  };
+}
+
 /** Polling GET with SWR. `refresh` in ms; pauses automatically when the tab is hidden. */
 const noSubscribe = () => () => {};
 
 export function useApi<T>(url: string | null, opts: SWRConfiguration & { refresh?: number } = {}) {
-  const { refresh, ...rest } = opts;
+  const { refresh, revalidateOnFocus = true, ...rest } = opts;
+  const { fallback, cache } = useSWRConfig();
+  const hydrated = React.useSyncExternalStore(noSubscribe, () => true, () => false);
+  // Data the server handed over (fallbackData, or an SWRConfig fallback for this key) is what it rendered.
+  const seeded = url !== null && (rest.fallbackData !== undefined || fallback[url] !== undefined);
+  const seedAge = useSeedAge(!hydrated);
+  // How old the data this hook starts with is: an answer already in the cache, or what the server read for the
+  // page. If it's that recent, refetching on mount would only ask the host the same question twice. Older (a page
+  // prefetched a while back, say) or unknown, it revalidates as usual.
+  const ageNow = () => {
+    if (url === null) return null;
+    const cachedAt = cache.get(url)?.data !== undefined ? answeredAt.get(url) : undefined;
+    const age = cachedAt !== undefined ? Date.now() - cachedAt : seeded ? seedAge() : null;
+    return age !== null && age >= 0 && age < freshFor(refresh) ? age : null;
+  };
+  const [start, setStart] = React.useState(() => ({ url, age: ageNow() }));
+  // A new key is a new start (the same rule, for its own data).
+  if (start.url !== url) setStart({ url, age: ageNow() });
+  const startAge = start.url === url ? start.age : null;
   const res = useSWR<T, ApiError>(url, fetcher as (u: string) => Promise<T>, {
     refreshInterval: refresh,
-    revalidateOnFocus: true,
+    revalidateOnFocus: false,
     keepPreviousData: true,
     dedupingInterval: 1000,
+    ...(startAge !== null ? { revalidateOnMount: false } : {}),
     ...rest,
   });
+  const { mutate } = res;
+  React.useEffect(() => {
+    if (!url) return;
+    if (startAge !== null) answeredAt.set(url, Math.max(answeredAt.get(url) ?? 0, Date.now() - startAge));
+    if (!revalidateOnFocus) return;
+    return watchFocus(url, { stale: Math.min(FOCUS_STALE, refresh || FOCUS_STALE), revalidate: () => void mutate() });
+  }, [url, startAge, revalidateOnFocus, refresh, mutate]);
   // A part of the page that hydrates late (slow Safari, Suspense) can find its data already cached.
   // Render what the server rendered until hydration is over, or React throws the page's HTML away.
-  // Data the server handed over (fallbackData, or an SWRConfig fallback for this key) is what it rendered.
-  const { fallback } = useSWRConfig();
-  const hydrated = React.useSyncExternalStore(noSubscribe, () => true, () => false);
-  if (hydrated || rest.fallbackData !== undefined || (url !== null && fallback[url] !== undefined)) return res;
+  if (hydrated || seeded) return res;
   return {
     get data() { return undefined; },
     get error() { return undefined; },
