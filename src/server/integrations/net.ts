@@ -320,7 +320,8 @@ export async function openStream(rawUrl: string, opts: FetchOptions): Promise<St
     const maxBytes = opts.maxBytes ?? 2 * 1024 * 1024;
     const declared = Number(res.headers["content-length"] ?? NaN);
     const enc = res.headers["content-encoding"];
-    if (!enc && Number.isFinite(declared) && declared > maxBytes) {
+    // A HEAD answer's length is the page it describes, not anything Gluon will read.
+    if (method !== "HEAD" && !enc && Number.isFinite(declared) && declared > maxBytes) {
       res.destroy();
       throw new NetError("too_large", `response larger than ${maxBytes} bytes`);
     }

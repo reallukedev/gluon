@@ -67,6 +67,15 @@ describe("importing a zip", () => {
     expect(fs.existsSync(draft(id, "big.txt"))).toBe(false);
   });
 
+  test("a damaged entry is a plain bad_zip, and nothing is written", async () => {
+    const id = newSite();
+    const zip = makeZip([{ name: "page.html", data: "<p>".repeat(500), deflate: true }]);
+    // Overwrite the compressed bytes (after the 30-byte header and the name) with something that isn't deflate.
+    zip.fill(0xff, 30 + "page.html".length, 30 + "page.html".length + 8);
+    await expect(importZip(id, user, zip, "")).rejects.toMatchObject({ code: "bad_zip" });
+    expect(fs.readdirSync(store.draftDir(id))).toEqual([]);
+  });
+
   test("refuses a zip with more files than a site can hold", async () => {
     const id = newSite();
     const zip = makeZip(Array.from({ length: SITE_LIMITS.files + 1 }, (_, i) => ({ name: `f${i}.txt`, data: "" })));

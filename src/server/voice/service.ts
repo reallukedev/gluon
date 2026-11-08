@@ -11,7 +11,7 @@ import { connect, iceError, iceId, iceVersion, isUnreachable, MumbleServer, type
 import { countConnections, mumbleFacts, type MumbleFacts } from "./container";
 import { applyChange, changeTarget, freeIcePort } from "./apply";
 import { editServiceEnv, iceEnvFile, manageCompose } from "./compose-edit";
-import { getVoice, saveVoice, type IceSecrets } from "./store";
+import { forgetVoice, getVoice, saveVoice, type IceSecrets } from "./store";
 import { asBool, effectiveSettings, envFor, settingDef, toStored } from "./settings-map";
 import { certView } from "./certs";
 import type { ManagePlan, VoiceChannel, VoiceDetails, VoiceLive, VoiceProblemCode, VoiceRegistered, VoiceUser } from "./types";
@@ -450,7 +450,9 @@ export async function startManage(appId: string, user: User, where: Where) {
         emit,
       );
     } catch (e) {
+      // Secrets Mumble never got would read as "its secret was changed outside Gluon".
       if (previous?.secrets) saveVoice(appId, { icePort: previous.icePort, secrets: previous.secrets });
+      else if (!previous) forgetVoice(appId);
       audit(user, { action: "voice.manage", target: appId, summary: `Tried to let Gluon manage ${f.app.name}'s voice server`, outcome: "failed" }, where);
       throw e;
     }

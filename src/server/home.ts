@@ -11,7 +11,13 @@ const MAX_BYTES = 96 * 1024;
 function read(owner: string): HomeLayout | null {
   const row = one<{ json: string }>("SELECT json FROM home_layouts WHERE owner = ?", owner);
   if (!row) return null;
-  const parsed = layoutSchema.safeParse(JSON.parse(row.json));
+  let json: unknown;
+  try {
+    json = JSON.parse(row.json);
+  } catch {
+    return null; // a damaged row falls back to the default rather than breaking Home
+  }
+  const parsed = layoutSchema.safeParse(json);
   // Layouts saved before the greeting and search bar were pinnable get them once, at the top (saved on next change).
   return parsed.success ? withStart(parsed.data) : null;
 }

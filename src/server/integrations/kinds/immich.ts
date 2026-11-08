@@ -108,7 +108,10 @@ async function stats(ctx: KindContext<Config>, params: Record<string, unknown>):
   ]);
   const base = { memories: mem?.list ?? null, memoriesNote: mem?.note ?? null };
   const s = obj(server);
+  // An answer without the counts isn't "0 photos".
+  const unreadable = () => new UpstreamError("Immich answered, but not with the library's counts. Check the address points at Immich.");
   if (!num(s.__status)) {
+    if (num(s.photos) === null && num(s.videos) === null) throw unreadable();
     return {
       scope: "server",
       photos: num(s.photos) ?? 0,
@@ -127,6 +130,7 @@ async function stats(ctx: KindContext<Config>, params: Record<string, unknown>):
   }
   // Not an admin key (or missing server.statistics): fall back to the key owner's own library.
   const mine = obj(await h.json("/api/assets/statistics"));
+  if (num(mine.images) === null && num(mine.videos) === null) throw unreadable();
   return { scope: "user", photos: num(mine.images) ?? 0, videos: num(mine.videos) ?? 0, usageBytes: null, users: [], ...base };
 }
 

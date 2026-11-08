@@ -78,6 +78,12 @@ export function saveVoice(appId: string, v: { icePort: number; secrets: IceSecre
   );
 }
 
+/** Forget a voice server Gluon never ended up managing. */
+export function forgetVoice(appId: string) {
+  ensure();
+  run("DELETE FROM voice_servers WHERE app_id = ?", appId);
+}
+
 export function setCertDomain(appId: string, domain: string | null) {
   ensure();
   run("UPDATE voice_servers SET cert_domain = ?, updated_at = ? WHERE app_id = ?", domain, now(), appId);

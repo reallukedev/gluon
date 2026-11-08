@@ -86,7 +86,12 @@ export async function applySettings(
       throw new AppError("needs_restart", `Saving this restarts the chat server, for ${needs.join(" and ")}.`, 409, { online, changes: needs });
     }
     const restore = settingsBackup(snap);
-    writeSettings(snap, h, next);
+    try {
+      writeSettings(snap, h, next);
+    } catch (e) {
+      restore();
+      throw e;
+    }
     // Prosody reads the new files before anything else happens: if it can't, the old ones go back,
     // so a restart (now or later) never meets a config that stops it starting.
     let reloaded: Awaited<ReturnType<typeof reloadProsody>> | null = null;

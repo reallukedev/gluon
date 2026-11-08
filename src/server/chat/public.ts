@@ -30,7 +30,8 @@ export async function findChatInvite(host: string, token: string, ip: string): P
     try {
       const t = await chatTarget(app.id);
       const hit = await peekInvite(t, { host, token });
-      if (hit) return { host, ...hit };
+      // An expired invite is no invite, whatever the server still keeps.
+      if (hit && !(hit.expires <= Date.now())) return { host, ...hit };
     } catch {
       /* this server doesn't host that domain, or isn't answering */
     }

@@ -112,9 +112,12 @@ export async function weather(cfg: { lat: number; lon: number; name: string | nu
     const t = (times[i] ?? 0) * 1000;
     if (t + 3600_000 <= now) continue;
     const hc = at(hourly, "weather_code", i) ?? 0;
+    const temperature = at(hourly, "temperature_2m", i);
+    // An hour with no temperature is left out rather than shown as 0°.
+    if (temperature === null) continue;
     hours.push({
       at: t,
-      temperature: at(hourly, "temperature_2m", i) ?? 0,
+      temperature,
       code: hc,
       icon: wmo(hc).icon,
       precipitationChance: at(hourly, "precipitation_probability", i),
@@ -229,7 +232,8 @@ export async function feed(cfg: { url: string; limit: number }, policy: NetPolic
 export async function linkStatus(url: string, policy: NetPolicy): Promise<LinkStatusData> {
   const checkedAt = Date.now();
   const attempt = async (method: "HEAD" | "GET", insecureTls: boolean) => {
-    const r = await openStream(url, { method, policy, insecureTls, maxBytes: 64 * 1024, timeoutMs: 5000, totalMs: 6000 });
+    // Only the status line matters and the body is never read, so a big page mustn't count as a failure.
+    const r = await openStream(url, { method, policy, insecureTls, maxBytes: Number.MAX_SAFE_INTEGER, timeoutMs: 5000, totalMs: 6000 });
     r.stream.destroy();
     return r;
   };
