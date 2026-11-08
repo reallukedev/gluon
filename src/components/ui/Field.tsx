@@ -131,8 +131,8 @@ interface SegmentedProps<T extends string> {
 }
 
 /**
- * A sunk well of choices. The raised plate slides to the chosen segment (200ms, --ease-in-out:
- * it is moving on screen) so the eye follows the change; keyboard changes land instantly.
+ * A sunk well of choices. The raised plate slides to the chosen segment (150ms, --ease-out: pressed
+ * constantly, so it starts moving at once) and the eye follows; keyboard changes land instantly.
  * Before hydration the chosen segment draws its own plate, so there is no flash.
  */
 export function Segmented<T extends string>({ value, onChange, options, block, disabled, ...aria }: SegmentedProps<T>) {

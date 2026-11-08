@@ -137,7 +137,7 @@
  
   clip-path: inset(0 0 0 0);
   animation: draw var(--dur-slow) var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 50ms);
+  animation-delay: calc(min(var(--i, 0), 6) * 40ms);
 }
 .span[data-away] { top: calc(50% - 3px); height: 6px; background: transparent; border-block: 2px solid var(--attn); border-radius: 0; }
 .span[data-open]::after {

@@ -208,7 +208,8 @@ textarea.input { height: auto; min-height: 88px; padding: 9px 11px; line-height:
 }
 /* Once measured, the thumb draws the raised plate and the segment itself stays clear. The hand-off
    switches opacity without a fade, or the chosen segment dims for a moment after hydration. */
-.segmented[data-ready] .segmentThumb { opacity: 1; transition: transform var(--dur-base) var(--ease-in-out), width var(--dur-base) var(--ease-in-out); }
+/* Pressed constantly: 150ms on --ease-out, so the thumb is already moving on the frame after the press. */
+.segmented[data-ready] .segmentThumb { opacity: 1; transition: transform var(--dur-fast) var(--ease-out), width var(--dur-fast) var(--ease-out); }
 .segmented[data-ready] .segment[data-pressed] { background: transparent; box-shadow: none; }
 .segmented[data-keyboard] .segmentThumb { transition-duration: 0ms; }
 /* Reduced motion: no slide; the plate simply moves to its new place. */

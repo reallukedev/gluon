@@ -39,7 +39,7 @@
   transform: translateX(var(--active-tab-left));
 }
 /* The one sanctioned width transition besides bar fills (DESIGN.md): it is out of flow. */
-.list[data-ready] .indicator { transition: transform var(--dur-base) var(--ease-in-out), width var(--dur-base) var(--ease-in-out); }
+.list[data-ready] .indicator { transition: transform var(--dur-fast) var(--ease-out), width var(--dur-fast) var(--ease-out); }
 .list[data-keyboard] .indicator { transition-duration: 0ms; }
 /* Counts are plain figures, never pills; "needs you" adds the doubled sodium mark in front. */
 .count {

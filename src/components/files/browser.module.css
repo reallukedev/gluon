@@ -209,9 +209,9 @@
   .row { font-size: var(--text-base); }
   .place { min-height: 46px; font-size: var(--text-base); }
   .drop { inset: 52px 0 56px; }
-  .frame[data-nav] .col[data-phone-current] { animation: files-phone-in var(--dur-base) var(--ease-out); }
+  .frame[data-nav] .col[data-phone-current] { animation: files-phone-in var(--dur-fast) var(--ease-out); }
   .frame[data-nav="out"] .col[data-phone-current] { animation-name: files-phone-back; }
 }
-@keyframes files-phone-in { from { opacity: 0; transform: translateX(calc(24px * var(--motion))); } }
-@keyframes files-phone-back { from { opacity: 0; transform: translateX(calc(-24px * var(--motion))); } }
+@keyframes files-phone-in { from { opacity: 0.4; transform: translateX(calc(16px * var(--motion))); } }
+@keyframes files-phone-back { from { opacity: 0.4; transform: translateX(calc(-16px * var(--motion))); } }
 @media (prefers-reduced-motion: reduce) { .tileFace { transition: none; } }
