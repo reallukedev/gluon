@@ -1,23 +1,5 @@
-import { Page, Skeleton } from "@/components/ui/Surface";
+import { Skeleton } from "@/components/ui/Surface";
 import s from "@/components/apps/routeStates.module.css";
-
-/** The Apps pages while a list loads: title, summary, tabs, toolbar and rows in their places. */
-export function AppsListSkeleton() {
-  return (
-    <Page pending>
-      <div role="status" aria-label="Loading apps">
-        <Skeleton width={120} height={34} radius={6} />
-        <Skeleton width="min(460px, 80%)" height={15} radius={4} style={{ marginTop: 14 }} />
-        <div className={s.tabs}>
-          {[64, 72, 92, 70].map((w, i) => (
-            <Skeleton key={i} width={w} height={12} radius={3} />
-          ))}
-        </div>
-        <Rows />
-      </div>
-    </Page>
-  );
-}
 
 /** Just the toolbar and rows, for a tab change inside Apps (the title and tabs are already there). */
 export function AppsListBodySkeleton() {
