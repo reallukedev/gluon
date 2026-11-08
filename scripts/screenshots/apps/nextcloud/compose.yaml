@@ -1,0 +1,18 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  app:
+    <<: *stand-in
+    image: nextcloud:31-apache
+    command: [port=8080, mb=380, work=8000]
+    ports: ["8080:8080"]
+    volumes: ["/srv/apps/nextcloud/html:/var/www/html", "/DATA/nextcloud:/var/www/html/data"]
+  db:
+    <<: *stand-in
+    image: mariadb:11.4.8
+    command: [mb=180]
+    volumes: ["/srv/apps/nextcloud/db:/var/lib/mysql"]

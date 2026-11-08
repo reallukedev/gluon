@@ -1,0 +1,20 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  webserver:
+    <<: *stand-in
+    image: ghcr.io/paperless-ngx/paperless-ngx:2.18
+    container_name: paperless
+    command: [port=8000, mb=520, work=12000]
+    ports: ["8000:8000"]
+    volumes: ["/srv/apps/paperless/data:/usr/src/paperless/data", "/DATA/documents:/usr/src/paperless/media"]
+  broker:
+    <<: *stand-in
+    image: redis:7.4.5
+    container_name: paperless-broker
+    command: [mb=20]
+    volumes: ["/srv/apps/paperless/redis:/data"]

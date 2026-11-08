@@ -1,0 +1,13 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  homeassistant:
+    <<: *stand-in
+    image: ghcr.io/home-assistant/home-assistant:stable
+    command: [port=8123, mb=420, work=25000]
+    ports: ["8123:8123"]
+    volumes: ["/srv/apps/homeassistant/config:/config"]
