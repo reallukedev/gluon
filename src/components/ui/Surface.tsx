@@ -17,9 +17,12 @@ interface PageHeaderProps {
   summary?: React.ReactNode;
   actions?: React.ReactNode;
   back?: { href: string; label: string };
+  /** 2 where the page's own title is elsewhere (the Settings list on /settings). */
+  level?: 1 | 2;
 }
 
-export function PageHeader({ title, summary, actions, back }: PageHeaderProps) {
+export function PageHeader({ title, summary, actions, back, level = 1 }: PageHeaderProps) {
+  const Title = level === 1 ? "h1" : "h2";
   return (
     <header className={s.header}>
       <div className={s.headerText}>
@@ -29,7 +32,7 @@ export function PageHeader({ title, summary, actions, back }: PageHeaderProps) {
             {back.label}
           </IntentLink>
         )}
-        <h1 className={s.title}>{title}</h1>
+        <Title className={s.title}>{title}</Title>
         {summary && <p className={s.summary}>{summary}</p>}
       </div>
       {actions && <div className={s.headerActions}>{actions}</div>}

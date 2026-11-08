@@ -30,7 +30,7 @@ export function daysToFull(mount: string, avail: number): { days: number | null;
   return { days: avail / perDay, perDay };
 }
 
-const humanDays = (d: number) => (d < 1 ? `in about ${Math.max(1, Math.round(d * 24))} hours` : d < 1.5 ? "in about a day" : `in about ${Math.round(d)} days`);
+const humanDays = (d: number) => (d < 1 ? `in about ${plural(Math.max(1, Math.round(d * 24)), "hour")}` : d < 1.5 ? "in about a day" : `in about ${Math.round(d)} days`);
 
 export function spaceOutcome(f: FsUsage): Outcome {
   const { diskAttention, diskFault } = getSetting("thresholds");

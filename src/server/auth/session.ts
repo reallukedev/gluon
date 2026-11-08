@@ -10,6 +10,7 @@ import { findById, toUser, type User } from "./users";
 import { DEVICE_COOKIE, DEVICE_COOKIE_SECURE, DEVICE_MAX_AGE_S, deviceHash, newDeviceToken, pruneDeviceFindings, sessionDevices } from "./devices";
 import { mfaRequired, sessionEndsAt } from "./policy";
 import { AppError } from "../errors";
+import { loginHref, REQUESTED_PATH_HEADER } from "@/lib/safe-next";
 
 /**
  * Over HTTPS the cookie is `__Host-` prefixed, so the browser insists on Secure, Path=/ and no Domain
@@ -215,7 +216,7 @@ export const pendingAuth = cache(readSession);
 /** For the shell itself, which shows the two-step setup when it's due. */
 export async function requireSignedIn(): Promise<{ session: Session; user: User }> {
   const a = await currentAuth();
-  if (!a) redirect("/login");
+  if (!a) redirect(loginHref((await headers()).get(REQUESTED_PATH_HEADER)));
   return a;
 }
 

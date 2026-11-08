@@ -4,7 +4,7 @@ import { currentAuth } from "@/server/auth/session";
 import { userCount } from "@/server/auth/users";
 import { clientInfo } from "@/server/net-zone";
 import { getSetting } from "@/server/settings";
-import { safeNext } from "../safe-next";
+import { safeNext } from "@/lib/safe-next";
 import { LoginForm } from "./LoginForm";
 import { mfaRequired } from "@/server/auth/policy";
 

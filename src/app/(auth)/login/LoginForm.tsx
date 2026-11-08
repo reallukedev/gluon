@@ -58,9 +58,13 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
     router.refresh();
   }
 
-  async function submitPassword(e: React.FormEvent) {
-    e.preventDefault();
+  // Read from the form, not state: what was typed before the page hydrated is in the fields but not yet in state.
+  async function submitPassword(form: FormData) {
     if (busy || blocked) return;
+    const username = String(form.get("username") ?? "");
+    const password = String(form.get("password") ?? "");
+    setUsername(username);
+    setPassword(password);
     if (!username.trim() || !password) {
       setProblem({ message: !username.trim() ? "Enter your username." : "Enter your password." });
       return;
@@ -130,7 +134,7 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
   if (step === "recovered") {
     return (
       <div className={`${s.form} appear`}>
-        <h2>You're signed in</h2>
+        <h1>You're signed in</h1>
         <p className={s.lede}>
           You used a recovery code.{" "}
           {left === 0 ? (
@@ -164,7 +168,7 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
         }}
         noValidate
       >
-        <h2>{recovery ? "Use a recovery code" : "Enter your code"}</h2>
+        <h1>{recovery ? "Use a recovery code" : "Enter your code"}</h1>
         <p className={s.lede}>
           {recovery
             ? "One of the codes you saved with two-step sign-in. Each works once."
@@ -219,16 +223,26 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
 
   const awayRule = problem?.code === "mfa_required_away";
   return (
-    <form className={s.form} onSubmit={submitPassword} noValidate>
-      <h2>Sign in to {serverName}</h2>
+    <form
+      className={s.form}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submitPassword(new FormData(e.currentTarget));
+      }}
+      // Only for a press before hydration: React holds that submit (a native one would reload the page and empty
+      // the fields) and hands it here once the page is ready. Without scripts at all, nothing is sent anywhere.
+      action={submitPassword}
+      noValidate
+    >
+      <h1>Sign in to {serverName}</h1>
       <ZoneLine zone={zone} serverName={serverName}>
         {zone === "away" && adminsNeedCode ? <>Admins also need a code from their authenticator app.</> : null}
       </ZoneLine>
       <Field label="Username">
-        <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus required />
+        <Input name="username" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus required />
       </Field>
       <Field label="Password">
-        <Input ref={passwordRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required aria-describedby={message && !awayRule ? errorId : undefined} />
+        <Input ref={passwordRef} name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required aria-describedby={message && !awayRule ? errorId : undefined} />
       </Field>
       {awayRule ? (
         <Notice tone="attention" title="Two-step sign-in needed away from home">

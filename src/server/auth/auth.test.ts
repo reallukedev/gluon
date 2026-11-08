@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -11,16 +12,19 @@ let db: typeof import("../db");
 let users: typeof import("./users");
 let setup: typeof import("./setup");
 let limits: typeof import("./ratelimit");
+let invites: typeof import("./invites");
 
 beforeAll(async () => {
   db = await import("../db");
   users = await import("./users");
   setup = await import("./setup");
   limits = await import("./ratelimit");
+  invites = await import("./invites");
 });
 afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 const T0 = 1_700_000_000_000;
+const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 function addUser(id: string, role: "admin" | "member", disabled = false) {
   db.run(
     "INSERT INTO users (id, username, display_name, role, password_hash, created_at, updated_at, disabled) VALUES (?, ?, ?, ?, 'x', ?, ?, ?)",
@@ -126,5 +130,23 @@ describe("sign-in throttling", () => {
     expect(limits.retryAfter("login:maya", "192.168.1.20", "home")).toBe(0);
     limits.recordAttempt("login:maya", "192.168.1.20", true, "home");
     expect(limits.retryAfter("login:maya", "203.0.113.9", "away")).toBe(0);
+  });
+});
+
+describe("an invite link that no longer works", () => {
+  it("says whether it was used or ran out of time", () => {
+    addUser("maya", "admin");
+    const used = invites.createInvite("member", "Ben", "maya").token;
+    const old = invites.createInvite("member", "Lin", "maya").token;
+    const open = invites.createInvite("member", "Omar", "maya").token;
+    db.run("UPDATE invites SET used_at = ? WHERE token_hash = ?", Date.now(), sha(used));
+    db.run("UPDATE invites SET expires_at = ? WHERE token_hash = ?", Date.now() - 1, sha(old));
+    expect(invites.peekInvite(used)).toBeNull();
+    expect(invites.closedInvite(used)).toBe("used");
+    expect(invites.peekInvite(old)).toBeNull();
+    expect(invites.closedInvite(old)).toBe("expired");
+    expect(invites.peekInvite(open)).not.toBeNull();
+    expect(invites.closedInvite(open)).toBeNull();
+    expect(invites.closedInvite("never-made-this-one-up")).toBeNull();
   });
 });

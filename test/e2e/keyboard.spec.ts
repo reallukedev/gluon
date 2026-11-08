@@ -86,8 +86,7 @@ test("the account menu and search give focus back to their button when closed wi
   await expect(search).toBeFocused();
 });
 
-test("closing the invite dialog with Escape gives focus back to its button", async ({ page }) => {
-  test.fail(true, "Focus drops to <body> when the Invite someone dialog closes (Escape or Cancel)");
+test("closing the invite dialog with Escape or Cancel gives focus back to its button", async ({ page }) => {
   await open(page, "/settings/people");
   const invite = page.getByRole("button", { name: "Invite someone" });
   const dialog = page.getByRole("dialog", { name: "Invite someone" });
@@ -95,6 +94,11 @@ test("closing the invite dialog with Escape gives focus back to its button", asy
   await expect(dialog.getByLabel("Their name")).toBeFocused();
 
   await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(invite).toBeFocused({ timeout: 3_000 });
+
+  await openWithKeyboard(page, invite, dialog);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(dialog).toBeHidden();
   await expect(invite).toBeFocused({ timeout: 3_000 });
 });

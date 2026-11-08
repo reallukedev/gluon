@@ -184,9 +184,9 @@ describe("oneAtATime", () => {
     const first = oneAtATime("login:Maya", "home", () => new Promise<string>((r) => (release = r)));
     const second = vi.fn(async () => "second");
     await expect(oneAtATime("login:maya", "home", second)).rejects.toMatchObject({
-      code: "rate_limited",
+      code: "signin_busy",
+      message: "Another sign-in to this account is being checked. Try again in a moment.",
       status: 429,
-      details: { retryAfter: 1 },
     });
     expect(second).not.toHaveBeenCalled();
     await expect(oneAtATime("login:maya", "away", async () => "away ok")).resolves.toBe("away ok");

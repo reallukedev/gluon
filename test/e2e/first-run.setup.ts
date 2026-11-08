@@ -4,7 +4,7 @@ import { admin, adminState, clickToOpen, expect, open, readSetupCode, setupCodeP
 test("first-run setup rejects a wrong code, then creates the admin with the right one", async ({ page, browser }) => {
   await open(page, "/");
   await expect(page).toHaveURL(/\/setup$/);
-  await expect(page.getByRole("heading", { name: /^Let's set up/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Let's set up/ })).toBeVisible();
 
   const code = page.getByLabel("Setup code");
   const create = page.getByRole("button", { name: "Create admin account" });

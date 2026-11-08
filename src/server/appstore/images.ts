@@ -5,6 +5,7 @@ import { safeFetch, NetError } from "../integrations/net";
 import { imageError, isLocalImage, parseImage } from "@/lib/builder/names";
 import { hubQuery, mapHubSearch, mapHubTags, pageTags, retryAt, sortTags } from "@/lib/builder/hub";
 import type { HubSearchResult, ImageLookup, TagPage } from "@/lib/builder-types";
+import { plural } from "@/lib/format";
 
 /**
  * This server first, then its registry (anything speaking registry v2 with anonymous pull tokens).
@@ -180,7 +181,7 @@ function remember<T>(c: Cache<T>, key: string, value: T) {
 
 const limitedText = () => {
   const s = Math.max(1, Math.ceil((hub.blockedUntil - Date.now()) / 1000));
-  return `Docker Hub is limiting requests from this network for ${s < 90 ? `${s} seconds` : `${Math.ceil(s / 60)} minutes`}. Type the full image name instead, like jellyfin/jellyfin.`;
+  return `Docker Hub is limiting requests from this network for ${s < 90 ? plural(s, "second") : `${Math.ceil(s / 60)} minutes`}. Type the full image name instead, like jellyfin/jellyfin.`;
 };
 
 export async function searchHub(input: string): Promise<HubSearchResult> {

@@ -103,7 +103,7 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
   if (claimed) {
     return (
       <div className={`${s.form} appear`}>
-        <h2>Gluon is already set up</h2>
+        <h1>Gluon is already set up</h1>
         <p className={s.lede}>Someone finished setting up {serverName}, maybe in another window. Sign in with that account.</p>
         <LinkButton href="/login" variant="primary" size="lg" block>
           Sign in
@@ -117,7 +117,7 @@ export function SetupForm({ where, serverName }: { where: CodeWhere; serverName:
 
   return (
     <form className={s.form} onSubmit={submit} noValidate data-wide="">
-      <h2>Let&apos;s set up {serverName}</h2>
+      <h1>Let&apos;s set up {serverName}</h1>
       <p className={s.lede}>First the code from its log, so we know it&apos;s yours. Then your account.</p>
 
       <div className={s.codeGroup}>

@@ -41,12 +41,14 @@ export function SettingsFrame({ sections, children }: { sections: SettingsSectio
   // Problem reports waiting for a reply (the sidebar's account button shows the same count).
   const { data: shell } = useApi<{ reports: number }>("/api/shell");
   const reports = shell?.reports ?? 0;
+  const NavTitle = section ? "h2" : "h1";
 
   return (
     <div className={s.frame}>
       <div className={s.layout} data-section={section ? "" : undefined} data-wide={wide ? "" : undefined}>
         <nav className={s.nav} aria-label="Settings">
-          <h1 className={s.navTitle}>Settings</h1>
+          {/* The page's title on /settings; beside a section, that section's header is. */}
+          <NavTitle className={s.navTitle}>Settings</NavTitle>
           {GROUPS.map((g) => {
             const items = sections.filter((x) => x.group === g.id);
             if (!items.length) return null;

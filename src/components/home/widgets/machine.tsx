@@ -15,6 +15,7 @@ import type { PowerData, ScheduleData, ScheduleItem, SpaceData, SpaceDisk } from
 import { Age, WidgetState, useDayStart, useDriveNames, useFit } from "./kit";
 import { Preview } from "../previews";
 import m from "./machine.module.css";
+import { plural } from "@/lib/format";
 
 function Retry({ onClick }: { onClick: () => void }) {
   return (
@@ -40,7 +41,7 @@ function Rows({ n = 3 }: { n?: number }) {
 }
 
 function fillsIn(days: number): string | null {
-  if (days < 1) return `in about ${Math.max(1, Math.round(days * 24))} hours`;
+  if (days < 1) return `in about ${plural(Math.max(1, Math.round(days * 24)), "hour")}`;
   if (days < 1.5) return "in about a day";
   if (days < 45) return `in about ${Math.round(days)} days`;
   if (days < 365) return `in about ${Math.round(days / 30)} months`;

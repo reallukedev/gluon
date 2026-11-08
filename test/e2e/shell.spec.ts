@@ -61,6 +61,7 @@ test.describe("every page", () => {
         return;
       }
       await expect(main.getByRole("heading", { level: 1, name: heading, exact: true })).toBeVisible();
+      if (path.startsWith("/settings/")) await expect(page.getByRole("heading", { level: 1 }), "one page title").toHaveCount(1);
       // Let the page's own data requests finish so their failures show up as console errors.
       await page.waitForLoadState("networkidle");
 

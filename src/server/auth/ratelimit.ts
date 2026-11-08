@@ -77,7 +77,8 @@ export async function oneAtATime<T>(subject: string, zone: Zone, fn: () => Promi
   const key = acctKey(subject, zone);
   const held = locks();
   if (held.has(key)) {
-    throw new AppError("rate_limited", "Another sign-in to this account is being checked. Try again in a moment.", 429, { retryAfter: 1 });
+    // Not "rate_limited": nothing is locked, so pages show this message rather than a countdown.
+    throw new AppError("signin_busy", "Another sign-in to this account is being checked. Try again in a moment.", 429, { retryAfter: 1 });
   }
   held.add(key);
   try {
