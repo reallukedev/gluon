@@ -78,12 +78,17 @@ if (typeof document !== "undefined") {
   });
 }
 
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
 function subscribe(l: () => void) {
   listeners.add(l);
+  clearTimeout(idleTimer);
   if (listeners.size === 1) open();
   return () => {
     listeners.delete(l);
-    if (!listeners.size) close();
+    // Going from one live page to another unsubscribes a moment before the next page subscribes: keep the
+    // stream through that instead of reconnecting and starting the readings over.
+    if (!listeners.size) idleTimer = setTimeout(() => !listeners.size && close(), 3000);
   };
 }
 
@@ -102,6 +107,15 @@ const serverSnapshot: LiveState = { host: [], containers: [], status: "connectin
 
 export function useLive(): LiveState {
   return React.useSyncExternalStore(subscribe, getSnapshot, () => serverSnapshot);
+}
+
+/** One value from the live state. Re-renders only when it changes, so return a primitive, not a new object. */
+export function useLiveValue<T>(pick: (s: LiveState) => T): T {
+  return React.useSyncExternalStore(
+    subscribe,
+    () => pick(state),
+    () => pick(serverSnapshot),
+  );
 }
 
 /** Latest container sample by name. */

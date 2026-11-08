@@ -4,7 +4,7 @@ import type { MemoryBreakdown, RestartNeeded, SystemOverview } from "@/lib/syste
 import { api, useApi, ApiError } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Panel, Notice, Skeleton, DefinitionList } from "@/components/ui/Surface";
-import { useLive } from "@/lib/client/live";
+import { useLiveValue } from "@/lib/client/live";
 import { Faceplate } from "./Faceplate";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { SettingRow, Switch } from "@/components/ui/Field";
@@ -76,7 +76,7 @@ function Facts({ overview: o }: { overview: SystemOverview }) {
 }
 
 function LiveMeta() {
-  const { status } = useLive();
+  const status = useLiveValue((l) => l.status);
   return <span className={s.liveMeta}>{status === "live" ? "Live" : status === "offline" ? "Paused, reconnecting" : "Connecting…"}</span>;
 }
 

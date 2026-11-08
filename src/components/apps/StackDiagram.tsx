@@ -3,7 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Globe, HomeSimple, Folder, Database, Page as FileIcon, Refresh, Play, Square, Journal, OpenNewWindow } from "iconoir-react";
 import type { AppDetail, ContainerDetail } from "@/server/docker/detail";
-import { useContainerStats, useLive } from "@/lib/client/live";
+import { useContainerStats, useLiveValue } from "@/lib/client/live";
 import { useFormat } from "@/components/PrefsProvider";
 import { StateLine, lineLabel } from "@/components/ui/StateLine";
 import { Menu, type MenuEntry } from "@/components/ui/Menu";
@@ -178,7 +178,7 @@ export interface DiagramActions {
 export function StackDiagram({ app, actions }: { app: AppDetail; actions: DiagramActions }) {
   const model = React.useMemo(() => buildModel(app), [app]);
   const stats = useContainerStats();
-  const memTotal = useLive().host.at(-1)?.mem.total ?? null;
+  const memTotal = useLiveValue((l) => l.host.at(-1)?.mem.total ?? null);
   const fmt = useFormat();
   const wrap = React.useRef<HTMLDivElement>(null);
   const [paths, setPaths] = React.useState<{ key: string; d: string; from: string; to: string }[]>([]);
