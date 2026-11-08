@@ -341,6 +341,8 @@ function BusyWidget({ item, size }: WidgetProps<BusyConfig>) {
   if (!apps.length) return <WidgetState title="Nothing is running">Apps appear here, busiest first, once they&apos;re started.</WidgetState>;
   if (!usage.size) {
     if (status === "offline") return <Failed title="Live readings stopped" />;
+    // The machine's own readings are arriving but none for apps: say so instead of waiting forever.
+    if (host.length >= 2) return <WidgetState title="No readings from apps" />;
     return <Loading />;
   }
   const top = ranked[0] ? (by === "cpu" ? ranked[0].u.cpu : ranked[0].u.mem) : 0;
