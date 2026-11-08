@@ -104,6 +104,36 @@
   .link:hover:not([aria-current="page"]) { background: color-mix(in oklab, var(--ink) 5%, transparent); color: var(--ink); }
   .link:hover svg { color: var(--ink); }
 }
+/* A clicked link takes the selected look at once; the page it leaves gives it up. If the page is slow to
+   arrive, a hairline sweeps along the bottom edge (the same loading mark buttons use). */
+.linkPending { display: none; }
+.link:has(> .linkPending[data-on]) { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+.link:has(> .linkPending[data-on]) svg { color: var(--ink); }
+:root[data-theme="dark"] .link:has(> .linkPending[data-on]) { background: var(--panel-2); box-shadow: 0 0 0 1px var(--line-strong); }
+@media (prefers-color-scheme: dark) { :root[data-theme="system"] .link:has(> .linkPending[data-on]) { background: var(--panel-2); box-shadow: 0 0 0 1px var(--line-strong); } }
+.scroll:has(.linkPending[data-on]) .link[aria-current="page"] { background: none; box-shadow: none; color: var(--ink-2); }
+.scroll:has(.linkPending[data-on]) .link[aria-current="page"] svg { color: var(--muted); }
+.linkPending[data-on] {
+  display: block;
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0;
+  animation: sweep 900ms var(--ease-in-out) 180ms infinite;
+}
+@keyframes sweep {
+  0% { clip-path: inset(0 100% 0 0); opacity: 0.6; }
+  50% { clip-path: inset(0 0 0 0); opacity: 0.6; }
+  100% { clip-path: inset(0 0 0 100%); opacity: 0.6; }
+}
+:global(:root[data-motion="reduce"]) .linkPending[data-on] { animation: breathe 1.4s ease-in-out 180ms infinite; }
+@media (prefers-reduced-motion: reduce) { .linkPending[data-on] { animation: breathe 1.4s ease-in-out 180ms infinite; } }
+@keyframes breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.2; } }
+@media (forced-colors: active) { .linkPending[data-on] { forced-color-adjust: none; background: CanvasText; } }
 .linkLabel { overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 .badge { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .badgeMark { width: 2px; height: 12px; border-left: 2px solid var(--attn); box-shadow: 4px 0 0 var(--attn); margin-right: 4px; }

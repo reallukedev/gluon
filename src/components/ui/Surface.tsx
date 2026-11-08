@@ -25,7 +25,7 @@ export function PageHeader({ title, summary, actions, back }: PageHeaderProps) {
     <header className={s.header}>
       <div className={s.headerText}>
         {back && (
-          <Link href={back.href} className={s.back}>
+          <Link href={back.href} className={s.back} unstable_dynamicOnHover>
             <NavArrowLeft strokeWidth={2} />
             {back.label}
           </Link>
