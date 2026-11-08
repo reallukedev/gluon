@@ -96,7 +96,6 @@ export function planFor(user: User, zone: Zone): Plan {
     serverName,
     admin: inviter?.display_name ?? firstAdmin?.display_name ?? null,
     invitedBy: inviter?.display_name ?? null,
-    canSeeStatus: getSetting("householdCanSeeStatus"),
   };
   return plan;
 }

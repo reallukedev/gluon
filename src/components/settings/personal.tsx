@@ -201,7 +201,7 @@ function PreviewPlate() {
           <span className={s.plateMeta}>Changes as you choose</span>
         </div>
         <div className={s.plateBody}>
-          <p className={s.plateTitle}>Status</p>
+          <p className={s.plateTitle}>Needs you</p>
           <p className={s.plateSummary}>
             <b>{fixed ? "Nothing needs you." : "One thing needs you."}</b> Everything else is running.
           </p>
@@ -298,7 +298,6 @@ export function HomePrefs() {
             onChange={(v) => void set({ startPage: v })}
             options={[
               { value: "home", label: "Home" },
-              { value: "status", label: "Status" },
               ...(viewer.role === "admin" ? [{ value: "apps" as const, label: "Apps" }] : []),
               { value: "files", label: "Files" },
             ]}

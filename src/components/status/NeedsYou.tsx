@@ -10,7 +10,7 @@ import { toast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/client/api";
 import { Empty } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
-import s from "./status.module.css";
+import s from "./needsYou.module.css";
 
 /** Run a finding's remedy: navigate, or confirm (if needed) and call the server. */
 export function RemedyButton({ remedy, findingId, variant = "secondary", onDone }: { remedy: Remedy; findingId: string | null; variant?: "secondary" | "attention" | "primary"; onDone?: () => void }) {
@@ -163,14 +163,14 @@ function useFlip(list: React.RefObject<HTMLUListElement | null>, key: string) {
 
 /**
  * What needs the person now, worst first, each with its remedy and a way to put it off. `foot`
- * replaces the link under the list (Status itself passes null; other pages link to Status).
- * `empty` replaces the empty state; Status passes null and hides the whole panel instead.
+ * replaces the link under the list (Home's Needs you widget passes null; other pages link to it).
+ * `empty` replaces the empty state.
  */
 export function NeedsYou({
   findings,
   onChange,
   checkedAt,
-  foot = <Link href="/status">Everything that needs you, on Status</Link>,
+  foot = <Link href="/">Everything that needs you, on Home</Link>,
   empty,
 }: {
   findings: Finding[];

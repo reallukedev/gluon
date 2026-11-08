@@ -18,7 +18,7 @@ import { host } from "../../host/exec";
 import { AppError } from "../../errors";
 import { formatBytes, formatDuration, formatRelative, listJoin, plural } from "@/lib/format";
 import type { AppSummary } from "../../docker/apps";
-import type { CheckupGroup, CheckupKind } from "@/lib/diagnostics-types";
+import { SECURITY_GROUPS, type CheckupGroup, type CheckupKind } from "@/lib/diagnostics-types";
 import type { UsageResult } from "@/lib/storage-types";
 import { recentRequests } from "../caddy-log";
 import { interfaces } from "../interfaces";
@@ -30,10 +30,11 @@ import { appHref, containersOutcome, containerVerdicts, webPortOutcome } from ".
 import { gatewayCheck, httpsCheck, netStatus, systemDnsCheck, PROBE_NAME } from "./internet";
 import { inventory, realFilesystems, spaceOutcome, inodeOutcome, smartOutcome } from "./storage";
 import { cpuTempOutcome, loadOutcome, memoryOutcome } from "./hardware";
-import { dockerDiskOutcome, updatesOutcome } from "./system";
+import { dockerDiskOutcome, rebootOutcome, updatesOutcome } from "./system";
 import { adminMfaOutcome, exposure, lanOutcome, sshFailuresOutcome, sshPasswordOutcome, sshRootOutcome, gluonLoginsOutcome } from "./security";
 import { cpuWindow, download, hostNameservers, httpAnswer, pingSeries, summarizeRtts } from "./probes";
 import { mfaRequired } from "../../auth/policy";
+import * as h from "./hardening";
 
 /** Targeted checkups: go deeper along one path for one symptom. */
 
@@ -832,7 +833,8 @@ async function drivePlan(diskId: string): Promise<Plan> {
   return { title: `The ${d.title} (${d.name}) is acting up`, layout: "sweep", origin: null, groups: [{ id: g, label: d.title }], specs, subject: `${d.name} ${d.model ?? ""}`.trim() };
 }
 
-// ---------------------------------------------------------------- is my server safe on the internet?
+// ---------------------------------------------------------------- how secure is this server?
+
 
 async function safetyPlan(): Promise<Plan> {
   const specs: CheckSpec[] = [];
@@ -860,11 +862,40 @@ async function safetyPlan(): Promise<Plan> {
     });
   }
   if (!entries.length) specs.push({ id: "safety.public", group: "internet", label: "Public addresses", run: async () => ok("Nothing is published to the internet") });
-  specs.push({ id: "safety.ssh-failures", group: "internet", label: "SSH attempts", run: sshFailuresOutcome });
+  specs.push({ id: "security.gluon-public", group: "internet", label: "Gluon itself", timeoutMs: 45_000, run: h.gluonPublicOutcome });
+  specs.push({ id: "security.upnp", group: "internet", label: "UPnP on the router", timeoutMs: 45_000, run: h.upnpOutcome });
+
+  specs.push({ id: "security.firewall", group: "network", label: "Firewall", run: h.firewallOutcome });
+  specs.push({ id: "security.docker-bypass", group: "network", label: "Docker and the firewall", timeoutMs: 45_000, run: h.dockerBypassOutcome });
+  specs.push({ id: "security.ipv6", group: "network", label: "IPv6", run: h.ipv6Outcome });
   specs.push({ id: "security.lan", group: "network", label: "Open ports", timeoutMs: 45_000, run: async (ctx) => lanOutcome(await exposure(ctx, true)) });
-  specs.push({ id: "security.ssh-password", group: "network", label: "SSH passwords", run: sshPasswordOutcome });
-  specs.push({ id: "security.ssh-root", group: "network", label: "SSH root", run: sshRootOutcome });
-  specs.push({ id: "system.updates", group: "network", label: "Security updates", timeoutMs: 60_000, run: updatesOutcome });
+  specs.push({ id: "security.risky-services", group: "network", label: "Unsafe services", run: h.riskyServicesOutcome });
+
+  specs.push({ id: "security.ssh-password", group: "ssh", label: "Passwords", run: sshPasswordOutcome });
+  specs.push({ id: "security.ssh-root", group: "ssh", label: "Root", run: sshRootOutcome });
+  specs.push({ id: "security.ssh-settings", group: "ssh", label: "Settings", run: h.sshSettingsOutcome });
+  specs.push({ id: "security.ssh-crypto", group: "ssh", label: "Encryption", run: h.sshCryptoOutcome });
+  specs.push({ id: "security.ssh-keys", group: "ssh", label: "Trusted keys", run: h.sshKeysOutcome });
+  specs.push({ id: "security.brute-force", group: "ssh", label: "Guessing protection", run: h.bruteForceOutcome });
+  specs.push({ id: "safety.ssh-failures", group: "ssh", label: "Failed attempts", run: sshFailuresOutcome });
+  specs.push({ id: "security.ssh-away", group: "ssh", label: "Sign-ins from outside", run: h.sshAwaySignInsOutcome });
+
+  specs.push({ id: "system.updates", group: "server", label: "Security updates", timeoutMs: 60_000, run: updatesOutcome });
+  specs.push({ id: "security.auto-updates", group: "server", label: "Automatic updates", run: h.autoUpdatesOutcome });
+  specs.push({ id: "security.os-support", group: "server", label: "System support", run: h.osSupportOutcome });
+  specs.push({ id: "system.reboot", group: "server", label: "Restart needed", run: async () => rebootOutcome() });
+  specs.push({ id: "security.host-accounts", group: "server", label: "Accounts", run: h.hostAccountsOutcome });
+  specs.push({ id: "security.sudo", group: "server", label: "Who can be root", run: h.sudoOutcome });
+  specs.push({ id: "security.file-perms", group: "server", label: "System files", run: h.filePermsOutcome });
+  specs.push({ id: "security.kernel", group: "server", label: "Kernel settings", run: h.kernelOutcome });
+  specs.push({ id: "security.confinement", group: "server", label: "AppArmor or SELinux", run: h.confinementOutcome });
+
+  specs.push({ id: "security.docker-api", group: "containers", label: "Docker's API", run: h.dockerApiOutcome });
+  specs.push({ id: "security.privileged", group: "containers", label: "Privileged apps", run: h.privilegedOutcome });
+  specs.push({ id: "security.docker-socket", group: "containers", label: "Docker control", run: h.dockerSocketOutcome });
+  specs.push({ id: "security.host-folders", group: "containers", label: "System folders", run: h.hostFoldersOutcome });
+  specs.push({ id: "security.container-powers", group: "containers", label: "Isolation", run: h.containerPowersOutcome });
+
   specs.push({ id: "security.admin-mfa", group: "accounts", label: "Admins", run: async () => adminMfaOutcome() });
   specs.push({
     id: "safety.members-mfa",
@@ -888,16 +919,14 @@ async function safetyPlan(): Promise<Plan> {
       return ok("Admins need two-step sign-in to get in from outside");
     },
   });
+  specs.push({ id: "security.stale-admins", group: "accounts", label: "Unused admins", run: async () => h.staleAdminsOutcome() });
+  specs.push({ id: "security.invites", group: "accounts", label: "Invite links", run: async () => h.invitesOutcome() });
   specs.push({ id: "safety.gluon-logins", group: "accounts", label: "Failed sign-ins", run: async () => gluonLoginsOutcome() });
   return {
-    title: "Is my server safe on the internet?",
+    title: "Security checkup",
     layout: "sweep",
     origin: null,
-    groups: [
-      { id: "internet", label: "From the internet" },
-      { id: "network", label: "On this machine" },
-      { id: "accounts", label: "Accounts" },
-    ],
+    groups: SECURITY_GROUPS,
     specs,
     subject: null,
   };

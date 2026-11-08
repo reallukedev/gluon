@@ -3,7 +3,7 @@ import type { Finding } from "@/server/findings";
 import type { SpectrumGroup } from "@/components/spectrum/Spectrum";
 import { instanceHints, sourceName } from "@/lib/app-names";
 
-// Kept apart from the Status page so the Spectrum widget doesn't bring that whole page into Home's bundle.
+// Kept in its own module so the Spectrum widget brings only this into Home's bundle.
 export function spectrumGroups(apps: StatusApp[], findings: Finding[], filesystems: StatusPayload["filesystems"], fmtBytes: (n: number) => string): SpectrumGroup[] {
   const attentionSubjects = new Set(findings.filter((f) => f.severity === "attention").map((f) => f.subject));
   const byId = new Map(apps.map((a) => [a.id, a]));

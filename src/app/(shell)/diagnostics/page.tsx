@@ -1,11 +1,11 @@
 import { requireAdmin } from "@/server/auth/session";
-import { checkupState } from "@/server/diagnostics/checkup/state";
+import { checkupState, securityState } from "@/server/diagnostics/checkup/state";
 import { DiagnosticsView, type DiagTab } from "@/components/diagnostics/DiagnosticsView";
 import type { CheckupKind } from "@/lib/diagnostics-types";
 
 export const metadata = { title: "Diagnostics" };
 
-const TABS: DiagTab[] = ["checkup", "traffic", "connections", "requests", "processes", "logs", "tools"];
+const TABS: DiagTab[] = ["checkup", "security", "apps", "traffic", "connections", "requests", "processes", "logs", "tools"];
 const KINDS: CheckupKind[] = ["full", "app", "address", "internet", "server", "space", "drive", "safety"];
 const str = (v: unknown) => (typeof v === "string" && v.length <= 200 ? v : null);
 
@@ -24,5 +24,14 @@ export default async function DiagnosticsPage({ searchParams }: { searchParams: 
   const kind = str(sp.start) as CheckupKind | null;
   const start = kind && KINDS.includes(kind) ? { kind, target: str(sp.target) } : null;
   const checkup = tab === "checkup" ? await checkupState().catch(() => null) : null;
-  return <DiagnosticsView tab={tab} logSource={source} logUnit={unit} checkup={checkup} runId={runId} start={start} />;
+  let security = null;
+  if (tab === "security") {
+    try {
+      security = securityState();
+    } catch {
+      security = null;
+    }
+  }
+  // ?start=safety on the Security tab runs it there; the Checkup tab only runs what it was sent.
+  return <DiagnosticsView tab={tab} logSource={source} logUnit={unit} checkup={checkup} security={security} runId={runId} start={tab === "checkup" || start?.kind === "safety" ? start : null} />;
 }

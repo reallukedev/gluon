@@ -70,7 +70,7 @@ function useSummary(id: string, fallback: string): React.ReactNode {
     }
     case "home": {
       const engine = prefs.searchEngine === "custom" ? "your own search address" : SEARCH_ENGINES[prefs.searchEngine].name;
-      const start = { home: "Home", status: "Status", apps: "Apps", files: "Files" }[prefs.startPage];
+      const start = { home: "Home", apps: "Apps", files: "Files" }[prefs.startPage];
       return `Gluon opens on ${start}. The search box uses ${engine}.`;
     }
     case "navigation": {

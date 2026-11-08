@@ -6,10 +6,10 @@ describe("what an XMPP notification says", () => {
     const text = xmppText({
       title: "Jellyfin isn't answering",
       body: "Its container keeps restarting.\n\nFix: Restart Jellyfin (one tap in Gluon).",
-      link: "https://gluon.example/status#app.broken%3Ajellyfin",
+      link: "https://gluon.example/#app.broken%3Ajellyfin",
       event: "problem",
     });
-    expect(text).toBe("Jellyfin isn't answering\nIts container keeps restarting.\nhttps://gluon.example/status#app.broken%3Ajellyfin");
+    expect(text).toBe("Jellyfin isn't answering\nIts container keeps restarting.\nhttps://gluon.example/#app.broken%3Ajellyfin");
     expect(text).not.toMatch(/<|&lt;/);
   });
 

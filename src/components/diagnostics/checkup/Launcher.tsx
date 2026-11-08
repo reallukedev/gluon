@@ -29,7 +29,7 @@ const SYMPTOMS: Symptom[] = [
   { kind: "server", label: "The server feels slow", hint: "Processor, memory, disks and what's busy", icon: <Cpu /> },
   { kind: "space", label: "Running out of space", hint: "What's full, what's big, what can go", icon: <Database /> },
   { kind: "drive", label: "A drive is acting up", hint: "Health counters, self-test and the kernel log", icon: <HardDrive />, pick: "disks", placeholder: "Pick the drive" },
-  { kind: "safety", label: "Is my server safe on the internet?", hint: "What's exposed, logins, SSH and two-step", icon: <ShieldCheck /> },
+  { kind: "safety", label: "Is the server secure?", hint: "Firewall, SSH, accounts, containers and what the internet reaches", icon: <ShieldCheck /> },
 ];
 
 function options(pick: NonNullable<Symptom["pick"]>, t: CheckupTargets) {
@@ -111,9 +111,9 @@ function HistoryRow({ r, current, hrefFor }: { r: CheckupRunRow; current: string
 }
 
 /** Recent checkups, newest first; the one on screen is marked. */
-export function History({ runs, current, hrefFor }: { runs: CheckupRunRow[]; current: string | null; hrefFor: (id: string) => string }) {
+export function History({ runs, current, hrefFor, title = "Recent checkups" }: { runs: CheckupRunRow[]; current: string | null; hrefFor: (id: string) => string; title?: string }) {
   return (
-    <Panel title="Recent checkups" meta={runs.length ? <span className="num">{runs.length}</span> : undefined} flush>
+    <Panel title={title} meta={runs.length ? <span className="num">{runs.length}</span> : undefined} flush>
       {!runs.length ? (
         <Empty title="No checkups yet">Each one is kept here, so the next can show what changed.</Empty>
       ) : (

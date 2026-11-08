@@ -60,8 +60,6 @@ export interface MemberPlan {
   /** Who made the invite, else the first admin: the person to tell when something breaks. */
   admin: string | null;
   invitedBy: string | null;
-  /** Members can open Status (and report problems from it). */
-  canSeeStatus: boolean;
 }
 
 export type Plan = AdminPlan | MemberPlan;

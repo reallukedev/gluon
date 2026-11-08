@@ -9,6 +9,6 @@ export default async function Start() {
   // A first run not yet finished (or skipped) picks up where it was left.
   if (prefs.onboarding !== "done") redirect("/welcome");
   const p = prefs.startPage;
-  const allowed = user.role === "admin" || p === "home" || p === "status" || p === "files";
-  redirect(allowed ? ({ home: "/", status: "/status", apps: "/apps", files: "/files" } as const)[p] : "/");
+  const allowed = user.role === "admin" || p === "home" || p === "files";
+  redirect(allowed ? ({ home: "/", apps: "/apps", files: "/files" } as const)[p] : "/");
 }

@@ -11,7 +11,7 @@ import type { KindSearchHit } from "./integrations/kinds/base";
 import { searchNames } from "./files/search";
 import { places } from "./files/places";
 import type { ProviderDef, ProviderGroup, ProviderItem, SearchCtx } from "./search";
-import { activityHref, statusHref } from "@/lib/settings-links";
+import { activityHref, problemHref } from "@/lib/settings-links";
 import { matchScore, splitVerb } from "@/lib/search-match";
 import type { SearchScope } from "@/lib/search-types";
 import type { Places, SearchHit } from "@/lib/files-types";
@@ -219,7 +219,7 @@ const findingsProvider: ProviderDef = {
     const unique = found.length === 1 || (found.length > 1 && found[1]!.score < found[0]!.score - 0.02);
     for (const [i, { f, fields, score }] of found.entries()) {
       const asked = !!verb && unique && i === 0;
-      items.push({ id: `finding:${f.id}`, label: f.title, hint: f.cause?.slice(0, 160) ?? undefined, icon: "finding", href: statusHref(f.id), score, keywords: fields.keywords });
+      items.push({ id: `finding:${f.id}`, label: f.title, hint: f.cause?.slice(0, 160) ?? undefined, icon: "finding", href: problemHref(f.id), score, keywords: fields.keywords });
       const r = f.remedy;
       if (r?.action) {
         items.push({

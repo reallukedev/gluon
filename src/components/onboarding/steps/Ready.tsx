@@ -30,9 +30,7 @@ export function Ready() {
 
       <ul className={o.plain}>
         <li>
-          {plan.canSeeStatus
-            ? `Something broken? Choose Report a problem on Status and ${admin} will see it.`
-            : `Something broken? Let ${admin} know.`}
+          Something broken? Let {admin} know.
         </li>
         <li>Collection, at the bottom of Home, adds apps and widgets. Press and hold, or right-click, anything there to unpin it.</li>
         <li>Theme and text size are in Settings.</li>

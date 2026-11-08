@@ -50,7 +50,12 @@ const schemas = {
     .object({
       token: z.string(),
       tokenHint: z.string().nullable(),
+      /** The domain that holds the base domain. */
       zone: z.object({ id: z.string(), name: z.string(), accountId: z.string(), accountName: z.string() }),
+      /** Every domain the token can see; addresses in any of them get their records from Gluon. */
+      zones: z.array(z.object({ id: z.string(), name: z.string(), accountId: z.string(), accountName: z.string() })).max(500).default([]),
+      /** Domains Gluon has written records in, so it looks there for its own records to remove. */
+      touched: z.array(z.string()).max(500).default([]),
       connectedAt: z.number(),
       ipv6: z.boolean().default(false),
       /** Web addresses go through Cloudflare's proxy, unless marked direct. */
