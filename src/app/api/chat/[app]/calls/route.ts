@@ -2,7 +2,6 @@ import { route } from "@/server/api";
 import { param } from "@/app/api/docker/params";
 import { callsStatus, startCalls, stopCalls } from "@/server/chat/calls";
 
-/** The call relay and whether it's reachable. */
 export const GET = route({ auth: "admin" }, async ({ params }) => callsStatus(param(params.app)));
 
 /** Start setting calls up: installs the relay when there isn't one (publish its draft next), then /finish. */

@@ -7,7 +7,6 @@
 const MARKS = /\p{M}+/gu;
 const SEP = /[^\p{L}\p{N}]+/gu;
 
-/** "Café-Bar Ünïcode" → "cafe bar unicode". */
 export function fold(s: string): string {
   return s
     .normalize("NFKD")
@@ -25,7 +24,6 @@ export function fold(s: string): string {
 export interface Query {
   raw: string;
   folded: string;
-  /** folded without spaces ("home bridge" → "homebridge"). */
   compact: string;
   tokens: string[];
 }
@@ -40,13 +38,11 @@ export function prepare(q: string): Query {
 
 export interface Fields {
   label: string;
-  /** Other names and words people might type ("audit log" for Activity). */
   keywords?: string;
   /** The second line (a path, a summary). Counts for less than the name. */
   hint?: string;
 }
 
-/** Typos allowed in a typed word of this length. Short words must be right. */
 function typos(len: number): number {
   return len >= 8 ? 2 : len >= 4 ? 1 : 0;
 }
@@ -78,10 +74,8 @@ export function editDistance(a: string, b: string, max: number): number {
 
 const words = (folded: string) => (folded ? folded.split(" ") : []);
 
-/** Does a typed word start one of these words? */
 const prefixOf = (t: string, ws: string[]) => ws.some((w) => w.startsWith(t));
 
-/** A typed word that is a word in the list (or the start of one) with a typo or two. */
 function nearly(t: string, ws: string[]): boolean {
   const max = typos(t.length);
   if (!max) return false;
@@ -104,7 +98,6 @@ function subsequence(q: string, label: string): boolean {
   return false;
 }
 
-/** How well `fields` match the query, 0–1. */
 export function matchScore(q: Query, f: Fields): number {
   if (!q.folded) return 0;
   const label = fold(f.label);
@@ -138,7 +131,6 @@ export function matchScore(q: Query, f: Fields): number {
   return 0;
 }
 
-/** Score many things at once, dropping non-matches, best first (stable for ties). */
 export function rank<T>(q: Query, list: readonly T[], fields: (x: T) => Fields, min = 0.01): { item: T; score: number }[] {
   const out: { item: T; score: number; i: number }[] = [];
   list.forEach((item, i) => {
@@ -149,13 +141,11 @@ export function rank<T>(q: Query, list: readonly T[], fields: (x: T) => Fields, 
   return out.map(({ item, score }) => ({ item, score }));
 }
 
-/** Little words around a command that say nothing about what it's for ("show the logs for jellyfin"). */
 const FILLERS = new Set(["the", "for", "of", "my", "a", "an", "go", "to", "show", "please", "now"]);
 
 /**
- * "restart jelly" → the verb's meaning ("restart") and what's left to match against ("jelly"). The
- * first word that starts a verb (3+ letters, so "rest jelly" works while typing) is the verb; other
- * verb words and filler words around it are dropped. With no verb, or nothing left after it, the query is returned as is.
+ * "restart jelly" → the verb's meaning and what's left to match. The first word that starts a verb (3+ letters,
+ * so "rest jelly" works while typing) is the verb; other verb words and fillers are dropped.
  */
 export function splitVerb(q: Query, verbs: Record<string, string>): { verb: string | null; rest: Query } {
   const names = Object.keys(verbs);
@@ -171,7 +161,6 @@ export function splitVerb(q: Query, verbs: Record<string, string>): { verb: stri
   return { verb, rest: prepare(keep.join(" ")) };
 }
 
-/** "go to notifications", "settings sidebar", "open apps" → the place's name ("notifications"). */
 export function placeQuery(q: Query): Query | null {
   const m = /^(?:go to|goto|go|open|show|settings)\s+(.+)$/.exec(q.folded);
   return m ? prepare(m[1]!) : null;

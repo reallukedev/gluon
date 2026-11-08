@@ -4,16 +4,13 @@
  */
 
 export interface Word {
-  /** The word as the shell would see it (quotes and escapes removed). */
   value: string;
   start: number;
   end: number;
-  /** A quote still open at the end of the word. */
   openQuote: '"' | "'" | null;
 }
 
 export interface CompletionContext {
-  /** Words of the command being typed, before the current one. */
   words: Word[];
   /** The word under the cursor (empty when the cursor follows a space). */
   current: Word;
@@ -103,7 +100,6 @@ export function completionContext(line: string, cursor = line.length): Completio
   return { words, current, redirect };
 }
 
-/** Programs that run the rest of the line as another command. */
 const PREFIXES = new Set(["sudo", "doas", "env", "time", "nice", "nohup", "exec", "command", "builtin", "stdbuf", "ionice", "chroot", "timeout", "watch", "xargs", "strace", "unbuffer"]);
 
 /**

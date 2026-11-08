@@ -29,10 +29,7 @@ export const GET = route({ auth: "admin", query, burst: { limit: 120, windowMs: 
   return { server: await serverNow(contextFor(rec), query.server) };
 });
 
-/**
- * Start, stop, restart or force-stop a Crafty server. Admins only; force-stop also needs a recent sign-in, like
- * killing a container. Every command Gluon sends, and every one Crafty refuses, is in the activity log.
- */
+/** Force-stop also needs a recent sign-in, like killing a container. Refused commands are logged too. */
 export const POST = route({ auth: "admin", body, burst: { limit: 30, windowMs: 60_000 } }, async ({ user, session, body, params, ip, zone }): Promise<CraftyServerResult> => {
   if (body.action === "kill" && !hasRecentAuth(session)) throw new AppError("reauth", "Confirm it's you to continue.", 403);
   const rec = crafty(params);

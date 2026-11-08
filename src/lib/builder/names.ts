@@ -1,7 +1,4 @@
-/**
- * Names, ids and formats the builder validates, shared by the form (instant feedback) and the
- * server (the real gate). Keep every rule here so both sides agree.
- */
+/** Shared by the form (instant feedback) and the server (the real gate), so both sides agree. */
 
 /** Docker image references: [registry[:port]/]name[/name…][:tag][@sha256:digest]. */
 const LABEL = "[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?";
@@ -68,7 +65,6 @@ export function envNameError(name: string): string | null {
   return null;
 }
 
-/** A value an env file or compose can carry. */
 export function envValueError(value: string): string | null {
   if (value.length > 32_768) return "That value is too long.";
   if (value.includes("\0")) return "Values can't contain a NUL character.";
@@ -107,7 +103,6 @@ export function slugError(slug: string): string | null {
 
 export const STORE_ID_RE = /^[a-z][a-z0-9]{1,15}$/;
 
-/** Umbrel app ids start with the store's id. */
 export const umbrelAppId = (storeId: string, slug: string) => `${storeId}-${slug}`;
 
 export function nameError(name: string): string | null {
@@ -153,7 +148,6 @@ export function portError(p: number | null | undefined, what = "Port"): string |
   return null;
 }
 
-/** Absolute host folder for a bind mount. */
 export function hostPathError(p: string): string | null {
   if (!p) return "Choose a folder.";
   if (!p.startsWith("/")) return "Use a full path starting with /.";
@@ -164,7 +158,6 @@ export function hostPathError(p: string): string | null {
   return null;
 }
 
-/** Folder inside the app's data folder: "config", "db/data". */
 export function dataFolderError(p: string): string | null {
   if (!p) return "Name the folder.";
   if (p.startsWith("/") || /(^|\/)\.\.?(\/|$)/.test(p) || p.includes("\0") || p.includes(":") || p.includes("$")) return "Use a simple folder name, like config.";
@@ -179,7 +172,6 @@ export function containerPathError(p: string): string | null {
   return null;
 }
 
-/** Sizes compose understands for mem_limit: 512m, 2g, 1.5gb. */
 export function memoryError(m: string): string | null {
   if (!m) return null;
   if (!/^\d+(\.\d+)?\s*([kmg]i?b?)$/i.test(m.trim())) return "Use a size like 512m or 2g.";
@@ -215,7 +207,6 @@ export function repoPathError(p: string): string | null {
 /** LinuxServer images (linuxserver/…, lscr.io/linuxserver/…) run as PUID/PGID, in the timezone TZ names. */
 export const isLinuxServerImage = (image: string) => /(^|\/)linuxserver\/|^lscr\.io\//.test(image.trim());
 
-/** The variables LinuxServer images read, with this server's usual answers. */
 export function linuxServerEnv(timeZone?: string): { key: string; value: string }[] {
   let tz = timeZone;
   if (!tz) {
@@ -255,7 +246,6 @@ export function dataFolderFor(containerPath: string, taken?: Set<string>): strin
   return f;
 }
 
-/** Folder names that hold a media library, by what people call the library. */
 const MEDIA: [RegExp, string][] = [
   [/^(music|songs)([-_ ]?library)?$/, "music"],
   [/^(movies?|films?)$/, "movies"],
@@ -280,7 +270,6 @@ export function mediaKind(containerPath: string): string | null {
   return null;
 }
 
-/** CPU limit in cores, like compose's cpus: 0.5, 2. */
 export function cpusError(v: string): string | null {
   const t = v.trim();
   if (!t) return null;
@@ -289,7 +278,6 @@ export function cpusError(v: string): string | null {
   return null;
 }
 
-/** Compose durations: 30s, 1m30s, 500ms, 2h. */
 export function durationError(v: string): string | null {
   const t = v.trim();
   if (!t) return null;
@@ -297,7 +285,6 @@ export function durationError(v: string): string | null {
   return null;
 }
 
-/** Docker network names. */
 export const NETWORK_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/;
 export function networkNameError(n: string): string | null {
   if (!n) return "Name the network.";
@@ -305,7 +292,6 @@ export function networkNameError(n: string): string | null {
   return null;
 }
 
-/** Label keys: reverse-DNS style, like com.example.role or traefik.enable. */
 export function labelKeyError(k: string): string | null {
   if (!k) return "Give the label a name.";
   if (k.length > 255 || !/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(k)) return "Use letters, digits, ., /, _ and -.";
@@ -315,7 +301,6 @@ export function labelKeyError(k: string): string | null {
 /** Secret-looking variable names start out hidden. */
 export const looksSecret = (name: string) => /(PASS(WORD|WD)?|SECRET|TOKEN|API_?KEY|PRIVATE|CREDENTIAL|_KEY$|^KEY$|SALT|AUTH)/i.test(name);
 
-/** Split a command line like a shell would (quotes, backslashes), without expanding anything. */
 export function shellSplit(s: string): string[] {
   const out: string[] = [];
   let cur = "";

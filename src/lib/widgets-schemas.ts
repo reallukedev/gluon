@@ -31,7 +31,6 @@ export const widgetConfigSchemas = {
   "jellyfin.recent": z
     .object({
       limit: z.coerce.number().int().min(1).max(30).default(12),
-      /** Which kinds of things to show. */
       include: list(z.array(z.enum(["movie", "episode", "album"])).min(1).max(3)).default(["movie", "episode"]),
     })
     .strip(),
@@ -67,7 +66,6 @@ export const widgetConfigSchemas = {
     .object({
       lat: z.coerce.number().min(-90).max(90),
       lon: z.coerce.number().min(-180).max(180),
-      /** Place name to show, from the geocoding search. */
       name: z.string().trim().max(120).nullable().default(null),
       hours: z.coerce.number().int().min(1).max(24).default(12),
     })
@@ -75,7 +73,6 @@ export const widgetConfigSchemas = {
   calendar: z
     .object({
       url: calendarUrl,
-      /** How far ahead to look (days). */
       days: z.coerce.number().int().min(1).max(14).default(7),
       limit: z.coerce.number().int().min(1).max(50).default(10),
       /** The viewer's IANA time zone (browser), used for floating times and all-day events. */

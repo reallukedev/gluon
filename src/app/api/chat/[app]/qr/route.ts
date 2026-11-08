@@ -3,10 +3,7 @@ import QRCode from "qrcode";
 import { route } from "@/server/api";
 import { badRequest } from "@/server/errors";
 
-/**
- * QR code (SVG) for a chat invite or an account address, so a phone's chat app can scan it off the
- * admin's screen. Only xmpp: links, Gluon's own chat invite pages and Quark's.
- */
+/** Only xmpp: links, Gluon's own chat invite pages and Quark's are encoded. */
 const body = z.object({ text: z.string().max(600) });
 
 export const POST = route({ auth: "admin", body }, async ({ body }) => {

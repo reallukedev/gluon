@@ -4,7 +4,6 @@ import { audit } from "@/server/audit";
 import { AppError } from "@/server/errors";
 import { listTimezones, setNtp, setTimezone, timeStatus } from "@/server/system/time";
 
-/** Clock status plus the list of timezones for the picker. */
 export const GET = route({ auth: "admin" }, async () => {
   const [status, timezones] = await Promise.all([timeStatus(), listTimezones().catch(() => [] as string[])]);
   return { ...status, timezones };

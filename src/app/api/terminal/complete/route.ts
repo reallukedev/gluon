@@ -10,7 +10,6 @@ const query = z.object({
   dir: z.string().max(1024).optional(),
 });
 
-/** Suggestions that need the target: a folder's contents, systemd units, container names. */
 export const GET = route({ auth: "admin", query, burst: { limit: 240, windowMs: 60_000 } }, async ({ query }) => {
   const target = parseTarget(query.target);
   if (!target) throw new AppError("invalid", "That isn't a place commands can run.", 400);

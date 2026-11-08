@@ -12,12 +12,12 @@ const body = z.object({ appId: z.string().regex(/^[a-z0-9][a-z0-9-]{0,80}$/) });
 
 const STATE_TEXT: Partial<Record<UmbrelAppState, string>> = { installing: "Installing", starting: "Starting", ready: "Running", running: "Running", stopped: "Stopped", "not-installed": "Not installed" };
 
-/** Install an app from the Umbrel store, streaming its progress until it's running (or fails). */
 export const POST = route({ auth: "admin", body, recent: true }, async ({ req, body, user, ip, zone }) => {
   if ((await activePlatform()) !== "umbrel") throw new AppError("platform", "Installing apps from here needs Gluon to be working with Umbrel.", 409);
-  const app = (await umbrelStores()).flatMap((s) => s.apps).find((a) => a.id === body.appId);
+  const [stores, installed] = await Promise.all([umbrelStores(), umbrelApps(0)]);
+  const app = stores.flatMap((s) => s.apps).find((a) => a.id === body.appId);
   if (!app) throw notFound("That app");
-  const installedIds = new Set((await umbrelApps(0)).map((a) => a.id));
+  const installedIds = new Set(installed.map((a) => a.id));
   if (installedIds.has(app.id)) throw new AppError("installed", `${app.name} is already installed.`, 409);
   const missing = app.dependencies.filter((d) => !installedIds.has(d));
   if (missing.length) throw new AppError("dependencies", `${app.name} needs ${missing.join(", ")} installed first.`, 409, { missing });

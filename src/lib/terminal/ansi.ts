@@ -85,9 +85,7 @@ export class AnsiScreen {
   private saved: [number, number] = [0, 0];
   private rev = 0;
   private cache = new Map<Line, { rev: number; runs: Run[] }>();
-  /** Lines dropped from the top to stay under the cap. */
   dropped = 0;
-  /** The program switched to the alternate screen (a full-screen program). */
   altScreen = false;
 
   /** `rows` is the height the program was told, for absolute cursor moves. */
@@ -101,7 +99,6 @@ export class AnsiScreen {
     return this.lines.length;
   }
 
-  /** Changes on every write that touched the screen. */
   get version() {
     return this.rev;
   }
@@ -142,7 +139,6 @@ export class AnsiScreen {
     this.trim();
   }
 
-  /** Runs of same-styled text for line `i`, cached until the line changes. */
   runs(i: number): Run[] {
     const line = this.lines[i];
     if (!line) return [];
@@ -169,7 +165,6 @@ export class AnsiScreen {
     return this.lines[i]?.rev ?? -1;
   }
 
-  /** Everything as plain text, without trailing blank lines. */
   text(): string {
     const out = this.lines.map((l) => l.chars.join("").replace(/\s+$/, ""));
     while (out.length && !out[out.length - 1]) out.pop();
@@ -180,8 +175,6 @@ export class AnsiScreen {
   currentLine(): string {
     return this.lines[this.row]?.chars.join("") ?? "";
   }
-
-  // ---------------------------------------------------------------- internals
 
   private line(): Line {
     while (this.lines.length <= this.row) this.lines.push({ chars: [], styles: [], rev: this.rev });
@@ -240,7 +233,6 @@ export class AnsiScreen {
     if (next === "[") {
       let j = i + 2;
       while (j < text.length && /[0-9;?<=>!]/.test(text[j]!)) j++;
-      // Intermediate bytes (space, quote) before the final one.
       while (j < text.length && /[ -/]/.test(text[j]!)) j++;
       if (j >= text.length) return text.length - i > 64 ? 2 : -1;
       this.csi(text.slice(i + 2, j), text[j]!);

@@ -7,7 +7,6 @@ const patch = z
   .object({
     /** Reply shown to (and sent to) the reporter; null clears it. */
     reply: z.string().trim().max(1000, "Keep the reply under 1000 characters.").nullable().optional(),
-    /** true = resolved, false = reopen. */
     resolved: z.boolean().optional(),
     /** true = the admin has seen it (the reporter sees "Seen by …"); false = back to unseen. */
     acknowledged: z.boolean().optional(),

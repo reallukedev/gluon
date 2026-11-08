@@ -39,7 +39,6 @@ export function LoginForm({ next, zone, serverName, adminsNeedCode }: Props) {
   const passwordRef = React.useRef<HTMLInputElement>(null);
   const errorId = React.useId();
 
-  // The throttle message counts down in place and clears itself when the wait is over.
   React.useEffect(() => {
     if (blockedUntil && wait === 0) {
       setBlockedUntil(null);

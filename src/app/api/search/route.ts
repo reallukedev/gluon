@@ -15,10 +15,7 @@ async function setup(user: Parameters<typeof searchSetup>[0], scope: string) {
   return s;
 }
 
-/**
- * Universal search, streamed as NDJSON (SearchEvent): start → group / fail as each source answers →
- * done. POST keeps what people type out of URLs and access logs. Queries are never logged.
- */
+/** POST keeps what people type out of URLs and access logs. Queries are never logged. */
 export const POST = route({ auth: "user", body, burst: { limit: 40, windowMs: 10_000 } }, async ({ user, body, zone, req }) => {
   const { extra, grants } = await setup(user, body.scope);
   return ndjson((emit, signal) => runSearch(user, body.q, { scope: body.scope, zone, signal, emit, extra, grants }), req.signal);

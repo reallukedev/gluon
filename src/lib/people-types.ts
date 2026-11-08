@@ -1,8 +1,3 @@
-/**
- * People & household: accounts, invites, app visibility, folder grants, problem reports,
- * announcements and the activity feed. Shared by server and client. No server imports.
- */
-
 export type Role = "admin" | "member";
 
 export interface PersonView {
@@ -10,20 +5,16 @@ export interface PersonView {
   username: string;
   displayName: string;
   role: Role;
-  /** Two-step verification is on. */
   mfa: boolean;
   disabled: boolean;
   /** Must pick a new password at next sign-in (set by an admin password reset). */
   mustChangePassword: boolean;
   createdAt: number;
   lastLoginAt: number | null;
-  /** Most recent activity on any session. */
   lastSeenAt: number | null;
-  /** Signed-in devices. */
   sessions: number;
   /** Apps granted individually (on top of household apps). Members only. */
   appGrants: number;
-  /** Folder grants. Members only. */
   folderGrants: number;
   /** This is the admin looking at the list. */
   self: boolean;
@@ -55,15 +46,12 @@ export interface PersonSession {
   current: boolean;
 }
 
-// ---------------------------------------------------------------- app visibility
-
 export interface AppVisibility {
   id: string;
   name: string;
   icon: string | null;
   line: string;
   hidden: boolean;
-  /** Every household member sees it. */
   household: boolean;
   /** Members who see it individually (in addition to household). */
   users: string[];
@@ -74,8 +62,6 @@ export interface VisibilityResponse {
   members: { id: string; displayName: string; username: string }[];
 }
 
-// ---------------------------------------------------------------- folder grants
-
 export interface FolderGrant {
   id: string;
   userId: string;
@@ -84,11 +70,8 @@ export interface FolderGrant {
   label: string | null;
   access: "read" | "write";
   createdAt: number;
-  /** The folder is still there. */
   exists: boolean;
 }
-
-// ---------------------------------------------------------------- reports
 
 export interface ProblemReport {
   id: string;
@@ -108,8 +91,6 @@ export interface ProblemReport {
   acknowledgedByName: string | null;
 }
 
-// ---------------------------------------------------------------- announcements
-
 export interface Announcement {
   id: string;
   message: string;
@@ -122,8 +103,6 @@ export interface Announcement {
   until: number | null;
   active: boolean;
 }
-
-// ---------------------------------------------------------------- activity
 
 export interface ActivityItem {
   id: number;

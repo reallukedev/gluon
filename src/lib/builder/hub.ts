@@ -1,18 +1,12 @@
-/**
- * Docker Hub and registry answers, mapped to what the image picker shows. Pure, so the shapes
- * Docker Hub sends can be tested without asking it.
- */
 import type { HubRepo, TagInfo } from "@/lib/builder-types";
 
 /** Per-architecture tags (amd64-latest…): Docker picks the right build by itself, so they're noise. */
 export const ARCH_TAG = /^(amd64|arm64v8|arm64|arm32v[67]|armhf|armv7|i386|ppc64le|s390x|riscv64)[-_]/;
-/** Signatures and attestations some registries list as tags. */
 const META_TAG = /^sha256-|\.sig$|\.att$|\.sbom$/;
 
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
-/** A search box value worth sending to Docker Hub, or null. */
 export function hubQuery(input: string): string | null {
   const q = input.trim().toLowerCase();
   // A tag, digest or another registry means the person already knows the exact image.
@@ -22,7 +16,6 @@ export function hubQuery(input: string): string | null {
   return q;
 }
 
-/** Docker Hub's /v2/search/repositories answer → repositories. */
 export function mapHubSearch(json: unknown): HubRepo[] {
   const results = (json as { results?: unknown })?.results;
   if (!Array.isArray(results)) return [];
@@ -40,7 +33,6 @@ export function mapHubSearch(json: unknown): HubRepo[] {
   return out;
 }
 
-/** Docker Hub's /v2/namespaces/…/tags page → tags, and whether there's another page. */
 export function mapHubTags(json: unknown, arch = "amd64"): { tags: TagInfo[]; next: boolean } {
   const j = json as { results?: unknown; next?: unknown };
   const results = Array.isArray(j?.results) ? (j.results as Record<string, unknown>[]) : [];
@@ -56,7 +48,6 @@ export function mapHubTags(json: unknown, arch = "amd64"): { tags: TagInfo[]; ne
   return { tags, next: typeof j?.next === "string" && j.next.length > 0 };
 }
 
-/** Sort a registry's tag list newest-looking first: by the numbers in them, then by name. */
 export function sortTags(all: string[]): string[] {
   const key = (t: string) => (t.match(/\d+/g) ?? []).map((n) => n.padStart(10, "0")).join(".");
   return all
@@ -73,7 +64,6 @@ export function sortTags(all: string[]): string[] {
     });
 }
 
-/** One page of a sorted tag list, filtered by what the person typed. */
 export function pageTags(sorted: string[], q: string, page: number, size: number): { tags: string[]; next: boolean } {
   const f = q.trim().toLowerCase();
   const list = f ? sorted.filter((t) => t.toLowerCase().includes(f)) : sorted;

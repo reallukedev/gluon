@@ -25,7 +25,6 @@ function Command({ cmd }: { cmd: string }) {
   );
 }
 
-/** Exactly where to look, for the way this server runs Gluon. */
 function WhereToLook({ where }: { where: CodeWhere }) {
   switch (where.kind) {
     case "umbrel":
@@ -59,10 +58,7 @@ function WhereToLook({ where }: { where: CodeWhere }) {
   }
 }
 
-/**
- * Claim a fresh server: the one-time code from the log (proves you can reach the machine), then the
- * admin account. After this, the first run at /welcome takes over.
- */
+/** The one-time code from the log proves you can reach the machine; then the first admin account. */
 export function SetupForm({ where, serverName }: { where: CodeWhere; serverName: string }) {
   const router = useRouter();
   const [f, setF] = React.useState<Form>({ code: "", displayName: "", username: "", password: "", confirm: "" });

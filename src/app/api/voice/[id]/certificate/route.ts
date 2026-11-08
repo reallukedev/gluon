@@ -6,7 +6,6 @@ import { certChoices, releaseCert, syncVoiceCert } from "@/server/voice/certs";
 import { mumbleApp } from "@/server/voice/container";
 import { getVoice, setCertDomain } from "@/server/voice/store";
 
-/** Follow an address's certificate (or stop), then check it straight away. */
 export const PUT = route({ auth: "admin", body: z.object({ domain: z.string().max(253).nullable() }) }, async ({ params, body, user, ip, zone }) => {
   const id = decodeURIComponent(String(params.id));
   const app = await mumbleApp(id);

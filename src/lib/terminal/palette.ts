@@ -33,8 +33,6 @@ export function paletteCommand(query: string): PaletteCommand | null {
   return null;
 }
 
-// ------------------------------------------------------------------ hand-offs between pages (browser only)
-
 const AUTORUN = "gluon.terminal.autorun";
 
 /** Sent by the palette when the terminal page is already open. */

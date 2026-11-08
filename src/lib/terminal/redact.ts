@@ -28,7 +28,6 @@ export function looksSecret(command: string): boolean {
   return SECRET_PATTERNS.some((re) => re.test(command));
 }
 
-/** The command as it should be remembered, or null when it shouldn't be. */
 export function historyEntry(command: string): string | null {
   if (!command.trim() || /^\s/.test(command)) return null;
   const c = command.trim();

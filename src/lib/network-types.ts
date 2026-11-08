@@ -1,8 +1,4 @@
-/** Types shared between the Network API and the client. No server imports. */
-
 export type Severity = "fault" | "attention" | "info";
-
-// ---------------------------------------------------------------- routes (public addresses)
 
 export interface BackendT {
   host: string;
@@ -38,11 +34,9 @@ export interface SubdomainRouteT extends RouteBase {
   direct?: boolean;
 }
 
-/** Which published copy of a site an address serves. */
 export interface SiteRefT {
   id: string;
   version: string;
-  /** The version has its own 404.html. */
   own_404?: boolean;
 }
 
@@ -65,11 +59,9 @@ export interface OwnCertInfo {
   fingerprint: string;
   /** Signed by itself: browsers and apps only accept it if told to trust it. */
   selfSigned: boolean;
-  /** Plain sentences worth showing next to it (ends soon, self-signed). */
   warnings: string[];
 }
 
-/** Where a route's own certificate stands on the server. */
 export interface OwnCertState {
   /** What Caddy serves from, null when the file is missing. */
   stored: OwnCertInfo | null;
@@ -106,11 +98,9 @@ export interface RoutesConfigT {
   updated?: string;
 }
 
-/** The app a public address leads to, as far as Gluon can tell. */
 export interface RouteAppRef {
   appId: string;
   name: string;
-  /** Declared by the admin in app settings. */
   hasLogin: "yes" | "no" | "unknown";
 }
 
@@ -124,37 +114,30 @@ export interface RoutesResponse {
   caddyRunning: boolean;
   /** Public URL per route id (and "__fallback__"). */
   urls: Record<string, string>;
-  /** App per route id (and "__fallback__"), when known. */
   apps: Record<string, RouteAppRef>;
   /** The wildcard *.base covers it, so no DNS change is needed. Per subdomain route id. */
   coveredByWildcard: Record<string, boolean>;
-  /** Own certificates per route id (routes with https.mode "own"). */
   certs: Record<string, OwnCertState>;
 }
 
 export interface DriftInfo {
-  /** "the Domains app", when the file's header says who generated it. */
   writer: string | null;
   /** Lines that change what Caddy does (comments and blank lines ignored). 0 = only comments differ. */
   settingLines: number;
-  /** A few of those lines as they are on disk, for a one-line explanation. */
   sample: string[];
 }
 
 export interface RouteWarning {
   routeId: string;
-  /** Plain sentence, e.g. "Octo has no login of its own, so anyone with the address can use it." */
   message: string;
   /** Published (or re-enabled) by this save, as opposed to already public before. */
   isNew: boolean;
 }
 
-/** Certificates pasted in the editor, sent with the save that uses them (by host). */
 export type CertUploads = Record<string, { cert: string; key: string }>;
 
 export interface RoutesSaveResponse extends Omit<RoutesResponse, "caddyRunning"> {
   warnings: RouteWarning[];
-  /** "Added photos.example.com; removed …" */
   summary: string;
 }
 
@@ -166,15 +149,11 @@ export interface RoutesHistoryEntry {
 }
 
 export interface CaddyfileResponse {
-  /** The Caddyfile on disk ("" if missing). */
   text: string;
-  /** What Gluon would generate from routes.json right now. */
   generated: string;
   drift: boolean;
   driftInfo: DriftInfo | null;
 }
-
-// ---------------------------------------------------------------- status
 
 export type ProbeState = "ok" | "attention" | "fault" | "pending" | "disabled" | "unknown";
 
@@ -204,7 +183,6 @@ export interface TlsResult {
   trusted: boolean | null;
   /** Caddy's last certificate error for this name, from its log. */
   issueError: string | null;
-  /** SHA-256 fingerprint of the leaf certificate, when one was presented. */
   fingerprint?: string;
   message: string;
 }
@@ -240,12 +218,9 @@ export interface RouteStatus {
   tls: TlsResult | null;
   http: HttpResult | null;
   backend: BackendResult | null;
-  /** Chat server checks, for XMPP addresses. */
   xmpp: XmppStatus | null;
-  /** Voice server checks, for Mumble addresses. */
   voice: VoiceStatus | null;
   state: ProbeState;
-  /** Plain sentence: "Working", "Immich isn't answering on port 2283." */
   summary: string;
 }
 
@@ -269,15 +244,12 @@ export interface XmppPortResult {
   reachable: boolean;
   ms: number | null;
   error: string | null;
-  /** The certificate the chat server presents after STARTTLS. */
   tls: TlsResult | null;
 }
 
 export interface XmppCertSync {
   container: string;
-  /** When Gluon last compared or copied the certificate. */
   checkedAt: number | null;
-  /** When it last copied a new one in. */
   copiedAt: number | null;
   ok: boolean;
   message: string;
@@ -293,11 +265,9 @@ export interface XmppStatus {
   /** Anyone can create an account (in-band registration is open). null = couldn't tell. */
   openRegistration: boolean | null;
   certSync: XmppCertSync | null;
-  /** Whether people outside can reach its ports through the router. */
   reach: PublicReach | null;
 }
 
-/** Mumble's answer to a UDP ping. */
 export interface MumblePing {
   reachable: boolean;
   ms: number | null;
@@ -309,16 +279,11 @@ export interface MumblePing {
 export interface VoiceStatus {
   host: string;
   port: number;
-  /** Mumble answers on TCP from inside. */
   tcp: BackendResult;
-  /** Mumble answers its UDP ping from inside. */
   udp: MumblePing;
-  /** The certificate Mumble presents on its TCP port. */
   tls: TlsResult | null;
   reach: PublicReach | null;
 }
-
-// ---------------------------------------------------------------- reaching the router from inside
 
 /**
  * same: the public address leads to this server (verified by certificate or protocol reply).
@@ -331,7 +296,6 @@ export type ReachOutcome = "same" | "other" | "none" | "unconfirmed";
 export interface PortReach {
   port: number;
   proto: "tcp" | "udp";
-  /** What uses the port: "Chat apps sign in". */
   label: string;
   /** People can't use the service at all without it (sign-in, voice), as opposed to extras like federation. */
   primary: boolean;
@@ -366,9 +330,6 @@ export interface NetworkStatus {
   counts: { ok: number; attention: number; fault: number; pending: number; disabled: number };
 }
 
-// ---------------------------------------------------------------- chat servers
-
-/** A container on this server that looks like an XMPP chat server. */
 export interface ChatServerCandidate {
   container: string;
   image: string;
@@ -382,7 +343,6 @@ export interface ChatServerCandidate {
   canSync: boolean;
 }
 
-/** A container on this server that looks like a Mumble voice server. */
 export interface VoiceServerCandidate {
   container: string;
   image: string;
@@ -391,7 +351,6 @@ export interface VoiceServerCandidate {
   /** Host port mapped to Mumble's port (TCP), and whether UDP is published too. */
   port: number | null;
   udp: boolean;
-  /** Every host port the container publishes. */
   ports: number[];
 }
 
@@ -400,8 +359,6 @@ export interface ChatServersResponse {
   /** Certificate sync per chat address (route id), once Gluon has checked it. */
   sync: Record<string, XmppCertSync>;
 }
-
-// ---------------------------------------------------------------- DDNS
 
 export interface DdnsLogLine {
   at: number | null;
@@ -440,17 +397,13 @@ export interface DdnsStatus {
   /** Errors since the last successful check. Empty = healthy. */
   errors: DdnsLogLine[];
   recent: DdnsLogLine[];
-  /** One sentence for the UI. */
   summary: string;
   state: ProbeState;
 }
 
-// ---------------------------------------------------------------- exposure audit
-
 export type LoginVerdict = "login" | "no-login" | "unknown";
 
 export interface LoginInfo {
-  /** What the admin set on the app. */
   declared: "yes" | "no" | "unknown" | null;
   /** Gluon's own look at the page: "login" = looks like it has a login, "none" = no login detected. */
   probe: "login" | "none" | "unknown" | null;
@@ -467,7 +420,6 @@ export interface InternetExposure {
   onlyPaths: string[] | null;
   backend: { host: string; port: number };
   app: RouteAppRef | null;
-  /** Owner of the listening socket on the backend port. */
   listener: { process: string | null; container: string | null } | null;
   /** Something is listening on the backend port (null for non-local backends). */
   backendListening: boolean | null;
@@ -484,17 +436,13 @@ export interface LanExposure {
   port: number;
   addresses: string[];
   scope: ListenScope;
-  /** "Samba file sharing", "SSH", "Jellyfin" … */
   label: string;
   process: string | null;
   pids: number[];
   container: { id: string; name: string } | null;
   app: { id: string; name: string } | null;
-  /** systemd unit, for host services. */
   unit: string | null;
-  /** Published Docker port: host port → container port. */
   published: { containerPort: number; bindIp: string } | null;
-  /** Public addresses (route ids) that lead here. */
   publicRoutes: string[];
   login: LoginInfo | null;
   /** Housekeeping sockets (DHCP, NetBIOS, mDNS) people rarely care about. */

@@ -1,6 +1,5 @@
 import { historyEntry } from "./redact";
 
-/** One target's commands, most recent first, without repeats. */
 export type History = string[];
 
 export const HISTORY_LIMIT = 300;

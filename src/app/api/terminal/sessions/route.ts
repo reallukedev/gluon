@@ -15,11 +15,7 @@ const body = z.object({
   cols: z.number().int().min(10).max(1000),
 });
 
-/**
- * Run a command (Commands mode) or open a shell (Terminal mode) and stream its output as NDJSON.
- * Keystrokes, resizes and Stop go to /api/terminal/sessions/[id]. Closing this stream ends it.
- * Needs a recent sign-in, stretched for terminal work (see grant.ts).
- */
+/** Closing this stream ends the session. Needs a recent sign-in, stretched for terminal work (see grant.ts). */
 export const POST = route({ auth: "admin", body, burst: { limit: 40, windowMs: 60_000 } }, async ({ req, body, user, session, ip, zone }) => {
   requireTerminalAuth(session);
   const target = parseTarget(body.target);

@@ -2,10 +2,7 @@
 import * as React from "react";
 import type { HostSample, ContainerSample } from "@/server/metrics/sampler";
 
-/**
- * One EventSource for live metrics, shared by every component on the page (spectrum, charts,
- * widgets). Opens on first subscriber, closes when the last unmounts or the tab is hidden.
- */
+/** One EventSource for live metrics, shared by every component on the page. */
 
 interface LiveState {
   host: HostSample[];
@@ -118,7 +115,6 @@ export function useLiveValue<T>(pick: (s: LiveState) => T): T {
   );
 }
 
-/** Latest container sample by name. */
 export function useContainerStats(): Map<string, ContainerSample> {
   const { containers, status } = useLive();
   // A frozen sample from before the stream dropped isn't a reading.

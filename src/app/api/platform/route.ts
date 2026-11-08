@@ -5,7 +5,6 @@ import { platformInfo, PLATFORM_NAME } from "@/server/platform";
 import { invalidateApps } from "@/server/docker/apps";
 import { audit } from "@/server/audit";
 
-/** Which home server OS Gluon works alongside, what it detected, and how it's reached. */
 export const GET = route({ auth: "admin" }, () => platformInfo());
 
 const body = z.object({ platform: z.enum(["auto", "umbrel", "casaos", "none"]) });

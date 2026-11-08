@@ -17,10 +17,7 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Some actions require recent re-authentication. When the server answers `reauth`, the shell's
- * re-auth dialog asks for the password/code, then we retry once.
- */
+/** When the server answers `reauth`, the shell's dialog asks for the password or code, then the request is retried once. */
 type ReauthHandler = () => Promise<boolean>;
 const reauthHandlerRef: { current: ReauthHandler | null } = { current: null };
 export function setReauthHandler(h: ReauthHandler | null) {
@@ -141,9 +138,9 @@ function watchFocus(key: string, watch: FocusWatch) {
   };
 }
 
-/** Polling GET with SWR. `refresh` in ms; pauses automatically when the tab is hidden. */
 const noSubscribe = () => () => {};
 
+/** Polling GET with SWR. `refresh` in ms; pauses automatically when the tab is hidden. */
 export function useApi<T>(url: string | null, opts: SWRConfiguration & { refresh?: number } = {}) {
   const { refresh, revalidateOnFocus = true, ...rest } = opts;
   const { fallback, cache } = useSWRConfig();
@@ -161,7 +158,6 @@ export function useApi<T>(url: string | null, opts: SWRConfiguration & { refresh
     return age !== null && age >= 0 && age < freshFor(refresh) ? age : null;
   };
   const [start, setStart] = React.useState(() => ({ url, age: ageNow() }));
-  // A new key is a new start (the same rule, for its own data).
   if (start.url !== url) setStart({ url, age: ageNow() });
   const startAge = start.url === url ? start.age : null;
   const res = useSWR<T, ApiError>(url, fetcher as (u: string) => Promise<T>, {

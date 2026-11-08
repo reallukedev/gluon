@@ -1,19 +1,10 @@
 /**
- * Turns a custom app into the files that run it.
- *
- * Umbrel (an app folder in Gluon's store):
- *   umbrel-app.yml       the manifest Umbrel lists
- *   docker-compose.yml   the app, plus Umbrel's app_proxy for the web page
- *   data/<folder>/.gitkeep   so each data folder exists (owned by Umbrel's user) before first start
- * Umbrel pulls every `image:` from a registry, so a service Gluon built locally becomes a build whose
- * whole Dockerfile is `FROM gluon.local/<image>`: it resolves the local image, sends no build context,
- * and `compose pull` skips it. Updates copy docker-compose.yml, so this stays correct across versions.
- * Secrets never appear here: each service with secrets reads ${APP_DATA_DIR}/secrets/<service>.env,
- * which Gluon writes on the server next to the app.
- *
- * Compose (Gluon runs it itself when Umbrel isn't used): docker-compose.yml and a .env with
- * APP_DATA_DIR/APP_ID, in the app's own folder. Its name and icon go to Gluon's own app settings,
- * not into the file (x-casaos would make it look like a CasaOS app).
+ * Turns a custom app into the files that run it. For Umbrel: umbrel-app.yml, docker-compose.yml (plus
+ * Umbrel's app_proxy) and a .gitkeep per data folder so each exists before first start.
+ * Umbrel pulls every `image:` from a registry, so a service Gluon built locally becomes a build whose whole
+ * Dockerfile is `FROM gluon.local/<image>`: it resolves the local image and `compose pull` skips it.
+ * Secrets never appear here: each service with secrets reads ${APP_DATA_DIR}/secrets/<service>.env.
+ * For compose, the name and icon go to Gluon's own settings, not the file (x-casaos would make it look like CasaOS).
  */
 import { Document, Scalar, isMap, isScalar, isSeq } from "yaml";
 import type { AppSpec, BuilderTarget, SecretNames } from "@/lib/builder-types";
@@ -30,17 +21,13 @@ export interface RenderInput {
   images: Record<string, string>;
   /** Where people manage this app in Gluon (Umbrel's "submission" link). */
   gluonUrl: string;
-  /** Repository page, for GitHub apps. */
   repoUrl?: string | null;
-  /** Compose target: the app's folder on the server. */
   appDir?: string;
 }
 
 export interface Rendered {
   files: Record<string, string>;
-  /** Folders under data/ the app uses. */
   dataFolders: string[];
-  /** The container Umbrel's proxy forwards to. */
   proxyHost: string | null;
 }
 
@@ -158,7 +145,6 @@ function manifest(input: RenderInput, port: number | null): string {
   return `# Made with Gluon's app builder.\n${doc.toString({ lineWidth: 0 })}`;
 }
 
-/** The container names a rendered compose file will create (for conflict checks). */
 export function containerNames(spec: AppSpec, appId: string, target: BuilderTarget): string[] {
   const parsed = parseCompose(spec.compose);
   if (!parsed.ok) return [];
@@ -184,10 +170,8 @@ export function envFile(values: Record<string, string>): string {
 }
 
 /**
- * The version the next publish gets: the person's label when it's new, else the last published
- * version bumped (1.0.3 → 1.0.4, 2.1-beta → 2.1-beta-2 → 2.1-beta-3). Umbrel offers an update
- * whenever the version string changes, so a republish must never reuse the last one. After a
- * publish the draft's label becomes the published version, so bumps carry on from there.
+ * Umbrel offers an update whenever the version string changes, so a republish must never reuse the last one:
+ * the person's label when it's new, else the last version bumped (1.0.3 → 1.0.4, 2.1-beta → 2.1-beta-2).
  */
 export function nextVersion(label: string, last: string | null): string {
   const l = label.trim() || "1.0.0";

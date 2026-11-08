@@ -5,14 +5,10 @@ import { alertsHref, fromOldAlertsTab } from "@/lib/settings-links";
 type Search = Promise<Record<string, string | string[] | undefined>>;
 const str = (v: string | string[] | undefined, max: number) => (typeof v === "string" && v ? v.slice(0, max) : undefined);
 
-/**
- * Alerts moved. Open problems are on Home; monitors, notifications and past problems are in
- * Settings → Alerts. Old links (bookmarks, emails, stored remedies) land in the right place with
- * their monitor or channel; a #problem anchor survives the redirect.
- */
+/** Old Alerts links. Their monitor, channel and #problem anchor survive the redirect. */
 export default async function AlertsRedirect({ searchParams }: { searchParams: Search }) {
   const { user } = await requireUser();
-  // Only admins keep watch; anyone else lands on their start page instead of a "not found".
+  // Members go to their start page rather than a "not found".
   if (user.role !== "admin") redirect("/");
   const sp = await searchParams;
   const to = fromOldAlertsTab(str(sp.tab, 40));

@@ -1,7 +1,4 @@
-/**
- * Where "keep watch" lives: Settings → Alerts, Activity and People (admins). Old addresses
- * (/alerts, /activity, /people, /status?tab=…) redirect here; build new links with these helpers.
- */
+/** Old addresses (/alerts, /activity, /people, /status?tab=…) redirect here; build new links with these. */
 export const ALERTS_TABS = ["watching", "notifications", "history"] as const;
 export type AlertsTab = (typeof ALERTS_TABS)[number];
 
@@ -17,17 +14,15 @@ function build(path: string, params: Params, hash?: string): string {
   return `${path}${qs ? `?${qs}` : ""}${hash ? `#${encodeURIComponent(hash)}` : ""}`;
 }
 
-/** Settings → Alerts. Watching (monitors) is the first tab, so it needs no `tab`. */
+/** Watching (monitors) is the first tab, so it needs no `tab`. */
 export function alertsHref(tab: AlertsTab = "watching", params: { monitor?: string | null; channel?: string | null } = {}): string {
   return build("/settings/alerts", { tab: tab === "watching" ? null : tab, ...params });
 }
 
-/** Settings → Activity, optionally filtered to one person or one thing. */
 export function activityHref(params: { target?: string | null; user?: string | null } = {}): string {
   return build("/settings/activity", params);
 }
 
-/** Settings → People: a tab, one person, or one problem report. */
 export function peopleHref(params: { tab?: PeopleTab | null; person?: string | null; report?: string | null } = {}): string {
   const { tab, ...rest } = params;
   return build("/settings/people", { tab: tab === "people" ? null : tab, ...rest });
@@ -38,7 +33,6 @@ export function problemHref(findingId?: string): string {
   return build("/", {}, findingId);
 }
 
-/** Old Alerts tabs → where they live now ("open" problems are on Home). */
 export function fromOldAlertsTab(tab: string | undefined): AlertsTab | "home" {
   switch (tab) {
     case "monitors":

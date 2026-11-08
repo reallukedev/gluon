@@ -1,4 +1,3 @@
-/** Network → Game servers, shared by the API and the panel. No server imports. */
 import type { LineState } from "./types";
 
 export interface McPing {
@@ -16,7 +15,6 @@ export interface McPing {
   at: number;
 }
 
-/** Does a name lead players to this home? */
 export interface HostDns {
   status: "home" | "proxied" | "elsewhere" | "missing" | "error" | "literal";
   message: string;
@@ -43,11 +41,9 @@ export type McTarget =
   | { kind: "address" };
 
 export interface McRoute {
-  /** The address players type, as written in the routes file. */
   host: string;
   backend: string;
   target: McTarget;
-  /** Through mc-router, saying this address. */
   ping: McPing | null;
   dns: HostDns | null;
   state: LineState;
@@ -66,13 +62,11 @@ export interface McRouterInfo {
   status: "missing" | "stopped" | "running";
   container: string | null;
   version: string | null;
-  /** The routes file on this server. */
   file: string | null;
   /** Gluon may change the file. When false, `reason` says why. */
   editable: boolean;
   reason: string | null;
   watch: boolean;
-  /** The port players connect to on this server. */
   hostPort: number | null;
   networks: string[];
   /** The file is there but isn't something mc-router can read. */
@@ -85,9 +79,7 @@ export interface CraftyInfo {
   status: "missing" | "stopped" | "running";
   container: string | null;
   servers: CraftyServer[];
-  /** Crafty's own server names were readable. */
   names: boolean;
-  /** Gluon can tell which servers are running. */
   live: boolean;
 }
 
@@ -122,13 +114,11 @@ export interface GamesStatus {
 
 export interface McChangeResult {
   status: GamesStatus;
-  /** What the changed address answers now, through mc-router. */
   check: { host: string | null; ping: McPing | null } | null;
   /** mc-router took the change without a restart. */
   applied: boolean;
   /** History entry that puts the file back as it was. */
   undo: number | null;
-  /** Anything the admin should know about how mc-router took it. */
   note: string | null;
 }
 

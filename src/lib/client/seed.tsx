@@ -20,7 +20,6 @@ function documentRequestedAt(): number {
   return performance.timeOrigin + (nav?.requestStart || 0);
 }
 
-/** Tells the client what time the server thought it was when it rendered this document. */
 export function ServerClock({ now }: { now: number }) {
   React.useEffect(() => {
     if (offset === null) noteServerTime(now, documentRequestedAt());
@@ -40,7 +39,6 @@ export function useSeedAge(hydrating: boolean): () => number | null {
   const at = React.use(SeedTime);
   return () => {
     if (typeof window === "undefined") return null;
-    // Hydrating: the data came with this document.
     if (hydrating) return Date.now() - documentRequestedAt();
     // A client navigation: the page's payload may have been prefetched a while ago.
     if (at === null || offset === null) return null;
