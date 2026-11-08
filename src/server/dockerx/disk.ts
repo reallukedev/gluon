@@ -10,7 +10,6 @@ import { afterChange, imageLabel, listImages, localDigests, remoteState } from "
 import { invalidateVolumeSizes, listVolumes, volumeSizes } from "./volumes";
 import type { CleanupItem, CleanupKind, CleanupPlan, CleanupResult, DockerDisk } from "@/lib/docker-types";
 import { sourceName } from "@/lib/app-names";
-import { unescapeMount } from "../metrics/sampler";
 
 interface DfResponse {
   LayersSize?: number;
@@ -43,6 +42,8 @@ export function invalidateDisk() {
  * until one answers the space shows as unknown.
  */
 const statfsPending = new Set<string>();
+/** /proc/mounts writes space, tab, newline and backslash as octal escapes. */
+const unescapeMount = (s: string) => s.replace(/\\([0-7]{3})/g, (_, o: string) => String.fromCharCode(parseInt(o, 8)));
 
 async function fsFor(path: string): Promise<DockerDisk["fs"]> {
   let mount = "/";
