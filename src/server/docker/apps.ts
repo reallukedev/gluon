@@ -12,6 +12,7 @@ import { all, now, one, run } from "../db";
 import { tryReadConfig, routeUrl, THIS_SERVER, type Route, isRedirect } from "../caddy/routes";
 import type { LineState } from "@/lib/types";
 import { readMarker } from "../apps/marker";
+import { oneShotServices } from "../apps/health";
 import { GLUON_NAME, isSelfContainer } from "./self";
 
 export interface PortMapping {
@@ -151,6 +152,24 @@ function casaMeta(configFile: string | null): CasaMeta | null {
   }
   metaCache.set(configFile, { mtime: st.mtimeMs, meta });
   return meta;
+}
+
+const oneShotCache = new Map<string, { mtime: number; services: Set<string> }>();
+
+/** One-off jobs the app's compose file declares, cached until the file changes. */
+function oneShotFor(configFile: string | null): Set<string> {
+  if (!configFile) return new Set();
+  const p = hostPath(configFile);
+  try {
+    const st = fs.statSync(p);
+    const cached = oneShotCache.get(configFile);
+    if (cached && cached.mtime === st.mtimeMs) return cached.services;
+    const services = oneShotServices(fs.readFileSync(p, "utf8"));
+    oneShotCache.set(configFile, { mtime: st.mtimeMs, services });
+    return services;
+  } catch {
+    return new Set();
+  }
 }
 
 // ---------------------------------------------------------------- Umbrel apps
@@ -369,7 +388,19 @@ function toSummary(c: Docker.ContainerInfo): ContainerSummary {
   };
 }
 
-function aggregate(containers: ContainerSummary[]): { line: LineState; summary: string } {
+/** The exit code in a container's status ("Exited (0) 2 hours ago"), or null. */
+export function exitCodeOf(status: string): number | null {
+  const m = /^Exited \((-?\d+)\)/.exec(status);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * The app's state in one line. A one-off job its compose file declares (see `oneShotServices`)
+ * that finished cleanly is done, not stopped, so it doesn't count against the app.
+ */
+export function aggregate(all: ContainerSummary[], oneShot: Set<string> = new Set()): { line: LineState; summary: string } {
+  const done = (c: ContainerSummary) => c.state === "exited" && !!c.service && oneShot.has(c.service) && exitCodeOf(c.status) === 0;
+  const containers = all.some((c) => !done(c)) ? all.filter((c) => !done(c)) : all;
   const n = containers.length;
   const count = (l: LineState) => containers.filter((c) => c.line === l).length;
   const running = count("running");
@@ -387,8 +418,9 @@ function aggregate(containers: ContainerSummary[]): { line: LineState; summary: 
   if (stopped === n) return { line: "stopped", summary: "Stopped" };
   if (starting) return { line: "starting", summary: n === 1 ? "Starting" : `${starting} of ${n} starting` };
   if (stopped) return { line: "unhealthy", summary: `${stopped} of ${n} stopped` };
-  if (count("paused") === n) return { line: "paused", summary: "Paused" };
-  return { line: running === n ? "running" : "starting", summary: "Running" };
+  const paused = count("paused");
+  if (paused) return { line: "paused", summary: paused === n ? "Paused" : `${paused} of ${n} paused` };
+  return { line: running === n ? "running" : "starting", summary: running === n ? "Running" : "Starting" };
 }
 
 /**
@@ -500,7 +532,7 @@ async function buildApps(): Promise<AppSummary[]> {
     const containers = cs.map(toSummary).sort((a, b) => a.name.localeCompare(b.name));
     const main = (meta?.main && containers.find((c) => c.service === meta.main)) || containers[0]!;
     const pref = prefs.get(id);
-    let { line, summary } = aggregate(containers);
+    let { line, summary } = aggregate(containers, oneShotFor(ownFile));
     if (u && u.state !== "ready" && u.state !== "running" && u.state !== "stopped" && UMBREL_STATE_TEXT[u.state]) {
       line = "starting";
       summary = UMBREL_STATE_TEXT[u.state]!;

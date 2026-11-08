@@ -1,5 +1,5 @@
 import "server-only";
-import fs from "node:fs";
+import { selfContainerId } from "../docker/self";
 import { docker } from "../docker/client";
 import { findUmbrel, umbrelApps, umbrelStores } from "../platform/umbrel";
 import { isNightlyVersion, type GithubTarget, type Install, type RunningBuild, type UpdateChannel, type UpdateRelation } from "@/lib/updates-types";
@@ -38,12 +38,8 @@ export interface SelfContainer {
 
 /** Gluon's own container, found through the bind mounts Docker gives every container. */
 export async function selfContainer(): Promise<SelfContainer | null> {
-  let id: string | null = null;
-  try {
-    id = fs.readFileSync("/proc/self/mountinfo", "utf8").match(/\/containers\/([0-9a-f]{64})\//)?.[1] ?? null;
-  } catch {
-    /* not in a container */
-  }
+  // The same detection the rest of Gluon uses (cgroup, then mounts), so they never disagree.
+  const id = selfContainerId();
   try {
     const d = docker();
     const info = id

@@ -148,6 +148,7 @@ if [ "$mode" = compose ]; then
     docker compose "${args[@]}" pull "$service" 2>&1
     stage apply "Replacing $container…"
   fi
+  # Only once the tag has moved: a failed pull leaves the running Gluon alone.
   if [ -n "$previd" ]; then
     undo() {
       undo() { :; }

@@ -146,14 +146,15 @@ function buildImages(raw: RawImage[], snap: Snapshot): DockerImage[] {
     }
   }
 
-  // An unused image with the same repository as one an app runs is an older version of it.
+  // An unused image with the same repository as one an app runs, and made before it, is an older
+  // version of it. One made after is a newer download the app hasn't switched to yet.
   const inUseRepo = new Map<string, DockerImage>();
   for (const i of base) if (i.repo && i.containers.length && i.app) inUseRepo.set(i.repo, i);
   for (const i of base) {
     if (i.containers.length || !i.repo) continue;
     const current = inUseRepo.get(i.repo);
     if (current?.app) {
-      i.olderOf = current.app;
+      if (i.created < current.created) i.olderOf = current.app;
       i.app ??= current.app;
     }
   }
@@ -190,7 +191,8 @@ export type RemoteState = { status: "same" | "newer" | "missing" | "unknown"; di
 export async function remoteState(ref: string, localIds: string[], fresh = false): Promise<RemoteState> {
   const key = `${ref}|${localIds.join(",")}`;
   const hit = remoteCache.get(key);
-  if (!fresh && hit && Date.now() - hit.at < 30 * 60_000) return hit.value;
+  // A check that couldn't reach the registry is asked again soon, not trusted for half an hour.
+  if (!fresh && hit && Date.now() - hit.at < (hit.value.status === "unknown" ? 2 * 60_000 : 30 * 60_000)) return hit.value;
   let value: RemoteState;
   try {
     const r = await dial<{ Descriptor?: { digest?: string } }>({ path: `/distribution/${ref}/json`, method: "GET", signal: AbortSignal.timeout(8000) });
@@ -198,7 +200,9 @@ export async function remoteState(ref: string, localIds: string[], fresh = false
     value = { status: digest && localIds.some((l) => l.endsWith(digest.replace(/^sha256:/, ""))) ? "same" : "newer", digest };
   } catch (e) {
     const msg = dockerMessage(e);
-    if (/denied|unauthorized|not found|manifest unknown|does not exist|no such host/i.test(msg)) value = { status: "missing", digest: null, message: msg };
+    // "no such host" is a DNS failure (often no internet), not proof the image is gone.
+    if (/no such host|timeout|connection refused|network is unreachable|TLS handshake/i.test(msg)) value = { status: "unknown", digest: null, message: msg };
+    else if (/denied|unauthorized|not found|manifest unknown|does not exist/i.test(msg)) value = { status: "missing", digest: null, message: msg };
     else value = { status: "unknown", digest: null, message: msg || "The registry didn't answer." };
   }
   remoteCache.set(key, { at: Date.now(), value });

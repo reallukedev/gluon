@@ -245,6 +245,19 @@ function refresh(r: Row): Row {
   return one<Row>("SELECT * FROM self_updates WHERE id = ?", r.id) ?? r;
 }
 
+/** Whether the host is still running an update's systemd unit (null when systemd can't be asked). */
+async function unitState(id: string): Promise<"running" | "gone" | null> {
+  try {
+    const { stdout } = await host("systemctl", ["is-active", `${unitName(id)}.service`], { timeoutMs: 5000, okCodes: [1, 3, 4] });
+    const st = stdout.trim();
+    if (st === "active" || st === "activating" || st === "deactivating" || st === "reloading") return "running";
+    if (st === "inactive" || st === "failed") return "gone";
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** While a run is going, follow its log and tell open pages. */
 async function watch() {
   const active = all<Row>("SELECT * FROM self_updates WHERE outcome = 'running'");
@@ -255,9 +268,17 @@ async function watch() {
       run("UPDATE self_updates SET outcome = 'ok', message = ?, finished_at = ? WHERE id = ?", `Gluon ${r.to_version} is running.`, now(), r.id);
       continue;
     }
+    // Asked before the log is read: a unit that ends in between has written its last line by then.
+    const unit = r.method === "umbrel" ? null : await unitState(r.id);
     const fresh = refresh(r);
-    if (fresh.outcome === "running" && now() - fresh.started_at > 60 * 60_000) {
-      run("UPDATE self_updates SET outcome = 'failed', message = ?, finished_at = ? WHERE id = ?", "The update didn't report back within an hour.", now(), r.id);
+    if (fresh.outcome !== "running") continue;
+    const age = now() - fresh.started_at;
+    if (unit === "gone" && age > 60_000) {
+      // The updater ended (or the server restarted) without saying how it went.
+      run("UPDATE self_updates SET outcome = 'failed', message = ?, finished_at = ? WHERE id = ?", "The updater stopped before it said how it went. Its output shows how far it got.", now(), r.id);
+    } else if (age > (unit === "running" ? 4 : 1) * 60 * 60_000) {
+      // A slow build on a small server can run past an hour; one still going after four has hung.
+      run("UPDATE self_updates SET outcome = 'failed', message = ?, finished_at = ? WHERE id = ?", unit === "running" ? "The update hasn't finished after four hours." : "The update didn't report back within an hour.", now(), r.id);
     }
   }
   const still = one<{ n: number }>("SELECT COUNT(*) AS n FROM self_updates WHERE outcome = 'running'")!.n;

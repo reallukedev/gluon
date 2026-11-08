@@ -1,4 +1,5 @@
 import "server-only";
+import { StringDecoder } from "node:string_decoder";
 import { docker } from "./client";
 
 export interface LogLine {
@@ -18,16 +19,19 @@ const LEVEL: [RegExp, LogLine["level"]][] = [
 
 export function guessLevel(text: string, stream: "out" | "err"): LogLine["level"] {
   for (const [re, lvl] of LEVEL) if (re.test(text.slice(0, 300))) return lvl;
-  return stream === "err" ? null : null;
+  void stream;
+  return null;
 }
 
 /**
  * Docker's multiplexed log stream (non-TTY containers): 8-byte headers [stream, 0,0,0, size(4)].
- * TTY containers send raw bytes. Returns a function you push chunks into.
+ * TTY containers send raw bytes. Returns a function you push chunks into. A character split
+ * across chunks or frames is put back together before it's decoded.
  */
-function demuxer(tty: boolean, onLine: (stream: "out" | "err", raw: string) => void) {
+export function demuxer(tty: boolean, onLine: (stream: "out" | "err", raw: string) => void) {
   let buf = Buffer.alloc(0);
   const partial = { out: "", err: "" };
+  const dec = { out: new StringDecoder("utf8"), err: new StringDecoder("utf8") };
   const emitText = (stream: "out" | "err", text: string) => {
     const joined = partial[stream] + text;
     const parts = joined.split("\n");
@@ -36,18 +40,22 @@ function demuxer(tty: boolean, onLine: (stream: "out" | "err", raw: string) => v
   };
   return {
     push(chunk: Buffer) {
-      if (tty) return emitText("out", chunk.toString("utf8"));
+      if (tty) return emitText("out", dec.out.write(chunk));
       buf = Buffer.concat([buf, chunk]);
       while (buf.length >= 8) {
         const size = buf.readUInt32BE(4);
         if (buf.length < 8 + size) break;
         const stream = buf[0] === 2 ? "err" : "out";
-        emitText(stream, buf.subarray(8, 8 + size).toString("utf8"));
+        emitText(stream, dec[stream].write(buf.subarray(8, 8 + size)));
         buf = buf.subarray(8 + size);
       }
     },
     flush() {
-      for (const s of ["out", "err"] as const) if (partial[s]) onLine(s, partial[s]);
+      for (const s of ["out", "err"] as const) {
+        const rest = partial[s] + dec[s].end();
+        partial[s] = "";
+        if (rest) onLine(s, rest.replace(/\r$/, ""));
+      }
     },
   };
 }
@@ -94,6 +102,8 @@ export async function followLogs(containerId: string, name: string, onLine: (l: 
   const d = demuxer(!!info.Config.Tty, (s, raw) => onLine(parseLine(name, s, raw)));
   stream.on("data", (chunk: Buffer) => d.push(chunk));
   stream.on("end", () => d.flush());
+  // Without a listener, a dropped connection would throw and take Gluon down with it.
+  stream.on("error", () => d.flush());
   return () => {
     try {
       stream.destroy?.();
