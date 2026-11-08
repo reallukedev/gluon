@@ -62,7 +62,7 @@ const FINGERPRINTS: Fingerprint[] = [
 
 const LOGIN_PATH = /\/(log-?in|sign-?in|signin|auth|sso|oauth2?|authorize|account\/login|session\/new|users\/sign_in)(\b|\/|\?|$)/i;
 
-interface Fetched {
+export interface Fetched {
   status: number;
   headers: http.IncomingHttpHeaders;
   body: string;
@@ -101,13 +101,25 @@ function fetchOnce(url: URL, timeoutMs: number): Promise<Fetched> {
   });
 }
 
+const IDENTITY_META = /\b(?:name|property)\s*=\s*["']?(?:application-name|apple-mobile-web-app-title|generator|author|og:site_name)["'\s>]/i;
+
+/**
+ * What the page says it is: its title, the meta tags that name the app, and the server's headers.
+ * Not the rest of the page: a dashboard that links to Jellyfin and Plex isn't either of them, and
+ * calling it one would report a page anyone can open as having a login.
+ */
 function fingerprint(f: Fetched): Fingerprint | null {
   const title = f.body.match(/<title[^>]*>([^<]{0,200})<\/title>/i)?.[0] ?? "";
-  const hay = [title, f.body.slice(0, 16_384), String(f.headers["server"] ?? ""), String(f.headers["x-powered-by"] ?? ""), String(f.headers["www-authenticate"] ?? "")].join("\n");
+  const metas = [...f.body.slice(0, 32_768).matchAll(/<meta\b[^>]{0,400}>/gi)]
+    .map((m) => m[0])
+    .filter((t) => IDENTITY_META.test(t))
+    .map((t) => t.match(/\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i)?.slice(1).find((x) => x !== undefined) ?? "");
+  const hay = [title, ...metas, String(f.headers["server"] ?? ""), String(f.headers["x-powered-by"] ?? ""), String(f.headers["www-authenticate"] ?? "")].join("\n");
   return FINGERPRINTS.find((fp) => fp.re.test(hay)) ?? null;
 }
 
-function judge(f: Fetched): Omit<LoginProbe, "checkedAt"> {
+/** Exported for tests. */
+export function judge(f: Fetched): Omit<LoginProbe, "checkedAt"> {
   const fp = fingerprint(f);
   const admin = fp?.admin ?? false;
   const name = fp?.name ?? null;

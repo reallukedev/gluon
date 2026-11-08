@@ -39,22 +39,31 @@ const st = () => (g.__gluonNetStatus ??= { at: 0, value: null, running: null, pe
 export const NOT_CONFIGURED = () =>
   new AppError("no_routes", "Can't read the public addresses file (routes.json in ~/proxy/caddy). Check that the proxy folder is mounted at /proxy-caddy.", 503);
 
-/** Global IPv6 addresses of the host (not docker/veth), from /proc/1/net/if_inet6. */
+// IFA_F_* flags: temporary (privacy), DAD failed, deprecated, tentative.
+const IFA_SKIP = 0x01 | 0x08 | 0x20 | 0x40;
+
+/**
+ * The host's IPv6 addresses people on the internet can reach (not docker/veth), from the text of
+ * /proc/net/if_inet6. Unique local addresses (fc00::/7) only work at home, and privacy addresses
+ * change every few hours, so neither belongs in DNS.
+ */
+export function parseIfInet6(text: string): string[] {
+  const out: string[] = [];
+  for (const line of text.trim().split("\n")) {
+    const [hex, , , scope, flags, ifname] = line.trim().split(/\s+/);
+    if (!hex || !/^[0-9a-f]{32}$/i.test(hex) || scope !== "00" || !ifname || /^(docker|br-|veth|lo)/.test(ifname)) continue;
+    if ((parseInt(flags ?? "0", 16) & IFA_SKIP) !== 0 || /^f[cd]/i.test(hex)) continue;
+    out.push(compressIpv6(hex.match(/.{4}/g)!));
+  }
+  return out;
+}
+
 export function hostGlobalIpv6(): string[] {
-  let text = "";
   try {
-    text = fs.readFileSync("/proc/1/net/if_inet6", "utf8");
+    return parseIfInet6(fs.readFileSync("/proc/1/net/if_inet6", "utf8"));
   } catch {
     return [];
   }
-  const out: string[] = [];
-  for (const line of text.trim().split("\n")) {
-    const [hex, , , scope, , ifname] = line.trim().split(/\s+/);
-    if (!hex || scope !== "00" || !ifname || /^(docker|br-|veth|lo)/.test(ifname)) continue;
-    const groups = hex.match(/.{4}/g);
-    if (groups?.length === 8) out.push(compressIpv6(groups));
-  }
-  return out;
 }
 
 function limiter(n: number) {
@@ -229,13 +238,11 @@ async function build(force = false): Promise<NetworkStatus> {
   const certDays = getSetting("thresholds").certDays;
   const s = st();
 
-  const ddns = await ddnsStatus().catch(() => null);
-  let v4 = ddns?.ipv4?.address ?? null;
-  let source: NetworkStatus["publicIp"]["source"] = v4 ? "ddns" : "none";
-  if (!v4) {
-    v4 = await lookupPublicIpv4();
-    if (v4) source = "lookup";
-  }
+  const [ddns, looked] = await Promise.all([ddnsStatus().catch(() => null), lookupPublicIpv4()]);
+  // What the internet sees now comes first: the updater's log only says what it saw last, which
+  // can be days old when it has stopped, and comparing DNS with that would hide the mismatch.
+  const v4 = looked ?? ddns?.ipv4?.address ?? null;
+  const source: NetworkStatus["publicIp"]["source"] = looked ? "lookup" : v4 ? "ddns" : "none";
   const v6 = [...new Set([...(ddns?.ipv6?.addresses ?? []), ...hostGlobalIpv6()])];
   const publicIp = { v4, v6, source };
 
@@ -380,6 +387,11 @@ export async function networkStatus(opts: { force?: boolean; maxAgeMs?: number }
       s.running = null;
     });
   return s.running;
+}
+
+/** The last finished status, however old, without starting a new one. */
+export function lastStatus(): NetworkStatus | null {
+  return st().value;
 }
 
 /** How long a host has been waiting for a certificate (ms), or null. */

@@ -172,8 +172,11 @@ export class RouterPages {
       await login(this.s, this.code);
       res = await request(this.s, this.s.auth, `/cgi-bin/${page}.ha`);
       parsed = parsePage(res.html);
+      if (parsed.sessionsFull) throw busyError();
       if (parsed.login) throw new AppError("router_login", "Your router keeps asking Gluon to sign in. Check the access code under Network, Port forwarding.", 502);
     }
+    // An error page has none of the tables, which would read as "nothing forwarded".
+    if (res.status >= 400) throw new AppError("router_page", `Your router answered ${res.status} for its ${page} page.`, 502);
     return { page: parsed, html: res.html };
   }
 

@@ -27,6 +27,12 @@ describe("Cloudflare client", () => {
     expect((calls[0]!.init.headers as Record<string, string>).Authorization).toBe("Bearer tok");
   });
 
+  it("refuses to plan from part of a zone when Cloudflare keeps saying there are more pages", async () => {
+    const { f, calls } = fake([(c) => ok([{ id: c.url.replace(/^.*page=/, ""), name: "a.example.com", type: "A", content: "203.0.113.7" }], { page: 1, total_pages: 999 })]);
+    await expect(new Cloudflare("tok", f).records("z1")).rejects.toThrow(/more than Gluon reads at once/);
+    expect(calls).toHaveLength(50);
+  });
+
   it("turns Cloudflare's error codes into something a person can act on", async () => {
     const { f } = fake([
       () => ({ status: 401, body: { success: false, errors: [{ code: 1000, message: "Invalid API Token" }], result: null } }),

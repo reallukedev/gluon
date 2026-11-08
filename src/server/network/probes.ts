@@ -179,6 +179,7 @@ export function certResult(socket: tls.TLSSocket, servername: string, certDays: 
     fingerprint: cert.fingerprint256,
   };
   const caddy = who === "Caddy";
+  if (!Number.isFinite(daysLeft)) return { ...r, status: "error", message: `Couldn't read when the certificate for ${servername} ends.` };
   if (daysLeft < 0) {
     const whose = caddy ? "The certificate" : `The certificate ${who.toLowerCase()} uses`;
     return { ...r, status: "expired", message: `${whose} for ${servername} expired ${-daysLeft} day${daysLeft === -1 ? "" : "s"} ago.` };
@@ -318,23 +319,65 @@ export async function probeBackend(host: string, port: number): Promise<BackendR
 
 let traceCache: { at: number; ip: string | null } | null = null;
 
-/** This network's public IPv4 from Cloudflare's trace endpoint (used when the DDNS log has none). */
-export async function lookupPublicIpv4(maxAgeMs = 10 * 60_000): Promise<string | null> {
-  if (traceCache && Date.now() - traceCache.at < maxAgeMs) return traceCache.ip;
-  const ip = await new Promise<string | null>((resolve) => {
-    const req = https.get({ host: "1.1.1.1", path: "/cdn-cgi/trace", timeout: 4000, headers: { "User-Agent": PROBE_UA } }, (res) => {
+/** Addresses no network has on the internet: private, shared (CGNAT), loopback, link-local, multicast, reserved. */
+const NOT_PUBLIC_V4 = (() => {
+  const b = new net.BlockList();
+  for (const [a, bits] of [["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8], ["169.254.0.0", 16], ["172.16.0.0", 12], ["192.0.0.0", 24], ["192.168.0.0", 16], ["198.18.0.0", 15], ["224.0.0.0", 4], ["240.0.0.0", 4]] as const) b.addSubnet(a, bits, "ipv4");
+  return b;
+})();
+
+/** The IPv4 address in an answer from one of the lookup services (a trace's ip= line, or the bare address), when it's a public one. */
+export function publicIpv4From(body: string): string | null {
+  const raw = (body.match(/^ip=(\S+)$/m)?.[1] ?? body).trim();
+  if (!net.isIPv4(raw) || NOT_PUBLIC_V4.check(raw, "ipv4")) return null;
+  return raw;
+}
+
+/** A small text answer over HTTPS, or null. Hard deadline, so a stalled or endless answer can't hold it up. */
+function smallGet(host: string, path: string, timeoutMs: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v: string | null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      req.destroy();
+      resolve(v);
+    };
+    const req = https.get({ host, path, headers: { "User-Agent": PROBE_UA }, agent: false }, (res) => {
+      if ((res.statusCode ?? 0) !== 200) return finish(null);
       let body = "";
       res.setEncoding("utf8");
       res.on("data", (c) => {
         body += c;
-        if (body.length > 4096) res.destroy();
+        if (body.length > 4096) finish(null);
       });
-      res.on("end", () => resolve(body.match(/^ip=([0-9.]+)$/m)?.[1] ?? null));
-      res.on("error", () => resolve(null));
+      res.on("end", () => finish(body));
+      res.on("close", () => finish(null));
+      res.on("error", () => finish(null));
     });
-    req.on("timeout", () => req.destroy());
-    req.on("error", () => resolve(null));
+    const timer = setTimeout(() => finish(null), timeoutMs);
+    req.on("error", () => finish(null));
   });
+}
+
+/** Asked in turn until one gives a public address: Cloudflare's trace on two addresses, then ipify. */
+const IP_SOURCES: [string, string][] = [
+  ["1.1.1.1", "/cdn-cgi/trace"],
+  ["1.0.0.1", "/cdn-cgi/trace"],
+  ["api.ipify.org", "/"],
+];
+
+/** This network's public IPv4, as services on the internet see it. Null when none of them could say. */
+export async function lookupPublicIpv4(maxAgeMs = 10 * 60_000): Promise<string | null> {
+  // A failed lookup is retried soon: a blip shouldn't leave DNS checks without an address for minutes.
+  if (traceCache && Date.now() - traceCache.at < (traceCache.ip ? maxAgeMs : Math.min(maxAgeMs, 30_000))) return traceCache.ip;
+  let ip: string | null = null;
+  for (const [host, path] of IP_SOURCES) {
+    const body = await smallGet(host, path, 4000);
+    ip = body === null ? null : publicIpv4From(body);
+    if (ip) break;
+  }
   traceCache = { at: Date.now(), ip };
   return ip;
 }

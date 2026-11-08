@@ -153,6 +153,17 @@ describe("a voice server address", () => {
   });
 });
 
+describe("path addresses on the base domain", () => {
+  test("paths that would share a matcher name get one each, so Caddy accepts the file", () => {
+    const p = (id: string, path: string, port: number) => ({ id, type: "path", name: id, enabled: true, path, backend: local(port), strip_prefix: false });
+    const text = renderCaddyfile(cleanConfig({ routes: [p("a", "/a-b", 1001), p("b", "/a.b", 1002), p("c", "/a_b", 1003)] }, base));
+    const defs = [...text.matchAll(/^\t(@route_\w+) path /gm)].map((m) => m[1]);
+    expect(defs).toHaveLength(3);
+    expect(new Set(defs).size).toBe(3);
+    for (const d of defs) expect(text).toContain(`\thandle ${d} {`);
+  });
+});
+
 describe("publicPorts", () => {
   test("names the address that reaches each port, through extra paths too, but not through redirects or routes that are off", () => {
     const cfg = cleanConfig(

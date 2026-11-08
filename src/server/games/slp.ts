@@ -153,8 +153,11 @@ export function parseLegacyText(text: string): SlpStatus | null {
 /** Read whatever has arrived so far: the status reply, a legacy 0xFF packet, or not enough yet. */
 export function decodeResponse(buf: Buffer): Decoded {
   if (buf.length === 0) return { kind: "incomplete" };
-  if (buf[0] === 0xff) {
-    if (buf.length < 3) return { kind: "incomplete" };
+  // A modern reply whose length VarInt starts 0xFF (255 bytes, 383, ...) looks like a legacy kick
+  // at first. A kick's next two bytes are a UTF-16 length under 32768, then text whose first
+  // character is ASCII or §, so its high byte is 0; a modern reply has the JSON length there instead.
+  if (buf[0] === 0xff && buf.length < 4) return { kind: "incomplete" };
+  if (buf[0] === 0xff && (buf[1]! & 0x80) === 0 && buf[3] === 0x00) {
     const chars = buf.readUInt16BE(1);
     if (buf.length < 3 + chars * 2) return { kind: "incomplete" };
     return { kind: "legacy-kick", text: Buffer.from(buf.subarray(3, 3 + chars * 2)).swap16().toString("utf16le") };

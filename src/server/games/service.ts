@@ -181,8 +181,9 @@ const CHECK_TTL = 90_000;
 const UNKNOWN_HOST = "gluon-check.invalid";
 
 async function publicIp() {
-  const ddns = await ddnsStatus().catch(() => null);
-  const v4 = ddns?.ipv4?.address ?? (await lookupPublicIpv4());
+  const [ddns, looked] = await Promise.all([ddnsStatus().catch(() => null), lookupPublicIpv4()]);
+  // The updater's log can be old; what the internet sees now wins.
+  const v4 = looked ?? ddns?.ipv4?.address ?? null;
   return { v4, v6: [...new Set([...(ddns?.ipv6?.addresses ?? []), ...hostGlobalIpv6()])] };
 }
 
@@ -402,10 +403,25 @@ function needWritable(ctx: Ctx): { r: Router; file: string; doc: RoutesDoc } {
 }
 
 /** Write a new version of the file and make sure that's what's there now. */
-function put(file: string, content: string) {
-  writeInPlace(hostPath(file), content);
-  const back = fs.readFileSync(hostPath(file), "utf8");
-  if (back !== content) throw new AppError("write_failed", `${file} didn't keep the change. Gluon's earlier copy is in the history.`, 500);
+function put(file: string, content: string, previous: string) {
+  try {
+    writeInPlace(hostPath(file), content);
+    const back = fs.readFileSync(hostPath(file), "utf8");
+    if (back !== content) throw new Error("it read back different");
+  } catch (e) {
+    // A write that failed part way (a full disk, say) can leave a file mc-router can't load: put the old one back.
+    let restored = false;
+    try {
+      if (previous.trim()) {
+        writeInPlace(hostPath(file), previous);
+        restored = fs.readFileSync(hostPath(file), "utf8") === previous;
+      }
+    } catch {
+      /* reported below */
+    }
+    const why = e instanceof Error ? e.message : String(e);
+    throw new AppError("write_failed", restored ? `Couldn't write ${file} (${why}). It's back as it was; nothing changed.` : `Couldn't write ${file} (${why}). Gluon's earlier copy is in the history: put it back from there.`, 500);
+  }
 }
 
 function describe(ctx: Ctx, backend: string): string {
@@ -428,7 +444,7 @@ async function change(user: User, where: Where, rev: string, edit: Edit, verb: (
     }
     const v = verb(ctx);
     const undo = snapshot(file, doc.raw, v.summary, user);
-    put(file, serialize(data, doc.indent));
+    put(file, serialize(data, doc.indent), doc.raw);
     g.__gluonJavaNeed = undefined;
     const res = await reload(r);
     audit(user, { action: v.action, target: v.target, summary: v.summary, detail: { file, applied: res.applied, note: res.note } }, where);
@@ -497,7 +513,7 @@ export function restoreMcHistory(user: User, where: Where, id: number): Promise<
     const current = readFile(ctx.info.file).raw ?? "";
     const when = new Date(row.at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
     const undo = snapshot(ctx.info.file, current, `Minecraft: put back the file from ${when}`, user);
-    put(ctx.info.file, content);
+    put(ctx.info.file, content, current);
     g.__gluonJavaNeed = undefined;
     const res = await reload(ctx.router);
     audit(user, { action: "games.mc.restore", target: ctx.info.file, summary: `Minecraft: put back mc-router's routes from ${when}`, detail: { id, applied: res.applied } }, where);

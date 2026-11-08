@@ -23,6 +23,7 @@ import { FALLBACK_ID } from "./routes-meta";
 const PENDING_GRACE = 30 * 60_000;
 const failures = new Map<string, number>();
 
+const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
 const addressHref = (id: string) => `/network?route=${encodeURIComponent(id)}`;
 
 registerCheck("network-status", 120_000, async () => {
@@ -84,22 +85,22 @@ registerCheck("network-status", 120_000, async () => {
           raise({
             id,
             kind: "net.cert",
-            severity: t.status === "expired" || (t.daysLeft ?? 0) < 3 ? "fault" : "attention",
+            severity: t.status === "expired" || (t.daysLeft !== null && t.daysLeft < 3) ? "fault" : "attention",
             subject: r.host,
-            title: t.status === "expired" ? `Your certificate for ${r.host} has expired` : t.status === "invalid" ? `Caddy isn't serving your certificate for ${r.host}` : `Your certificate for ${r.host} ends in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`,
+            title: t.status === "expired" ? `Your certificate for ${r.host} has expired` : t.status === "invalid" ? `Caddy isn't serving your certificate for ${r.host}` : t.daysLeft === null ? `Couldn't tell when your certificate for ${r.host} ends` : `Your certificate for ${r.host} ends in ${days(t.daysLeft)}`,
             cause: t.status === "invalid" ? t.message : `${t.status === "expired" ? "Browsers now show a security warning." : "Browsers will show a security warning after that."} You supplied this certificate, so Gluon can't renew it: replace it in the address's HTTPS settings, or point Gluon at the files your renewal tool keeps current.`,
             detail: { host: r.host, daysLeft: t.daysLeft, issuer: t.issuer, validTo: t.validTo, own: true },
             remedy: { action: "", label: "Replace the certificate", href: addressHref(r.id) },
           });
         }
-      } else if (t.status === "expired" || (t.status === "expiring" && (t.daysLeft ?? 99) < certDays)) {
+      } else if (t.status === "expired" || (t.status === "expiring" && t.daysLeft !== null && t.daysLeft < certDays)) {
         openCert.add(id);
         raise({
           id,
           kind: "net.cert",
-          severity: t.status === "expired" || (t.daysLeft ?? 0) < 3 ? "fault" : "attention",
+          severity: t.status === "expired" || (t.daysLeft !== null && t.daysLeft < 3) ? "fault" : "attention",
           subject: r.host,
-          title: t.status === "expired" ? `The certificate for ${r.host} has expired` : `The certificate for ${r.host} expires in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`,
+          title: t.status === "expired" ? `The certificate for ${r.host} has expired` : `The certificate for ${r.host} expires in ${days(t.daysLeft ?? 0)}`,
           cause:
             t.status === "expired"
               ? "Browsers now show a security warning. Caddy renews automatically, so something is blocking it (DNS, port forwarding, or Let's Encrypt limits)."
@@ -136,7 +137,7 @@ registerCheck("network-status", 120_000, async () => {
           cause:
             r.dns.status === "missing"
               ? `Nobody can reach it by name. ${dnsFix(r.host, status)}`
-              : `${r.dns.message} ${r.host === status.baseDomain || r.host.endsWith(`.${status.baseDomain}`) ? "The dynamic DNS updater should fix this within a few minutes; if it doesn't, check its log." : `Change its A record to ${status.publicIp.v4 ?? "this network's public address"} wherever the domain's DNS is managed.`}`,
+              : `${r.dns.message} ${cloudflareHolds(r.host) ? "Gluon's Cloudflare connection updates it within a few minutes; if it doesn't, check Settings, Integrations, Cloudflare." : r.host === status.baseDomain || r.host.endsWith(`.${status.baseDomain}`) ? "The dynamic DNS updater should fix this within a few minutes; if it doesn't, check its log." : `Change its A record to ${status.publicIp.v4 ?? "this network's public address"} wherever the domain's DNS is managed.`}`,
           detail: { host: r.host, a: r.dns.a, aaaa: r.dns.aaaa, publicIp: status.publicIp },
           remedy: { action: "", label: "See DNS", href: "/network?hop=dns" },
         });
@@ -202,10 +203,17 @@ registerCheck("network-status", 120_000, async () => {
   resolveMissing("net.reach", openReach);
 });
 
+/** Names in the zone Gluon's own Cloudflare connection keeps. */
+function cloudflareHolds(host: string): boolean {
+  const zone = getSetting("cloudflare")?.zone.name;
+  return !!zone && (host === zone || host.endsWith(`.${zone}`));
+}
+
 /** What to add so a name resolves: the DDNS updater for names under the base domain, plain records anywhere else. */
 function dnsFix(host: string, status: Awaited<ReturnType<typeof networkStatus>>): string {
   const base = status.baseDomain;
   const v4 = status.publicIp.v4;
+  if (cloudflareHolds(host)) return "Gluon's Cloudflare connection adds it within a few minutes; if it doesn't, check Settings, Integrations, Cloudflare.";
   const v6 = status.publicIp.v6[0];
   if (host === base || host.endsWith(`.${base}`)) {
     if (coveredByWildcard(host, base) && status.wildcard?.status === "missing") return `There's no wildcard record for *.${base} either; add one, or add this name to the DDNS updater's DOMAINS.`;
