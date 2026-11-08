@@ -160,7 +160,9 @@ export function useCommand(c: {
 
   const sel = c.selection.entries;
   const held = useClip();
-  const parsed = React.useMemo(() => parseCommand(text, sel.length > 0), [text, sel.length]);
+  // The field follows every key; the results (hundreds of rows in a big folder) catch up behind it.
+  const query = React.useDeferredValue(text);
+  const parsed = React.useMemo(() => parseCommand(query, sel.length > 0), [query, sel.length]);
   const here = c.here && c.here.path === c.path ? c.here : undefined;
   const writable = !!here && here.access === "write" && !here.protectedReason;
   const browsing = c.screen === "browse" && !!c.path;
@@ -246,7 +248,7 @@ export function useCommand(c: {
   const found = useFileSearch(spec);
 
   // ---- completing a typed path
-  const typed = parsed.mode === "path" ? splitTypedPath(parsed.text) : null;
+  const typed = React.useMemo(() => (parsed.mode === "path" ? splitTypedPath(parsed.text) : null), [parsed]);
   const completions = useApi<ListingT>(typed ? `/api/files/list?path=${encodeURIComponent(typed.dir)}&only=dirs&limit=400${prefs.filesShowHidden || typed.stem.startsWith(".") ? "&hidden=1" : ""}` : null, { keepPreviousData: true, shouldRetryOnError: false });
 
   const sections: Section[] = React.useMemo(() => {
@@ -310,11 +312,11 @@ export function useCommand(c: {
             empty: found.done ? "Nothing matches in here." : "Looking through every folder…",
           });
         }
-        if (scope && parsed.name.length >= 2) out.push({ title: "Elsewhere", items: [{ key: "everywhere", type: "everywhere", q: text.trim() }] });
+        if (scope && parsed.name.length >= 2) out.push({ title: "Elsewhere", items: [{ key: "everywhere", type: "everywhere", q: query.trim() }] });
         return out;
       }
     }
-  }, [parsed, completions.data, completions.error, typed, commands, sel, c.places, here, found, spec, scope, c.path, fmt, browsing, text, prefs.filesSort]);
+  }, [parsed, completions.data, completions.error, typed, commands, sel, c.places, here, found, spec, scope, c.path, fmt, browsing, query, prefs.filesSort]);
 
   const flat = React.useMemo(() => sections.flatMap((x) => x.items), [sections]);
 
@@ -574,13 +576,23 @@ export function CommandBar() {
 }
 
 function Sections({ c }: { c: CommandState }) {
+  // Through a ref, so the rows below stay memoised while `run` changes every render.
+  const runRef = React.useRef(c.run);
+  runRef.current = c.run;
+  const run = React.useCallback((it: Item, how?: "open" | "look") => runRef.current(it, how), []);
+  const q = c.parsed.mode === "find" ? c.parsed.name : c.parsed.mode === "dest" ? c.parsed.text : "";
+  // Search hits stream in while someone types; drawing them never holds up the next key.
+  const sections = React.useDeferredValue(c.sections);
+  return <SectionList sections={sections} anything={sections.some((x) => x.items.length > 0)} hint={!c.searching && c.parsed.mode === "find"} index={c.index} q={q} setIndex={c.setIndex} run={run} />;
+}
+
+/** Memoised: a key in the field or the pointer moving down the list re-renders only the rows that changed. */
+const SectionList = React.memo(function SectionList({ sections, anything, hint, index, q, setIndex, run }: { sections: Section[]; anything: boolean; hint: boolean; index: number; q: string; setIndex: (i: number) => void; run: (it: Item, how?: "open" | "look") => void }) {
   const fmt = useFormat();
   let i = -1;
-  const anything = c.flat.length > 0;
-  const q = c.parsed.mode === "find" ? c.parsed.name : c.parsed.mode === "dest" ? c.parsed.text : "";
   return (
     <>
-      {c.sections
+      {sections
         .filter((sec) => sec.items.length || !anything || sec.title === "Everywhere inside" || sec.title === "In every folder")
         .map((sec) => (
           <section key={sec.title} className={s.section} aria-label={sec.title}>
@@ -593,30 +605,32 @@ function Sections({ c }: { c: CommandState }) {
             ) : (
               sec.items.map((it) => {
                 i++;
-                const idx = i;
-                return (
-                  <div
-                    key={it.key}
-                    id={`cmd-opt-${idx}`}
-                    role="option"
-                    aria-selected={c.index === idx}
-                    className={s.option}
-                    data-active={c.index === idx ? "" : undefined}
-                    data-danger={it.type === "cmd" && it.cmd.danger ? "" : undefined}
-                    onMouseMove={() => c.index !== idx && c.setIndex(idx)}
-                    onClick={() => c.run(it)}
-                  >
-                    <Option it={it} q={q} fmt={fmt} onLook={() => c.run(it, "look")} />
-                  </div>
-                );
+                return <ResultRow key={it.key} it={it} idx={i} active={index === i} q={q} fmt={fmt} setIndex={setIndex} run={run} />;
               })
             )}
           </section>
         ))}
-      {!anything && !c.searching && c.parsed.mode === "find" && <p className={s.none}>Try part of the name, “photos”, “this week” or *.mkv.</p>}
+      {!anything && hint && <p className={s.none}>Try part of the name, “photos”, “this week” or *.mkv.</p>}
     </>
   );
-}
+});
+
+const ResultRow = React.memo(function ResultRow({ it, idx, active, q, fmt, setIndex, run }: { it: Item; idx: number; active: boolean; q: string; fmt: ReturnType<typeof useFormat>; setIndex: (i: number) => void; run: (it: Item, how?: "open" | "look") => void }) {
+  return (
+    <div
+      id={`cmd-opt-${idx}`}
+      role="option"
+      aria-selected={active}
+      className={s.option}
+      data-active={active ? "" : undefined}
+      data-danger={it.type === "cmd" && it.cmd.danger ? "" : undefined}
+      onMouseMove={() => !active && setIndex(idx)}
+      onClick={() => run(it)}
+    >
+      <Option it={it} q={q} fmt={fmt} onLook={() => run(it, "look")} />
+    </div>
+  );
+});
 
 function Mark({ text, q }: { text: string; q: string }) {
   const i = q ? text.toLowerCase().indexOf(q.toLowerCase()) : -1;
