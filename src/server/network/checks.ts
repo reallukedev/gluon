@@ -203,21 +203,22 @@ registerCheck("network-status", 120_000, async () => {
   resolveMissing("net.reach", openReach);
 });
 
-/** Names in the zone Gluon's own Cloudflare connection keeps. */
+/** Names in a domain Gluon's own Cloudflare connection can write. */
 function cloudflareHolds(host: string): boolean {
-  const zone = getSetting("cloudflare")?.zone.name;
-  return !!zone && (host === zone || host.endsWith(`.${zone}`));
+  const c = getSetting("cloudflare");
+  if (!c) return false;
+  return (c.zones.length ? c.zones : [c.zone]).some((z) => host === z.name || host.endsWith(`.${z.name}`));
 }
 
-/** What to add so a name resolves: the DDNS updater for names under the base domain, plain records anywhere else. */
+/** What to add so a name resolves: Gluon's Cloudflare connection when it can write there, plain records anywhere else. */
 function dnsFix(host: string, status: Awaited<ReturnType<typeof networkStatus>>): string {
   const base = status.baseDomain;
   const v4 = status.publicIp.v4;
   if (cloudflareHolds(host)) return "Gluon's Cloudflare connection adds it within a few minutes; if it doesn't, check Settings, Integrations, Cloudflare.";
   const v6 = status.publicIp.v6[0];
   if (host === base || host.endsWith(`.${base}`)) {
-    if (coveredByWildcard(host, base) && status.wildcard?.status === "missing") return `There's no wildcard record for *.${base} either; add one, or add this name to the DDNS updater's DOMAINS.`;
-    return "Add a record for it where the domain's DNS is managed, or add it to the DDNS updater's DOMAINS.";
+    if (coveredByWildcard(host, base) && status.wildcard?.status === "missing") return `There's no wildcard record for *.${base} either; add one, or connect Cloudflare in Settings, Integrations and Gluon keeps them.`;
+    return "Add a record for it where the domain's DNS is managed, or connect Cloudflare in Settings, Integrations and Gluon keeps it.";
   }
   const records = [`an A record for ${host} pointing at ${v4 ?? "this network's public address"}`, ...(v6 ? [`an AAAA record pointing at ${v6}`] : [])];
   return `Add ${records.join(" and ")} wherever ${host}'s DNS is managed.`;
@@ -226,7 +227,9 @@ function dnsFix(host: string, status: Awaited<ReturnType<typeof networkStatus>>)
 registerCheck("network-ddns", 300_000, async () => {
   const d = await ddnsStatus(true);
   const open = new Set<string>();
-  if (d.container.exists && (!d.container.running || d.errors.length)) {
+  // With Gluon's own Cloudflare connection, a stopped cloudflare-ddns is the plan, not a fault.
+  const replaced = !!getSetting("cloudflare") && !d.container.running;
+  if (d.container.exists && !replaced && (!d.container.running || d.errors.length)) {
     open.add("net.ddns");
     raise({
       id: "net.ddns",

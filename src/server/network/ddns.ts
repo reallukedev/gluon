@@ -1,5 +1,6 @@
 import "server-only";
 import { findContainer, containerLogLines } from "../diagnostics/docker-logs";
+import { getSetting } from "../settings";
 import type { DdnsLogLine, DdnsStatus } from "@/lib/network-types";
 
 /**
@@ -15,7 +16,7 @@ import type { DdnsLogLine, DdnsStatus } from "@/lib/network-types";
  */
 
 const CONTAINER = (process.env.GLUON_DDNS_CONTAINER ?? process.env.TEND_DDNS_CONTAINER) ?? "cloudflare-ddns";
-const ENV_KEYS = ["DOMAINS", "IP4_DOMAINS", "IP6_DOMAINS", "PROXIED", "IP4_PROVIDER", "IP6_PROVIDER", "UPDATE_CRON"] as const;
+const ENV_KEYS = ["DOMAINS", "IP4_DOMAINS", "IP6_DOMAINS", "PROXIED", "IP4_PROVIDER", "IP6_PROVIDER", "UPDATE_CRON", "DELETE_ON_STOP"] as const;
 
 const ERROR_EMOJI = ["😡", "😩", "😞", "🤯", "😤", "❌", "💀", "🙀", "😰", "😱", "😖", "🚫", "😵"];
 const WARN_EMOJI = ["🤔", "⚠️", "⚠", "😦", "🙁", "😐", "😮"];
@@ -119,6 +120,12 @@ export function evalProxied(expr: string, domain: string): boolean | null {
   }
 }
 
+/** Whether the updater is running right now, without reading its log. null: not on this server. */
+export async function ddnsRunning(): Promise<boolean | null> {
+  const found = await findContainer(CONTAINER, (c) => /cloudflare-ddns/.test(c.Image));
+  return found ? found.running : null;
+}
+
 // ---------------------------------------------------------------- status
 
 type G = typeof globalThis & { __gluonDdns?: { at: number; value: Promise<DdnsStatus> } };
@@ -173,7 +180,7 @@ async function build(): Promise<DdnsStatus> {
   const found = await findContainer(CONTAINER, (c) => /cloudflare-ddns/.test(c.Image));
   const empty: DdnsStatus = {
     container: { exists: false, name: CONTAINER, state: null, running: false, startedAt: null, image: null, version: null, project: null },
-    config: { domains: [], ip4Domains: [], ip6Domains: [], proxied: null, proxiedDomains: [], unproxiedDomains: [], ip4Provider: null, ip6Provider: null, updateSchedule: null },
+    config: { domains: [], ip4Domains: [], ip6Domains: [], proxied: null, proxiedDomains: [], unproxiedDomains: [], ip4Provider: null, ip6Provider: null, updateSchedule: null, deleteOnStop: false },
     ipv4: null,
     ipv6: null,
     lastCheckAt: null,
@@ -216,7 +223,10 @@ async function build(): Promise<DdnsStatus> {
   let state: DdnsStatus["state"] = "ok";
   let summary: string;
   const v4 = log.ipv4;
-  if (!running) {
+  if (!running && getSetting("cloudflare")) {
+    state = "unknown";
+    summary = `${found.name} is stopped. Gluon's Cloudflare connection keeps DNS pointed here instead.`;
+  } else if (!running) {
     state = "fault";
     summary = `The dynamic DNS updater (${found.name}) isn't running, so DNS won't follow if your internet address changes.`;
   } else if (log.errors.length) {
@@ -253,6 +263,7 @@ async function build(): Promise<DdnsStatus> {
       ip4Provider: env.get("IP4_PROVIDER") ?? "cloudflare.trace",
       ip6Provider: env.get("IP6_PROVIDER") ?? "cloudflare.trace",
       updateSchedule: env.get("UPDATE_CRON") ?? "@every 5m",
+      deleteOnStop: /^(1|t|true|y|yes|on)$/i.test(env.get("DELETE_ON_STOP")?.trim() ?? ""),
     },
     ipv4: v4,
     ipv6: log.ipv6,
