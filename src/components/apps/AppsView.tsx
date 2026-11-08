@@ -7,7 +7,7 @@ import { usePinToHome } from "@/components/home/pinned";
 import type { AppSummary } from "@/server/docker/apps";
 import type { Platform } from "@/server/platform";
 import { api, useApi, ApiError, STATUS_KEY, STATUS_REFRESH } from "@/lib/client/api";
-import { useLive } from "@/lib/client/live";
+import { useLiveValue } from "@/lib/client/live";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
 import { Empty, Notice } from "@/components/ui/Surface";
 import { AppsHead, AppsBody } from "@/components/apps/AppsFrame";
@@ -47,7 +47,6 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const pinHome = usePinToHome();
   const fmt = useFormat();
   const { viewer, serverName } = usePrefs();
-  const { host } = useLive();
   const { data: apps = initial, error: appsError, mutate } = useApi<AppSummary[]>("/api/apps", { refresh: 8000, fallbackData: initial });
   const usage = useAppUsage(apps);
   // Same key and cadence as Home and Status: a web check that fails while Docker says "running" is
@@ -90,7 +89,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
     setRemoveTarget({ app: a, title });
     setRemoveOpen(true);
   };
-  const memTotal = host.at(-1)?.mem.total ?? null;
+  const memTotal = useLiveValue((l) => l.host.at(-1)?.mem.total ?? null);
   const memScale = Math.max(0, ...[...usage.values()].map((u) => u.mem));
 
   const byId = new Map(apps.map((a) => [a.id, a]));
