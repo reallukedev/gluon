@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
-import useSWR, { mutate as mutateGlobal } from "swr";
+import { mutate as mutateGlobal } from "swr";
 import { toast } from "@/components/ui/Toast";
-import { api } from "@/lib/client/api";
+import { api, useApi } from "@/lib/client/api";
 import { appInsertIndex, appItem, isAppItem, type HomeLayout, type WidgetItem } from "@/lib/home";
 
 /**
@@ -29,12 +29,7 @@ export const canPin = (a: PinnableApp) => !!(a.urls.home || a.urls.away);
 
 /** The layout, shared with Home. Pass the server-rendered one on Home so the first paint needs no fetch. */
 export function useHomeLayout(initial?: HomeData) {
-  return useSWR<HomeData>(HOME_KEY, (u: string) => api.get<HomeData>(u), {
-    fallbackData: initial,
-    revalidateOnFocus: false,
-    revalidateOnMount: true,
-    dedupingInterval: 2000,
-  });
+  return useApi<HomeData>(HOME_KEY, { fallbackData: initial, revalidateOnFocus: false, dedupingInterval: 2000 });
 }
 
 /** Save a whole layout: the cache changes at once, the server in the background; a failure puts it back. */

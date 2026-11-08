@@ -16,7 +16,9 @@ import s from "./home.module.css";
 export function StartSearch({ className }: { className?: string } = {}) {
   const { prefs } = usePrefs();
   const url = useSmartUrl();
-  const { data: apps } = useApi<HomeApp[]>("/api/apps");
+  // Apps are only for suggestions while typing: ask for them once the search is focused.
+  const [wanted, setWanted] = React.useState(false);
+  const { data: apps } = useApi<HomeApp[]>(wanted ? "/api/apps" : null);
   const [q, setQ] = React.useState("");
   const [active, setActive] = React.useState(-1);
   const [open, setOpen] = React.useState(false);
@@ -87,7 +89,10 @@ export function StartSearch({ className }: { className?: string } = {}) {
           setActive(-1);
           setOpen(true);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          setOpen(true);
+          setWanted(true);
+        }}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {
