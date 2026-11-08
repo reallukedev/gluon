@@ -93,13 +93,13 @@
   },
   "description": "A home server manager: health, apps, files, storage, network and diagnostics in one calm web app.",
   "license": "GPL-3.0-or-later",
-  "homepage": "https://github.com/reallukedev/gluon",
+  "homepage": "https://github.com/slukedev/gluon",
   "bugs": {
-    "url": "https://github.com/reallukedev/gluon/issues"
+    "url": "https://github.com/slukedev/gluon/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/reallukedev/gluon.git"
+    "url": "https://github.com/slukedev/gluon.git"
   },
   "allowScripts": {
     "better-sqlite3": true,

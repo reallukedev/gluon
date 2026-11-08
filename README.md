@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/reallukedev/gluon/actions/workflows/ci.yml"><img src="https://github.com/reallukedev/gluon/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/slukedev/gluon/actions/workflows/ci.yml"><img src="https://github.com/slukedev/gluon/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/node-%E2%89%A522-brightgreen" alt="Node 22 or newer">
   <img src="https://img.shields.io/badge/runs%20on-Linux%20%2B%20Docker-informational" alt="Runs on Linux with Docker">
@@ -31,7 +31,7 @@ When something's wrong, Gluon says what it is, why, and offers the fix.
 On a Linux server with Docker and the Compose plugin:
 
 ```sh
-git clone https://github.com/reallukedev/gluon.git
+git clone https://github.com/slukedev/gluon.git
 cd gluon
 docker compose -f docker/compose.yaml up -d --build
 ```
@@ -117,7 +117,7 @@ without that access.
 1. Get the code and start it:
 
    ```sh
-   git clone https://github.com/reallukedev/gluon.git
+   git clone https://github.com/slukedev/gluon.git
    cd gluon
    docker compose -f docker/compose.yaml up -d --build
    ```
