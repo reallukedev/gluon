@@ -4,7 +4,6 @@
 /* The column head says "Open at" on wide tables; restacked rows have no heads, so the list says it. */
 .lead { display: none; font-size: var(--text-xs); color: var(--muted); margin-right: 2px; }
 @container (max-width: 699px) { .lead { display: inline; } }
-/* An address tag: a hairline rectangle on the small radius, mono text, an arrow that says it opens. Not a pill. */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -26,7 +25,6 @@
 .tag .arrow { width: 12px; height: 12px; margin-left: -1px; transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) ease; }
 .text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .partly { flex: none; font-family: var(--font-sans); font-size: var(--text-2xs); color: var(--muted); }
-/* The rest of the addresses: the same hairline rectangle, just the count. */
 .more {
   flex: none;
   height: 26px;

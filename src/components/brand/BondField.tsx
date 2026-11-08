@@ -1,11 +1,5 @@
 import type * as React from "react";
 
-/**
- * The sign-in plate's drawing: the server as a row of state lines (the same vocabulary as the Status
- * spectrum) held together by gluon coils, like a ladder diagram in a physics notebook. The pattern is
- * fixed, so it says nothing about the server before anyone signs in.
- */
-
 const W = 460;
 const H = 340;
 const LINES = 14;

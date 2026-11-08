@@ -13,11 +13,6 @@ import { FlowNav } from "./FlowFrame";
 import s from "../builder.module.css";
 import f from "./flow.module.css";
 
-/**
- * Optional: a subdomain of the server's domain that leads to the app's web page. Off by
- * default, because putting something on the internet should be a choice someone makes.
- * The address is added after the app starts, through the Network page's own API.
- */
 export function AddressStep({ draft, name, choice: { choice, update }, onBack, onNext }: { draft: Draft; name: string; choice: AddressState; onBack: () => void; onNext: () => void }) {
   const { data, error, isLoading } = useApi<RoutesResponse>("/api/network/routes", { revalidateOnFocus: false });
   const port = draft.spec.web.port ?? draft.spec.web.containerPort;

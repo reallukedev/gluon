@@ -25,9 +25,7 @@ interface UsageInfo {
 
 export interface MountChoice {
   path: string;
-  /** For the drive picker: "2.0 TB hard drive · /mnt/hdd1". */
   label: string;
-  /** For sentences and the breadcrumb: "2.0 TB hard drive" or "/var". */
   short?: string;
   /** How full it is, so the map opens on the drive that most needs looking at. */
   pct?: number;
@@ -42,7 +40,6 @@ function rootFor(path: string, mounts: MountChoice[]): string {
 const MB = 1_000_000;
 const LIST_N = 10;
 
-/** Cleanups Gluon knows how to do, placed on the folder where the space is. */
 function useHints(onChanged?: () => void): { hints: SpaceHint[]; node: React.ReactNode } {
   const fmt = useFormat();
   const a = useCleanupActions(onChanged);
@@ -76,11 +73,7 @@ function useHints(onChanged?: () => void): { hints: SpaceHint[]; node: React.Rea
   return { hints, node: a.confirmNode };
 }
 
-/**
- * "What's using space": a map of a drive's folders (two levels at a time), with cleanups hung on the
- * blocks they'd shrink, a readout for the block under the pointer, and the plain list underneath.
- * Scans run in the background; drilling into a folder shows what's already known right away.
- */
+/** Scans run in the background; drilling into a folder shows what's already known right away. */
 export function UsagePanel({ mounts, initialPath, onChanged }: { mounts: MountChoice[]; initialPath: string | null; onChanged?: () => void }) {
   const fmt = useFormat();
   const [path, setPath] = React.useState(() => initialPath ?? [...mounts].sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0))[0]?.path ?? "/");
@@ -344,7 +337,6 @@ export function UsagePanel({ mounts, initialPath, onChanged }: { mounts: MountCh
   );
 }
 
-/** The line under the map: the block in focus in words, with what you can do about it right there. */
 function Readout({ block: b, hints, urgent, onDrill }: { block: Block; hints: SpaceHint[]; urgent: boolean; onDrill: (p: string) => void }) {
   const fmt = useFormat();
   const share = b.share;

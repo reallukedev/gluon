@@ -21,7 +21,6 @@ interface Props {
   onPick: (path: string) => void;
 }
 
-/** Browse to a destination folder (for Copy to…/Move to…). Only folders you can change are choosable. */
 export function FolderPicker({ open, onOpenChange, title, confirmLabel, initialPath, places, onPick }: Props) {
   const [path, setPath] = React.useState(initialPath);
   const [creating, setCreating] = React.useState(false);

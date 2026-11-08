@@ -30,10 +30,6 @@ import { Thumb } from "./Thumb";
 import { DRAG_MIME, KindIcon, PlaceIcon, THUMBABLE, baseName, isDirLike, isNewFolderKey, modKey, newFolderHint, parentOf, sortFromPref, thumbUrl, useDropTarget, useMediaQuery } from "./lib";
 import s from "./browser.module.css";
 
-// Browsing: the path drawn as columns (each folder beside the one it's in, the file you're on in
-// full at the end), or the deepest folder as a list or a grid of pictures. Arrow keys walk the
-// tree, dragging between columns moves, and a status line under it all acts on the selection.
-
 export interface BrowserApi {
   rename: (path: string) => void;
   newFolder: () => void;
@@ -92,7 +88,6 @@ export const Browser = React.memo(function Browser() {
   const colRefs = React.useRef(new Map<number, HTMLDivElement>());
   const clipboard = useClip();
 
-  // How the deepest folder is shown: remembered per folder, photo folders as a grid.
   const [views, setViews] = React.useState<Record<string, FolderView>>({});
   React.useEffect(() => setViews(readViews()), []);
   const deepListing = listings.current.get(deepest);
@@ -120,7 +115,6 @@ export const Browser = React.memo(function Browser() {
   const one = selected.length === 1 ? selected[0]! : null;
   const fileOpen = one && !isDirLike(one) ? one : null;
 
-  // Arriving somewhere new: the deepest column has the keyboard.
   const lastPath = React.useRef(path);
   React.useEffect(() => {
     if (lastPath.current === path) return;
@@ -145,7 +139,6 @@ export const Browser = React.memo(function Browser() {
     if (single && sel.col !== last) setSel({ ...NO_SEL, col: last });
   }, [single, sel.col, last]);
 
-  // Tell the rest of Files where we are and what's selected.
   React.useEffect(() => {
     f.setHere(deepListing);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,7 +156,6 @@ export const Browser = React.memo(function Browser() {
 
   const focusCol = (col: number) => requestAnimationFrame(() => colRefs.current.get(col)?.focus({ preventScroll: true }));
 
-  /** Choose an item. In columns a folder opens beside it; in a list or grid it's only selected. */
   const choose = (col: number, i: number, ev: Pick = {}, navigate = true) => {
     const rows = rowsOf(col);
     const e = rows[i];
@@ -267,7 +259,6 @@ export const Browser = React.memo(function Browser() {
   }
 
   const clear = () => setSel((c) => ({ ...c, paths: new Set() }));
-  /** Everything in the folder, not just the rows that have loaded (up to 20,000). */
   const selectAll = (col: number) => {
     const dir = folders[col]!;
     void allIn(col).then((all) => {
@@ -278,7 +269,6 @@ export const Browser = React.memo(function Browser() {
   };
   React.useImperativeHandle(f.browser, () => ({ rename: (p) => setRenaming({ path: p }), newFolder: () => void newFolder(), newFile: () => void newFile(), setView, clear }));
 
-  // ---- refreshes: every visible column listens
   const refreshers = React.useRef(new Map<string, () => void>());
   React.useEffect(() => f.onRefresh(() => refreshers.current.forEach((r) => r())), [f.onRefresh]);
   useFolderSizes(deepListing && !deepListing.sortLimited ? deepListing : undefined, () => refreshers.current.get(deepest)?.());
@@ -343,7 +333,6 @@ export const Browser = React.memo(function Browser() {
     [folders.join("\n")],
   );
 
-  // ---- keys inside a column or the list/grid
   const typed = React.useRef({ text: "", at: 0 });
   const onKeys = (col: number, ev: React.KeyboardEvent, grid: { cols: number } | null) => {
     if (renaming || (ev.target as HTMLElement).closest("input,button,[role=menuitem]")) return;
@@ -423,7 +412,6 @@ export const Browser = React.memo(function Browser() {
           else return;
           break;
         }
-        // Type the start of a name to jump to it.
         if (m || ev.altKey || ev.key.length !== 1) return;
         const t = typed.current;
         const now = Date.now();
@@ -457,7 +445,6 @@ export const Browser = React.memo(function Browser() {
     return () => window.removeEventListener("keydown", onKey);
   }, [deepWritable]);
 
-  // ---- files from the computer: dropped on a folder they upload into it
   const [dropping, setDropping] = React.useState<{ into: string; ok: boolean } | null>(null);
   const depth = React.useRef(0);
   const dropAt = (e: React.DragEvent) => {
@@ -655,7 +642,6 @@ export const Browser = React.memo(function Browser() {
   );
 });
 
-/** A folder that can't be listed, said plainly with the way out. */
 function ErrorNotice({ error, path, onGo }: { error: ApiError; path: string; onGo: (p: string) => void }) {
   const { admin, go } = useFiles();
   const up = parentOf(path);
@@ -703,8 +689,6 @@ function FolderNotices({ listing }: { listing: ListingT | undefined }) {
   return notes.length ? <div className={s.notices}>{notes}</div> : null;
 }
 
-// ---------------------------------------------------------------- the path, as text you can click or drop on
-
 function PathLine({ folders, onGo }: { folders: string[]; onGo: (p: string) => void }) {
   const f = useFiles();
   const first = folders[0]!;
@@ -735,8 +719,6 @@ function PathPart({ path, last, onGo }: { path: string; last: boolean; onGo: (p:
     </button>
   );
 }
-
-// ---------------------------------------------------------------- column 0: places
 
 const GROUP_TITLE: Record<PlaceGroup, string> = { shared: "Shared with you", pins: "Pinned", drives: "Drives", people: "Home folders", apps: "App folders", recent: "Recent" };
 
@@ -813,7 +795,11 @@ function PlaceRow({ place: p, on, onGo, onDropItems }: { place: Place; on: boole
 function Pins({ pins, current, onGo, onDropItems, onRename }: { pins: Place[]; current: string; onGo: (p: string) => void; onDropItems: (src: string[], dest: string, copy: boolean) => void; onRename: (p: Place) => void }) {
   const f = useFiles();
   const [list, setList] = React.useState(pins);
-  React.useEffect(() => setList(pins), [pins]);
+  const [listFor, setListFor] = React.useState(pins);
+  if (listFor !== pins) {
+    setListFor(pins);
+    setList(pins);
+  }
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const onEnd = async (e: DragEndEvent) => {
     if (!e.over || e.active.id === e.over.id) return;
@@ -881,9 +867,13 @@ function PinRow({ place: p, on, onGo, onDropItems, onRename, onUnpin }: { place:
 
 function RenamePin({ place, onClose }: { place: Place | null; onClose: () => void }) {
   const f = useFiles();
-  const [label, setLabel] = React.useState("");
+  const [label, setLabel] = React.useState(place?.label ?? "");
   const [busy, setBusy] = React.useState(false);
-  React.useEffect(() => setLabel(place?.label ?? ""), [place]);
+  const [labelFor, setLabelFor] = React.useState(place);
+  if (labelFor !== place) {
+    setLabelFor(place);
+    setLabel(place?.label ?? "");
+  }
   const save = async () => {
     if (!place || !label.trim()) return;
     setBusy(true);
@@ -929,8 +919,6 @@ function RenamePin({ place, onClose }: { place: Place | null; onClose: () => voi
   );
 }
 
-// ---------------------------------------------------------------- one folder's listing, shared by columns and panes
-
 interface ColumnHandlers {
   onChoose: (i: number, ev?: Pick) => void;
   onToggle: (i: number) => void;
@@ -941,7 +929,6 @@ interface ColumnHandlers {
   menuFor: (entries: FileEntry[]) => MenuEntry[];
   backgroundMenu: () => MenuEntry[];
   onDropItems: (src: string[], dest: string, copy: boolean) => void;
-  /** What a drag from this row carries: the whole selection when the row is in it. */
   dragFrom: (path: string) => string[];
   refCb: (el: HTMLDivElement | null) => void;
 }
@@ -1001,7 +988,6 @@ function FolderState({ L, folder, touch }: { L: ReturnType<typeof useListing>; f
   );
 }
 
-/** One column of the column view: a folder's contents, virtualised, with the open folder marked. */
 function FolderColumn(p: FolderProps & { open: string | null; active: boolean }) {
   const { L, selfDrop, ctx, onContextMenu, waited } = useFolder(p);
   const scroller = React.useRef<HTMLDivElement>(null);
@@ -1111,7 +1097,6 @@ interface RowProps {
   onDropItems: (src: string[], dest: string, copy: boolean) => void;
 }
 
-/** Click, double-click, long-press on touch, drag out and drop in: what every row and tile does. */
 function useItem(p: RowProps) {
   const e = p.entry;
   const dir = isDirLike(e);
@@ -1211,8 +1196,6 @@ const ColRow = React.memo(function ColRow(p: RowProps) {
     </div>
   );
 });
-
-// ---------------------------------------------------------------- the deepest folder as a list or a grid
 
 function FolderPane(p: FolderProps & { view: "list" | "grid"; admin: boolean; active: boolean }) {
   const { L, max, selfDrop, ctx, onContextMenu, waited } = useFolder(p);
@@ -1450,8 +1433,6 @@ const Tile = React.memo(function Tile(p: RowProps & { size: number }) {
   );
 });
 
-// ---------------------------------------------------------------- the end: the file itself
-
 function PreviewColumn({ entry, phoneCurrent, writable, siblings }: { entry: FileEntry; phoneCurrent?: boolean; writable: boolean; siblings: FileEntry[] }) {
   const f = useFiles();
   const look = () => f.look(entry, siblings);
@@ -1479,7 +1460,6 @@ function PreviewColumn({ entry, phoneCurrent, writable, siblings }: { entry: Fil
   );
 }
 
-/** With nothing open at the end of the columns: what this folder holds, where it lives, who uses it. */
 function FolderSummary({ listing: l }: { listing: ListingT }) {
   const f = useFiles();
   const fmt = useFormat();
@@ -1508,8 +1488,6 @@ function FolderSummary({ listing: l }: { listing: ListingT }) {
     </section>
   );
 }
-
-// ---------------------------------------------------------------- the status line under it all
 
 function StatusLine(p: {
   selected: FileEntry[];

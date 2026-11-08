@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { MoreHoriz, OpenNewWindow, Copy, Download, EditPencil, Internet, Trash, PagePlus, FolderPlus, Upload, Prohibition, Check } from "iconoir-react";
 import { api, ApiError } from "@/lib/client/api";
@@ -15,12 +16,14 @@ import { formatBytes, plural } from "@/lib/format";
 import { isImage, languageOf, type SiteDetail, type SiteFileContent, type SitePreview, type SiteTextFile, type SiteTree } from "@/lib/sites-types";
 import { fileUrl, fromDrop, fromInput, importZip, join, sortPicked, uploadAll, useSite, useTree, type Picked, type UploadProgress } from "./client";
 import { FileTree, uploadEntries, type TreeAction } from "./FileTree";
-import { CodePane } from "./CodePane";
 import { PreviewPane, usePreview } from "./PreviewPane";
 import { PublishDialog } from "./PublishDialog";
 import { VersionStrip } from "./VersionStrip";
 import { MoveDialog, NameDialog } from "./dialogs";
 import e from "./editor.module.css";
+
+// CodeMirror only builds its editor after mount, so its code needn't hold up the page.
+const CodePane = dynamic(() => import("./CodePane").then((m) => m.CodePane), { ssr: false, loading: () => <div className={e.code} /> });
 
 type Buffer = { file: SiteTextFile; text: string; key: number };
 type Pane = "files" | "code" | "preview";
@@ -178,7 +181,6 @@ export function SiteEditor({ initial, openFile }: { initial: SiteDetail; openFil
     window.history.replaceState(null, "", `/sites/${id}?file=${encodeURIComponent(p)}`);
   }
 
-  // First file: the one in the link, else the front page, else whatever's there.
   React.useEffect(() => {
     if (!tree || path) return;
     const first = tree.files.find((f) => f.path === "index.html") ?? tree.files.find((f) => /\.html?$/i.test(f.path)) ?? tree.files[0];
@@ -303,8 +305,6 @@ export function SiteEditor({ initial, openFile }: { initial: SiteDetail; openFil
     };
   }, [dirtyPaths, confirm, router]);
 
-  // ---------------------------------------------------------------- file actions
-
   async function op(body: Record<string, unknown>): Promise<SiteTree> {
     const t = await api.post<SiteTree>(`/api/sites/${id}/files`, body);
     applyTree(t);
@@ -413,8 +413,6 @@ export function SiteEditor({ initial, openFile }: { initial: SiteDetail; openFil
     }
   }
 
-  // ---------------------------------------------------------------- site actions
-
   const url = site.address?.url ?? null;
   async function rollback(version: string) {
     setBusy(version);
@@ -475,8 +473,6 @@ export function SiteEditor({ initial, openFile }: { initial: SiteDetail; openFil
   }
 
   const copy = () => url && void copyText(url).then((ok) => (ok ? toast.success("Address copied", { description: url.replace(/^https?:\/\//, "") }) : toast.error("Couldn't copy", { description: url })));
-
-  // ---------------------------------------------------------------- layout
 
   // Wide: files, editor and preview side by side. Tablet: files plus the editor or the preview. Phone: one at a time.
   const show = (p: Pane) => (wide ? true : phone ? pane === p : p === "files" || p === (pane === "files" ? "code" : pane));

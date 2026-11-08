@@ -1,6 +1,3 @@
-/* Shared pieces of the Files prototypes: previews, facts, the size rule, thumbnails, rename. */
-
-/* ------------------------------------------------------------ preview body */
 .fallback {
   display: grid;
   justify-items: center;
@@ -38,7 +35,6 @@
 .read { overflow: auto; padding: 4px 2px 12px; }
 .textNote { margin: 0; color: var(--muted); font-size: var(--text-xs); }
 
-/* ------------------------------------------------------------ facts */
 .facts { display: grid; gap: 12px; min-width: 0; }
 .factList { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 16px; margin: 0; font-size: var(--text-sm); }
 .factList dt { color: var(--muted); }
@@ -46,12 +42,10 @@
 .factPath { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px 7px 10px; border-radius: 8px; background: var(--sunk); font-size: var(--text-xs); color: var(--ink-2); }
 .factPath > .mono, .factPath > :global(.mono) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ------------------------------------------------------------ size rule */
 .rule { position: relative; display: block; height: 2px; min-width: 0; }
 .rule > span { position: absolute; inset: 0 auto 0 0; background: var(--line-strong); border-radius: 1px; }
 .rule[data-empty] { opacity: 0; }
 
-/* ------------------------------------------------------------ thumbnails */
 .thumb { position: relative; display: grid; place-items: center; overflow: hidden; width: 100%; height: 100%; background: var(--sunk); color: var(--muted); }
 .thumb[data-kind="folder"] { background: transparent; }
 .thumbImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
@@ -61,7 +55,6 @@
 .thumbGlyph { width: 26px; height: 26px; stroke-width: 1.25; color: var(--faint); }
 .thumbExt { font-family: var(--font-display); font-stretch: 85%; font-size: var(--text-2xs); font-weight: 600; letter-spacing: 0.12em; color: var(--muted); }
 
-/* ------------------------------------------------------------ rename */
 .rename {
   width: 100%;
   min-width: 0;

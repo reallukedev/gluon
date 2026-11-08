@@ -21,7 +21,6 @@ export interface CheckupStart {
   target: string | null;
 }
 
-/** The Checkup tab: run a full checkup or a targeted one, watch it live, and look back at past runs. */
 export function CheckupTab({ initial, runId, start }: { initial: Promise<CheckupState | null>; runId: string | null; start: CheckupStart | null }) {
   const router = useRouter();
   const state = useApi<CheckupState>(STATE_URL, { fallbackData: React.use(initial) ?? undefined, refresh: 30_000 });
@@ -96,7 +95,6 @@ export function CheckupTab({ initial, runId, start }: { initial: Promise<Checkup
   );
 }
 
-/** Before anything has run: the rows the checkup will fill, and the button that starts it. */
 function RunSkeleton() {
   return (
     <div className={s.run}>
@@ -111,7 +109,6 @@ function RunSkeleton() {
   );
 }
 
-/** The tab while the server reads apps and drives for it: the run panel and both lists in their places. */
 export function CheckupSkeleton() {
   return (
     <div className={s.stack} aria-busy>
@@ -200,10 +197,6 @@ function verdictState(v: RunView, streaming: boolean): TickState {
   return c.fail ? "fail" : c.warn ? "warn" : "ok";
 }
 
-/**
- * One run: its instrument, verdict, what changed and what it found. `home` is the kind this view is
- * about; a run of that kind offers to run again, anything else also offers the full checkup.
- */
 export function RunPanel({ view, streaming, isLive, onRun, onBackToLatest, home = "full" }: { view: RunView; streaming: boolean; isLive: boolean; onRun: (kind: CheckupKind, target: string | null) => void; onBackToLatest: (() => void) | null; home?: CheckupKind }) {
   const fmt = useFormat();
   const results = React.useMemo(() => new Map(view.results.map((r) => [r.id, r])), [view.results]);

@@ -44,7 +44,6 @@ interface PromptProps {
   history: string[];
   running: boolean;
   disabled: boolean;
-  /** The running command seems to be asking for a password: hide what's typed. */
   secret: boolean;
   label: string;
   onRun: (line: string) => void;
@@ -54,10 +53,7 @@ interface PromptProps {
   onClear: () => void;
 }
 
-/**
- * The command line: type, Tab to complete, ↑ and ↓ for earlier commands, Enter to run. While a
- * command runs it becomes that command's keyboard: Enter sends a line, Ctrl-C interrupts.
- */
+/** While a command runs it becomes that command's keyboard: Enter sends a line, Ctrl-C interrupts. */
 export const Prompt = React.forwardRef<PromptHandle, PromptProps>(function Prompt(p, ref) {
   const [value, setValue] = React.useState("");
   const [cursor, setCursor] = React.useState(0);

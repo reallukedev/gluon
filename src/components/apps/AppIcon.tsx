@@ -2,7 +2,6 @@
 import * as React from "react";
 import s from "./appIcon.module.css";
 
-/** An app's icon from its CasaOS/selfh.st URL, falling back to a lettered tile if it fails to load. */
 /** Remote icons go through Gluon's icon cache; data: and same-origin URLs are used as they are. */
 export function iconSrc(src: string | null | undefined): string | null {
   if (!src) return null;

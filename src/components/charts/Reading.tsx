@@ -4,10 +4,6 @@ import { TimeChart } from "./TimeChart";
 import type { MachineReading } from "./readings";
 import r from "./reading.module.css";
 
-/**
- * One machine reading: the figure, a line of context in numbers, and its last few minutes as a
- * chart with a scale. `sm` puts the label and figure on one row for small tiles.
- */
 export function Reading({
   reading,
   span,
@@ -22,9 +18,7 @@ export function Reading({
   windowMs: number;
   size?: "sm" | "md";
   chartHeight?: number;
-  /** What the reading sits on, so the chart's end dot rings in the right colour. */
   ground?: "panel" | "ground";
-  /** Label the chart's time axis; the smallest tiles leave it off. */
   times?: boolean;
 }) {
   const fmt = useFormat();

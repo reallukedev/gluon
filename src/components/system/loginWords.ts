@@ -1,7 +1,5 @@
 import type { LiveSession, LoginZone } from "@/lib/system-types";
 
-/** Plain words for sign-in data, shared by the Sign-ins tab and the Home widget. */
-
 export const ZONE_WORDS: Record<LoginZone, string> = {
   home: "Home network",
   away: "Outside your home network",
@@ -36,7 +34,6 @@ export function methodWords(method: LiveSession["method"], keyLabel: string | nu
   return null;
 }
 
-/** "luke", "luke and ali", "luke, ali and 2 others" */
 export function peopleList(names: string[]): string {
   if (names.length <= 2) return names.join(" and ");
   if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;

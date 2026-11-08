@@ -55,7 +55,6 @@ export function storageSummary(inv: Inventory, fmt: ReturnType<typeof useFormat>
   );
 }
 
-/** Every mounted filesystem people keep things on, by a name a person recognises. */
 export function mountChoices(disks: DiskView[]): MountChoice[] {
   const rows = mountedRows(disks).filter((r) => r.vol.primaryMount && r.vol.role === "filesystem" && !r.vol.primaryMount.startsWith("/boot"));
   const perDisk = new Map<string, number>();
@@ -83,7 +82,6 @@ function StorageTabs({ tab }: { tab: StorageTab }) {
   );
 }
 
-/** While the server reads the drives: the title and tabs as they will be, the rest in its places. */
 function StorageSkeleton({ tab }: { tab: StorageTab }) {
   return (
     <>
@@ -131,7 +129,6 @@ function StorageSkeleton({ tab }: { tab: StorageTab }) {
   );
 }
 
-/** The page stays put while the drives are read; only what depends on them waits. */
 export function StorageView({ initial, tab, usage }: { initial: Promise<Inventory>; tab: StorageTab; usage: string | null }) {
   return (
     <Page>
@@ -305,7 +302,6 @@ function StorageLive({ initial: pending, tab, usage }: { initial: Promise<Invent
   );
 }
 
-/** How to read the bars. */
 export function Legend() {
   return (
     <p className={s.legend}>

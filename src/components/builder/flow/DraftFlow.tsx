@@ -21,14 +21,9 @@ export type DraftStep = Exclude<FlowStepKey, "source">;
 
 const STEP_NAMES: Record<DraftStep, string> = { setup: "Set up", address: "Public address", review: "Review", start: "Start" };
 
-/**
- * The guided steps after the draft exists. Everything typed autosaves into the draft (the same
- * one the full builder edits), and the step lives in the address bar, so a reload lands where
- * the person was.
- */
 export function DraftFlow({ initial, initialStep, target: platformTarget }: { initial: CustomAppDetail; initialStep: DraftStep; target: BuilderTarget }) {
   const [step, setStepState] = React.useState<DraftStep>(() => (initial.job && !initial.job.finishedAt) || initial.status === "published" ? "start" : initialStep);
-  // Poll while a job runs (SWR re-reads the option each render, so it follows the latest detail).
+  // SWR re-reads the option each render, so polling follows the latest detail.
   const [jobActive, setJobActive] = React.useState(!!initial.job && !initial.job.finishedAt);
   const { data, mutate } = useApi<CustomAppDetail>(`/api/custom-apps/${initial.id}`, { fallbackData: initial, refresh: jobActive ? 1500 : undefined, revalidateOnFocus: false });
   const d = data ?? initial;
@@ -57,7 +52,6 @@ export function DraftFlow({ initial, initialStep, target: platformTarget }: { in
     [d.id],
   );
 
-  // ---------------------------------------------------------------- checks (as the builder runs them)
   const ctx = React.useMemo(() => ({ source: d.source, target, web: draft.spec.web, secrets: draft.secrets }), [d.source, target, draft.spec.web, draft.secrets]);
   const analysis = React.useMemo(() => analyze(draft.spec.compose, ctx), [draft.spec.compose, ctx]);
   const local = React.useMemo(() => [...detailIssues(draft.spec, false), ...analysis.issues], [draft.spec, analysis.issues]);

@@ -30,7 +30,6 @@ interface Props {
   onCreated: (id: string) => void;
 }
 
-/** Name it, pick how it starts, and land in the editor with something to look at. */
 export function NewSiteDialog({ open, onOpenChange, start: initialStart, baseDomain, onCreated }: Props) {
   const [name, setName] = React.useState("");
   const [start, setStart] = React.useState<StartWith>(initialStart);

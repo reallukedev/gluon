@@ -11,7 +11,6 @@ import s from "../games.module.css";
 
 const NONE = "__none";
 
-/** Where players go when they connect by IP or by a name mc-router doesn't know. */
 export function FallbackDialog({ open, onOpenChange, st, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; st: GamesStatus; onDone: (r: McChangeResult) => void }) {
   const servers = javaServers(st);
   const host = craftyHostOf(st, st.fallback?.target.kind === "crafty" ? st.fallback.backend : null);

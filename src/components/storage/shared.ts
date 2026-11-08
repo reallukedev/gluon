@@ -1,14 +1,13 @@
 import type { LineState } from "@/lib/types";
 import type { DiskView, SmartAttribute, SmartSummary, StorageJob, VolumeView } from "@/lib/storage-types";
 
-/** Every volume on a disk, including LVM/crypt children. */
 export function allVolumes(d: DiskView): VolumeView[] {
   const top = [...d.partitions, ...(d.wholeDisk ? [d.wholeDisk] : [])];
   const walk = (v: VolumeView): VolumeView[] => [v, ...v.children.flatMap(walk)];
   return top.flatMap(walk);
 }
 
-/** Mounted filesystems that won't come back after a restart (mirrors the server's check). */
+/** Mirrors the server's check. */
 export function notPermanent(v: VolumeView, d: DiskView): boolean {
   return (
     v.role === "filesystem" &&
@@ -48,7 +47,6 @@ export function transportLabel(d: DiskView): string {
   return t ? t.toUpperCase() : "";
 }
 
-/** One short phrase for a disk's health. */
 export function smartPhrase(s: SmartSummary | null): string {
   if (!s) return "Health not checked yet";
   switch (s.state) {
@@ -92,8 +90,6 @@ export const JOB_STATUS: Record<StorageJob["status"], string> = {
   interrupted: "Interrupted",
   cancelled: "Stopped",
 };
-
-// ---------------------------------------------------------------- SMART attributes in plain words
 
 const NAMES: Record<number, string> = {
   1: "Read errors (rate)",
@@ -165,7 +161,7 @@ function rawNumber(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Plain verdict for one attribute. `known` = smartctl knows this drive's attribute meanings. */
+/** `known` means smartctl knows this drive's attribute meanings. */
 export function attributeVerdict(a: SmartAttribute, known: boolean, hdd: boolean): Verdict {
   const temp = a.id === 190 || a.id === 194;
   if (a.whenFailed === "now") return { tone: a.prefailure ? "fault" : "attention", text: temp ? "Hotter than the maker allows" : "Below the maker's safe limit now" };

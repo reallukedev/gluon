@@ -61,7 +61,6 @@ export function TrafficTab() {
     ];
   };
 
-  // ---- containers
   const last = live.containers.at(-1);
   const history = live.containers;
   const rows = (last?.list ?? []).map((c) => {

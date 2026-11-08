@@ -15,7 +15,6 @@ import { act, initial, quiet, shortDuration } from "./client";
 import { channelPath } from "./tree";
 import s from "./voice.module.css";
 
-/** Who's connected right now, where they are, and the few things an admin does to them. */
 export function People({ appId, live, rootName, onChanged }: { appId: string; live: VoiceLive; rootName: string | null; onChanged: () => void }) {
   const [kicking, setKicking] = React.useState<VoiceUser | null>(null);
   const byId = React.useMemo(() => new Map(live.channels.map((c) => [c.id, c])), [live.channels]);

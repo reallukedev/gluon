@@ -13,7 +13,6 @@ import { TimeChart } from "@/components/charts/TimeChart";
 import { monitorLine, ms, pct, Trace, TraceLegend } from "./monitorBits";
 import s from "./alerts.module.css";
 
-/** Everything about one monitor: uptime, the week at a glance, response times, outages, raw checks. */
 export function MonitorDetailDialog({ id, open, onOpenChange, footer }: { id: string | null; open: boolean; onOpenChange: (o: boolean) => void; footer: (d: Detail) => React.ReactNode }) {
   const fmt = useFormat();
   const { data, error } = useApi<Detail>(open && id ? `/api/alerts/monitors/${encodeURIComponent(id)}` : null, { refresh: 30_000 });

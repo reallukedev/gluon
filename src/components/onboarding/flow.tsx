@@ -8,13 +8,9 @@ import o from "./onboarding.module.css";
 export interface Flow {
   plan: Plan;
   step: StepId;
-  /** Go to the next step (or finish after the last). */
   next: () => void;
-  /** Go to the previous step; undefined on the first. */
   back?: () => void;
-  /** Mark first run done and leave for `to` (Home by default). */
   finish: (to?: string) => void;
-  /** Finishing is in flight (buttons show it). */
   leaving: boolean;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
 }
@@ -39,7 +35,7 @@ export function useMemberPlan(): MemberPlan {
   return plan;
 }
 
-/** The step's title (focused when the step changes, so screen readers hear where they are) and lede. */
+/** Focused when the step changes, so screen readers hear where they are. */
 export function StepHead({ title, art, children }: { title: React.ReactNode; art?: React.ReactNode; children?: React.ReactNode }) {
   const { headingRef } = useFlow();
   return (
@@ -53,11 +49,7 @@ export function StepHead({ title, art, children }: { title: React.ReactNode; art
   );
 }
 
-/**
- * The step's way on. Back sits on the left; the skip (named for what skipping means) and the one
- * primary action on the right. On phones the bar sticks to the bottom, primary full width under
- * the thumb.
- */
+/** On phones the bar sticks to the bottom, primary full width under the thumb. */
 export function Actions({ primary, skip, back = true }: { primary?: React.ReactNode; skip?: { label: string; onClick: () => void; disabled?: boolean }; back?: boolean }) {
   const flow = useFlow();
   const showBack = back && !!flow.back;
@@ -86,7 +78,6 @@ export function Actions({ primary, skip, back = true }: { primary?: React.ReactN
   );
 }
 
-/** A part that couldn't be read: says which, offers another go, keeps the technical bit folded away. */
 export function PartError({ message, detail, onRetry }: { message: string; detail?: string | null; onRetry?: () => void }) {
   return (
     <div className={o.partError} role="alert">
@@ -104,12 +95,10 @@ export function PartError({ message, detail, onRetry }: { message: string; detai
   );
 }
 
-/** "Alex" from "Alex Smith"; the username when there's no name. */
 export function firstName(displayName: string, fallback: string): string {
   return displayName.trim().split(/\s+/)[0] || fallback;
 }
 
-/** An hour of the day in the person's clock style: "04:00" or "4 AM". */
 export function hourLabel(h: number, clock: "auto" | "12" | "24"): string {
   if (clock === "24") return `${String(h).padStart(2, "0")}:00`;
   if (clock === "12") return `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;

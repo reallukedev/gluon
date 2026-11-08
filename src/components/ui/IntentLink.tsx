@@ -6,7 +6,6 @@ import { useIntentPrefetch } from "@/lib/client/prefetch";
 type Props = React.ComponentPropsWithRef<typeof Link>;
 type Handler = ((e: never) => void) | undefined;
 
-/** Calls the caller's handler, then ours. */
 function both<E>(theirs: Handler, ours: Handler) {
   if (!theirs) return ours;
   if (!ours) return theirs;
@@ -16,11 +15,7 @@ function both<E>(theirs: Handler, ours: Handler) {
   };
 }
 
-/**
- * A Link for places people move between all the time (the sidebar, tabs, section lists, back links):
- * pointing at it, focusing it or pressing it fetches the whole page, so the click lands on real content.
- * Lists of many links keep the plain Link, which only fetches a page's skeleton.
- */
+/** Lists of many links keep the plain Link, which only fetches a page's skeleton. */
 export function IntentLink({ href, onPointerEnter, onPointerLeave, onPointerDown, onFocus, onBlur, ...rest }: Props) {
   const intent = useIntentPrefetch(typeof href === "string" ? href : undefined) as Partial<Record<"onPointerEnter" | "onPointerLeave" | "onPointerDown" | "onFocus" | "onBlur", Handler>>;
   return (

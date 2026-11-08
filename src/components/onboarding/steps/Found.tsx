@@ -16,10 +16,6 @@ const URL = "/api/onboarding/inventory?part=";
 // A first look, not a live view: read once, don't re-scan every time the window gets focus.
 const ONCE = { revalidateOnFocus: false, revalidateOnReconnect: false } as const;
 
-/**
- * Admin, step 1: what Gluon found on the server. Four readings (apps, drives, public addresses, what
- * needs you), each read on its own so a slow or failing one never holds up the rest.
- */
 export function Found() {
   const plan = useAdminPlan();
   const { next } = useFlow();

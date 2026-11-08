@@ -1,7 +1,4 @@
-/* Home Assistant widgets. Tiles reuse the accessory tiles in live.module.css; these are the pressable parts. */
-
-/* A pressable tile is a button inside the grid cell. It takes the control border (strong hairline), so what can be
-   pressed reads apart from what can only be looked at. */
+/* Pressable tiles take the strong hairline, so what can be pressed reads apart from what can only be looked at. */
 .cell { display: grid; min-width: 0; }
 .tile { transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
 .tile[data-off] { opacity: 0.55; }
@@ -30,7 +27,6 @@
 .foot { flex: none; margin: 0; padding: 0 var(--px, 16px) 10px; }
 .inlineLink { font: inherit; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); padding: 0; cursor: pointer; }
 
-/* Who's home */
 .summary { margin: 0; font-size: var(--text-sm); color: var(--ink-2); }
 .people { overflow: hidden; }
 .person { display: flex; align-items: center; gap: 10px; padding: 7px var(--px, 16px); min-width: 0; }
@@ -58,7 +54,6 @@
 .avatar[data-away] img { opacity: 0.6; }
 .more { flex: none; margin: -6px 0 0; font-size: var(--text-xs); color: var(--muted); }
 
-/* Settings: the picker */
 .picker { display: grid; gap: 8px; }
 .pickList { list-style: none; margin: 0; padding: 4px 10px; display: grid; gap: 10px; align-content: start; max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-panel); scrollbar-width: thin; }
 .pickList[aria-busy] { padding: 12px; gap: 12px; }

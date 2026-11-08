@@ -13,10 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { useSet } from "./personal";
 import s from "./settings.module.css";
 
-/*
- * Settings → Navigation. Its own module (loaded with the section, like the server-wide ones) so the
- * drag-and-drop library isn't part of every Settings page.
- */
+/* Its own module so the drag-and-drop library isn't part of every Settings page. */
 
 function SortRow({ id, label, hint, hidden, locked, onToggle }: { id: string; label: string; hint: string; hidden: boolean; locked: boolean; onToggle: (v: boolean) => void }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id });

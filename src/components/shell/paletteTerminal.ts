@@ -3,10 +3,6 @@ import { lastTarget, paletteCommand, requestAutorun, terminalHref, TERMINAL_RUN_
 import { containerOf, type TargetId } from "@/lib/terminal/types";
 import type { PaletteItem } from "./paletteModel";
 
-/**
- * "Run `df -h` on the server" (and in the container used last) when what's typed reads like a
- * command. Choosing it opens the terminal and runs it there, in a block you can see and stop.
- */
 export function terminalItems(q: string, userId: string, router: ReturnType<typeof useRouter>): { strong: boolean; items: PaletteItem[] } | null {
   const cmd = paletteCommand(q);
   if (!cmd) return null;

@@ -13,8 +13,6 @@ import { SetUp } from "../kit";
 import { TitleField, type IntegrationConfig } from "./media";
 import l from "./live.module.css";
 
-// ---------------------------------------------------------------- slskd
-
 function TransferRow({ t }: { t: SlskdTransfer }) {
   const fmt = useFormat();
   const Dir = t.direction === "download" ? ArrowDown : ArrowUp;
@@ -89,8 +87,6 @@ export function SlskdTransfers({ item, size }: WidgetProps<IntegrationConfig>) {
     </Gate>
   );
 }
-
-// ---------------------------------------------------------------- Homebridge
 
 export interface HomebridgeConfig extends IntegrationConfig {
   only?: string[];
@@ -267,8 +263,6 @@ export function HomebridgeSettings({ config, onChange }: SettingsProps<Homebridg
   );
 }
 
-// ---------------------------------------------------------------- generic JSON
-
 function FieldValue({ f }: { f: JsonFieldValue }) {
   const fmt = useFormat();
   const v = f.value;
@@ -321,8 +315,6 @@ export function JsonFields({ item, size }: WidgetProps<IntegrationConfig>) {
     </Gate>
   );
 }
-
-// ---------------------------------------------------------------- link status
 
 export interface LinkStatusConfig {
   url?: string;

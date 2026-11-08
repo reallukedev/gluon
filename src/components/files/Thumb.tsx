@@ -20,11 +20,7 @@ function extOf(name: string): string | null {
   return x.length <= 5 ? x.toUpperCase() : null;
 }
 
-/**
- * The face of an item at any size: a thumbnail for photos, a still frame for playable video, the
- * drawn folder, or the kind's glyph with its extension. `cover` is an image to show instead (a
- * film's poster, a show's or an album's cover found beside it).
- */
+/** `cover` is an image to show instead (a film's poster, an album's cover found beside it). */
 export function Thumb(props: ThumbProps) {
   // Keyed by path: a recycled row (virtual lists, re-sorts) must not keep another file's loaded or failed state.
   return <ThumbFace key={props.item.path} {...props} />;

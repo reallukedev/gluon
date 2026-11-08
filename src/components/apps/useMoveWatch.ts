@@ -5,11 +5,7 @@ import { api } from "@/lib/client/api";
 import { toast } from "@/components/ui/Toast";
 import { markSeen, replay, wasSeen } from "./moveStream";
 
-/**
- * Tells the person how a move ended when they weren't watching it: when an app stops being part
- * of a running move, fetch the move's result and toast it, unless the dialog showing it is open.
- * `moving` are the ids the server says a move involves (the original and the new copy).
- */
+/** Toasts how a move ended when nobody was watching it, unless the dialog showing it is open. */
 export function useMoveWatch(moving: string[], showing: string | null, onEnded?: () => void) {
   const before = React.useRef<Set<string>>(new Set(moving));
   const ended = React.useRef(onEnded);

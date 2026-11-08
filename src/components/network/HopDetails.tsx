@@ -14,8 +14,6 @@ import { certRows, gluonUpdater } from "./model";
 import { DriftSentence } from "./DriftNotice";
 import s from "./network.module.css";
 
-/** What each hop of the map opens: DNS records, the router and its address updater, the web server. */
-
 function dnsLine(d: DnsResult): { state: LineState; label: string } {
   if (d.status === "ok") return { state: "running", label: d.proxied ? "Through Cloudflare" : d.matchesPublicIp === false ? "Points elsewhere" : "Points to your router" };
   if (d.status === "missing") return { state: "unhealthy", label: "No record" };

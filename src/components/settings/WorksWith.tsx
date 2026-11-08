@@ -16,7 +16,6 @@ const OPTIONS = [
   { value: "none", label: "Docker only" },
 ] as const satisfies readonly { value: PlatformSetting; label: string }[];
 
-/** What Gluon found for each choice, drawn as a state line. */
 function detected(p: PlatformInfo, v: PlatformSetting): { line: LineState; text: string } {
   if (v === "auto") {
     const pick = p.umbrel.found ? "Umbrel" : p.casaos.found ? "CasaOS" : "Docker only";
@@ -30,7 +29,6 @@ function detected(p: PlatformInfo, v: PlatformSetting): { line: LineState; text:
 const umbrelName = (p: PlatformInfo) => (p.umbrel.version ? `Umbrel (${p.umbrel.version})` : "Umbrel");
 const casaName = (p: PlatformInfo) => (p.casaos.version ? `CasaOS ${p.casaos.version}` : "CasaOS");
 
-/** One plain sentence: what Gluon works with right now, and what else is on the server. */
 function statusSentence(p: PlatformInfo): string {
   const auto = p.setting === "auto";
   if (p.active === "umbrel") {
@@ -45,7 +43,6 @@ function statusSentence(p: PlatformInfo): string {
     const also = p.umbrel.found ? ` ${umbrelName(p)} is also running.` : "";
     return `${lead}${how}.${also}`;
   }
-  // Plain Docker.
   // The cards already say neither was found.
   if (auto) return "";
   const found = [p.umbrel.found && umbrelName(p), p.casaos.found && casaName(p)].filter(Boolean) as string[];
@@ -53,7 +50,6 @@ function statusSentence(p: PlatformInfo): string {
   return `Apps are managed with Docker alone. ${found.join(" and ")} ${found.length > 1 ? "are" : "is"} installed but left alone.`;
 }
 
-/** Which home server OS Gluon works alongside. Saved the moment it changes. */
 export function WorksWith() {
   const { data, error, mutate, isLoading } = useApi<PlatformInfo>("/api/platform", { revalidateOnFocus: false });
   const [pending, setPending] = React.useState<PlatformSetting | null>(null);
@@ -139,7 +135,6 @@ export function WorksWith() {
   );
 }
 
-/** A platform chosen by hand that isn't on the server: say what that breaks. */
 function Missing({ info }: { info: PlatformInfo }) {
   if (info.setting === "umbrel" && !info.umbrel.found) {
     return (

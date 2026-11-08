@@ -1,6 +1,3 @@
-/* The app builder. Tokens only; hairlines and tonal steps, no fills that aren't the plate. */
-
-/* ---------------------------------------------------------------- editor layout */
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 312px; gap: 24px; align-items: start; }
 .main { min-width: 0; }
 .rail { position: sticky; top: 20px; display: grid; gap: 16px; min-width: 0; }
@@ -21,12 +18,10 @@
 .link { padding: 0; border: 0; background: none; font: inherit; color: var(--ink); text-decoration: underline; text-underline-offset: 0.2em; text-decoration-color: var(--line-strong); cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .link:hover { text-decoration-color: var(--ink); } }
 
-/* Header title with the app's icon */
 .title { display: inline-flex; align-items: center; gap: 14px; min-width: 0; }
 .titleText { min-width: 0; overflow-wrap: anywhere; }
 .summaryState { display: inline-flex; align-items: center; gap: 8px; }
 
-/* ---------------------------------------------------------------- rail */
 .railBody { display: grid; gap: 14px; }
 .railState { display: grid; gap: 6px; }
 .railFacts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: var(--text-sm); }
@@ -40,7 +35,6 @@
 .saveState[data-state="saved"] .saveDot { background: var(--ink-2); }
 .saveState[data-state="error"] .saveDot, .saveState[data-state="conflict"] .saveDot { background: var(--fault); height: 5px; }
 
-/* ---------------------------------------------------------------- issues */
 .issues { list-style: none; margin: 0; padding: 0; display: grid; }
 .issue { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 9px 0; border-top: 1px solid var(--line); font-size: var(--text-sm); line-height: 1.45; }
 .issue:first-child { border-top: 0; padding-top: 2px; }
@@ -59,14 +53,12 @@
 .issueCount[data-level="warning"]::before { width: 2px; height: 12px; background: var(--ink-2); transform: none; }
 .issuesHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 
-/* ---------------------------------------------------------------- field notes */
 .note { font-size: var(--text-sm); color: var(--muted); line-height: 1.45; display: flex; gap: 7px; align-items: baseline; }
 .note[data-level="error"] { color: var(--fault); }
 .note[data-level="error"]::before { content: ""; flex: none; width: 5px; height: 5px; transform: translateY(-2px) rotate(45deg); background: var(--fault); }
 .note[data-level="warning"] { color: var(--ink-2); }
 .note[data-level="warning"]::before { content: ""; flex: none; width: 2px; height: 11px; transform: translateY(1px); background: var(--ink-2); }
 
-/* ---------------------------------------------------------------- services */
 .serviceHead { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .serviceName { font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: 0.86rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .webTag { font-size: var(--text-xs); color: var(--muted); font-weight: 400; white-space: nowrap; }
@@ -76,7 +68,6 @@
 .groupTitle { font-size: var(--text-md); font-weight: 620; }
 .groupDesc { font-size: var(--text-sm); color: var(--muted); }
 
-/* Rows of ports, folders and variables: a grid of inputs with a trailing remove button. */
 .rows { display: grid; gap: 8px; min-width: 0; }
 .row { display: grid; gap: 8px; align-items: start; min-width: 0; }
 .portRow { grid-template-columns: minmax(0, 120px) 16px minmax(0, 120px) 92px 34px; }
@@ -118,19 +109,16 @@
 .inlineControl { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: var(--control); }
 .inlineControl > label, .inlineControl > span { font-size: var(--text-md); }
 
-/* ---------------------------------------------------------------- image field */
 .imageStatus { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 20px; font-size: var(--text-sm); color: var(--muted); }
 .tagList { display: flex; flex-wrap: wrap; gap: 6px; }
 .suggest { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); font-size: var(--text-sm); }
 .suggest ul { margin: 0; padding-left: 18px; color: var(--ink-2); }
 
-/* ---------------------------------------------------------------- icon picker */
 .iconPicker { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: start; }
 .iconPreview { display: grid; gap: 6px; justify-items: center; }
 .iconControls { display: grid; gap: 8px; min-width: 0; }
 .iconButtons { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* ---------------------------------------------------------------- compose tab */
 .editorWrap { border: 1px solid var(--line); border-radius: var(--radius-panel); overflow: hidden; background: var(--panel); min-width: 0; }
 .editorBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; min-height: 46px; padding: 6px 10px 6px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
 .editorBar h2 { font-size: var(--text-md); font-weight: 620; }
@@ -139,7 +127,6 @@
 @media (max-width: 1280px) { .composeGrid { grid-template-columns: minmax(0, 1fr); } }
 .diffNote { padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); background: var(--panel-2); }
 
-/* ---------------------------------------------------------------- source picker (New app) */
 .sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 860px) { .sources { grid-template-columns: minmax(0, 1fr); } }
 .source {
@@ -170,7 +157,6 @@
 .formActions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: flex-end; padding-top: 4px; }
 .formActions > .grow { margin-right: auto; font-size: var(--text-sm); color: var(--muted); }
 
-/* ---------------------------------------------------------------- list */
 .table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; }
 .headRow, .listRow {
   display: grid;
@@ -204,14 +190,12 @@
 }
 .storeLine { margin-top: 14px; font-size: var(--text-sm); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 
-/* ---------------------------------------------------------------- store setup */
 .explain { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; }
 .setupPanel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 24px; align-items: center; }
 @media (max-width: 720px) { .setupPanel { grid-template-columns: minmax(0, 1fr); } }
 .setupText { display: grid; gap: 6px; }
 .setupText h2 { font-size: var(--text-lg); font-weight: 600; font-family: var(--font-display); font-stretch: 90%; }
 
-/* ---------------------------------------------------------------- jobs */
 .job { display: grid; gap: 14px; min-width: 0; }
 .jobSteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: var(--text-sm); }
 .jobSteps li { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 10px; align-items: baseline; color: var(--ink-2); }
@@ -241,7 +225,6 @@
 .closeNote { font-size: var(--text-sm); color: var(--muted); }
 .consequences { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: var(--text-md); line-height: 1.5; color: var(--ink-2); }
 
-/* ---------------------------------------------------------------- lists in panels */
 .plainList { list-style: none; margin: 0; padding: 0; }
 .plainList > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; padding: 11px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); }
 .plainList > li:first-child { border-top: 0; }
@@ -256,7 +239,6 @@
 /* The YAML editor sits flush inside .editorWrap; its height comes from the component. */
 .yamlHost.yamlHost { height: var(--editor-height, 520px); border: 0; border-radius: 0; }
 
-/* ---------------------------------------------------------------- shared bits */
 .grow { flex: 1; min-width: 0; }
 .gap { height: 16px; }
 .pageNotice { margin-bottom: 16px; }
@@ -267,7 +249,6 @@
 .addService { display: flex; }
 .threeCol { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px 20px; }
 
-/* ---------------------------------------------------------------- more settings */
 .advancedBody { display: grid; gap: 22px; padding-top: 10px; min-width: 0; }
 .subGroup { display: grid; gap: 10px; min-width: 0; }
 .subTitle { font-size: var(--text-sm); font-weight: 620; color: var(--ink); }
@@ -283,7 +264,6 @@
 .netAdd > :first-child { flex: 1 1 160px; min-width: 0; }
 .netAddNote { flex-basis: 100%; }
 
-/* ---------------------------------------------------------------- image search and tags */
 .imageField { display: grid; gap: 6px; min-width: 0; }
 .searchPopup.searchPopup { width: max(var(--anchor-width), min(420px, var(--available-width))); max-width: min(560px, var(--available-width)); }
 .searchStatus { padding: 4px 10px 6px; font-size: var(--text-xs); color: var(--muted); }
@@ -348,7 +328,6 @@
 .plainListAfter { margin-top: 4px; }
 .logAfter { margin-top: 8px; }
 
-/* A media folder the person still has to choose. */
 .pendingFolder { display: grid; gap: 8px; padding: 12px 14px; border: 1px dashed var(--line-strong); border-radius: var(--radius-control); min-width: 0; }
 .pendingTitle { font-size: var(--text-md); font-weight: 560; overflow-wrap: anywhere; }
 @media (max-width: 560px) {

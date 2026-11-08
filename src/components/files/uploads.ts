@@ -3,12 +3,7 @@ import * as React from "react";
 import { api, ApiError } from "@/lib/client/api";
 import type { ConflictPolicy, UploadSession } from "@/lib/files-types";
 
-/**
- * Client side of resumable uploads. A module-level store (so uploads keep going while you move
- * between folders or pages) with two uploads in flight at a time, chunked PUTs with progress, pause,
- * cancel, automatic retry when the connection drops, and resuming sessions left by a reload once the
- * person picks the same files again.
- */
+/** A module-level store, so uploads keep going while you move between folders or pages. */
 
 export type UploadStatus = "queued" | "starting" | "uploading" | "paused" | "waiting" | "completing" | "done" | "skipped" | "failed" | "cancelled" | "interrupted";
 
@@ -23,7 +18,6 @@ export interface UploadItem {
   conflict: ConflictPolicy;
   status: UploadStatus;
   error: string | null;
-  /** Smoothed bytes per second. */
   speed: number;
   finalPath: string | null;
   createdAt: number;
@@ -116,7 +110,6 @@ export const uploads = {
     emit();
   },
 
-  /** Sessions the server still holds from before a reload (their File objects are gone). */
   async loadInterrupted() {
     try {
       const list = await api.get<UploadSession[]>("/api/files/uploads");
@@ -131,7 +124,6 @@ export const uploads = {
       /* offline: try later */
     }
   },
-  /** Match re-picked files (same name and size) to interrupted sessions and continue them. */
   attach(files: File[]): number {
     let n = 0;
     for (const it of items) {
@@ -152,8 +144,6 @@ const NO_UPLOADS: ReturnType<typeof uploads.snapshot> = [];
 export function useUploads() {
   return React.useSyncExternalStore(uploads.subscribe, uploads.snapshot, () => NO_UPLOADS);
 }
-
-// ---------------------------------------------------------------- engine
 
 function pump() {
   while (active() < MAX_ACTIVE) {

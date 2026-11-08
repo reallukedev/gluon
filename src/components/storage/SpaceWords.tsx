@@ -18,9 +18,8 @@ interface Row {
 }
 
 /**
- * Each filesystem in numbers: "62% full · 1.1 of 1.8 TB · about 8 months left" when it's filling,
- * otherwise what's free. The forecast is last week's rate (the same one Home's space widget uses);
- * until there's history, rows say what's free instead of guessing.
+ * The forecast is last week's rate (the same one Home's space widget uses); until there's history, rows say what's free
+ * instead of guessing.
  */
 export function SpaceWords({ fallback, attention }: { fallback?: FsUsage[]; attention?: Set<string> }) {
   const fmt = useFormat();

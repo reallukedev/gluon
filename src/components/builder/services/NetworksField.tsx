@@ -12,11 +12,6 @@ import { FieldNotes, issuesAt } from "../Issues";
 import type { Draft } from "../state";
 import s from "../builder.module.css";
 
-/**
- * Which networks a service joins: the app's own (its services reach each other by name), Docker
- * networks already on this server (to reach a reverse proxy or a shared database), or a new one
- * made for this app.
- */
 export function NetworksField({ draft, form: f, issues, target }: { draft: Draft; form: ServiceForm; issues: Issue[]; target: BuilderTarget }) {
   const { data, error, isLoading } = useApi<DockerNetworkInfo[]>(target === "compose" ? "/api/custom-apps/networks" : null, { revalidateOnFocus: false });
   const [adding, setAdding] = React.useState<string | null>(null);

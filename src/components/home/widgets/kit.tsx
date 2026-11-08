@@ -1,5 +1,4 @@
 "use client";
-// Small pieces every Home widget shares: rows that fit, "set me up" actions, and data-age notes.
 import * as React from "react";
 import { Button } from "@/components/ui/Button";
 import { Time } from "@/components/ui/Time";
@@ -40,7 +39,6 @@ export function useFit<T extends HTMLElement>(count: number): [React.RefObject<T
   return [ref, Math.min(fit, count)];
 }
 
-/** The one action an unconfigured widget offers: open its own settings. */
 export function SetUp({ openSettings, children }: { openSettings?: () => void; children: React.ReactNode }) {
   if (!openSettings) return null;
   return (
@@ -74,7 +72,6 @@ export function useDriveNames() {
   );
 }
 
-/** Size of an element, kept current as the widget is resized. */
 export function useBox<T extends HTMLElement>(): [React.RefObject<T | null>, { w: number; h: number }] {
   const ref = React.useRef<T>(null);
   const [size, setSize] = React.useState({ w: 0, h: 0 });
@@ -89,8 +86,6 @@ export function useBox<T extends HTMLElement>(): [React.RefObject<T | null>, { w
 }
 
 export { useReducedMotion } from "@/lib/client/motion";
-
-// ---------------------------------------------------------------- the viewer's day
 
 function zoneOffset(ts: number, tz: string): number {
   const p = new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(ts);
@@ -115,7 +110,6 @@ export function startOfDay(ts: number, tz: string | undefined): number {
   }
 }
 
-/** The viewer's local midnight today; moves on at midnight. */
 export function useDayStart(): number {
   const { timeZone } = usePrefs();
   const [now, setNow] = React.useState(() => Date.now());
@@ -131,7 +125,6 @@ export function useDayStart(): number {
   return day;
 }
 
-/** "under a minute", "4 min", "1 h 12 min". */
 export function spanWords(ms: number): string {
   const min = Math.round(ms / 60_000);
   if (min < 1) return "under a minute";

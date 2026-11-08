@@ -10,7 +10,6 @@ import { loadLanguage } from "@/components/code/languages";
 import type { SiteLanguage } from "@/lib/sites-types";
 import e from "./editor.module.css";
 
-/** Real HTML (closing tags as you type), CSS and JavaScript modes; the rest borrow Gluon's shared loaders. */
 async function language(lang: SiteLanguage): Promise<Extension | null> {
   switch (lang) {
     case "html":
@@ -38,10 +37,7 @@ interface Props {
   onSave: () => void;
 }
 
-/**
- * The site's code editor. ⌘S / Ctrl+S saves from inside it; the page handles the same keys when
- * focus is elsewhere. Colours come from Gluon's tokens, so it follows light and dark.
- */
+/** ⌘S saves from inside it; the page handles the same keys when focus is elsewhere. */
 export function CodePane({ docKey, value, language: lang, label, onChange, onSave }: Props) {
   const host = React.useRef<HTMLDivElement>(null);
   const view = React.useRef<EditorView | null>(null);

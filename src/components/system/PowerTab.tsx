@@ -241,8 +241,6 @@ export function PowerTab({ initial }: { initial?: PowerStatus }) {
   );
 }
 
-// ---------------------------------------------------------------- what happens to apps
-
 function ImpactPanel({ impact }: { impact: PowerImpact | null }) {
   const fmt = useFormat();
   if (!impact) {
@@ -306,9 +304,6 @@ function ImpactPanel({ impact }: { impact: PowerImpact | null }) {
   );
 }
 
-// ---------------------------------------------------------------- the next 24 hours
-
-/** Minutes past midnight in `tz` for `ts`. */
 function minutesIn(ts: number, tz: string | null | undefined): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -319,7 +314,6 @@ function minutesIn(ts: number, tz: string | null | undefined): number {
   return Number(parts.find((p) => p.type === "hour")?.value ?? 0) * 60 + Number(parts.find((p) => p.type === "minute")?.value ?? 0);
 }
 
-/** A ruler of the next 24 hours from now, with the restart marked on it. */
 const noopSubscribe = () => () => {};
 
 function DayRuler(props: { hhmm?: string; at?: number; tz: string | null | undefined }) {
@@ -349,7 +343,6 @@ function DayRulerLive({ hhmm, at, tz }: { hhmm?: string; at?: number; tz: string
   }
   if (mins === null) return null;
   const nowMin = minutesIn(now, tz);
-  // Hour ticks: label the midnight and midday that fall inside the window.
   const ticks = Array.from({ length: 25 }, (_, i) => i);
   const offsetToMidnight = (1440 - nowMin) % 1440;
   return (
@@ -374,11 +367,8 @@ function DayRulerLive({ hhmm, at, tz }: { hhmm?: string; at?: number; tz: string
   );
 }
 
-// ---------------------------------------------------------------- waiting for the server
-
 type Phase = "stopping" | "down" | "back" | "slow";
 
-/** After "restart now": watch Gluon go away and come back, then reload. */
 function Waiting({ action }: { action: Action }) {
   const [phase, setPhase] = React.useState<Phase>("stopping");
   const [elapsed, setElapsed] = React.useState(0);

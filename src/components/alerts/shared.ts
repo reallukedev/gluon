@@ -6,7 +6,6 @@ export const CHANNELS_URL = "/api/alerts/channels";
 
 export const KIND_LABEL: Record<ChannelKind, string> = { ntfy: "ntfy", pushover: "Pushover", email: "Email", webhook: "Webhook", xmpp: "XMPP" };
 
-/** Group items into days (newest first), keyed by the viewer's local calendar day. */
 export function byDay<T>(items: T[], at: (t: T) => number, dayOf: (ts: number) => string): { day: string; ts: number; items: T[] }[] {
   const out: { day: string; ts: number; items: T[] }[] = [];
   for (const it of items) {
@@ -21,7 +20,6 @@ export function byDay<T>(items: T[], at: (t: T) => number, dayOf: (ts: number) =
 
 export const errorMessage = (e: unknown, fallback = "That didn't work.") => (e instanceof Error ? e.message : fallback);
 
-/** "Today", "Yesterday", or the weekday + date in the viewer's format. */
 export function dayLabel(ts: number, date: (ts: number, o?: { year?: boolean; weekday?: boolean }) => string): string {
   const now = Date.now();
   const d = date(ts);

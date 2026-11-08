@@ -3,7 +3,6 @@ import type { ConfirmOptions } from "@/components/ui/Dialog";
 import { sourceName } from "@/lib/app-names";
 import { plural } from "@/lib/format";
 
-/** "Remove the old copy": Compose `down` on its own project. Its folders and data stay on disk. */
 export function removeCopyConfirm(a: AppSummary, of: AppSummary | undefined, onConfirm: () => Promise<void>): ConfirmOptions {
   const from = sourceName(a.source);
   const other = of ? `${of.name} from ${sourceName(of.source)}` : a.copyOf ? `${a.copyOf.name} from ${sourceName(a.copyOf.source)}` : null;
@@ -22,7 +21,6 @@ export function removeCopyConfirm(a: AppSummary, of: AppSummary | undefined, onC
   };
 }
 
-/** "Stop the old copy": for a copy Gluon can only manage container by container. */
 export function stopCopyConfirm(a: AppSummary, of: AppSummary | undefined, onConfirm: () => Promise<void>): ConfirmOptions {
   const ports = [...new Set(a.containers.flatMap((c) => c.ports.map((p) => p.host)))];
   return {
@@ -38,7 +36,6 @@ export function stopCopyConfirm(a: AppSummary, of: AppSummary | undefined, onCon
   };
 }
 
-/** Uninstalling an app Umbrel installed: Umbrel removes it along with its data. Works for old copies too. */
 export function uninstallUmbrelConfirm(a: AppSummary, of: AppSummary | undefined, onConfirm: () => Promise<void>): ConfirmOptions {
   const other = of ? `${of.name} from ${sourceName(of.source)}` : a.copyOf ? `${a.copyOf.name} from ${sourceName(a.copyOf.source)}` : null;
   return {

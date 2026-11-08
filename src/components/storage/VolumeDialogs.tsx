@@ -19,7 +19,6 @@ export function errorText(e: unknown, fallback = "That didn't work."): string | 
   return e instanceof Error ? e.message : fallback;
 }
 
-/** The storage change that's running right now, if any (so conflicting buttons can be disabled). */
 export function useRunningJob(): StorageJob | null {
   const { data } = useApi<StorageJob[]>(`${OPS}?limit=10`, { refresh: 5000 });
   return data?.find((j) => j.status === "running" && j.kind !== "usage") ?? null;
@@ -54,8 +53,6 @@ function Problems({ blockers, warnings }: { blockers: string[]; warnings: string
     </>
   );
 }
-
-// ---------------------------------------------------------------- mount
 
 export function MountDialog({ vol, disk, onClose, onDone }: { vol: VolumeView | null; disk: DiskView | null; onClose: () => void; onDone: () => void }) {
   const [target, setTarget] = React.useState("");
@@ -153,8 +150,6 @@ export function MountDialog({ vol, disk, onClose, onDone }: { vol: VolumeView | 
     </Dialog>
   );
 }
-
-// ---------------------------------------------------------------- unmount
 
 export function UnmountDialog({ target, onClose, onDone }: { target: string | null; onClose: () => void; onDone: () => void }) {
   const [plan, setPlan] = React.useState<UnmountPlan | null>(null);
@@ -272,8 +267,6 @@ export function UnmountDialog({ target, onClose, onDone }: { target: string | nu
     </Dialog>
   );
 }
-
-// ---------------------------------------------------------------- make permanent
 
 export function PersistDialog({ target, hdd, users = [], onClose, onDone }: { target: string | null; hdd: boolean; users?: VolumeUser[]; onClose: () => void; onDone: () => void }) {
   const fmt = useFormat();

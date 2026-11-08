@@ -9,13 +9,7 @@ import { prefersReducedMotion } from "@/lib/client/motion";
 import type { HopId, HopState } from "./model";
 import m from "./map.module.css";
 
-/**
- * The map: how a visitor reaches an app. Internet → Cloudflare (two lanes: direct, where Cloudflare
- * only answers the DNS lookup, and proxied, where its servers carry the traffic) → your router →
- * the web server (Caddy) on this machine → apps. Every hop is a button carrying its health in
- * StateLine grammar; pressing one opens its details under the map. Horizontal on wide screens,
- * vertical on phones (the two lanes then sit side by side).
- */
+/** Direct means Cloudflare only answers the DNS lookup; proxied means its servers carry the traffic. */
 
 export interface MapModel {
   baseDomain: string;
@@ -37,7 +31,6 @@ interface Props {
   detailsId: string;
   children?: React.ReactNode;
   detailsTitle?: string;
-  /** A recheck is running: hop states dim until the results land. */
   checking?: boolean;
 }
 
@@ -173,7 +166,6 @@ function Hop({
   area: string;
   icon: React.ReactNode;
   title: string;
-  /** The technical name and figure, under the plain words. */
   detail: string;
   st: HopState;
   count?: number;

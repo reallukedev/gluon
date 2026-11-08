@@ -53,7 +53,6 @@ function installWords(i: Install): string {
   }
 }
 
-/** "Gluon 1.2.0" / "Nightly 1.3.0-nightly.20260928.1a2b3c4". */
 function buildName(d: UpdatesStatus): string {
   if (!d.latest) return "A newer Gluon";
   return d.latest.channel === "nightly" ? `${CHANNEL_NAME.nightly} ${d.latest.version}` : `Gluon ${d.latest.version}`;
@@ -129,8 +128,6 @@ export function Updates() {
     </div>
   );
 }
-
-// ---------------------------------------------------------------- what's running, drawn on a rail
 
 function Running({ data, checking, onCheck }: { data: UpdatesStatus; checking: boolean; onCheck: () => void }) {
   const fmt = useFormat();
@@ -222,8 +219,6 @@ function Running({ data, checking, onCheck }: { data: UpdatesStatus; checking: b
   );
 }
 
-// ---------------------------------------------------------------- what to do now: one of several states
-
 function Situation({
   data,
   checking,
@@ -274,7 +269,6 @@ function CantUpdate({ data }: { data: UpdatesStatus }) {
   );
 }
 
-/** Stable, while running something past the newest release (usually a nightly). */
 function Ahead({ data, onStarted, confirm }: { data: UpdatesStatus; onStarted: () => void; confirm: (o: ConfirmOptions) => void }) {
   const latest = data.latest!;
   const nightly = data.running.channel === "nightly";
@@ -325,8 +319,6 @@ function Ahead({ data, onStarted, confirm }: { data: UpdatesStatus; onStarted: (
     </Notice>
   );
 }
-
-// ---------------------------------------------------------------- what's available and how to get it
 
 function Available({ data, onStarted }: { data: UpdatesStatus; onStarted: () => void }) {
   const usable = data.options.filter((o) => o.available);
@@ -427,8 +419,6 @@ function Available({ data, onStarted }: { data: UpdatesStatus; onStarted: () => 
   );
 }
 
-// ---------------------------------------------------------------- an update in progress, or one that failed
-
 function Progress({ run, onDone }: { run: UpdateRun; onDone: () => void }) {
   const [log, setLog] = React.useState<UpdateLog | null>(null);
   const [offline, setOffline] = React.useState(false);
@@ -502,7 +492,6 @@ function LastFailed({ run }: { run: UpdateRun }) {
   );
 }
 
-/** The updater's output for one run, fetched when opened. */
 function RunOutput({ id }: { id: string }) {
   const [open, setOpen] = React.useState(false);
   const { data, error, isLoading } = useApi<UpdateLog>(open ? `${URL}/runs/${id}` : null);
@@ -520,8 +509,6 @@ function RunOutput({ id }: { id: string }) {
     </Disclosure>
   );
 }
-
-// ---------------------------------------------------------------- saving
 
 type SaveSettings = (patch: Partial<UpdateSettings>) => Promise<UpdatesStatus>;
 
@@ -557,8 +544,6 @@ function useSettingsWriter(data: UpdatesStatus | undefined, onSaved: (v: Updates
   );
   return { settings: shown, save };
 }
-
-// ---------------------------------------------------------------- channel
 
 function Channel({ settings, save, setChecking }: { settings: UpdateSettings; save: SaveSettings; setChecking: (b: boolean) => void }) {
   const [pending, setPending] = React.useState<UpdateChannel | null>(null);
@@ -628,8 +613,6 @@ function Channel({ settings, save, setChecking }: { settings: UpdateSettings; sa
   );
 }
 
-// ---------------------------------------------------------------- automatic updates
-
 function Automatic({ data, settings: st, save: write }: { data: UpdatesStatus; settings: UpdateSettings; save: SaveSettings }) {
   const fmt = useFormat();
   // Through the person's clock setting (12 or 24 hour), like every other time in Gluon.
@@ -697,8 +680,6 @@ function Automatic({ data, settings: st, save: write }: { data: UpdatesStatus; s
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- history
 
 function History({ runs }: { runs: UpdateRun[] }) {
   return (

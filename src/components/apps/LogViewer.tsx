@@ -13,7 +13,7 @@ import s from "./logs.module.css";
 const MAX = 20_000;
 const BUCKETS = 160;
 
-// ---- minimal ANSI SGR → spans (colours mapped onto the palette, not raw terminal colours)
+// Minimal ANSI SGR parsing; colours map onto the palette, not raw terminal colours.
 const COLOR: Record<number, string> = { 31: "red", 91: "red", 33: "yellow", 93: "yellow", 32: "green", 92: "green", 34: "blue", 94: "blue", 36: "blue", 96: "blue", 35: "blue", 95: "blue", 90: "dim", 2: "dim" };
 const SGR = /\x1b\[([\d;]*)m/g;
 const CSI = /\x1b\[[\d;?]*[A-Za-z]/g;
@@ -62,10 +62,6 @@ interface Row extends LogLine {
   plain: string;
 }
 
-/**
- * Live logs: follow new lines, search with next/previous, jump between errors, and a strip down
- * the right edge that maps where errors, warnings and matches are in everything loaded.
- */
 export function LogViewer({ appId, containers, initialContainer }: { appId: string; containers: { name: string; label: string }[]; initialContainer: string | null }) {
   const { prefs, setPrefs } = usePrefs();
   const fmt = useFormat();
@@ -141,7 +137,6 @@ export function LogViewer({ appId, containers, initialContainer }: { appId: stri
     },
   });
 
-  // Stick to the bottom while following.
   React.useEffect(() => {
     if (follow && visible.length) v.scrollToIndex(visible.length - 1, { align: "end" });
   }, [visible.length, follow, v]);
@@ -161,7 +156,6 @@ export function LogViewer({ appId, containers, initialContainer }: { appId: stri
     setCursor(index);
     v.scrollToIndex(index, { align: "center" });
   }
-  /** Next (or previous) index in `list` after the cursor, wrapping around. */
   function step(list: number[], dir: 1 | -1) {
     if (!list.length) return;
     const from = cursor ?? (dir === 1 ? range.start - 1 : range.end + 1);

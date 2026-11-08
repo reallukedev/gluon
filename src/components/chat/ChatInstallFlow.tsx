@@ -36,7 +36,6 @@ const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 interface Plan {
   existing: { id: string; name: string; server: ChatServerKind }[];
   conflicts: string[];
-  /** Quark only: the host ports it will publish. */
   ports: QuarkPorts | null;
   /** Something holds the standard chat ports, so Quark gets the alternate set. */
   alternatePorts: boolean;
@@ -57,12 +56,6 @@ const SERVER_DESC: Record<ChatServerKind, string> = {
   prosody: "The long-standing choice. Some settings restart it, and calls between homes need a second app Gluon installs.",
 };
 
-/**
- * Install a chat server the way Gluon manages it: Quark (the default) or Prosody. Pick the chat
- * domain and your own account, choose the features chat apps expect, then Gluon installs it,
- * publishes the domain on Network (so Caddy gets a certificate Gluon copies in) and hands over the
- * first admin's sign-in.
- */
 export function ChatInstallFlow({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [server, setServer] = React.useState<ChatServerKind>("quark");
   // The port check depends on the server: Quark also needs the call relay's ports.

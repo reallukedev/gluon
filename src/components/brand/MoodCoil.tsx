@@ -1,11 +1,7 @@
 "use client";
 import s from "./moodCoil.module.css";
 
-/**
- * The gluon coil as a mood: open and slowly breathing in green when all is well, wound tighter in sodium when
- * something needs the person. Same trochoid as the mark (mark.ts), drawn at hero size. With `draw` it sketches itself
- * in (Home passes its once-a-session entrance); reduced motion shows it drawn and still.
- */
+/** Reduced motion shows it drawn and still. */
 
 export type Mood = "calm" | "tense" | "fault" | "quiet";
 

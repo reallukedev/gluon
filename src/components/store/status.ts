@@ -10,7 +10,6 @@ const WORKING: Partial<Record<InstalledInfo["state"], string>> = {
   restarting: "Restarting",
 };
 
-/** How an installed app reads in the store: the StateLine and the words beside it. */
 export function installedLine(i: InstalledInfo): { line: LineState; label: string } | null {
   if (i.state === "not-installed") return null;
   const working = WORKING[i.state];

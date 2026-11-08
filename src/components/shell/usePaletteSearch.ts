@@ -9,10 +9,7 @@ const DEBOUNCE_MS = 70;
 const CACHE_MS = 30_000;
 const CACHE_MAX = 60;
 
-/**
- * Ask the server as you type and keep each group as it streams in. A new query cancels the one in
- * flight; finished answers are kept for half a minute so backspacing is instant.
- */
+/** Finished answers are kept for half a minute so backspacing is instant. */
 export function usePaletteSearch(open: boolean, term: string, scope: string): StreamState | null {
   const [state, setState] = React.useState<StreamState | null>(null);
   const latest = React.useRef<StreamState | null>(null);
@@ -81,7 +78,6 @@ export function usePaletteSearch(open: boolean, term: string, scope: string): St
   return state;
 }
 
-/** Recent searches, kept in this browser only (never on the server). */
 export function useRecentSearches(userId: string) {
   const key = `gluon:palette:recent:${userId}`;
   const [list, setList] = React.useState<string[]>([]);

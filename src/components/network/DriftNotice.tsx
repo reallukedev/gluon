@@ -1,6 +1,5 @@
 import type { DriftInfo } from "@/lib/network-types";
 
-/** One sentence: who changed the web server's settings file, whether it matters, what saving does. */
 export function driftSentence(info: DriftInfo | null): string {
   const who = info?.writer ? `${info.writer.charAt(0).toUpperCase()}${info.writer.slice(1)} rewrote` : "Something outside Gluon changed";
   const n = info?.settingLines ?? null;

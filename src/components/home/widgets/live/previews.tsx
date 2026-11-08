@@ -1,5 +1,3 @@
-// Collection drawings for the Home Assistant and Coolify widgets, in the same line language as ../previews.tsx
-// (120×56 tile, words as 2px strokes, StateLine geometry, no fills beyond sunk).
 import * as React from "react";
 import p from "../../previews.module.css";
 
@@ -16,7 +14,6 @@ function Tile({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Home controls: pressable tiles, one lit. */
 export function ControlsPreview() {
   const cells: [number, number, boolean][] = [
     [12, 8, true],
@@ -39,7 +36,6 @@ export function ControlsPreview() {
   );
 }
 
-/** Who's home: a solid line for home, a faint one for away, beside a round face. */
 export function PeoplePreview() {
   return (
     <Tile>
@@ -59,7 +55,6 @@ export function PeoplePreview() {
   );
 }
 
-/** Deployments: one dashed (deploying), one solid (worked), one short red (failed). */
 export function DeploymentsPreview() {
   return (
     <Tile>
@@ -82,7 +77,6 @@ export function DeploymentsPreview() {
   );
 }
 
-/** Minecraft servers: two running (one with people on), one stopped with its Start button. */
 export function ServersPreview() {
   return (
     <Tile>

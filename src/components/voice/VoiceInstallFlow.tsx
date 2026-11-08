@@ -38,11 +38,6 @@ interface Done {
   superuser: string;
 }
 
-/**
- * A new Mumble voice server with Gluon managing it from the first start: name and welcome message,
- * an optional join password, the port, then the builder installs it and Gluon sets a random admin
- * password, shown here once with everything people need to connect.
- */
 export function VoiceInstallFlow({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { data: plan, error: planError } = useApi<InstallDefaults>(open ? "/api/voice/install" : null, { revalidateOnFocus: false });
   const [step, setStep] = React.useState<Step>("name");

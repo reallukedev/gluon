@@ -10,9 +10,8 @@ import { RecoveryCodes } from "@/components/auth/RecoveryCodes";
 import d from "@/components/ui/dialog.module.css";
 
 /**
- * The server's rules (Settings → Server) need two-step sign-in for this person and they haven't set
- * it up. At home they set it up here before anything else; away from home it can't be done (a stolen
- * cookie could link its own phone), so the only way on is to come back home or sign out.
+ * Away from home it can't be done (a stolen cookie could link its own phone), so the only way on is to come back home
+ * or sign out.
  */
 export function ForceMfaSetup() {
   const router = useRouter();

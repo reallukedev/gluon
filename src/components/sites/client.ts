@@ -10,7 +10,6 @@ export const useTree = (id: string) => useApi<SiteTree>(`/api/sites/${id}/files`
 export const enc = encodeURIComponent;
 export const fileUrl = (id: string, path: string, download = false) => `/api/sites/${id}/raw?path=${enc(path)}${download ? "&download=1" : ""}`;
 
-/** A file picked or dropped, with where it goes in the site. */
 export interface Picked {
   file: File;
   rel: string;
@@ -40,7 +39,6 @@ async function rawPost<T>(url: string, body: Blob): Promise<T> {
 export const uploadOne = (id: string, rel: string, file: Blob, replace: boolean) => rawPost<{ path: string; replaced: boolean; tree: SiteTree }>(`/api/sites/${id}/upload?path=${enc(rel)}${replace ? "&replace=1" : ""}`, file);
 export const importZip = (id: string, zip: Blob, into: string) => rawPost<SiteImportResult>(`/api/sites/${id}/import${into ? `?into=${enc(into)}` : ""}`, zip);
 
-/** Split what someone picked into what can go on the site and what can't (and why), before sending anything. */
 export function sortPicked(items: Picked[]): { ok: Picked[]; skipped: { rel: string; reason: string }[]; junk: number } {
   const ok: Picked[] = [];
   const skipped: { rel: string; reason: string }[] = [];
@@ -59,9 +57,8 @@ export function sortPicked(items: Picked[]): { ok: Picked[]; skipped: { rel: str
 }
 
 /**
- * Files from an <input type=file> (with or without webkitdirectory). A picked folder arrives with
- * its own name on every path ("my-site/index.html"); that top folder is dropped so its contents
- * become the site's (or the target folder's) contents.
+ * A picked folder arrives with its own name on every path; that top folder is dropped so its contents become the
+ * site's.
  */
 export function fromInput(list: FileList | null, into: string): Picked[] {
   const files = [...(list ?? [])];
@@ -78,7 +75,6 @@ function topFolder(rels: string[]): string {
 
 export const join = (dir: string, name: string) => (dir ? `${dir}/${name}` : name);
 
-/** Files dropped on the page, walking into dropped folders. */
 export async function fromDrop(dt: DataTransfer, into: string): Promise<Picked[]> {
   const entries = [...dt.items].map((i) => (i.kind === "file" ? i.webkitGetAsEntry?.() : null)).filter((e): e is FileSystemEntry => !!e);
   if (!entries.length) return [...dt.files].map((file) => ({ file, rel: join(into, file.name) }));
@@ -121,7 +117,6 @@ export interface UploadProgress {
   current: string | null;
 }
 
-/** Send files one after another; failures are collected rather than stopping the rest. */
 export async function uploadAll(id: string, items: Picked[], replace: boolean, onProgress: (p: UploadProgress) => void): Promise<{ done: number; failed: { rel: string; message: string }[]; tree: SiteTree | null }> {
   const bytesTotal = items.reduce((n, i) => n + i.file.size, 0);
   let bytesDone = 0;

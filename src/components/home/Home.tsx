@@ -34,7 +34,6 @@ import s from "./home.module.css";
 
 interface Props {
   initial: HomeData;
-  /** The server's word: this browser session hasn't seen Home yet. */
   entrance: boolean;
 }
 
@@ -60,7 +59,6 @@ function useEntrance(fromServer: boolean) {
   return enter;
 }
 
-/** FLIP: when order changes, animate each widget from its old position to its new one. */
 function useFlip(container: React.RefObject<HTMLElement | null>, key: string) {
   const rects = React.useRef(new Map<string, DOMRect>());
   const capture = React.useCallback(() => {
@@ -89,7 +87,6 @@ function useFlip(container: React.RefObject<HTMLElement | null>, key: string) {
 /** Widgets don't shift while something is dragged: the order changes live instead (onDragOver). */
 const noStrategy = () => null;
 
-/** What a thing on Home is called in menus and announcements: its title, its label (an app's name), or its kind. */
 function nameFor(it: WidgetItem, d: WidgetDef | undefined): string {
   if (!d) return "this";
   return d.title?.(it.config as never) ?? d.label?.(it.config as never) ?? d.name;
@@ -97,11 +94,11 @@ function nameFor(it: WidgetItem, d: WidgetDef | undefined): string {
 
 const sizeLabel = (d: WidgetDef, z: Size) => d.sizeLabels?.[z] ?? SIZES[z].label;
 
-/** The Collection is only needed once someone opens it, so its code loads then (or when a pointer or focus heads for its button). */
+/** Loads when someone opens it, or when a pointer or focus heads for its button. */
 type CollectionView = typeof import("./Collection").Collection;
 const loadCollection = () => import("./Collection").then((m) => m.Collection);
 
-/** What a widget can ask of Home, by its id: one object for Home's lifetime, so widgets re-render only for their own changes. */
+/** One object for Home's lifetime, so widgets re-render only for their own changes. */
 interface WidgetActions {
   move: (id: string, by: -1 | 1) => void;
   resize: (id: string, size: Size) => void;
@@ -110,7 +107,6 @@ interface WidgetActions {
   update: (id: string, patch: Record<string, unknown>) => void;
 }
 
-/** Good first things to pin, by role, for an empty Home. */
 const STARTERS: Record<"admin" | "member", { type: string; why: string }[]> = {
   admin: [
     { type: "status", why: "One sentence about the server" },
@@ -168,7 +164,6 @@ export function Home({ initial, entrance }: Props) {
   // The sortable context changes (and re-renders every widget) whenever these do, so they keep their identity.
   const sortableIds = React.useMemo(() => items.map((i) => i.id), [items]);
 
-  // Leave ?edit=1 out of the URL once consumed.
   React.useEffect(() => {
     if (params.get("edit")) router.replace("/", { scroll: false });
   }, [params, router]);
@@ -205,7 +200,6 @@ export function Home({ initial, entrance }: Props) {
     [change],
   );
 
-  // ---- drag and drop (arrange mode)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
@@ -233,7 +227,6 @@ export function Home({ initial, entrance }: Props) {
   };
   const onDragEnd = () => setActiveId(null);
 
-  // ---- pin and unpin
   function pin(type: string, config?: Record<string, unknown>) {
     const d = widgetDef(type);
     if (!d) return;
@@ -482,7 +475,6 @@ export function Home({ initial, entrance }: Props) {
   );
 }
 
-/** Nothing pinned at all: a calm first screen that points at the Collection, with a few good starters. */
 function EmptyHome({ role, onPin, onOpen, onPreload }: { role: "admin" | "member"; onPin: (type: string) => void; onOpen: () => void; onPreload: () => void }) {
   const starters = STARTERS[role].map((x) => ({ ...x, def: widgetDef(x.type) })).filter((x): x is typeof x & { def: WidgetDef } => !!x.def);
   return (
@@ -612,7 +604,6 @@ interface FrameProps {
   update?: (patch: Record<string, unknown>) => void;
 }
 
-/** A size drawn as its own shape, so resizing reads as picking an outline. */
 function SizeGlyph({ size }: { size: Size }) {
   const { cols, rows } = SIZES[size];
   const w = cols * 2 + 2;

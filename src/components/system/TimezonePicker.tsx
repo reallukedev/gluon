@@ -7,7 +7,6 @@ import s from "./system.module.css";
 
 const label = (tz: string) => tz.replace(/_/g, " ").replace(/\//g, " / ");
 
-/** Searchable timezone select over the server's own list (`timedatectl list-timezones`). */
 export function TimezonePicker({ value, onChange, disabled }: { value: string | null; onChange: (tz: string) => void; disabled?: boolean }) {
   const { data, error } = useApi<{ timezones: string[] }>("/api/system/time", {
     revalidateOnFocus: false,

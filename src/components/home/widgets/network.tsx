@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/Surface";
 import { Age } from "./kit";
 import s from "./network.module.css";
 
-/** Size of an element, kept current as the widget is resized. */
 function useSize<T extends HTMLElement>(): [React.RefObject<T | null>, { w: number; h: number }] {
   const ref = React.useRef<T>(null);
   const [size, setSize] = React.useState({ w: 0, h: 0 });
@@ -33,10 +32,6 @@ const FLOOR = 1000; // 1 kB/s: below this a home network is idle.
 /** Log scale: every decade (1 kB/s, 10 kB/s, 1 MB/s…) gets the same height, so a quiet baseline and a burst both read. */
 const scale = (v: number, top: number) => Math.log10(1 + Math.max(0, v) / FLOOR) / Math.log10(1 + top / FLOOR);
 
-/**
- * Network traffic as a seismograph: one hairline per sample, incoming above the rail and outgoing below, on a
- * log scale with a dashed rule per decade. Hover, touch or arrow keys read any moment back into the figures.
- */
 export function NetworkWidget({ size }: WidgetProps) {
   const { host, status } = useLive();
   const fmt = useFormat();

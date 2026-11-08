@@ -14,9 +14,6 @@
 .panelFoot { margin: 0; padding: 12px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); }
 .num { text-align: right; font-size: var(--text-md); }
 
-/* ---------------------------------------------------------------- overview */
-
-/* Identity sits on the ground: the name, then how long it has been up. */
 .identity { display: grid; gap: 18px; padding: 4px 0 6px; min-width: 0; }
 .factsWrap { display: grid; gap: 14px; min-width: 0; }
 .uptime { margin: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
@@ -32,7 +29,6 @@
 .plainList li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 14px 10px 18px; border-top: 1px solid var(--line); font-size: var(--text-md); }
 .plainList li:first-child { border-top: 0; }
 
-/* Timezone combobox: matches the Select trigger. */
 .comboGroup {
   display: flex;
   align-items: center;
@@ -51,8 +47,6 @@
 .comboPopup { width: var(--anchor-width); min-width: 260px; max-height: min(360px, var(--available-height, 360px)); }
 .comboEmpty { padding: 10px; font-size: var(--text-sm); color: var(--muted); }
 .comboItemText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ---------------------------------------------------------------- updates */
 
 .updHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
 .updSentence { margin: 0; font-size: var(--text-lg); line-height: 1.4; }
@@ -111,8 +105,6 @@
   .runRow { grid-template-columns: minmax(0, 1fr); gap: 6px; }
 }
 
-/* ---------------------------------------------------------------- services (table like Apps) */
-
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .filter {
   flex: 1 1 260px;
@@ -131,9 +123,7 @@
 .filter input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: var(--text-md); }
 .filter input::placeholder { color: var(--faint); }
 
-/* Services. Sized by the table's own width (sidebar and density change it), not the viewport.
-   Full: 220+130+110+90+76 + 4×16 gaps + 32 padding = 722px. overflow: hidden only rounds the hover
-   fill into the corners; the tiers below keep every column inside. */
+/* Sized by the table's own width, not the viewport. Full: 220+130+110+90+76 + 4×16 gaps + 32 padding = 722px. */
 .table { border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; container: services / inline-size; }
 .svcHead, .svcRow {
   display: grid;
@@ -220,8 +210,6 @@
 .dialogActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .journalViewport { height: min(46dvh, 460px); }
 
-/* ---------------------------------------------------------------- power */
-
 .schedule { display: grid; gap: 10px; justify-items: start; }
 .scheduleWhen { margin: 0; font-size: var(--text-lg); }
 .scheduleForm { display: grid; gap: 12px; }
@@ -229,7 +217,5 @@
 
 .waiting { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 8px 0; }
 .waitingText { margin: 0 0 2px; font-size: var(--text-lg); line-height: 1.4; }
-
-/* ---------------------------------------------------------------- host errors */
 
 .errorDetail { display: block; margin: 4px 0 0; padding: 10px 12px; border-radius: var(--radius-small); background: var(--panel); font-size: var(--text-xs); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }

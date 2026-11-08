@@ -30,10 +30,6 @@ const PersonDetail = dynamic(() => import("./PersonDetail").then((m) => m.Person
 
 export type { PeopleTab };
 
-/**
- * Settings → People: everyone who can sign in (and invites), who can open what, the household's
- * problem reports, announcements, and what new members start with. `person` opens one person.
- */
 export function PeopleSettings({ tab, initialPeople, person, reportId }: { tab: PeopleTab; initialPeople: PersonView[]; person: PersonView | null; reportId: string | null }) {
   if (person) return <PersonDetail initial={person} />;
   return <PeopleView tab={tab} initialPeople={initialPeople} reportId={reportId} />;
@@ -218,7 +214,6 @@ function PeopleList({ people, invites, onInvitesChange }: { people: PersonView[]
   );
 }
 
-/** How much of an invite's week is left, as a hairline that shortens towards expiry. */
 function InviteLife({ createdAt, expiresAt }: { createdAt: number; expiresAt: number }) {
   const [now] = React.useState(() => Date.now());
   const span = Math.max(1, expiresAt - createdAt);

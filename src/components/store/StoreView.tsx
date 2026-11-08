@@ -39,8 +39,6 @@ export function StoreView() {
   const term = React.useDeferredValue(q.trim().toLowerCase());
   const [runs, setRuns] = React.useState<Record<string, InstallRun>>({});
 
-  // ---------------------------------------------------------------- data
-
   const stores = React.useMemo(() => data?.stores ?? [], [data]);
   const entries = React.useMemo<StoreEntry[]>(() => {
     const list = stores.flatMap((store) => store.apps.map((app) => ({ key: `${store.id}:${app.id}`, app, store })));
@@ -87,8 +85,6 @@ export function StoreView() {
     [entries, storeId, category, term, installedOnly, installedInfo],
   );
 
-  // ---------------------------------------------------------------- deep link (?app=<id>)
-
   const selectedId = params.get("app");
   const selectedStore = params.get("store");
   const selected = selectedId ? ((selectedStore && entries.find((e) => e.app.id === selectedId && e.store.id === selectedStore)) || byId.get(selectedId) || null) : null;
@@ -124,8 +120,6 @@ export function StoreView() {
     } else window.history.replaceState(null, "", pathname);
   };
 
-  // ---------------------------------------------------------------- install
-
   async function install(e: StoreEntry) {
     const id = e.app.id;
     const name = e.app.name;
@@ -159,8 +153,6 @@ export function StoreView() {
       else toast.error(`${name} didn't install`, { description: result.message });
     }
   }
-
-  // ---------------------------------------------------------------- render
 
   const clearFilters = () => {
     setQ("");

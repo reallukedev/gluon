@@ -64,7 +64,6 @@ function draftFrom(m: MonitorView | null): Draft {
   };
 }
 
-/** Add or edit a monitor. Automatic monitors only expose timing (the rest follows their app or address). */
 interface AppChoice {
   id: string;
   name: string;
@@ -74,7 +73,6 @@ interface AppChoice {
 }
 type Source = "app" | "web" | "port";
 
-/** Add or edit a monitor. New ones start from an app (address filled in), a web address, or a device's port. */
 export function MonitorForm({
   open,
   onOpenChange,
@@ -85,7 +83,6 @@ export function MonitorForm({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   monitor: MonitorView | null;
-  /** Current monitors, to say which apps are already watched. */
   existing?: MonitorView[];
   onSaved: (m: MonitorView) => void;
 }) {
@@ -109,7 +106,6 @@ export function MonitorForm({
     }
   }, [open, monitor]);
 
-  /** Picking an app fills in its name, its address (public if it has one) and links alerts to it. */
   function pickApp(id: string) {
     const a = apps.find((x) => x.id === id);
     const lastAuto = autoName.current;
@@ -124,7 +120,6 @@ export function MonitorForm({
     setSource(v);
     setD((x) => ({ ...x, kind: v === "port" ? "tcp" : "http", app: v === "app" ? x.app : "" }));
   }
-  /** A typed address suggests a name when there isn't one yet. */
   function suggestName() {
     if (d.name.trim()) return;
     const host = d.kind === "http" ? (() => { try { return new URL(d.target.trim()).hostname; } catch { return ""; } })() : d.target.split(":")[0];

@@ -20,10 +20,7 @@ function url(p: ListingParams, offset: number) {
   return `/api/files/list?${q}`;
 }
 
-/**
- * A folder listing loaded page by page (500 entries each) as rows scroll into view, so a 100k-entry
- * folder never loads at once. Page 0 carries the folder's metadata and is kept fresh by SWR.
- */
+/** Loaded 500 entries at a time as rows scroll into view, so a 100k-entry folder never loads at once. */
 export function useListing(p: ListingParams) {
   const first = useApi<Listing>(p.path ? url(p, 0) : null, { keepPreviousData: false, revalidateOnFocus: true, shouldRetryOnError: false });
   const key = p.path ? url(p, 0) : "";
@@ -66,7 +63,6 @@ export function useListing(p: ListingParams) {
     [key, listing, pages],
   );
 
-  /** Load every page (for select-all / conflict checks), up to `max` entries. */
   const loadAll = React.useCallback(
     async (max = 20_000): Promise<FileEntry[]> => {
       if (!listing) return [];

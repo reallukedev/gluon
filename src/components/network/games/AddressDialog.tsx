@@ -9,10 +9,6 @@ import { Select } from "@/components/ui/Select";
 import { craftyHostOf, craftyValue, GAMES_URL, javaServers, OTHER, portMates, slug } from "./model";
 import s from "../games.module.css";
 
-/**
- * Add an address, or change one: which server it reaches (a Crafty server, or any host:port) and
- * the name players type. New addresses default to the server's name under the domain the others use.
- */
 export function AddressDialog({ open, onOpenChange, st, edit, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; st: GamesStatus; edit: McRoute | null; onDone: (r: McChangeResult, verb: "added" | "changed") => void }) {
   const servers = javaServers(st);
   const craftyHost = craftyHostOf(st, edit?.target.kind === "crafty" ? edit.backend : null);

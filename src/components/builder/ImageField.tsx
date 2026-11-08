@@ -19,15 +19,11 @@ import s from "./builder.module.css";
 export interface ImageLookupState {
   result: ImageLookup | null;
   loading: boolean;
-  /** Gluon itself couldn't be asked (network, rate limit). The registry's own answers are in result. */
   error: string | null;
   retry: () => void;
 }
 
-/**
- * An image reference with a live check: is it on this server, does the registry have it, what
- * does it ask for. The lookup waits for typing to settle and never blocks editing.
- */
+/** The lookup waits for typing to settle and never blocks editing. */
 export function useImageLookup(ref: string): ImageLookupState {
   const [result, setResult] = React.useState<ImageLookup | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -67,15 +63,12 @@ export function registryName(ref: string) {
   return r === "docker.io" ? "Docker Hub" : r === "ghcr.io" ? "GitHub's registry" : r === "lscr.io" ? "LinuxServer's registry" : r === "quay.io" ? "Quay" : r;
 }
 
-/** The reference with its tag replaced (or added). */
 export function withTag(ref: string, tag: string): string {
   const v = ref.trim().split("@")[0]!;
   const colon = v.lastIndexOf(":");
   const slash = v.lastIndexOf("/");
   return `${colon > slash ? v.slice(0, colon) : v}:${tag}`;
 }
-
-// ---------------------------------------------------------------- Docker Hub search
 
 const searchCache = new Map<string, HubSearchResult>();
 
@@ -114,14 +107,9 @@ interface Props {
   error?: string | null;
   autoFocus?: boolean;
   lookup: ImageLookupState;
-  /** Under the status line (what Gluon will set up from the image). */
   children?: React.ReactNode;
 }
 
-/**
- * The image to run. Typing a name searches Docker Hub; the tag picker lists every tag, page by
- * page, as soon as the name is valid (it doesn't wait for the full lookup).
- */
 export function ImageField({ value, onChange, label = "Image", error, autoFocus, lookup, children }: Props) {
   const localErr = value.trim() ? imageError(value) : null;
   const shownError = error ?? localErr;
@@ -238,9 +226,6 @@ export function ImageField({ value, onChange, label = "Image", error, autoFocus,
   );
 }
 
-// ---------------------------------------------------------------- tags
-
-/** Every tag of an image, newest first, searchable, a page at a time. */
 function TagPicker({ image, current, disabled, onPick }: { image: string; current: string | null; disabled: boolean; onPick: (tag: string) => void }) {
   const fmt = useFormat();
   const [open, setOpen] = React.useState(false);

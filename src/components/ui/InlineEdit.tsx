@@ -1,15 +1,5 @@
 "use client";
-/**
- * InlineEdit: rename in place (a server name, a pinned folder, a route label).
- *
- *   <InlineEdit value={name} label="Server name" onSave={(v) => api.patch(..., { name: v })} />
- *
- * - Reads as plain text with a pencil that appears on hover/focus; click, tap, or Enter to edit.
- * - Enter or the tick saves; Escape or the cross cancels; leaving the field saves if it changed.
- * - `onSave` may throw (or reject): the message shows under the field and editing continues.
- * - `validate` returns an error string to block saving (shown the same way).
- * - The field is sized to its text, so switching modes does not reflow the row.
- */
+/** The field is sized to its text, so switching modes doesn't reflow the row. */
 import * as React from "react";
 import { Check, EditPencil, Xmark } from "iconoir-react";
 import { IconButton } from "./Button";
@@ -18,7 +8,6 @@ import s from "./inlineEdit.module.css";
 interface InlineEditProps {
   value: string;
   onSave: (next: string) => unknown;
-  /** Accessible name, e.g. "Server name". */
   label: string;
   placeholder?: string;
   validate?: (next: string) => string | null | undefined;
@@ -26,7 +15,6 @@ interface InlineEditProps {
   disabled?: boolean;
   maxLength?: number;
   className?: string;
-  /** Text shown when value is empty. */
   emptyText?: string;
 }
 

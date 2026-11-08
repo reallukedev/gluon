@@ -12,7 +12,6 @@ const Editor = dynamic(() => import("./YamlEditor").then((m) => m.YamlEditor), {
 
 type Props = React.ComponentProps<typeof Editor>;
 
-/** YamlEditor, loaded on demand, holding its own height while it loads so nothing jumps. */
 export function LazyYamlEditor(props: Props) {
   const h = props.height ?? 520;
   return (

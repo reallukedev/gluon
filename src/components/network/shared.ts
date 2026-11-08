@@ -23,17 +23,14 @@ export function useDdns() {
   return useApi<DdnsStatus>("/api/network/ddns", { refresh: 60_000 });
 }
 
-/** Chat servers Gluon can see, and certificate sync per chat address. Only fetched while needed. */
 export function useChatServers(on: boolean) {
   return useApi<ChatServersResponse>(on ? "/api/network/xmpp" : null, { refresh: 60_000 });
 }
 
-/** Voice servers (Mumble) Gluon can see. Only fetched while needed. */
 export function useVoiceServers(on: boolean) {
   return useApi<{ servers: VoiceServerCandidate[] }>(on ? "/api/network/voice" : null, { refresh: 60_000 });
 }
 
-/** What public DNS says about a name right now, for the help next to a new address. */
 export function useDnsLookup(name: string | null) {
   return useApi<{ dns: DnsResult; publicIp: { v4: string | null; v6: string[] } }>(name ? `/api/network/dns?name=${encodeURIComponent(name)}` : null, { refresh: 0 });
 }
@@ -44,7 +41,6 @@ export const XMPP_CLIENT_PORTS = new Set([5222]);
 export const MUMBLE_PORT = 64738;
 const MUMBLE_IMAGE = /(^|\/)(mumble-server|mumblevoip\/mumble-server|murmur)[^/]*(:|$)|murmur/i;
 
-/** Ports Mumble answers on here: its usual port and anything a Mumble container publishes. */
 export function voicePorts(apps: AppSummary[] | undefined): Set<number> {
   const out = new Set([MUMBLE_PORT]);
   for (const a of apps ?? []) for (const c of a.containers) if (MUMBLE_IMAGE.test(c.image)) for (const p of c.ports) out.add(p.host);
@@ -55,10 +51,8 @@ export function saveRoutes(rev: string, routes: RouteT[], fallback?: RoutesConfi
   return api.put<RoutesSaveResponse>("/api/network/routes", { rev, routes, ...(fallback ? { fallback } : {}), ...(certs && Object.keys(certs).length ? { certs } : {}) });
 }
 
-/** A short link on the base domain, or a whole subdomain that redirects. */
 export const isRedirectRoute = (r: RouteT | null | undefined): boolean => !!r && (r.type === "redirect" || (r.type === "subdomain" && !!r.redirect_to));
 
-/** Where a redirect sends people, or null for anything else. */
 export const redirectTarget = (r: RouteT | null | undefined): string | null => (!r ? null : r.type === "redirect" ? r.target : r.type === "subdomain" ? (r.redirect_to ?? null) : null);
 
 export const bare = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -72,10 +66,7 @@ export function slug(s: string): string {
     .slice(0, 30);
 }
 
-/**
- * A short, typeable address for an app: "Big Bear CasaOS User Management" → "user-management".
- * Drops store prefixes and keeps whole words within 20 characters.
- */
+/** Drops store prefixes and keeps whole words within 20 characters. */
 export function suggestLabel(name: string): string {
   const words = slug(name.replace(/^(big[\s-]?bear|casaos|umbrel|linuxserver)\b[\s-]*/gi, "").replace(/^(big[\s-]?bear|casaos|umbrel)\b[\s-]*/gi, "") || name)
     .split("-")
@@ -94,7 +85,6 @@ export function newRouteId(name: string): string {
   return `${slug(name) || "route"}-${rand}`.slice(0, 40);
 }
 
-/** Every TCP port an app publishes on this server, its web port first. */
 export function tcpPorts(a: AppSummary): number[] {
   const set = new Set<number>();
   if (a.webPort) set.add(a.webPort);
@@ -102,5 +92,4 @@ export function tcpPorts(a: AppSummary): number[] {
   return [...set];
 }
 
-/** Clipboard that also works over plain http on the home network. */
 export { copyText } from "@/lib/client/clipboard";

@@ -29,7 +29,6 @@ function highlight(text: string, q: string): React.ReactNode {
   return parts;
 }
 
-/** A service's journal: recent entries, then live. Same look and behaviour as the app log viewer. */
 export function ServiceJournal({ unit }: { unit: string }) {
   const { prefs, setPrefs } = usePrefs();
   const fmt = useFormat();

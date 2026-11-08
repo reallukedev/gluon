@@ -1,10 +1,6 @@
-// Pure rules behind the Files screens: reading what's typed into the command bar, completing
-// paths, filtering and sorting, which actions a person may see, and how folders are laid out.
-// No React and no network here, so all of it is tested directly (logic.test.ts).
+// No React and no network here, so all of it is tested directly.
 
 import type { ConflictPolicy, FileKind, Place, Places } from "@/lib/files-types";
-
-// ---------------------------------------------------------------- the command bar
 
 export type Token = { type: "kind"; kind: FileKind; label: string } | { type: "time"; days: number; label: string } | { type: "size"; bytes: number };
 
@@ -15,7 +11,6 @@ export type Parsed =
   | { mode: "dest"; verb: "move" | "copy"; text: string }
   | { mode: "find"; name: string; kinds: FileKind[]; days: number | null; minSize: number | null; tokens: Token[] };
 
-/** Words people type for a kind of file, and what the bar calls it back to them. */
 const KIND_WORDS: [RegExp, FileKind, string][] = [
   [/^(photos?|pictures?|images?|pics)$/, "image", "Photos"],
   [/^(videos?|films?|movies?)$/, "video", "Videos"],
@@ -40,9 +35,8 @@ const UNIT: Record<string, number> = { k: 1e3, m: 1e6, g: 1e9, t: 1e12 };
 const SIZE_WORD = /^(?:>|over)(\d+(?:\.\d+)?)([kmgt])b?$/;
 
 /**
- * What the bar should do with the text: a path (starts with / or ~), actions (starts with >), a
- * destination ("move to …" with something selected), or a search, with words like "photos",
- * "this week" or ">1gb" read as filters and the rest as part of a name.
+ * A path (starts with / or ~), actions (starts with >), a destination ("move to …"), or a search with filter words read
+ * out of it.
  */
 export function parseCommand(raw: string, hasSelection: boolean, home?: string | null): Parsed {
   const text = raw.trimStart();
@@ -88,7 +82,6 @@ export function parseCommand(raw: string, hasSelection: boolean, home?: string |
   return { mode: "find", name, kinds, days, minSize, tokens };
 }
 
-/** Add or remove a filter word in what's typed (the quick filters under the bar do this). */
 export function toggleWord(text: string, word: string): string {
   const words = text.split(/\s+/).filter(Boolean);
   const i = words.findIndex((w) => w.toLowerCase() === word.toLowerCase());
@@ -104,16 +97,12 @@ export function hasWord(text: string, word: string): boolean {
     .includes(word.toLowerCase());
 }
 
-// ---------------------------------------------------------------- paths
-
-/** "/home/sam/Pi" → the folder to list (/home/sam) and what to complete in it ("pi"). */
 export function splitTypedPath(text: string): { dir: string; stem: string } {
   if (text.endsWith("/")) return { dir: text.replace(/\/+$/, "") || "/", stem: "" };
   const i = text.lastIndexOf("/");
   return { dir: i <= 0 ? "/" : text.slice(0, i), stem: text.slice(i + 1).toLowerCase() };
 }
 
-/** Folder names that complete a stem: those starting with it first, then those containing it. */
 export function rankCompletions(names: string[], stem: string, limit = 40): string[] {
   const s = stem.toLowerCase();
   const starts = names.filter((n) => n.toLowerCase().startsWith(s));
@@ -130,7 +119,6 @@ export function parentOf(p: string): string {
   return i <= 0 ? "/" : p.slice(0, i);
 }
 
-/** The folders drawn as columns: from the place the path is in, down to the path itself. */
 export function columnsFor(path: string, places: Pick<Places, "places"> | undefined, admin: boolean): string[] {
   const roots = (places?.places ?? []).filter((p) => !p.missing && p.kind !== "root").map((p) => p.path);
   const inside = roots.filter((r) => path === r || path.startsWith(`${r}/`)).sort((a, b) => b.length - a.length);
@@ -145,8 +133,6 @@ export function columnsFor(path: string, places: Pick<Places, "places"> | undefi
   }
   return out;
 }
-
-// ---------------------------------------------------------------- filtering and sorting
 
 export interface Filterable {
   name: string;
@@ -181,7 +167,6 @@ export function matches(e: Filterable, f: Filter, now: number, under?: string): 
 export type SortBy = "name" | "mtime" | "size";
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
-/** Sort search hits the way the folders are sorted: folders first, then by the key. */
 export function sortItems<T extends { name: string; mtime: number; size: number | null; kind: FileKind }>(items: T[], by: SortBy, order: "asc" | "desc"): T[] {
   const dir = order === "asc" ? 1 : -1;
   return items.toSorted((a, b) => {
@@ -192,8 +177,6 @@ export function sortItems<T extends { name: string; mtime: number; size: number 
     return c || collator.compare(a.name, b.name);
   });
 }
-
-// ---------------------------------------------------------------- what a person may do
 
 export type CommandId =
   | "download"
@@ -233,11 +216,9 @@ export type CommandId =
   | "keys";
 
 export interface CommandContext {
-  /** How many things are selected, and what the single one is when there's one. */
   count: number;
   oneIsDir: boolean;
   oneIsArchive: boolean;
-  /** The folder being shown can be changed by this person. */
   writable: boolean;
   admin: boolean;
   inFolder: boolean;
@@ -245,7 +226,7 @@ export interface CommandContext {
   clipboard: boolean;
 }
 
-/** The actions on offer right now, in the order people look for them. Members never see admin tools. */
+/** Members never see admin tools. */
 export function commandIds(c: CommandContext): CommandId[] {
   const out: CommandId[] = [];
   const one = c.count === 1;
@@ -274,8 +255,6 @@ export function commandIds(c: CommandContext): CommandId[] {
   out.push("trash-view", "keys");
   return [...new Set(out)];
 }
-
-// ---------------------------------------------------------------- places
 
 export type PlaceGroup = "shared" | "pins" | "drives" | "people" | "apps" | "recent";
 
@@ -306,8 +285,6 @@ export function fullness(used: number, size: number): "normal" | "attention" | "
   return pct >= 95 ? "fault" : pct >= 85 ? "attention" : "normal";
 }
 
-// ---------------------------------------------------------------- how a folder is shown
-
 export type FolderView = "columns" | "list" | "grid";
 
 /** A remembered choice wins; otherwise a folder that's mostly photos opens as a grid. */
@@ -317,7 +294,6 @@ export function viewFor(remembered: FolderView | undefined, files: { kind: FileK
   return files.length >= 24 && photos / files.length >= 0.6 ? "grid" : "columns";
 }
 
-/** Keep the remembered views small: the newest choices, at most `max`. */
 export function rememberView(map: Record<string, FolderView>, path: string, view: FolderView, max = 200): Record<string, FolderView> {
   const next: Record<string, FolderView> = { ...map };
   delete next[path];
@@ -332,16 +308,12 @@ export function timeKind(ts: number, now: number): "relative" | "dateTime" {
   return ts > now + 60_000 ? "dateTime" : "relative";
 }
 
-// ---------------------------------------------------------------- uploads
-
 export interface UploadPick {
-  /** Folder path inside what was dropped ("" for a loose file). */
   rel: string;
   name: string;
   size: number;
 }
 
-/** What lands at the top of the destination: loose files, and dropped folders (even empty ones). */
 export function uploadTops(files: UploadPick[], dirs: string[]): Map<string, { isDir: boolean; size: number | null }> {
   const tops = new Map<string, { isDir: boolean; size: number | null }>();
   for (const f of files) {
@@ -353,10 +325,8 @@ export function uploadTops(files: UploadPick[], dirs: string[]): Map<string, { i
 }
 
 /**
- * Where everything goes once the clashes are answered. A clashing folder is skipped, merged
- * (files with the same names are replaced, the old ones go to the trash) or kept beside the old
- * one as "Name (2)", where its files use "rename". Loose files take their
- * own answer. Folders are listed parents first, ready to create.
+ * A clashing folder is skipped, merged (same-named files replaced, old ones trashed) or kept beside as "Name (2)".
+ * Folders are listed parents first.
  */
 export function planUpload(files: UploadPick[], dirs: string[], taken: Set<string>, answers: Map<string, ConflictPolicy>): { dirs: string[]; files: { index: number; dir: string; conflict: ConflictPolicy }[] } {
   const topRename = new Map<string, string>();
@@ -393,7 +363,6 @@ export function planUpload(files: UploadPick[], dirs: string[], taken: Set<strin
   return { dirs: outDirs, files: out };
 }
 
-/** Indexes from `a` to `b` inclusive, either way round. */
 export function rangeOf(a: number, b: number): number[] {
   const lo = Math.min(a, b);
   return Array.from({ length: Math.abs(a - b) + 1 }, (_, i) => lo + i);

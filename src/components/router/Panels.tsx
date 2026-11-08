@@ -24,8 +24,6 @@ function Loading({ rows = 5 }: { rows?: number }) {
 
 const Faint = ({ children }: { children: React.ReactNode }) => <span className={s.faint}>{children}</span>;
 
-// ---------------------------------------------------------------- Internet
-
 export function InternetPanel({ o }: { o: RouterOverview }) {
   const fmt = useFormat();
   const bb = o.broadband;
@@ -114,8 +112,6 @@ export function InternetPanel({ o }: { o: RouterOverview }) {
   );
 }
 
-// ---------------------------------------------------------------- Traffic
-
 export function TrafficPanel({ o }: { o: RouterOverview }) {
   const fmt = useFormat();
   const pts = o.traffic.points;
@@ -176,8 +172,6 @@ export function TrafficPanel({ o }: { o: RouterOverview }) {
   );
 }
 
-// ---------------------------------------------------------------- Wi-Fi
-
 function wifiSub(n: WifiNetworkT): string {
   return [n.band, n.kind === "guest" ? "Guest" : "Home", n.on ? n.security : null, n.radioOn ? null : "radio off"].filter(Boolean).join(" · ");
 }
@@ -220,8 +214,6 @@ export function WifiPanel({ o }: { o: RouterOverview }) {
   );
 }
 
-// ---------------------------------------------------------------- Firewall
-
 const FIREWALL: { key: keyof FirewallT; name: string; on: string; off: string }[] = [
   { key: "packetFilter", name: "Packet filter", on: "Blocks traffic by the rules set on the router", off: "No extra rules" },
   { key: "ipPassthrough", name: "IP passthrough", on: "One device gets the public address directly", off: "The router shares its address with everything" },
@@ -262,8 +254,6 @@ export function FirewallPanel({ o }: { o: RouterOverview }) {
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- the router itself
 
 export function FactsPanel({ o, access }: { o: RouterOverview; access: React.ReactNode }) {
   const fmt = useFormat();

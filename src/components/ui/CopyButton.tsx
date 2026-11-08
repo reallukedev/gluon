@@ -1,16 +1,5 @@
 "use client";
-/**
- * CopyButton: copies a value and says so in place, no toast needed.
- *
- *   <CopyButton value={url} label="Copy address" />            // icon only, with tooltip
- *   <CopyButton value={command} size="sm">Copy command</CopyButton>  // with text
- *
- * - The copy glyph gives way to a tick that draws itself (stroke over 250ms on --ease-out), then
- *   settles back after 1.6s. Text buttons swap "Copy…" for "Copied" in a fixed-width slot, so the
- *   button never changes size. Reduced motion: the tick appears without drawing.
- * - Works over plain http on the LAN (falls back when the Clipboard API is unavailable).
- * - Announces "Copied" to screen readers; a failed copy shows an error toast with the value.
- */
+/** Works over plain http on the LAN (falls back when the Clipboard API is unavailable). */
 import * as React from "react";
 import { Copy } from "iconoir-react";
 import { copyText } from "@/lib/client/clipboard";
@@ -20,7 +9,6 @@ import s from "./copy.module.css";
 
 interface CopyButtonProps {
   value: string;
-  /** Accessible name (and tooltip) for the icon-only form. */
   label?: string;
   children?: React.ReactNode;
   variant?: ButtonVariant;

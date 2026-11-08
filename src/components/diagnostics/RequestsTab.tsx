@@ -238,7 +238,6 @@ function TopList({ title, items, mono }: { title: string; items: { key: string; 
 
 const CLASS_WORD: Record<Exclude<Cls, "all">, string> = { "2xx": "OK", "3xx": "Redirected", "4xx": "Refused or not found", "5xx": "Server errors" };
 
-/** The last hour as one hairline per minute (height = requests, red below the rail = failures), with totals. */
 function LastHour({ stats, cls, onCls }: { stats: RequestStats; cls: Cls; onCls: (c: Cls) => void }) {
   const fmt = useFormat();
   const [active, setActive] = React.useState<number | null>(null);

@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import { useApi } from "@/lib/client/api";
 import { usePrefs } from "@/components/PrefsProvider";
 import { AppIcon } from "@/components/apps/AppIcon";
@@ -10,10 +9,6 @@ import { APPS_URL, openable, type MemberApp } from "./memberApps";
 import { Bond } from "../Bond";
 import o from "../onboarding.module.css";
 
-/**
- * Household member, first: who asked them here and what Gluon is for them, in plain words, with the
- * apps they can already open. No jargon, nothing to configure.
- */
 export function Hello() {
   const plan = useMemberPlan();
   const { next, finish, leaving } = useFlow();

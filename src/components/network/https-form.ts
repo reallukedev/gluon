@@ -1,8 +1,6 @@
 import type { CertUploads, HttpsModeT, HttpsSettingsT, OwnCertInfo, OwnCertState, SubdomainRouteT } from "@/lib/network-types";
 import { api, ApiError } from "@/lib/client/api";
 
-/** The HTTPS part of an address editor: what's chosen, what's been pasted, and what Gluon checked. */
-
 export type CertSource = "paste" | "files";
 
 export interface HttpsForm {
@@ -12,9 +10,7 @@ export interface HttpsForm {
   key: string;
   certFile: string;
   keyFile: string;
-  /** Editing an address that already has its own certificate: show the inputs to swap it. */
   replacing: boolean;
-  /** What the server said about the inputs, and which inputs it said it about. */
   checked: { sig: string; info: OwnCertInfo } | null;
 }
 
@@ -36,7 +32,6 @@ export function httpsFormFrom(r: SubdomainRouteT | undefined): HttpsForm {
 
 const sig = (f: HttpsForm, host: string) => (f.source === "files" ? `files|${host}|${f.certFile.trim()}|${f.keyFile.trim()}` : `paste|${host}|${f.cert}|${f.key}`);
 
-/** True when there's something new to check and store; false when the stored certificate stays. */
 export function hasNewCert(f: HttpsForm, prev: SubdomainRouteT | undefined, stored: OwnCertState | undefined, host: string): boolean {
   if (f.mode !== "own") return false;
   const sameHost = !!prev && prev.host === host && prev.https?.mode === "own";
@@ -53,17 +48,13 @@ export function httpsSetting(f: HttpsForm): HttpsSettingsT | undefined {
   return f.source === "files" ? { mode: "own", files: { cert: f.certFile.trim(), key: f.keyFile.trim() } } : { mode: "own" };
 }
 
-/** Pasted certificates travel with the save that uses them. */
 export function certUploads(f: HttpsForm, host: string, isNew: boolean): CertUploads {
   return f.mode === "own" && f.source === "paste" && isNew ? { [host]: { cert: f.cert, key: f.key } } : {};
 }
 
 const FIELD: Record<string, keyof HttpsForm> = { cert: "cert", key: "key", cert_file: "certFile", key_file: "keyFile" };
 
-/**
- * Ask the server to check new certificate inputs (nothing is stored). Returns the form with what
- * it found, or errors keyed by form field.
- */
+/** Nothing is stored. */
 export async function verifyHttps(f: HttpsForm, host: string): Promise<{ form: HttpsForm } | { errors: Record<string, string> }> {
   const s = sig(f, host);
   if (f.checked?.sig === s) return { form: f };
@@ -84,7 +75,6 @@ export async function verifyHttps(f: HttpsForm, host: string): Promise<{ form: H
   }
 }
 
-/** Save errors from the server, mapped onto the HTTPS fields. Null when the error isn't about HTTPS. */
 export function httpsFieldOf(field: string | undefined): string | null {
   if (!field) return null;
   if (field === "https") return "https";
@@ -93,7 +83,6 @@ export function httpsFieldOf(field: string | undefined): string | null {
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 
-/** One line for the review: who handles HTTPS. */
 export function httpsSummary(f: HttpsForm, stored: OwnCertState | undefined): string {
   switch (f.mode) {
     case "auto":

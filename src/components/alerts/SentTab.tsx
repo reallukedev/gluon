@@ -33,7 +33,6 @@ const LINE: Record<DeliveryStatus, { line: LineState; label: string }> = {
   cancelled: { line: "stopped", label: "Not sent" },
 };
 
-/** Everything Gluon sent (or tried to), newest first, with retry for failures. Members only ever get their own channels' messages. */
 export function SentTab({ compact }: { compact?: boolean }) {
   const fmt = useFormat();
   const [show, setShow] = React.useState<Show>("all");

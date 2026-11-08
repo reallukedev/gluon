@@ -23,16 +23,7 @@ import { toast } from "@/components/ui/Toast";
 import { shortName } from "@/lib/app-names";
 import c from "./appCard.module.css";
 
-/**
- * One pinned app, as its own card on Home. The whole card opens the app; everything else (unpin,
- * size, which address) lives in the item's menu. A running app says nothing about its state, since
- * that's the normal case; only starting, stopped, broken or needs-you apps show their line.
- *
- *   i  Icon  the app's icon and name, like a home screen
- *   c  Row   icon, name and a quiet second line on one row
- *   s  Card  adds live CPU and memory (admins) or what the app is for (household)
- *   m  Wide  adds where it opens, at home and from anywhere
- */
+/** A running app says nothing about its state, since that's the normal case. */
 
 type Line = ApiApp["line"];
 
@@ -247,7 +238,6 @@ export function AppCardWidget({ item, size, openSettings, editing }: WidgetProps
   );
 }
 
-/** Catalog / Collection preview: the Icon card in miniature. */
 export function AppCardPreview({ icon, name }: { icon?: string | null; name?: string }) {
   return (
     <span className={c.preview} aria-hidden>

@@ -12,7 +12,6 @@ import { Empty } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
 import s from "./needsYou.module.css";
 
-/** Run a finding's remedy: navigate, or confirm (if needed) and call the server. */
 export function RemedyButton({ remedy, findingId, variant = "secondary", onDone }: { remedy: Remedy; findingId: string | null; variant?: "secondary" | "attention" | "primary"; onDone?: () => void }) {
   const [busy, setBusy] = React.useState(false);
   const [confirm, confirmNode] = useConfirm();
@@ -59,7 +58,6 @@ export function RemedyButton({ remedy, findingId, variant = "secondary", onDone 
   );
 }
 
-/** Hours from now until 8 in the morning tomorrow (a "not now, first thing tomorrow" snooze). */
 export function hoursUntilMorning(): number {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -76,14 +74,10 @@ const LEAVE_MS = 220;
 interface Leaving {
   f: Finding;
   index: number;
-  /** Fixed (the doubled line settles into one before it goes), not just hidden or snoozed. */
   resolved: boolean;
 }
 
-/**
- * Items that disappear from `findings` stay on screen briefly: a fixed one's doubled line
- * settles into a single line, then it slides out; the rows below close the gap by transform.
- */
+/** Items that disappear from `findings` stay on screen briefly so their exit can animate. */
 function useLeaving(findings: Finding[], hiddenByMe: React.RefObject<Set<string>>) {
   const [leaving, setLeaving] = React.useState<Leaving[]>([]);
   // Worked out during render, not in an effect: the leaving row must stay in the DOM through the
@@ -131,7 +125,6 @@ function useLeaving(findings: Finding[], hiddenByMe: React.RefObject<Set<string>
   return rows;
 }
 
-/** Rows that move because one above them left glide into place (transform only). */
 function useFlip(list: React.RefObject<HTMLUListElement | null>, key: string) {
   const tops = React.useRef(new Map<string, number>());
   React.useLayoutEffect(() => {
@@ -161,11 +154,7 @@ function useFlip(list: React.RefObject<HTMLUListElement | null>, key: string) {
   }, [list, key]);
 }
 
-/**
- * What needs the person now, worst first, each with its remedy and a way to put it off. `foot`
- * replaces the link under the list (Home's Needs you widget passes null; other pages link to it).
- * `empty` replaces the empty state.
- */
+/** `foot` replaces the link under the list (Home's Needs you widget passes null). */
 export function NeedsYou({
   findings,
   onChange,
@@ -186,7 +175,6 @@ export function NeedsYou({
   const rows = useLeaving(findings, hiddenByMe);
   useFlip(listRef, rows.map((r) => r.f.id + (r.leaving ? "~" : "")).join(","));
 
-  /** Fixed with their remedy: the doubled line settles while Gluon confirms on its next check. */
   const [settled, setSettled] = React.useState<ReadonlySet<string>>(() => new Set());
   const timers = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
   React.useEffect(() => {

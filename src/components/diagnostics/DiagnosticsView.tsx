@@ -33,7 +33,6 @@ const TAB_ITEMS: { value: DiagTab; label: string }[] = [
   { value: "tools", label: "Tools" },
 ];
 
-/** The sentence under the title: what the last checkup of this kind found, or what's running. */
 function CheckupSummary({ kind, latest }: { kind: CheckupKind; latest: CheckupRun | null | undefined }) {
   const live = useCheckupRun();
   const name = kind === "full" ? "full checkup" : "security checkup";

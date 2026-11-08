@@ -1,10 +1,6 @@
-/**
- * A quiet, local estimate of how guessable a password is. Advice only: Gluon accepts any password of
- * at least one character (the owner's choice). No network calls, no dictionary download.
- */
+/** Advice only: Gluon accepts any password of at least one character. No network calls, no dictionary download. */
 
 export interface Strength {
-  /** 0 very easy to guess … 4 strong. */
   score: 0 | 1 | 2 | 3 | 4;
   label: string;
   hint: string | null;

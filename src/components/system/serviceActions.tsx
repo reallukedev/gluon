@@ -6,7 +6,6 @@ import { useConfirm, type ConfirmOptions } from "@/components/ui/Dialog";
 import { toast } from "@/components/ui/Toast";
 import type { LineState } from "@/components/ui/StateLine";
 
-/** Menu/button wording for each action. */
 export const ACTION_LABEL: Record<ServiceAction, string> = {
   start: "Start",
   stop: "Stop",
@@ -25,7 +24,6 @@ const PROGRESS: Record<ServiceAction, string> = {
   disable: "Turning off at boot:",
 };
 
-/** The state glyph and a short label for a service row. */
 export function serviceLine(s: Pick<ServiceInfo, "active" | "sub" | "load" | "enabled">): { state: LineState; label: string } {
   if (s.load === "masked" || s.enabled === "masked") return { state: "paused", label: "Masked" };
   switch (s.active) {
@@ -66,7 +64,6 @@ export function bootLabel(enabled: string | null): string {
   }
 }
 
-/** Which actions to offer now, given state and Gluon's policy for the unit. */
 export function availableActions(svc: ServiceInfo): ServiceAction[] {
   const out: ServiceAction[] = [];
   const running = svc.active === "active" || svc.active === "activating" || svc.active === "reloading";
@@ -130,10 +127,7 @@ function askFor(svc: ServiceInfo, action: ServiceAction): Omit<ConfirmOptions, "
   return null;
 }
 
-/**
- * Service actions with the right confirmation for each unit. The server enforces the same rules
- * (and asks for a fresh sign-in where needed); this only decides what to ask first.
- */
+/** The server enforces the same rules; this only decides what to ask first. */
 export function useServiceActions(onDone: () => void, onFailed?: (unit: string) => void) {
   const [confirm, confirmNode] = useConfirm();
   const [busy, setBusy] = React.useState<string | null>(null);

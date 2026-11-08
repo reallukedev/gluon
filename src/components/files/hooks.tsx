@@ -6,10 +6,6 @@ import { useFormat } from "@/components/PrefsProvider";
 import { baseName, isDirLike } from "./lib";
 import type { FolderView } from "./logic";
 
-// Data hooks and small helpers the Files screens share.
-
-// ---------------------------------------------------------------- search
-
 export interface SearchSpec {
   roots: string[];
   q: string;
@@ -19,7 +15,6 @@ export interface SearchSpec {
   minSize?: number;
   limit?: number;
   depth?: number;
-  /** The name may also match a folder on the way to a file. */
   inPath?: boolean;
 }
 
@@ -33,11 +28,9 @@ export interface SearchState {
 
 const EMPTY_SEARCH: SearchState = { hits: [], done: false, truncated: false, timedOut: false, error: null };
 
-/** Name search streamed from every root at once, merged as hits arrive. null spec = idle. */
-/** Finished collections, kept for this visit so going back to the front page doesn't scan again. */
+/** Kept for this visit so going back to the front page doesn't scan again. */
 const searchCache = new Map<string, { at: number; state: SearchState }>();
 const CACHE_MS = 5 * 60_000;
-/** Forget cached results (after anything changed files). */
 export function clearSearchCache() {
   searchCache.clear();
 }
@@ -105,25 +98,20 @@ export function useFileSearch(spec: SearchSpec | null, opts: { cache?: boolean }
   return st.key === key ? { ...st, retry } : { ...EMPTY_SEARCH, retry };
 }
 
-/** Search hits carry what a thumbnail needs; previews need a stat for the rest. */
 export async function statEntry(path: string): Promise<FileEntry> {
   return api.get<FileEntry>(`/api/files/stat?path=${encodeURIComponent(path)}`);
 }
-
-// ---------------------------------------------------------------- what's in a name
 
 const IMAGE_PREVIEW = /\.(jpe?g|png|gif|webp|avif|bmp|svg)$/i;
 const VIDEO_PLAYABLE = /\.(mp4|m4v|webm|mov|ogv)$/i;
 export const isPhoto = (name: string) => IMAGE_PREVIEW.test(name);
 export const isPlayable = (name: string) => VIDEO_PLAYABLE.test(name);
 
-/** A file's share of the biggest thing next to it, for the size rule (0 when unknown). */
 export function sizeOf(e: Pick<FileEntry, "size" | "dirSize" | "type">): number | null {
   if (e.type === "dir") return e.dirSize?.bytes ?? null;
   return e.size;
 }
 
-/** Size of a selection in words: "2.1 GB", "at least 2.1 GB", or null when no size is known. */
 export function useSelectionSize(entries: FileEntry[]): string | null {
   const fmt = useFormat();
   let bytes = 0;
@@ -138,14 +126,12 @@ export function useSelectionSize(entries: FileEntry[]): string | null {
   return `${unknown ? "at least " : ""}${fmt.bytes(bytes)}`;
 }
 
-/** Places to offer as destinations and shortcuts, in a stable order without duplicates. */
 export function placeList(places: Places | undefined) {
   if (!places) return [];
   const seen = new Set<string>();
   return [...places.pins, ...places.places, ...places.recent].filter((p) => !p.missing && !seen.has(p.path) && !!seen.add(p.path));
 }
 
-/** Roots to search across for collections: everything a person keeps files in, not the OS. */
 export function collectionRoots(places: Places | undefined): string[] {
   if (!places) return [];
   const list = places.places.filter((p) => !p.missing && p.kind !== "root" && (p.kind !== "drive" || p.fs)).map((p) => p.path);
@@ -153,9 +139,6 @@ export function collectionRoots(places: Places | undefined): string[] {
   return list.filter((p) => !list.some((q) => q !== p && (p.startsWith(`${q}/`) || q === "/")));
 }
 
-// ---------------------------------------------------------------- the one sentence of state
-
-/** "340 photos and 2 folders, 24 MB in all. 1.2 TB free on the 1.8 TB hard drive." */
 export function folderSentence(l: ListingT, places: Places | undefined, fmt: ReturnType<typeof useFormat>, admin: boolean): string {
   const c = l.counts;
   const files = c.files + c.links + c.other;
@@ -172,7 +155,6 @@ export function folderSentence(l: ListingT, places: Places | undefined, fmt: Ret
   return out;
 }
 
-/** A drive, home or share by its human name when the folder is one, else the folder's own name. */
 export function folderTitle(l: ListingT | undefined, path: string, places: Places | undefined): string {
   const here = l ? places?.places.find((p) => p.path === l.path) : undefined;
   if (here) return here.label;
@@ -180,19 +162,13 @@ export function folderTitle(l: ListingT | undefined, path: string, places: Place
   return baseName(path) === "/" ? "Computer" : baseName(path);
 }
 
-// ---------------------------------------------------------------- folder sizes, measured without asking
-
 const SIZE_STALE_MS = 60 * 60_000;
 /** Don't re-measure a folder that was measured this recently, however much changes. */
 const SIZE_REST_MS = 30_000;
 /** A measured size is out of date when the folder itself changed after it (something added or removed). */
 const staleSize = (e: FileEntry) => !!e.dirSize && e.mtime > e.dirSize.computedAt + 1000;
 
-/**
- * When a folder opens with sub-folders whose size isn't known (or its own measurement is over an
- * hour old), the server measures it once (du, one level deep, at most two at a time) and the
- * listing refreshes when it's done. Returns whether a measurement is running.
- */
+/** Folders with unknown or hour-old sizes are measured once by the server (du, one level deep, two at a time). */
 export function useFolderSizes(listing: ListingT | undefined, onDone: () => void) {
   const [measuring, setMeasuring] = React.useState(false);
   const done = React.useRef(onDone);
@@ -235,7 +211,6 @@ export function useFolderSizes(listing: ListingT | undefined, onDone: () => void
   return measuring;
 }
 
-/** Remembered per-folder views, kept in this browser. */
 const VIEW_KEY = "gluon.files.views";
 export function readViews(): Record<string, FolderView> {
   try {
@@ -252,5 +227,4 @@ export function writeViews(v: Record<string, FolderView>) {
   }
 }
 
-/** True when the item is a file kind the lightbox shows (photos and playable video). */
 export const inLightbox = (e: Pick<FileEntry, "preview">) => e.preview === "image" || e.preview === "video";

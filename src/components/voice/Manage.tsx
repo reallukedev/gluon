@@ -16,7 +16,6 @@ const PROBLEM_TITLE: Record<string, string> = {
   no_server: "None of Mumble's servers is started",
 };
 
-/** What Gluon can tell before it manages the server, and the one change that lets it. */
 export function NotManaged({ live, details, onManage, onRetry }: { live: VoiceLive; details: VoiceDetails | null; onManage: () => void; onRetry: () => void }) {
   const p = live.problem;
   const code = p?.code ?? "not_managed";
@@ -77,7 +76,6 @@ export function NotManaged({ live, details, onManage, onRetry }: { live: VoiceLi
   );
 }
 
-/** Explain the change, say who it drops, run it, and show how it went. */
 export function ManageDialog({ open, onOpenChange, appId, appName, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; appId: string; appName: string; onDone: () => void }) {
   const plan = useApi<ManagePlan>(open ? voiceUrl(appId, "/manage") : null, { refresh: 0, revalidateOnFocus: false });
   const job = useVoiceJob(onDone);

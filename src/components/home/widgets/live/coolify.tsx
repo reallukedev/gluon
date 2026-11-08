@@ -1,5 +1,4 @@
 "use client";
-// Coolify: what it's deploying, what failed, and what isn't running. Admins only.
 import * as React from "react";
 import type { WidgetProps } from "../../types";
 import { useFormat, usePrefs } from "@/components/PrefsProvider";
@@ -32,7 +31,6 @@ const RESOURCE_WORD: Record<LineState, string> = {
   attention: "needs you",
 };
 
-/** The one sentence at the top: what's happening now, else how the last deploy went. */
 function verdict(d: CoolifyDeploymentsData): string {
   if (d.active.length) {
     const running = d.active.filter((x) => x.status === "in_progress");

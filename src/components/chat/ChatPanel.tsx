@@ -23,11 +23,6 @@ const ConfigEditor = dynamic(() => import("./ConfigEditor").then((m) => m.Config
   loading: () => <Skeleton height={360} radius={12} />,
 });
 
-/**
- * Apps → Prosody or Quark → Chat server: who has an account and which devices they're on, invite
- * links, what chat apps can do with this server (and the switch that fixes each gap), group chats,
- * settings and the config file. Everything is read live from the chat server.
- */
 export function ChatPanel({ appId, appName, running, server: serverHint }: { appId: string; appName: string; running: boolean; server: ChatServerKind }) {
   const url = running ? `/api/chat/${encodeURIComponent(appId)}` : null;
   const { data, error, mutate, isLoading } = useApi<ChatSnapshot>(url, { refresh: 15_000 });
@@ -170,10 +165,6 @@ function Lead({ snap, hostName, onAdd, onInvite }: { snap: ChatSnapshot; hostNam
   );
 }
 
-/**
- * Network's check of the router, where it matters most: a chat server that works at home but not
- * from outside looks fine from every device on the home network.
- */
 function ReachNotice({ host }: { host: string }) {
   const { data } = useApi<NetworkStatus>("/api/network/status", { refresh: 60_000 });
   const route = data?.routes.find((r) => r.xmpp?.domain === host);

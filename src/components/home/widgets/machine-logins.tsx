@@ -1,6 +1,5 @@
 "use client";
-// "Who's connected": people signed in to the machine over SSH or at its keyboard. Admin-only: the
-// widget is hidden from members in the catalog and on Home, and its API refuses anyone but admins.
+// Admin-only: hidden from members in the catalog and on Home, and its API refuses anyone but admins.
 import Link from "next/link";
 import { registerWidget } from "../widgetStore";
 import type { WidgetProps } from "../types";
@@ -20,7 +19,6 @@ interface Person {
   sessions: LiveSession[];
   away: boolean;
   since: number;
-  /** The most telling session: a terminal beats a tunnel. */
   lead: LiveSession;
 }
 

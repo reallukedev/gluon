@@ -17,7 +17,6 @@ interface FieldProps {
   className?: string;
 }
 
-/** Label + control + description/error, wired for accessibility by Base UI Field. */
 export function Field({ label, description, error, optional, children, className }: FieldProps) {
   return (
     <BaseField.Root invalid={!!error} className={`${s.field} ${className ?? ""}`}>
@@ -38,7 +37,6 @@ export function Field({ label, description, error, optional, children, className
 
 type InputProps = React.ComponentPropsWithoutRef<"input"> & { mono?: boolean };
 
-/** Use inside <Field> (becomes its control) or on its own with an aria-label. */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input({ className, mono, ...rest }, ref) {
   return <BaseField.Control ref={ref} className={`${s.input} ${mono ? s.mono : ""} ${className ?? ""}`} {...rest} />;
 });
@@ -50,7 +48,6 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, React.ComponentPro
   return <BaseField.Control render={<textarea ref={ref} />} className={`${s.input} ${mono ? s.mono : ""} ${className ?? ""}`} {...(rest as object)} />;
 });
 
-/** An input with fixed text before/after it, e.g. `https://` [ photos ] `.example.com`. */
 export function AffixInput({ before, after, ...rest }: InputProps & { before?: React.ReactNode; after?: React.ReactNode }) {
   return (
     <div className={s.affix}>
@@ -78,7 +75,6 @@ export function Switch({ checked, onChange, disabled, id, ...aria }: SwitchProps
   );
 }
 
-/** A settings row: label + description on the left, a control (switch, select…) on the right. */
 export function SettingRow({ label, description, children, stack, className }: { label: React.ReactNode; description?: React.ReactNode; children: React.ReactNode; stack?: boolean; className?: string }) {
   const id = React.useId();
   return (
@@ -130,11 +126,7 @@ interface SegmentedProps<T extends string> {
   disabled?: boolean;
 }
 
-/**
- * A sunk well of choices. The raised plate slides to the chosen segment (150ms, --ease-out: pressed
- * constantly, so it starts moving at once) and the eye follows; keyboard changes land instantly.
- * Before hydration the chosen segment draws its own plate, so there is no flash.
- */
+/** Before hydration the chosen segment draws its own plate, so there is no flash. */
 export function Segmented<T extends string>({ value, onChange, options, block, disabled, ...aria }: SegmentedProps<T>) {
   const root = React.useRef<HTMLDivElement>(null);
   const thumb = React.useRef<HTMLSpanElement>(null);

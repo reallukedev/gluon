@@ -19,7 +19,6 @@ interface DialogProps {
   footer?: React.ReactNode;
   footerStart?: React.ReactNode;
   size?: "default" | "wide" | "xwide";
-  /** Keep content when closed (e.g. forms mid-edit). */
   keepMounted?: boolean;
   initialFocus?: React.RefObject<HTMLElement | null>;
 }
@@ -27,9 +26,7 @@ interface DialogProps {
 const PHONE = "(max-width: 640px)";
 
 /**
- * Phones get a bottom sheet you can flick away (Base UI Drawer: follows the finger, dismisses on
- * distance or velocity); larger screens get a centred dialog. The choice is made when the dialog
- * opens and held until it has finished closing, so rotating the phone never remounts a half-filled form.
+ * The choice is held until the dialog has finished closing, so rotating the phone never remounts a half-filled form.
  */
 function useSheet(open: boolean) {
   const phone = useMediaQuery(PHONE);
@@ -102,21 +99,17 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 export interface ConfirmOptions {
   title: string;
   description?: React.ReactNode;
-  /** Plain-language list of what will happen. */
   consequences?: React.ReactNode[];
   confirmLabel: string;
   cancelLabel?: string;
   variant?: ButtonVariant;
-  /** Require typing this text (e.g. a disk name) before the button enables. */
   typeToConfirm?: string;
-  /** Require pressing and holding the button (ms). */
   holdMs?: number;
   onConfirm: () => Promise<unknown> | unknown;
 }
 
 /**
- * The only way Gluon asks "are you sure". Destructive actions spell out consequences; the most
- * dangerous ones also require typing a name or holding the button.
+ * Destructive actions spell out consequences; the most dangerous ones also require typing a name or holding the button.
  */
 export function ConfirmDialog({ open, onOpenChange, ...o }: ConfirmOptions & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [typed, setTyped] = React.useState("");
@@ -215,7 +208,6 @@ export function ConfirmDialog({ open, onOpenChange, ...o }: ConfirmOptions & { o
   );
 }
 
-/** Imperative helper: `const confirm = useConfirm(); confirm({...})`. */
 export function useConfirm() {
   const [state, setState] = React.useState<ConfirmOptions | null>(null);
   const [open, setOpen] = React.useState(false);

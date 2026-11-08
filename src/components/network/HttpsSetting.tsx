@@ -8,11 +8,6 @@ import { StateLine } from "@/components/ui/StateLine";
 import { certbotFiles, httpsSummary, type HttpsForm } from "./https-form";
 import h from "./https.module.css";
 
-/**
- * Who handles HTTPS for an address. Quiet by default: one line saying Gluon gets the certificate,
- * with the other ways a click away, each saying plainly who does what.
- */
-
 export type SiteKind = "web" | "chat" | "voice" | "redirect";
 
 interface Props {
@@ -202,7 +197,6 @@ function PemField({ label, value, error, onText, placeholder, description }: { l
 
 const longDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 
-/** What a certificate covers and when it ends. The key is never part of this. */
 export function CertFacts({ info, host, label }: { info: OwnCertInfo; host: string; label?: string }) {
   const state = info.daysLeft < 0 ? "unhealthy" : info.daysLeft < 21 ? "attention" : "running";
   const days = `${info.daysLeft} day${info.daysLeft === 1 ? "" : "s"}`;

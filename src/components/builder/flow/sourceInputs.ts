@@ -2,7 +2,6 @@
 import * as React from "react";
 import type { FlowSource } from "./SourceStep";
 
-/** What the person typed on the first step, for every source at once (tokens excluded). */
 export interface SourceInputs {
   image: string;
   run: string;
@@ -11,7 +10,6 @@ export interface SourceInputs {
   repo: string;
   branch: string;
   path: string;
-  /** Names typed per source; missing means "follow the suggestion". */
   names: Partial<Record<FlowSource, string>>;
 }
 
@@ -26,10 +24,7 @@ export function clearSourceInputs() {
   }
 }
 
-/**
- * Inputs live above the source forms, so switching from a pasted compose file to docker run and
- * back keeps both, and a reload in this tab brings them back until the draft is made.
- */
+/** Lifted above the source forms so switching sources keeps what was typed in each. */
 export function useSourceInputs() {
   const [inputs, setInputs] = React.useState<SourceInputs>(EMPTY);
   React.useEffect(() => {

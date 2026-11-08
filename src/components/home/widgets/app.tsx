@@ -21,7 +21,6 @@ import s from "./app.module.css";
 
 export interface AppConfig {
   appId?: string;
-  /** The app's name when it was picked, so edit mode can say which tile this is. */
   name?: string;
 }
 
@@ -42,7 +41,6 @@ export function appHints(apps: ApiApp[]) {
   return hints;
 }
 
-/** Docker's "Up 3 days (healthy)" → "3 days". */
 export function uptimeOf(app: ApiApp): string | null {
   const c = app.containers?.find((x) => x.state === "running");
   const m = c ? /^Up\s+(.+?)(\s*\(.*\))?$/i.exec(c.status) : null;
@@ -50,7 +48,6 @@ export function uptimeOf(app: ApiApp): string | null {
   return m[1]!.replace(/^About an? /i, "1 ").replace(/^Less than a second$/i, "a moment");
 }
 
-/** CPU (% of the machine) and memory for an app's containers over the live window. */
 function useAppSeries(names: string[]) {
   const { containers, status } = useLive();
   const key = names.join("\u0000");
@@ -74,7 +71,6 @@ function useAppSeries(names: string[]) {
   return { series, status };
 }
 
-/** A 1.25px line over the live window, ending in a marked "now". Pure SVG, no axes: the figure above it says the value. */
 function Trace({ values, max, label }: { values: number[]; max: number; label: string }) {
   const h = 24;
   if (values.length < 2) return <span className={s.traceEmpty} aria-hidden />;
@@ -284,7 +280,6 @@ export function AppSettings({ config, onChange }: SettingsProps<AppConfig>) {
   );
 }
 
-/** Catalog preview for the App tile: the same miniature tile as every other preview, with the app's real icon. */
 export function AppPreview({ icon, name }: { icon?: string | null; name?: string }) {
   return (
     <span className={s.preview}>

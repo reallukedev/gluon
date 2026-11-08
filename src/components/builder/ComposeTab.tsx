@@ -11,10 +11,6 @@ import { LazyYamlEditor as YamlEditor } from "./LazyYamlEditor";
 import type { Draft } from "./state";
 import s from "./builder.module.css";
 
-/**
- * The compose file itself: the source of truth for everything, including what the form doesn't
- * show. Problems sit on their lines; the fixes Gluon can make are one click.
- */
 export function ComposeTab({ draft, detail, issues, onFix, onFixAll, onGo, editorRef, secrets }: { draft: Draft; detail: CustomAppDetail; issues: Issue[]; onFix: (id: string) => void; onFixAll: () => void; onGo: (i: Issue) => void; editorRef: React.RefObject<YamlEditorHandle | null>; secrets: SecretNames }) {
   const [view, setView] = React.useState<"edit" | "changes">("edit");
   const published = detail.publishedSpec?.compose ?? null;

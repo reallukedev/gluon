@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import { useApi } from "@/lib/client/api";
 import { useFormat } from "@/components/PrefsProvider";
 import { Panel, Empty, Notice, Skeleton } from "@/components/ui/Surface";
@@ -34,7 +33,6 @@ function sourceWords(e: FstabEntryView): string {
   }
 }
 
-/** One fstab line in plain words. */
 function explain(e: FstabEntryView): string {
   if (e.swap) return `Uses ${e.device ?? sourceWords(e)} as swap space.`;
   if (e.bind) return `Shows ${e.spec} also at ${e.target}.`;
@@ -53,17 +51,12 @@ function entryLine(e: FstabEntryView) {
   return "running" as const;
 }
 
-/** Which disk a device path belongs to, by name a person recognises. */
 function diskFor(disks: DiskView[], device: string | null): { disk: DiskView; vol: VolumeView } | null {
   if (!device) return null;
   for (const d of disks) for (const v of allVolumes(d)) if (v.path === device) return { disk: d, vol: v };
   return null;
 }
 
-/**
- * The startup list (/etc/fstab) as what it means: each line is a drive connected to a folder when the
- * server starts. Drives that are connected now but missing from it are listed first, with the fix.
- */
 export function FstabPanel({ disks, onPersist, busy }: { disks: DiskView[]; onPersist: (r: Row) => void; busy: boolean }) {
   const fmt = useFormat();
   const { data, error } = useApi<{ text: string; entries: FstabEntryView[]; backups: FstabBackup[] }>("/api/storage/fstab", { refresh: 30_000 });

@@ -1,4 +1,3 @@
-/* Loading skeletons for the Apps routes, laid out like the pages they stand in for. */
 .tabs { display: flex; gap: 28px; margin-top: 28px; padding-bottom: 14px; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .table { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); overflow: hidden; }
@@ -9,5 +8,4 @@
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
 @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .row { grid-template-columns: 34px minmax(0, 1fr); } .row > :last-child { display: none; } }
-/* Inside the Apps frame the tabs are already drawn; the toolbar sits where the real one will. */
 .bodyOnly .toolbar { margin-top: 0; }

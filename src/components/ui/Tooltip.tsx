@@ -19,7 +19,7 @@ interface Props {
   disabled?: boolean;
 }
 
-/** Supplementary label for pointer users. Never the only place important information lives. */
+/** Never the only place important information lives. */
 export function Tooltip({ content, shortcut, side = "top", children, disabled }: Props) {
   if (disabled) return children;
   return (

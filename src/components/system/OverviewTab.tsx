@@ -2,7 +2,6 @@
 import * as React from "react";
 import type { MemoryBreakdown, RestartNeeded, SystemOverview } from "@/lib/system-types";
 import { api, useApi, ApiError } from "@/lib/client/api";
-import { useFormat } from "@/components/PrefsProvider";
 import { Panel, Notice, Skeleton, DefinitionList } from "@/components/ui/Surface";
 import { useLiveValue } from "@/lib/client/live";
 import { Faceplate } from "./Faceplate";
@@ -17,7 +16,6 @@ import { upFor } from "@/lib/words";
 import s from "./system.module.css";
 
 export function OverviewTab({ initial, memory }: { initial?: SystemOverview; memory?: MemoryBreakdown }) {
-  const fmt = useFormat();
   const { data, error, isLoading, mutate } = useApi<SystemOverview>("/api/system/overview", { refresh: 30_000, fallbackData: initial });
   const restart = useApi<RestartNeeded>("/api/system/restart-needed", {
     refresh: 5 * 60_000,
@@ -61,7 +59,6 @@ export function OverviewTab({ initial, memory }: { initial?: SystemOverview; mem
   );
 }
 
-/** How long it's been up. The live figures are the faceplate's, right below. */
 function Facts({ overview: o }: { overview: SystemOverview }) {
   return (
     <div className={s.factsWrap}>
@@ -152,8 +149,6 @@ function identity(o: SystemOverview): [React.ReactNode, React.ReactNode][] {
   return rows;
 }
 
-// ---------------------------------------------------------------- hostname
-
 const LABEL = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
 function hostnameProblem(raw: string): string | null {
@@ -210,8 +205,6 @@ function HostnameRow({ hostname, onRenamed, sub }: { hostname: string; onRenamed
   );
 }
 
-// ---------------------------------------------------------------- time
-
 function TimePanel({ overview, onChanged }: { overview: SystemOverview; onChanged: () => void }) {
   const t = overview.time;
   const [busy, setBusy] = React.useState<"tz" | "ntp" | null>(null);
@@ -255,8 +248,6 @@ function TimePanel({ overview, onChanged }: { overview: SystemOverview; onChange
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- restart needed
 
 function RestartNotice({ overview, restart, onRestarted }: { overview: SystemOverview; restart?: RestartNeeded; onRestarted: () => void }) {
   const [busy, setBusy] = React.useState<string | null>(null);

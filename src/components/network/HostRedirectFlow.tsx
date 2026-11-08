@@ -13,8 +13,6 @@ import { DnsHelp } from "./DnsHelp";
 import { certUploads, hasNewCert, httpsFieldOf, httpsFormFrom, httpsSetting, verifyHttps } from "./https-form";
 import f from "./flow.module.css";
 
-/** A whole domain that sends visitors somewhere else, keeping the path ("old.example.com → new.example.com"). */
-
 export type HostRedirectTarget = { mode: "new" } | { mode: "edit"; id: string };
 
 const HOST_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;

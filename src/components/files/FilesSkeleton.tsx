@@ -1,6 +1,5 @@
 import { Page, PageHeader, Skeleton } from "@/components/ui/Surface";
 
-/** Files while the server reads your places: the screen you asked for, in its shape, so arriving isn't blank. */
 export function FilesSkeleton({ screen }: { screen: "front" | "browse" | "trash" }) {
   const title = screen === "front" ? "Files" : screen === "trash" ? "Trash" : <Skeleton width={220} height={30} radius={6} />;
   return (

@@ -38,7 +38,6 @@ function tipFor(sc: SearchScope | undefined, admin: boolean): string {
   return `Try other words, or look everywhere instead.`;
 }
 
-/** ⌘ on Apple devices, Ctrl elsewhere. Only read once the palette is open (never during SSR). */
 function modLabel(): string {
   if (typeof navigator === "undefined") return "Ctrl";
   return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl";
@@ -194,7 +193,6 @@ export function CommandPalette({ open, onOpenChange, nav, pins }: { open: boolea
     else router.push(it.href);
   }
 
-  /** First result of the next (or previous) group, for ⌥↓ / ⌥↑. */
   function jumpGroup(dir: 1 | -1) {
     const starts: number[] = [];
     let n = 0;
@@ -459,7 +457,6 @@ const Option = React.memo(function Option({
   );
 });
 
-/** Two rows shaped like results while a connected app is being asked. Still, on purpose. */
 function SkeletonRows() {
   return (
     <div className={s.skeletons} aria-hidden>

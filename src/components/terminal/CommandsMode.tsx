@@ -38,7 +38,6 @@ const MAX_BLOCKS = 60;
 const EXAMPLES_HOST = ["df -h", "docker ps", "systemctl --failed", "free -h", "journalctl -p err -b --no-pager | tail -20"];
 const EXAMPLES_CONTAINER = ["ls -la", "cat /etc/os-release", "ps aux", "env | sort", "df -h"];
 
-/** Commands mode: one prompt, each run a block with its output, the folder carried between runs. */
 export const CommandsMode = React.forwardRef<CommandsHandle, Props>(function CommandsMode(p, ref) {
   // Callbacks read the latest props through this, so they stay stable for the memoised blocks.
   const latest = React.useRef(p);
