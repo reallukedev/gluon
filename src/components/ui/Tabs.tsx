@@ -24,8 +24,8 @@ interface Props<T extends string> {
 }
 
 /**
- * Underlined tabs. The 2px indicator glides between tabs (200ms, --ease-in-out: a moving element)
- * so the eye follows the change; keyboard changes and the first paint land instantly. On narrow
+ * Underlined tabs. The 2px indicator glides between tabs (150ms, --ease-out: clicked constantly, so
+ * it starts moving at once) and the eye follows; keyboard changes and the first paint land instantly. On narrow
  * screens the list scrolls sideways and keeps the active tab in view.
  */
 export function Tabs<T extends string>({ value, onChange, items, hrefFor, children, className, ...aria }: Props<T>) {

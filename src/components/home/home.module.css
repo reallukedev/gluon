@@ -177,12 +177,13 @@
 .widget[data-overlay] .body { opacity: 0.8; }
 .widget[data-overlay] .chrome { transition: none; }
 
-/* Entrance, once per session: each widget rises 6px into place, 40ms apart. */
+/* Entrance, once per session: each widget rises 6px into place, 25ms apart and capped at the sixth, so
+   the last one is readable within 350ms however many are pinned. */
 /* Reduced motion keeps the staggered fade and drops the travel (--motion is 0). */
 @keyframes widget-in {
   from { opacity: 0.5; transform: translateY(calc(4px * var(--motion, 1))); }
 }
-.grid[data-enter] .widget { animation: widget-in var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.grid[data-enter] .widget { animation: widget-in var(--dur-base) var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 6) * 25ms); }
 
 .chrome {
   flex: none;
