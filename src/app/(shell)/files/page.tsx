@@ -4,17 +4,21 @@ import { places } from "@/server/files/places";
 import { Files } from "@/components/files/Files";
 import { FilesSkeleton } from "@/components/files/FilesSkeleton";
 import type { Places } from "@/lib/files-types";
+import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Files" };
 
 export default async function FilesPage({ searchParams }: { searchParams: Promise<{ view?: string; path?: string }> }) {
+  const at = Date.now();
   const { user } = await requireUser();
   const sp = await searchParams;
   // Places reads the drives, so it isn't awaited here: the page's shape goes out first.
   return (
-    <Suspense fallback={<FilesSkeleton screen={sp.view === "trash" ? "trash" : sp.path ? "browse" : "front"} />}>
-      <FilesWithPlaces initial={places(user).catch(() => null)} />
-    </Suspense>
+    <Seeded at={at}>
+      <Suspense fallback={<FilesSkeleton screen={sp.view === "trash" ? "trash" : sp.path ? "browse" : "front"} />}>
+        <FilesWithPlaces initial={places(user).catch(() => null)} />
+      </Suspense>
+    </Seeded>
   );
 }
 

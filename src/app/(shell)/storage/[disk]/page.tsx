@@ -4,6 +4,7 @@ import { currentAuth, requireAdmin } from "@/server/auth/session";
 import { getInventoryState, findDisk } from "@/server/storage/inventory";
 import { smartDetail, smartFor } from "@/server/storage/smart";
 import { DiskDetailView, DiskDetailSkeleton } from "@/components/storage/DiskDetailView";
+import { Seeded } from "@/lib/client/seed";
 
 export async function generateMetadata({ params }: { params: Promise<{ disk: string }> }) {
   // Metadata can render before the page's own admin check: never describe a disk to anyone else.
@@ -26,8 +27,9 @@ export default async function DiskPage({ params }: { params: Promise<{ disk: str
 }
 
 async function Disk({ id }: { id: string }) {
+  const at = Date.now();
   const disk = findDisk(await getInventoryState(), id);
   if (!disk) notFound();
   const view = { ...disk, smart: smartFor(disk.id) };
-  return <DiskDetailView initial={{ disk: view, smart: smartDetail(disk.id) }} />;
+  return <Seeded at={at}><DiskDetailView initial={{ disk: view, smart: smartDetail(disk.id) }} /></Seeded>;
 }

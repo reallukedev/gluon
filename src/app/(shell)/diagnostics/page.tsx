@@ -2,6 +2,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { checkupState, securityState } from "@/server/diagnostics/checkup/state";
 import { DiagnosticsView, type DiagTab } from "@/components/diagnostics/DiagnosticsView";
 import type { CheckupKind } from "@/lib/diagnostics-types";
+import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "Diagnostics" };
 
@@ -10,6 +11,7 @@ const KINDS: CheckupKind[] = ["full", "app", "address", "internet", "server", "s
 const str = (v: unknown) => (typeof v === "string" && v.length <= 200 ? v : null);
 
 export default async function DiagnosticsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const at = Date.now();
   await requireAdmin();
   const sp = await searchParams;
   const rawTab = str(sp.tab);
@@ -34,5 +36,9 @@ export default async function DiagnosticsPage({ searchParams }: { searchParams: 
     }
   }
   // ?start=safety on the Security tab runs it there; the Checkup tab only runs what it was sent.
-  return <DiagnosticsView tab={tab} logSource={source} logUnit={unit} checkup={checkup} security={security} runId={runId} start={tab === "checkup" || start?.kind === "safety" ? start : null} />;
+  return (
+    <Seeded at={at}>
+      <DiagnosticsView tab={tab} logSource={source} logUnit={unit} checkup={checkup} security={security} runId={runId} start={tab === "checkup" || start?.kind === "safety" ? start : null} />
+    </Seeded>
+  );
 }

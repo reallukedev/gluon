@@ -4,6 +4,7 @@ import { appDetail } from "@/server/docker/detail";
 import { getApp } from "@/server/docker/apps";
 import { listUsers } from "@/server/auth/users";
 import { AppDetailView } from "@/components/apps/AppDetailView";
+import { Seeded } from "@/lib/client/seed";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const id = decodeURIComponent((await params).id);
@@ -12,6 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function AppPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; container?: string }> }) {
+  const at = Date.now();
   await requireAdmin();
   const { id } = await params;
   const sp = await searchParams;
@@ -19,5 +21,5 @@ export default async function AppPage({ params, searchParams }: { params: Promis
   if (!detail) notFound();
   const members = listUsers().filter((u) => u.role === "member").map((u) => ({ id: u.id, name: u.displayName }));
   const tab = sp.tab === "logs" || sp.tab === "compose" || sp.tab === "settings" || sp.tab === "chat" || sp.tab === "voice" ? sp.tab : "overview";
-  return <AppDetailView initial={detail} tab={tab} container={sp.container ?? null} members={members} />;
+  return <Seeded at={at}><AppDetailView initial={detail} tab={tab} container={sp.container ?? null} members={members} /></Seeded>;
 }

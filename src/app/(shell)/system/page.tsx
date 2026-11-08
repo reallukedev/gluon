@@ -6,12 +6,14 @@ import { powerStatus } from "@/server/system/power";
 import { liveLogins } from "@/server/system/logins";
 import { memoryBreakdown } from "@/server/system/memory";
 import { SystemView, type SystemTab, type SystemInitial } from "@/components/system/SystemView";
+import { Seeded } from "@/lib/client/seed";
 
 export const metadata = { title: "System" };
 
 const TABS: SystemTab[] = ["overview", "updates", "services", "sign-ins", "power"];
 
 export default async function SystemPage({ searchParams }: { searchParams: Promise<{ tab?: string; unit?: string }> }) {
+  const at = Date.now();
   await requireAdmin();
   const sp = await searchParams;
   const tab: SystemTab = TABS.includes(sp.tab as SystemTab) ? (sp.tab as SystemTab) : "overview";
@@ -26,5 +28,5 @@ export default async function SystemPage({ searchParams }: { searchParams: Promi
     power: tab === "power" ? soft(powerStatus()) : undefined,
     logins: tab === "sign-ins" ? soft(liveLogins()) : undefined,
   };
-  return <SystemView tab={tab} unit={typeof sp.unit === "string" ? sp.unit : null} initial={initial} />;
+  return <Seeded at={at}><SystemView tab={tab} unit={typeof sp.unit === "string" ? sp.unit : null} initial={initial} /></Seeded>;
 }
