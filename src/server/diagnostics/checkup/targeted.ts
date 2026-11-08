@@ -191,6 +191,7 @@ async function appPlan(appId: string): Promise<Plan> {
       let crashes = 0;
       let restarts = 0;
       let oldest: number | null = null;
+      let uninspected = 0;
       for (const c of app.containers) {
         const dies = recentDies(c.name, 24 * 3_600_000);
         crashes += dies;
@@ -202,9 +203,11 @@ async function appPlan(appId: string): Promise<Plan> {
           rows.push([c.name, `${info.State.Status}, started ${Number.isFinite(started) ? formatRelative(started) : "?"} · restarted ${info.RestartCount ?? 0}× by Docker · stopped ${dies}× today`]);
         } catch {
           rows.push([c.name, "couldn't inspect"]);
+          uninspected++;
         }
       }
       const evidence = kv(rows);
+      if (crashes < 3 && uninspected && uninspected === app.containers.length) return skip("Docker couldn't say when its containers last started", { evidence });
       if (crashes >= 3) return warn(`${app.name} stopped ${plural(crashes, "time")} in the last day`, { detail: "Something keeps killing it. Its logs usually show why.", evidence, fix: go("Read the logs", appHref(app.id, "logs")) });
       return ok(oldest ? `Up for ${formatDuration((Date.now() - oldest) / 1000)} without a crash` : "No recent crashes", { evidence });
     },
@@ -215,13 +218,19 @@ async function appPlan(appId: string): Promise<Plan> {
     label: "Recent errors",
     run: async () => {
       const since = Date.now() - 3_600_000;
+      const asked = app.containers.filter((c) => c.state === "running" || c.state === "restarting" || c.state === "exited");
+      let unread = 0;
       const lines = (
         await Promise.all(
-          app.containers
-            .filter((c) => c.state === "running" || c.state === "restarting" || c.state === "exited")
-            .map((c) => tailLogs(c.id, c.name, { tail: 400 }).catch(() => [])),
+          asked.map((c) =>
+            tailLogs(c.id, c.name, { tail: 400 }).catch(() => {
+              unread++;
+              return [];
+            }),
+          ),
         )
       ).flat();
+      if (asked.length && unread === asked.length) return skip("Couldn't read its logs");
       const recent = lines.filter((l) => l.t >= since);
       const errors = recent.filter((l) => l.level === "error");
       const evidence = errors.length ? errors.slice(-8).map((l) => `${new Date(l.t).toISOString().slice(11, 19)} ${l.container}  ${l.text.slice(0, 220)}`).join("\n") : `${recent.length} log lines in the last hour, none look like errors.`;

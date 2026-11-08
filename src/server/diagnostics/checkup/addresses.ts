@@ -80,8 +80,10 @@ export function certOutcome(host: string, t: TlsResult | null, routeId: string |
   const findings = [`net.cert:${host}`];
   const fix = go("See Caddy's log", "/diagnostics?tab=requests");
   if (t.status === "expired") return fail(`The certificate for ${host} has expired`, { detail: "Browsers show a security warning. Caddy renews automatically, so something is blocking renewal: DNS, port forwarding or Let's Encrypt limits.", value: "expired", evidence, findings, fix });
-  if (t.status === "ok" && (t.daysLeft ?? 99) >= certDays) return ok(`The certificate for ${host} is good for ${t.daysLeft} more days`, { value: `${t.daysLeft} d`, evidence });
-  if (t.status === "expiring" || (t.daysLeft ?? 99) < certDays) return warn(`The certificate for ${host} expires in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`, { detail: "Caddy normally renews 30 days ahead, so renewal seems to be failing. Its log says why.", value: `${t.daysLeft} d`, evidence, findings, fix });
+  if (t.status === "ok" && t.daysLeft === null) return ok(`The certificate for ${host} is valid`, { evidence });
+  if (t.status === "ok" && t.daysLeft !== null && t.daysLeft >= certDays) return ok(`The certificate for ${host} is good for ${t.daysLeft} more days`, { value: `${t.daysLeft} d`, evidence });
+  if (t.status === "expiring" || t.status === "ok") return warn(t.daysLeft === null ? `The certificate for ${host} expires soon` : `The certificate for ${host} expires in ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"}`, { detail: "Caddy normally renews 30 days ahead, so renewal seems to be failing. Its log says why.", value: t.daysLeft === null ? null : `${t.daysLeft} d`, evidence, findings, fix });
+  if (t.status === "error") return skip(`Couldn't check the certificate for ${host}`, { detail: t.message, evidence });
   return warn(t.status === "pending" ? `${host} has no certificate yet` : `The certificate for ${host} isn't trusted`, { detail: t.issueError ?? t.message, evidence, findings, fix: go("Check DNS and certificates", routeId ? addressHref(routeId) : "/network?tab=dns") });
 }
 

@@ -100,6 +100,8 @@ export function sampleHost(): HostSample {
   const s = st();
   const t = Date.now();
   const cpu = cpuTimes();
+  // The first sample has nothing to diff against; keep it out of the history instead of logging 0%.
+  const first = !s.prevCpu;
   let cpuPct = 0;
   let cores: number[] = [];
   if (s.prevCpu) {
@@ -167,13 +169,15 @@ export function sampleHost(): HostSample {
   s.host.push(sample);
   if (s.host.length > HOST_KEEP) s.host.shift();
 
-  acc("cpu", cpuPct);
+  if (!first) {
+    acc("cpu", cpuPct);
+    acc("net.rx", rx);
+    acc("net.tx", tx);
+    acc("disk.read", read);
+    acc("disk.write", write);
+  }
   acc("mem.used", mem.used);
   acc("load1", sample.load[0]);
-  acc("net.rx", rx);
-  acc("net.tx", tx);
-  acc("disk.read", read);
-  acc("disk.write", write);
   acc("temp.cpu", sample.temp);
   flushMinute();
   publish("metrics.host", sample);
@@ -243,6 +247,34 @@ export async function sampleContainers(): Promise<ContainerSample[]> {
 // ---------------------------------------------------------------- filesystems
 
 const REAL_FS = new Set(["ext4", "ext3", "ext2", "xfs", "btrfs", "zfs", "vfat", "exfat", "ntfs", "ntfs3", "fuseblk", "f2fs", "nfs", "nfs4", "cifs", "smb3", "fuse.mergerfs", "fuse.sshfs"]);
+// statfs on a hard-mounted share whose server is gone blocks forever, so these are never read
+// synchronously: a background read fills `remote` and a stuck one is simply left pending.
+export const REMOTE_FS = new Set(["nfs", "nfs4", "cifs", "smb3", "fuse.sshfs", "fuse.mergerfs"]);
+const REMOTE_STALE_MS = 5 * 60_000;
+const remote = new Map<string, { at: number; size: number; used: number; avail: number; pending: boolean }>();
+
+/** Decode the octal escapes /proc/mounts uses for space, tab, newline and backslash. */
+export const unescapeMount = (s: string) => s.replace(/\\([0-7]{3})/g, (_, o: string) => String.fromCharCode(parseInt(o, 8)));
+
+const usage = (sfs: fs.StatsFs) => {
+  const size = sfs.blocks * sfs.bsize;
+  return { size, avail: sfs.bavail * sfs.bsize, used: size - sfs.bfree * sfs.bsize };
+};
+
+function remoteUsage(mount: string) {
+  const r = remote.get(mount) ?? { at: 0, size: 0, used: 0, avail: 0, pending: false };
+  remote.set(mount, r);
+  if (!r.pending) {
+    r.pending = true;
+    fs.statfs(hostPath(mount), (err, sfs) => {
+      r.pending = false;
+      if (err) return void (r.at = 0);
+      Object.assign(r, usage(sfs), { at: Date.now() });
+    });
+  }
+  // Only a recent answer counts; a share that stopped answering drops out instead of showing old numbers.
+  return r.at && Date.now() - r.at < REMOTE_STALE_MS ? r : null;
+}
 
 export function sampleFilesystems(): FsUsage[] {
   const mounts = readHostFileOr("/proc/1/mounts", "").split("\n");
@@ -251,17 +283,16 @@ export function sampleFilesystems(): FsUsage[] {
   for (const line of mounts) {
     const [device, rawMount, fstype] = line.split(" ");
     if (!device || !rawMount || !fstype || !REAL_FS.has(fstype)) continue;
-    const mount = rawMount.replace(/\\040/g, " ");
+    const mount = unescapeMount(rawMount);
     if (mount.startsWith("/proc") || mount.startsWith("/sys") || mount.startsWith("/run") || mount.startsWith("/snap")) continue;
-    // Bind mounts show the same device twice; keep the first (shortest) path per device+fs.
+    // Bind mounts show the same device twice; keep the first one listed.
     const key = `${device}`;
     if (seen.has(key)) continue;
     seen.add(key);
     try {
-      const sfs = fs.statfsSync(hostPath(mount));
-      const size = sfs.blocks * sfs.bsize;
-      const avail = sfs.bavail * sfs.bsize;
-      const used = size - sfs.bfree * sfs.bsize;
+      const u = REMOTE_FS.has(fstype) ? remoteUsage(mount) : usage(fs.statfsSync(hostPath(mount)));
+      if (!u) continue;
+      const { size, used, avail } = u;
       out.push({ mount, device, fstype, size, used, avail, pct: used + avail > 0 ? (used / (used + avail)) * 100 : 0 });
       acc(`fs.${mount}.used`, used);
     } catch {

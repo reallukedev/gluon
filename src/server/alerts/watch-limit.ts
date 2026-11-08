@@ -129,11 +129,12 @@ registerRemedy("system.raiseFileWatches", {
     const current = (await readNum(LIMIT_FILE)) ?? 0;
     if (want <= current) return { message: `The limit is already ${fmt(current)}.` };
     await host("sysctl", ["-w", `fs.inotify.max_user_watches=${want}`], { timeoutMs: 10_000 });
-    await fs.writeFile(
-      hostPath(CONF),
-      `# Written by Gluon: room for apps to watch files for changes (default limits run out on busy servers).\nfs.inotify.max_user_watches = ${want}\n`,
-      { mode: 0o644 },
-    );
+    const now = await readNum(LIMIT_FILE);
+    if (now !== want) throw new AppError("not_applied", `The limit is still ${now === null ? "unknown" : fmt(now)}, so the change didn't take. Nothing was saved.`, 500);
+    // Temp file then rename, so a crash never leaves a half-written sysctl file for the next boot.
+    const tmp = `${hostPath(CONF)}.gluon-tmp`;
+    await fs.writeFile(tmp, `# Written by Gluon: room for apps to watch files for changes (default limits run out on busy servers).\nfs.inotify.max_user_watches = ${want}\n`, { mode: 0o644 });
+    await fs.rename(tmp, hostPath(CONF));
     return { message: `Apps can watch up to ${fmt(want)} files now, and after restarts too.` };
   },
 });

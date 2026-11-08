@@ -1,7 +1,7 @@
 import "server-only";
 import { failedServices, failureReason } from "../../system/services";
 import { timeStatus } from "../../system/time";
-import { rebootStatus, pendingUpdates, pendingClock } from "../../system/apt";
+import { rebootStatus, pendingUpdates, pendingClock, refreshHistory, listsUpdatedAt } from "../../system/apt";
 import { dockerUsage } from "../../storage/cleanup";
 import { formatBytes, formatRelative, plural } from "@/lib/format";
 import { fail, go, kv, ok, skip, warn, type CheckSpec, type Outcome } from "./core";
@@ -68,6 +68,17 @@ export async function updatesOutcome(): Promise<Outcome> {
   if (security.length) {
     const days = clock.oldestSecurityAt ? Math.floor((Date.now() - clock.oldestSecurityAt) / 86_400_000) : 0;
     return warn(`${plural(security.length, "security update")} ${security.length === 1 ? "is" : "are"} waiting${days > 1 ? ` (for ${days} days)` : ""}`, { value: String(security.length), detail: "They fix known security problems. Installing takes a few minutes and apps keep running.", evidence, findings, fix });
+  }
+  // The list is only as current as the last refresh: one that keeps failing can't show new fixes.
+  const h = refreshHistory();
+  const listsAt = listsUpdatedAt();
+  if (h.ok === false || (listsAt !== null && Date.now() - listsAt > 7 * 86_400_000)) {
+    return warn("Couldn't check for new updates", {
+      detail: `${h.ok === false && h.error ? `${h.error.replace(/[.\s]*$/, ".")} ` : ""}The package lists were last refreshed ${listsAt ? formatRelative(listsAt) : "a long time ago"}, so new security fixes may be missing from this list.`,
+      evidence,
+      findings: ["system.apt-refresh"],
+      fix,
+    });
   }
   if (installable.length) return ok(`No security updates waiting (${plural(installable.length, "other update")} ready)`, { value: String(installable.length), evidence });
   return ok("The system is up to date", { evidence });

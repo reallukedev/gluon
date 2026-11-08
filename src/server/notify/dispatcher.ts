@@ -3,7 +3,7 @@ import { all, now, one, run } from "../db";
 import { getSetting } from "../settings";
 import { findById } from "../auth/users";
 import { listApps, appsForMember } from "../docker/apps";
-import { getFinding, markNotified, needsNotification, raise, resolve, type Finding } from "../findings";
+import { getFinding, markNotified, needsNotification, raise, resolve, REOPEN_GRACE_MS, type Finding } from "../findings";
 import type { ChannelKind, DeliveryEvent, NotifyKind } from "@/lib/alerts-types";
 import { alertsHref } from "@/lib/settings-links";
 import { getChannel, sendContext, type Channel } from "./channels";
@@ -31,6 +31,7 @@ const BACKOFF_MS = [30_000, 2 * 60_000, 10 * 60_000, 30 * 60_000, 60 * 60_000, 3
 const MAX_ATTEMPTS = 7;
 const MAX_ATTEMPTS_PERMANENT = 3;
 const RETENTION_MS = 90 * 86_400_000;
+const SEND_LIMIT_MS = 90_000;
 
 export interface DeliveryRow {
   id: number;
@@ -192,7 +193,10 @@ export function followUps() {
             f.id AS f_id, f.kind, f.title, f.subject, f.severity, f.first_seen, f.resolved_at, f.dismissed_at
      FROM notify_deliveries d LEFT JOIN findings f ON f.id = d.finding_id
      WHERE d.event = 'problem' AND d.followed_up = 0 AND d.finding_id IS NOT NULL
-       AND (f.id IS NULL OR f.resolved_at IS NOT NULL OR f.dismissed_at IS NOT NULL OR f.first_seen != d.episode)`,
+       AND (f.id IS NULL OR f.resolved_at <= ? OR f.dismissed_at IS NOT NULL OR f.first_seen != d.episode)`,
+    // A cleared finding can still come back as the same episode (see REOPEN_GRACE_MS): wait that
+    // long before saying it's fixed, so a flapping one doesn't send "fixed" then "broken" again.
+    now() - REOPEN_GRACE_MS,
   );
   if (!rows.length) return;
   const subs = byChannel(activeSubscriptions());
@@ -350,7 +354,15 @@ function channelFailing(ch: Channel, error: string) {
 async function attempt(ch: Channel, rows: DeliveryRow[], msg: OutMessage): Promise<boolean> {
   const t = now();
   try {
-    await deliver(ch.kind, ch.config, msg, sendContext(ch));
+    // Every transport has its own timeouts; this is the backstop, because one send that never
+    // settles would hold the tick lock and stop every notification after it.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      deliver(ch.kind, ch.config, msg, sendContext(ch)).finally(() => clearTimeout(timer)),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new DeliveryError(`Sending to “${ch.name}” didn't finish within ${SEND_LIMIT_MS / 1000} seconds.`)), SEND_LIMIT_MS);
+      }),
+    ]);
     for (const r of rows) run("UPDATE notify_deliveries SET status = 'sent', sent_at = ?, attempts = attempts + 1, last_error = NULL WHERE id = ?", now(), r.id);
     resolve(`notify.channel:${ch.id}`, `Alerts to “${ch.name}” are getting through again`);
     return true;

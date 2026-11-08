@@ -5,6 +5,9 @@ import { systemEvent } from "./audit";
 
 export type Severity = "fault" | "attention" | "info";
 
+/** A finding that comes back this soon after clearing continues its episode instead of starting a new one. */
+export const REOPEN_GRACE_MS = 10 * 60_000;
+
 /** A one-click fix the server knows how to perform. `action` maps to a handler in alerts/remedies. */
 export interface Remedy {
   action: string;
@@ -85,6 +88,23 @@ export function raise(f: FindingInput): "new" | "updated" {
   const existing = one<Row>("SELECT * FROM findings WHERE id = ?", f.id);
   const detail = f.detail ? JSON.stringify(f.detail) : null;
   const remedy = f.remedy ? JSON.stringify(f.remedy) : null;
+  if (existing?.resolved_at && !existing.dismissed_at && t - existing.resolved_at < REOPEN_GRACE_MS) {
+    // Back within the grace period: the same episode carries on, so a flapping condition
+    // doesn't send a fresh alert (and a "fixed" one) every time it crosses the line.
+    run(
+      "UPDATE findings SET severity = ?, subject = ?, title = ?, cause = ?, detail = ?, remedy = ?, last_seen = ?, resolved_at = NULL WHERE id = ?",
+      f.severity,
+      f.subject ?? null,
+      f.title,
+      f.cause ?? null,
+      detail,
+      remedy,
+      t,
+      f.id,
+    );
+    publish("findings", { id: f.id, change: "opened" });
+    return "new";
+  }
   if (!existing || existing.resolved_at) {
     run(
       `INSERT INTO findings (id, kind, severity, subject, title, cause, detail, remedy, first_seen, last_seen)
