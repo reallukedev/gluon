@@ -11,6 +11,10 @@ const config: NextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
     optimizePackageImports: ["iconoir-react"],
+    // Links marked unstable_dynamicOnHover fetch their whole page on hover or touch, not just its skeleton.
+    dynamicOnHover: true,
+    // A page fetched that way is reused for at most 30s (the minimum), so nothing it shows is older than that.
+    staleTimes: { static: 30 },
   },
   async headers() {
     return [

@@ -463,7 +463,10 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       // On the icon rail the label is hidden, so the link carries its name (and count) itself.
       aria-label={collapsed ? (tooltip ?? label) : undefined}
-      prefetch={false}
+      // Pointing at a link (or touching it) fetches the whole page, so the click lands on real content
+      // instead of a skeleton. External links aren't routes.
+      prefetch={external ? false : undefined}
+      unstable_dynamicOnHover={!external}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
     >
