@@ -8,7 +8,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { StateLine } from "@/components/ui/StateLine";
 import { toast } from "@/components/ui/Toast";
 import type { ConnectTarget } from "../../connect/Connect";
-import { Field } from "@/components/ui/Field";
+import { Field, Input } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { Notice, Skeleton } from "@/components/ui/Surface";
 import { Time } from "@/components/ui/Time";
@@ -23,6 +23,7 @@ import {
   type WidgetType,
 } from "@/lib/widgets-types";
 import type { LineState } from "@/lib/types";
+import type { SettingsProps } from "../../types";
 import l from "./live.module.css";
 
 export const KIND_LABEL: Record<IntegrationKind, string> = {
@@ -511,5 +512,13 @@ export function Gate<T>({
       {children(q.data)}
       <StaleNote response={q.response} error={q.error} />
     </div>
+  );
+}
+
+export function TitleField<C extends { title?: string }>({ config, onChange, placeholder }: SettingsProps<C> & { placeholder: string }) {
+  return (
+    <Field label="Title" optional>
+      <Input value={config.title ?? ""} maxLength={40} onChange={(e) => onChange({ ...config, title: e.target.value || undefined })} placeholder={placeholder} />
+    </Field>
   );
 }

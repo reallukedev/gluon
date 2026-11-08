@@ -4,10 +4,12 @@ import { Pause, Play } from "iconoir-react";
 import type { SettingsProps, WidgetProps } from "../../types";
 import { useSmartUrl } from "../core";
 import { usePrefs, useFormat } from "@/components/PrefsProvider";
-import { Checkbox, Field, Input, Segmented } from "@/components/ui/Field";
+import { Checkbox, Field, Segmented } from "@/components/ui/Field";
 import { UsageBar } from "@/components/ui/Surface";
 import type { IntegrationKind, IntegrationRef, NowPlayingSession, RecentMediaItem } from "@/lib/widgets-types";
-import { Gate, IntegrationPicker, perSize, Poster, Quiet, RowsSkeleton, ShelfSkeleton, StatsSkeleton, useIntegrationWidget } from "./shared";
+import { Gate, IntegrationPicker, perSize, Poster, Quiet, RowsSkeleton, ShelfSkeleton, StatsSkeleton, TitleField, useIntegrationWidget } from "./shared";
+
+export { TitleField };
 import l from "./live.module.css";
 
 // ---------------------------------------------------------------- common bits
@@ -17,13 +19,6 @@ export interface IntegrationConfig {
   title?: string;
 }
 
-export function TitleField<C extends { title?: string }>({ config, onChange, placeholder }: SettingsProps<C> & { placeholder: string }) {
-  return (
-    <Field label="Title" optional>
-      <Input value={config.title ?? ""} maxLength={40} onChange={(e) => onChange({ ...config, title: e.target.value || undefined })} placeholder={placeholder} />
-    </Field>
-  );
-}
 
 /** 83 min → "1:23:00"; 4 min → "4:00". */
 function clock(ms: number | null): string {

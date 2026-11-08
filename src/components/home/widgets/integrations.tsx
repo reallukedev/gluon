@@ -1,31 +1,52 @@
 "use client";
 // Integration widgets (media, downloads, home accessories, weather, calendar, feeds…), registered with the
 // widget store. Each reads its data through one batched POST to /api/widgets/data.
+import dynamic from "next/dynamic";
 import { registerWidget } from "../widgetStore";
-import {
-  ImmichRecent,
-  ImmichRecentSettings,
-  ImmichSettings,
-  ImmichStats,
-  IntegrationSettingsFor,
-  JellyfinLibraries,
-  JellyfinNowPlaying,
-  JellyfinRecent,
-  JellyfinRecentSettings,
-  SubsonicNowPlaying,
-  SubsonicRecent,
-  type ImmichConfig,
-  type ImmichRecentConfig,
-  type IntegrationConfig,
-  type RecentConfig,
-} from "./live/media";
-import { HomebridgeAccessories, HomebridgeSettings, JsonFields, LinkStatus, LinkStatusSettings, SlskdTransfers, type HomebridgeConfig, type LinkStatusConfig } from "./live/services";
-import { CalendarSettings, CalendarWidget, FeedSettings, FeedWidget, WeatherSettings, WeatherWidget, type CalendarConfig, type FeedConfig, type WeatherConfig } from "./live/personal";
-import { HaEntities, HaEntitiesSettings, HaPeople, HaPeopleSettings, saveHaEntities, saveHaPeople, type HaEntitiesConfig, type HaPeopleConfig } from "./live/homeassistant";
-import { CoolifyDeployments } from "./live/coolify";
-import { CraftyServers } from "./live/crafty";
+import type { ImmichConfig, ImmichRecentConfig, IntegrationConfig, RecentConfig } from "./live/media";
+import type { HomebridgeConfig, LinkStatusConfig } from "./live/services";
+import type { CalendarConfig, FeedConfig, WeatherConfig } from "./live/personal";
+import type { HaEntitiesConfig, HaPeopleConfig } from "./live/homeassistant";
 import { ControlsPreview, DeploymentsPreview, PeoplePreview, ServersPreview } from "./live/previews";
 import { Preview } from "../previews";
+import type { IntegrationKind } from "@/lib/widgets-types";
+
+// Only the widgets someone has on Home load their code: each arrives when it is first drawn.
+const media = () => import("./live/media");
+const services = () => import("./live/services");
+const personal = () => import("./live/personal");
+const homeassistant = () => import("./live/homeassistant");
+const coolify = () => import("./live/coolify");
+const crafty = () => import("./live/crafty");
+const JellyfinNowPlaying = dynamic(() => media().then((x) => x.JellyfinNowPlaying));
+const JellyfinRecent = dynamic(() => media().then((x) => x.JellyfinRecent));
+const JellyfinRecentSettings = dynamic(() => media().then((x) => x.JellyfinRecentSettings));
+const JellyfinLibraries = dynamic(() => media().then((x) => x.JellyfinLibraries));
+const ImmichStats = dynamic(() => media().then((x) => x.ImmichStats));
+const ImmichSettings = dynamic(() => media().then((x) => x.ImmichSettings));
+const ImmichRecent = dynamic(() => media().then((x) => x.ImmichRecent));
+const ImmichRecentSettings = dynamic(() => media().then((x) => x.ImmichRecentSettings));
+const SubsonicNowPlaying = dynamic(() => media().then((x) => x.SubsonicNowPlaying));
+const SubsonicRecent = dynamic(() => media().then((x) => x.SubsonicRecent));
+const HomebridgeAccessories = dynamic(() => services().then((x) => x.HomebridgeAccessories));
+const HomebridgeSettings = dynamic(() => services().then((x) => x.HomebridgeSettings));
+const JsonFields = dynamic(() => services().then((x) => x.JsonFields));
+const LinkStatus = dynamic(() => services().then((x) => x.LinkStatus));
+const LinkStatusSettings = dynamic(() => services().then((x) => x.LinkStatusSettings));
+const SlskdTransfers = dynamic(() => services().then((x) => x.SlskdTransfers));
+const CalendarSettings = dynamic(() => personal().then((x) => x.CalendarSettings));
+const CalendarWidget = dynamic(() => personal().then((x) => x.CalendarWidget));
+const FeedSettings = dynamic(() => personal().then((x) => x.FeedSettings));
+const FeedWidget = dynamic(() => personal().then((x) => x.FeedWidget));
+const WeatherSettings = dynamic(() => personal().then((x) => x.WeatherSettings));
+const WeatherWidget = dynamic(() => personal().then((x) => x.WeatherWidget));
+const HaEntities = dynamic(() => homeassistant().then((x) => x.HaEntities));
+const HaEntitiesSettings = dynamic(() => homeassistant().then((x) => x.HaEntitiesSettings));
+const HaPeople = dynamic(() => homeassistant().then((x) => x.HaPeople));
+const HaPeopleSettings = dynamic(() => homeassistant().then((x) => x.HaPeopleSettings));
+const CoolifyDeployments = dynamic(() => coolify().then((x) => x.CoolifyDeployments));
+const CraftyServers = dynamic(() => crafty().then((x) => x.CraftyServers));
+const integrationSettings = (kind: IntegrationKind, placeholder: string) => dynamic(() => media().then((x) => x.IntegrationSettingsFor(kind, placeholder)));
 
 registerWidget<IntegrationConfig>({
   type: "jellyfin.now-playing",
@@ -38,7 +59,7 @@ registerWidget<IntegrationConfig>({
   defaultConfig: {},
   title: (c) => c.title || "Now watching",
   Component: JellyfinNowPlaying,
-  Settings: IntegrationSettingsFor("jellyfin", "Now watching"),
+  Settings: integrationSettings("jellyfin", "Now watching"),
   preview: <Preview of="now-playing" />,
 });
 
@@ -68,7 +89,7 @@ registerWidget<IntegrationConfig>({
   defaultConfig: {},
   title: (c) => c.title || "Libraries",
   Component: JellyfinLibraries,
-  Settings: IntegrationSettingsFor("jellyfin", "Libraries"),
+  Settings: integrationSettings("jellyfin", "Libraries"),
   preview: <Preview of="counts" />,
 });
 
@@ -113,7 +134,7 @@ registerWidget<IntegrationConfig>({
   defaultConfig: {},
   title: (c) => c.title || "Now playing",
   Component: SubsonicNowPlaying,
-  Settings: IntegrationSettingsFor("subsonic", "Now playing"),
+  Settings: integrationSettings("subsonic", "Now playing"),
   preview: <Preview of="music-now" />,
 });
 
@@ -128,7 +149,7 @@ registerWidget<IntegrationConfig>({
   defaultConfig: {},
   title: (c) => c.title || "New music",
   Component: SubsonicRecent,
-  Settings: IntegrationSettingsFor("subsonic", "New music"),
+  Settings: integrationSettings("subsonic", "New music"),
   preview: <Preview of="music-shelf" />,
 });
 
@@ -143,7 +164,7 @@ registerWidget<IntegrationConfig>({
   defaultConfig: {},
   title: (c) => c.title || "Transfers",
   Component: SlskdTransfers,
-  Settings: IntegrationSettingsFor("slskd", "Transfers"),
+  Settings: integrationSettings("slskd", "Transfers"),
   preview: <Preview of="transfers" />,
 });
 
@@ -176,7 +197,7 @@ registerWidget<HaEntitiesConfig>({
   title: (c) => c.title || "Home",
   Component: HaEntities,
   Settings: HaEntitiesSettings,
-  beforeSave: saveHaEntities,
+  beforeSave: (c) => homeassistant().then((x) => x.saveHaEntities(c)),
   preview: <ControlsPreview />,
   keywords: "home assistant lights switches scenes sensors thermostat smart home",
 });
@@ -193,7 +214,7 @@ registerWidget<HaPeopleConfig>({
   title: (c) => c.title || "Who's home",
   Component: HaPeople,
   Settings: HaPeopleSettings,
-  beforeSave: saveHaPeople,
+  beforeSave: (c) => homeassistant().then((x) => x.saveHaPeople(c)),
   preview: <PeoplePreview />,
   keywords: "home assistant people presence family away",
 });
@@ -210,7 +231,7 @@ registerWidget<IntegrationConfig>({
   adminOnly: true,
   title: (c) => c.title || "Deployments",
   Component: CoolifyDeployments,
-  Settings: IntegrationSettingsFor("coolify", "Deployments"),
+  Settings: integrationSettings("coolify", "Deployments"),
   preview: <DeploymentsPreview />,
   keywords: "coolify deploy builds apps",
 });
@@ -226,7 +247,7 @@ registerWidget<IntegrationConfig>({
   defaultConfig: {},
   title: (c) => c.title || "Minecraft servers",
   Component: CraftyServers,
-  Settings: IntegrationSettingsFor("crafty", "Minecraft servers"),
+  Settings: integrationSettings("crafty", "Minecraft servers"),
   preview: <ServersPreview />,
   keywords: "crafty controller minecraft game server players start stop restart",
 });
@@ -242,7 +263,7 @@ registerWidget<IntegrationConfig>({
   defaultConfig: {},
   title: (c) => c.title || "Values",
   Component: JsonFields,
-  Settings: IntegrationSettingsFor("generic-json", "Values"),
+  Settings: integrationSettings("generic-json", "Values"),
   preview: <Preview of="values" />,
 });
 
