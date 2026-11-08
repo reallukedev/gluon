@@ -14,3 +14,12 @@ PLAN.md
 PRODUCT.md
 .devtools/
 !deploy/.env.example
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+test/e2e/.auth/
+
+# Local agent worktrees
+.claude/worktrees/
