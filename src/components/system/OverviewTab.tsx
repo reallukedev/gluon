@@ -215,14 +215,20 @@ function HostnameRow({ hostname, onRenamed, sub }: { hostname: string; onRenamed
 function TimePanel({ overview, onChanged }: { overview: SystemOverview; onChanged: () => void }) {
   const t = overview.time;
   const [busy, setBusy] = React.useState<"tz" | "ntp" | null>(null);
+  // The switch moves on the click and goes back if the server says no; the line under it waits for the answer.
+  const [ntpShown, setNtpShown] = React.useState<boolean | null>(null);
+  React.useEffect(() => setNtpShown(null), [t.ntp]);
 
   async function put(body: { timezone?: string; ntp?: boolean }, what: "tz" | "ntp") {
+    if (busy === what) return;
     setBusy(what);
+    if (body.ntp !== undefined) setNtpShown(body.ntp);
     try {
       await api.put("/api/system/time", body);
       toast.success(body.timezone ? `Timezone set to ${body.timezone.replace(/_/g, " ")}` : body.ntp ? "Automatic time is on" : "Automatic time is off");
       onChanged();
     } catch (e) {
+      setNtpShown(null);
       toast.error(what === "tz" ? "Couldn't change the timezone" : "Couldn't change automatic time", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setBusy(null);
@@ -244,7 +250,7 @@ function TimePanel({ overview, onChanged }: { overview: SystemOverview; onChange
         <TimezonePicker value={t.timezone} disabled={busy === "tz"} onChange={(tz) => void put({ timezone: tz }, "tz")} />
       </SettingRow>
       <SettingRow label="Set time automatically" description={syncText}>
-        <Switch checked={!!t.ntp} disabled={busy === "ntp" || t.canNtp === false || t.ntp == null} onChange={(v) => void put({ ntp: v }, "ntp")} aria-label="Set time automatically" />
+        <Switch checked={ntpShown ?? !!t.ntp} disabled={t.canNtp === false || t.ntp == null} onChange={(v) => void put({ ntp: v }, "ntp")} aria-label="Set time automatically" />
       </SettingRow>
     </Panel>
   );

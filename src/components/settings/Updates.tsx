@@ -596,24 +596,32 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
   const fmt = useFormat();
   // Through the person's clock setting (12 or 24 hour), like every other time in Gluon.
   const hourLabel = (h: number) => fmt.time(new Date(2000, 0, 1, h));
-  const [busy, setBusy] = React.useState(false);
   const methods = data.options.filter((o) => o.method === "github" || o.reason !== "Umbrel's app store doesn't list Gluon.").map((o) => o.method);
+  // Controls move on the click. Each save sends the whole set, so the newest answer wins; if the newest
+  // fails, the controls go back to what the server last confirmed.
+  const [shown, setShown] = React.useState<UpdateSettings | null>(null);
+  const sent = React.useRef(0);
+  const applied = React.useRef(0);
 
   async function save(next: Partial<UpdateSettings>) {
-    const v: UpdateSettings = { ...data.settings, ...next };
-    setBusy(true);
+    const v: UpdateSettings = { ...st, ...next };
+    const mine = ++sent.current;
+    setShown(v);
     try {
       const fresh = await api.put<UpdatesStatus>(`${URL}/settings`, v);
-      onSaved(fresh);
+      if (mine > applied.current) {
+        applied.current = mine;
+        onSaved(fresh);
+      }
+      if (mine === sent.current) setShown(null);
       if (next.auto !== undefined) toast.success(next.auto ? "Automatic updates are on" : "Automatic updates are off");
     } catch (e) {
+      if (mine === sent.current) setShown(null);
       if (!cancelledReauth(e)) toast.error("Couldn't save", { description: errorText(e) });
-    } finally {
-      setBusy(false);
     }
   }
 
-  const st = data.settings;
+  const st = shown ?? data.settings;
   const nightly = st.channel === "nightly";
   const asap = nightly && st.nightlyTiming === "asap";
   const description = !st.auto
@@ -626,7 +634,7 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
     <Panel title="Automatic updates">
       <div className={s.rows}>
         <SettingRow label={nightly ? "Install nightlies automatically" : "Install updates automatically"} description={description}>
-          <Switch checked={st.auto} onChange={(v) => void save({ auto: v })} disabled={busy} aria-label="Install updates automatically" />
+          <Switch checked={st.auto} onChange={(v) => void save({ auto: v })} aria-label="Install updates automatically" />
         </SettingRow>
         {nightly && (
           <SettingRow
@@ -640,7 +648,6 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
                 { value: "asap", label: "As it lands" },
                 { value: "hour", label: "Once a day" },
               ]}
-              disabled={busy}
               aria-label="How often to install nightlies"
             />
           </SettingRow>
@@ -652,7 +659,6 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
                 value={String(st.hour)}
                 onChange={(v) => void save({ hour: Number(v) })}
                 options={Array.from({ length: 24 }, (_, h) => ({ value: String(h), label: `Around ${hourLabel(h)}` }))}
-                disabled={busy}
                 aria-label="Hour for automatic updates"
               />
             </SettingRow>
@@ -660,7 +666,7 @@ function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: Update
         )}
         {methods.length > 1 && (
           <SettingRow label="Update from">
-            <Segmented value={st.method} onChange={(v) => void save({ method: v })} options={methods.map((m) => ({ value: m, label: METHOD_NAME[m] }))} disabled={busy} aria-label="Where updates come from" />
+            <Segmented value={st.method} onChange={(v) => void save({ method: v })} options={methods.map((m) => ({ value: m, label: METHOD_NAME[m] }))} aria-label="Where updates come from" />
           </SettingRow>
         )}
       </div>

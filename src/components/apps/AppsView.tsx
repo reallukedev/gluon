@@ -63,7 +63,8 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   const term = React.useDeferredValue(q.trim().toLowerCase());
   const [filter, setFilter] = React.useState<Filter>(initialFilter);
   const [sort, setSort] = React.useState<Sort>(initialSort);
-  const [busy, setBusy] = React.useState<{ id: string; action: "start" | "stop" | "restart" } | null>(null);
+  // Per app, so restarting one app while another is still stopping keeps both rows honest.
+  const [busy, setBusy] = React.useState<ReadonlyMap<string, "start" | "stop" | "restart">>(() => new Map());
   // A restart that worked says so for a moment ("Back up"), then the row goes back to its usual word.
   const [settled, setSettled] = React.useState<{ id: string; word: string } | null>(null);
   React.useEffect(() => {
@@ -129,7 +130,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
   // The row shows progress by eye; this says it out loud for screen readers.
   const [said, say] = React.useState("");
   async function act(a: AppSummary, action: "start" | "stop" | "restart") {
-    setBusy({ id: a.id, action });
+    setBusy((m) => new Map(m).set(a.id, action));
     say(`${{ start: "Starting", stop: "Stopping", restart: "Restarting" }[action]} ${a.name}…`);
     try {
       // The row says it all: a dashed "Stopping…" line that settles into the new state.
@@ -147,7 +148,11 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
       if (e instanceof ApiError && e.code === "reauth_cancelled") return;
       toast.error(`Couldn't ${action} ${a.name}`, { description: e instanceof Error ? e.message : undefined });
     } finally {
-      setBusy(null);
+      setBusy((m) => {
+        const next = new Map(m);
+        next.delete(a.id);
+        return next;
+      });
     }
   }
 
@@ -343,8 +348,8 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                       : "Make one here, or start a Compose stack and it shows up."}
         </Empty>
       ) : (
-        // A new filter fades its rows in; typing in the filter box doesn't.
-        <div key={filter} className={`${s.table} appear`} role="table" aria-label="Apps" aria-rowcount={rows.length + 1}>
+        // A filter is used constantly, so its rows swap in place: no remount, no fade.
+        <div className={s.table} role="table" aria-label="Apps" aria-rowcount={rows.length + 1}>
           <div className={s.headRow} role="row">
             {sortHead("name", "App")}
             <span role="columnheader">State</span>
@@ -368,7 +373,8 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
               a.gluonDev && "Gluon dev instance",
               a.hidden && "hidden",
             ].filter((t): t is string => !!t);
-            const wrong = busy?.id === a.id || busyState || a.moving ? null : troubleOf(a);
+            const acting = busy.get(a.id);
+            const wrong = acting || busyState || a.moving ? null : troubleOf(a);
             const menu: MenuEntry[] = [
               { label: "Restart", icon: <Refresh />, onSelect: () => void act(a, "restart"), disabled: !running || busyState },
               running
@@ -427,8 +433,8 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                   <span className={s.stateLine}>
                     {a.moving ? (
                       <StateLine state="starting" label="Moving to Gluon…" />
-                    ) : busy?.id === a.id ? (
-                      <StateLine state="starting" label={{ start: "Starting…", stop: "Stopping…", restart: "Restarting…" }[busy.action]} />
+                    ) : acting ? (
+                      <StateLine state="starting" label={{ start: "Starting…", stop: "Stopping…", restart: "Restarting…" }[acting]} />
                     ) : busyState ? (
                       <UmbrelProgress app={a} />
                     ) : wrong ? (
@@ -470,7 +476,7 @@ export function AppsView({ initial, initialSort, initialFilter, platform }: { in
                 <span role="cell" className={s.actions}>
                   <Menu
                     trigger={
-                      <IconButton label={`${a.name} actions`} size="sm" disabled={busy?.id === a.id || (busyState && a.containers.length === 0)} focusableWhenDisabled>
+                      <IconButton label={`${a.name} actions`} size="sm" disabled={!!acting || (busyState && a.containers.length === 0)} focusableWhenDisabled>
                         <MoreHoriz />
                       </IconButton>
                     }
