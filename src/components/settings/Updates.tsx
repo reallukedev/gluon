@@ -100,6 +100,8 @@ export function Updates() {
     }
   }
 
+  const writer = useSettingsWriter(data, apply);
+
   if (error && !data) {
     return (
       <Notice tone="fault" title="Couldn't read the update status" action={<Button size="sm" onClick={() => void mutate()}>Try again</Button>}>
@@ -120,8 +122,8 @@ export function Updates() {
     <div className={s.stack}>
       <Running data={data} checking={checking} onCheck={() => void checkNow()} />
       <Situation data={data} checking={checking} onCheck={() => void checkNow()} onChanged={refresh} confirm={confirm} />
-      <Channel data={data} onSaved={apply} setChecking={setChecking} />
-      <Automatic data={data} onSaved={apply} />
+      <Channel settings={writer.settings ?? data.settings} save={writer.save} setChecking={setChecking} />
+      <Automatic data={data} settings={writer.settings ?? data.settings} save={writer.save} />
       {data.recent.length > 0 && <History runs={data.recent} />}
       {confirmNode}
     </div>
@@ -519,19 +521,55 @@ function RunOutput({ id }: { id: string }) {
   );
 }
 
+// ---------------------------------------------------------------- saving
+
+type SaveSettings = (patch: Partial<UpdateSettings>) => Promise<UpdatesStatus>;
+
+/**
+ * Channel and Automatic both save the whole set of update settings. Saves go out one at a time, each
+ * built on the newest choice, so a slow one (or two waiting on the same password prompt) can't land
+ * after a newer one and undo it. Controls show the choice while saves are out, then what the server holds.
+ */
+function useSettingsWriter(data: UpdatesStatus | undefined, onSaved: (v: UpdatesStatus) => void) {
+  const [shown, setShown] = React.useState<UpdateSettings | null>(null);
+  const intended = React.useRef<UpdateSettings | null>(null);
+  const queue = React.useRef<Promise<unknown>>(Promise.resolve());
+  const out = React.useRef(0);
+  const confirmed = data?.settings;
+  const save = React.useCallback<SaveSettings>(
+    (patch) => {
+      const v = { ...(intended.current ?? confirmed!), ...patch };
+      intended.current = v;
+      setShown(v);
+      out.current++;
+      const run = queue.current.then(() => api.put<UpdatesStatus>(`${URL}/settings`, v)).then((fresh) => {
+        onSaved(fresh);
+        return fresh;
+      });
+      queue.current = run.catch(() => undefined);
+      return run.finally(() => {
+        if (--out.current > 0) return;
+        intended.current = null;
+        setShown(null);
+      });
+    },
+    [confirmed, onSaved],
+  );
+  return { settings: shown, save };
+}
+
 // ---------------------------------------------------------------- channel
 
-function Channel({ data, onSaved, setChecking }: { data: UpdatesStatus; onSaved: (v: UpdatesStatus) => void; setChecking: (b: boolean) => void }) {
+function Channel({ settings, save, setChecking }: { settings: UpdateSettings; save: SaveSettings; setChecking: (b: boolean) => void }) {
   const [pending, setPending] = React.useState<UpdateChannel | null>(null);
-  const on = data.settings.channel;
+  const on = settings.channel;
 
   async function choose(channel: UpdateChannel) {
     if (channel === on || pending) return;
     setPending(channel);
     setChecking(true);
     try {
-      const fresh = await api.put<UpdatesStatus>(`${URL}/settings`, { ...data.settings, channel } satisfies UpdateSettings);
-      onSaved(fresh);
+      const fresh = await save({ channel });
       const name = CHANNEL_NAME[channel];
       const description = fresh.checkError
         ? `Couldn't check ${name} yet: ${fresh.checkError}`
@@ -592,36 +630,22 @@ function Channel({ data, onSaved, setChecking }: { data: UpdatesStatus; onSaved:
 
 // ---------------------------------------------------------------- automatic updates
 
-function Automatic({ data, onSaved }: { data: UpdatesStatus; onSaved: (v: UpdatesStatus) => void }) {
+function Automatic({ data, settings: st, save: write }: { data: UpdatesStatus; settings: UpdateSettings; save: SaveSettings }) {
   const fmt = useFormat();
   // Through the person's clock setting (12 or 24 hour), like every other time in Gluon.
   const hourLabel = (h: number) => fmt.time(new Date(2000, 0, 1, h));
   const methods = data.options.filter((o) => o.method === "github" || o.reason !== "Umbrel's app store doesn't list Gluon.").map((o) => o.method);
-  // Controls move on the click. Each save sends the whole set, so the newest answer wins; if the newest
-  // fails, the controls go back to what the server last confirmed.
-  const [shown, setShown] = React.useState<UpdateSettings | null>(null);
-  const sent = React.useRef(0);
-  const applied = React.useRef(0);
 
+  // Controls move on the click; if the save fails they go back to what the server holds.
   async function save(next: Partial<UpdateSettings>) {
-    const v: UpdateSettings = { ...st, ...next };
-    const mine = ++sent.current;
-    setShown(v);
     try {
-      const fresh = await api.put<UpdatesStatus>(`${URL}/settings`, v);
-      if (mine > applied.current) {
-        applied.current = mine;
-        onSaved(fresh);
-      }
-      if (mine === sent.current) setShown(null);
+      await write(next);
       if (next.auto !== undefined) toast.success(next.auto ? "Automatic updates are on" : "Automatic updates are off");
     } catch (e) {
-      if (mine === sent.current) setShown(null);
       if (!cancelledReauth(e)) toast.error("Couldn't save", { description: errorText(e) });
     }
   }
 
-  const st = shown ?? data.settings;
   const nightly = st.channel === "nightly";
   const asap = nightly && st.nightlyTiming === "asap";
   const description = !st.auto
