@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/runs%20on-Linux%20%2B%20Docker-informational" alt="Runs on Linux with Docker">
 </p>
 
-![Gluon's Home page: app tiles, a sentence saying everything is running, and live processor, memory, storage and network cards](docs/screenshots/home.png)
+![Gluon's Home page: a sentence saying all nine apps are happy, live processor and memory, the biggest apps, and app tiles](docs/screenshots/home.png)
 
 In physics, the gluon is the particle that holds everything together. This one holds a home server
 together: health, apps, files, storage, network and diagnostics in one place, written in plain words.
@@ -92,12 +92,20 @@ That's it. Gluon shows what it found on the server before it changes anything. M
 | --- | --- |
 | ![The Apps list: nine apps with state, CPU and memory sparklines and their addresses](docs/screenshots/apps.png) | ![Immich's page: a diagram from its address through four containers to the folders that hold its data](docs/screenshots/app.png) |
 | **Apps.** Every container and Compose stack, with live CPU and memory. | **How an app is put together**, from its address to its containers and data. |
-| ![Diagnostics: a full checkup and targeted checks such as "An app won't open"](docs/screenshots/diagnostics.png) | ![First-run setup listing what Gluon found on the server](docs/screenshots/setup.png) |
-| **Diagnostics.** A full checkup, or a check for one specific problem. | **First run** shows what Gluon found before it changes anything. |
-| <img src="docs/screenshots/phone.png" width="260" alt="Home on a phone: app tiles in a three-column grid"> | |
+| ![Files: recently changed photos as thumbnails, pinned folders, the drive and the folders apps keep data in](docs/screenshots/files.png) | ![System overview: processor, memory split by app, hardware and software](docs/screenshots/system.png) |
+| **Files.** The whole machine, with pins, previews and the folders each app uses. | **System.** What the machine is doing, and which app is using the memory. |
+| ![Diagnostics: a full checkup and targeted checks such as "An app won't open"](docs/screenshots/diagnostics.png) | ![Alerts: nine uptime monitors with their response times](docs/screenshots/alerts.png) |
+| **Diagnostics.** A full checkup, or a check for one specific problem. | **Alerts.** Uptime monitors and where notifications go. |
+| ![People: two admins and two household members, with two-step sign-in and devices](docs/screenshots/people.png) | ![Activity: invites sent and accepted, a site created, a command run and sign-ins](docs/screenshots/activity.png) |
+| **People.** Accounts for the household, each with only what you share. | **Activity.** Every change, who made it and when. |
+| ![The site editor: a file tree, the HTML source and a live preview of a family recipes site](docs/screenshots/sites.png) | ![Terminal showing the output of docker ps](docs/screenshots/terminal.png) |
+| **Sites.** Simple web pages, edited in the browser and published in a click. | **Terminal.** A shell on the server or in any container. |
+| ![Home in dark mode](docs/screenshots/home-dark.png) | ![First-run setup introducing the server](docs/screenshots/setup.png) |
+| **Dark mode** follows your device. | **First run** shows what Gluon found before it changes anything. |
+| <img src="docs/screenshots/phone.png" width="260" alt="Home on a phone: the status sentence, machine use and the app list"> <img src="docs/screenshots/phone-apps.png" width="260" alt="The Apps list on a phone"> | |
 | **On a phone**, everything works the same. | |
 
-Light and dark follow your device. The screenshots come from a demo server with made-up data.
+The screenshots come from a demo server with made-up data; [`scripts/screenshots`](scripts/screenshots) rebuilds it and takes them again.
 
 ## Install
 

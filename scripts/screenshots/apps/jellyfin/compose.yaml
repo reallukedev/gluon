@@ -1,0 +1,13 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  jellyfin:
+    <<: *stand-in
+    image: jellyfin/jellyfin:10.11
+    command: [port=8096, mb=600, work=30000]
+    ports: ["8096:8096"]
+    volumes: ["/srv/apps/jellyfin/config:/config", "/DATA/media:/media:ro"]
