@@ -23,7 +23,8 @@ export default async function DiagnosticsPage({ searchParams }: { searchParams: 
   const runId = runRaw && /^ck_[a-z0-9]{6,40}$/.test(runRaw) ? runRaw : null;
   const kind = str(sp.start) as CheckupKind | null;
   const start = kind && KINDS.includes(kind) ? { kind, target: str(sp.target) } : null;
-  const checkup = tab === "checkup" ? await checkupState().catch(() => null) : null;
+  // Not awaited: the checkup's targets read the drives, so the title and tabs go out first.
+  const checkup = tab === "checkup" ? checkupState().catch(() => null) : null;
   let security = null;
   if (tab === "security") {
     try {
