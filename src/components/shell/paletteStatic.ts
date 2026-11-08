@@ -19,7 +19,6 @@ const SETTINGS: [string, string, string][] = [
  * keywords, so "alerts" still finds monitors and channels in Settings.
  */
 const SECTIONS: { id: string; parent: string; label: string; hint: string; keywords: string; href: string; icon: string }[] = [
-  { id: "status:now", parent: "status", label: "Problems", hint: "Status · what needs you now", keywords: "alerts needs you open snoozed dismissed", href: "/status", icon: "status" },
   { id: "alerts:watching", parent: "settings", label: "Monitors", hint: "Settings · Alerts", keywords: "alerts uptime checks http tcp ping watching", href: alertsHref("watching"), icon: "settings" },
   { id: "alerts:notifications", parent: "settings", label: "Notification channels", hint: "Settings · Alerts", keywords: "alerts ntfy pushover email webhook discord sent log deliveries", href: alertsHref("notifications"), icon: "settings" },
   { id: "alerts:history", parent: "settings", label: "Past problems", hint: "Settings · Alerts", keywords: "alerts history cleared resolved", href: alertsHref("history"), icon: "settings" },

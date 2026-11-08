@@ -43,6 +43,17 @@ describe("wanted", () => {
   });
 });
 
+describe("another domain on the same token", () => {
+  it("gives a name its own proxied record, with no base domain or wildcard written there", () => {
+    const { wants } = wanted(input({ zone: "leech.party", baseDomain: "", routes: [route("media.leech.party"), route("leech.party"), route("chat.leech.party", { web: false })] }));
+    expect(Object.fromEntries(wants.map((w) => [w.name, w.records]))).toEqual({
+      "media.leech.party": [A(true)],
+      "leech.party": [A(true)],
+      "chat.leech.party": [A(false)],
+    });
+  });
+});
+
 describe("plan", () => {
   it("creates what's missing, fixes its own stale records and leaves everything else in the zone alone", () => {
     const p = plan(input({ routes: [route("a.b.example.com")] }), [

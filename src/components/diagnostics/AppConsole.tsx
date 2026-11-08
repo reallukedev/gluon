@@ -6,12 +6,12 @@ import type { Finding } from "@/server/findings";
 import { useFormat } from "@/components/PrefsProvider";
 import { AppIcon } from "@/components/apps/AppIcon";
 import { useAppUsage } from "@/components/apps/Meters";
-import c from "./console.module.css";
+import c from "./appConsole.module.css";
 
 /**
  * The server as a mixing desk, for experts: one channel strip per app with a live processor
  * meter, a peak-hold tick for the last 30 seconds, and memory underneath. Levels use a log scale
- * so a 0.5% app still reads, and a busy one still fits. The whole machine is on This machine.
+ * so a 0.5% app still reads, and a busy one still fits.
  */
 
 const PEAK_SAMPLES = 6; // container samples arrive every 5 s
@@ -37,7 +37,7 @@ interface Strip {
   note: string;
 }
 
-export function Console({ apps, findings }: { apps: StatusApp[]; findings: Finding[] }) {
+export function AppConsole({ apps, findings }: { apps: StatusApp[]; findings: Finding[] }) {
   const fmt = useFormat();
   const byId = React.useMemo(() => new Map(apps.map((a) => [a.id, a])), [apps]);
   const shown = React.useMemo(() => apps.filter((a) => a.containers.length && !(a.copyOf && byId.has(a.copyOf.id))), [apps, byId]);

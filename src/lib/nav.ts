@@ -14,7 +14,6 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { id: "home", label: "Home", href: "/", hint: "Your start page and widgets", key: "h" },
-  { id: "status", label: "Status", href: "/status", hint: "What needs you, and the machine right now", memberHint: "Is everything working?", key: "s" },
   { id: "apps", label: "Apps", href: "/apps", admin: true, hint: "Apps, the app store, Docker", key: "a" },
   { id: "files", label: "Files", href: "/files", hint: "Browse and share files", key: "f" },
   { id: "storage", label: "Storage", href: "/storage", admin: true, hint: "Disks, mounts, space", key: "d" },
@@ -40,13 +39,12 @@ export const hintFor = (n: NavItem, role: "admin" | "member") => (role === "memb
 
 /**
  * The destinations this person may see, in their order. Ids in `order`/`hidden` that aren't
- * destinations any more ("alerts", "activity", "people": now in Settings) are ignored; anything
+ * destinations any more ("alerts", "activity", "people": now in Settings; "status": now on Home) are ignored; anything
  * not in `order` keeps its place from NAV, so an empty order is the usual order.
  */
-export function orderedNav(role: "admin" | "member", order: readonly string[], hidden: readonly string[], opts: { memberStatus: boolean; memberFiles: boolean }) {
+export function orderedNav(role: "admin" | "member", order: readonly string[], hidden: readonly string[], opts: { memberFiles: boolean }) {
   const allowed = NAV.filter((n) => {
     if (n.admin && role !== "admin") return false;
-    if (role === "member" && n.id === "status" && !opts.memberStatus) return false;
     if (role === "member" && n.id === "files" && !opts.memberFiles) return false;
     return true;
   });

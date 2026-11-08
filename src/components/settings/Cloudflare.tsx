@@ -181,7 +181,7 @@ export function CloudflarePanel() {
           }
           items={[
             { label: "Replace token", icon: <KeyBack />, onSelect: () => setConnecting("token") },
-            { label: "Use another domain", icon: <Globe />, onSelect: () => setConnecting("zone") },
+            { label: "Change main domain", description: "The one that holds your base domain", icon: <Globe />, onSelect: () => setConnecting("zone") },
             "separator",
             { label: "Disconnect", icon: <Trash />, danger: true, onSelect: disconnect },
           ]}
@@ -193,7 +193,10 @@ export function CloudflarePanel() {
         <div className={c.headText}>
           <span className={c.title}>
             <span className="truncate">{zone.name}</span>
-            <span className={c.account}>{zone.accountName}</span>
+            <span className={c.account}>
+              {data.zones.length > 1 ? `and ${data.zones.length - 1} more domain${data.zones.length === 2 ? "" : "s"} · ` : ""}
+              {zone.accountName}
+            </span>
           </span>
           <span className={c.state} aria-live="polite">
             <StateLine state={summary.state} size={11} />

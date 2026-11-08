@@ -19,7 +19,7 @@ const CHECKUPS = [
   { id: "internet", label: "Check why the internet feels slow", hint: "Latency, DNS, speed and delay under load", words: "internet slow speed latency ping dns bufferbloat wifi connection" },
   { id: "server", label: "Check why the server feels slow", hint: "Processor, memory, disks and the busiest programs", words: "server slow sluggish cpu load memory busy lag" },
   { id: "space", label: "Check what's using the space", hint: "Full drives, biggest folders, what can be freed", words: "space full disk storage room free cleanup" },
-  { id: "safety", label: "Check whether the server is safe on the internet", hint: "Exposure, logins, SSH and two-step sign-in", words: "safe security secure exposed hack ssh internet login two-step 2fa" },
+  { id: "safety", label: "Check the server's security", hint: "Firewall, SSH, accounts, containers and exposure", words: "safe security secure exposed hack hacked ssh internet login two-step 2fa firewall ufw upnp ipv6 sudo root docker privileged fail2ban hardening harden audit vulnerable ports" },
 ];
 
 /** Words that ask for a checkup of an app ("why won't jellyfin open"). */
@@ -34,7 +34,7 @@ registerSearch({
     const items: ProviderItem[] = [];
     for (const c of CHECKUPS) {
       const score = matchScore(ctx.query, { label: c.label, keywords: c.words, hint: c.hint });
-      if (score) items.push({ id: `checkup:${c.id}`, label: c.label, hint: c.hint, icon: "diagnostics", href: `/diagnostics?start=${c.id}`, score });
+      if (score) items.push({ id: `checkup:${c.id}`, label: c.label, hint: c.hint, icon: "diagnostics", href: c.id === "safety" ? "/diagnostics?tab=security&start=safety" : `/diagnostics?start=${c.id}`, score });
     }
     if (ctx.query.compact.length >= 3) {
       // "jellyfin" or "why won't jellyfin open" offers a checkup for that app. Asked for with a verb

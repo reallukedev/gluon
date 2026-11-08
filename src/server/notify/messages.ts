@@ -21,8 +21,8 @@ export interface Composed {
 }
 
 const base = () => publicBaseUrl();
-export const findingLink = (id: string) => `${base()}/status#${encodeURIComponent(id)}`;
-const memberLink = () => (getSetting("householdCanSeeStatus") ? `${base()}/status` : `${base()}/`);
+export const findingLink = (id: string) => `${base()}/#${encodeURIComponent(id)}`;
+const memberLink = () => `${base()}/`;
 
 /** 90 s → "2 minutes", 5 h → "5 hours". */
 export function humanSpan(ms: number): string {
@@ -96,7 +96,7 @@ export function batchMessage(items: { title: string; severity: string | null }[]
   return {
     title,
     body: shown.join("\n"),
-    link: event === "update" ? `${base()}/apps` : `${base()}/status`,
+    link: event === "update" ? `${base()}/apps` : `${base()}/`,
     linkLabel: "Open Gluon",
     severity: event === "resolved" ? null : worst,
   };
@@ -106,8 +106,8 @@ export function reportReplyMessage(r: { id: string; appName: string | null; repl
   return {
     title: `${adminName} replied about ${r.appName ?? "your report"}`,
     body: r.reply,
-    link: `${base()}/status#report-${encodeURIComponent(r.id)}`,
-    linkLabel: "See your reports",
+    link: `${base()}/`,
+    linkLabel: "Open Gluon",
     severity: null,
   };
 }
@@ -157,7 +157,7 @@ export function digestMessage(): Composed {
   return {
     title: open.length ? `${server}: ${plural(open.length, "thing")} need${open.length === 1 ? "s" : ""} you` : `${server}: all good`,
     body: lines.join("\n"),
-    link: `${base()}/status`,
+    link: `${base()}/`,
     linkLabel: "Open Gluon",
     severity: null,
   };

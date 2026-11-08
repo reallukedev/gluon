@@ -3,7 +3,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus, MoreHoriz, ClockRotateRight, Code, Refresh, Link as LinkIcon, ChatBubble, Headset } from "iconoir-react";
 import type { CertUploads, ExposureReport, NetworkStatus, RouteT, RoutesConfigT, RoutesResponse, RoutesSaveResponse } from "@/lib/network-types";
-import { api, ApiError } from "@/lib/client/api";
+import { api, ApiError, useApi } from "@/lib/client/api";
+import type { CloudflareStatus } from "@/lib/cloudflare-types";
 import { usePrefs } from "@/components/PrefsProvider";
 import { Page, PageHeader, Notice, Panel, Skeleton } from "@/components/ui/Surface";
 import { Button, IconButton } from "@/components/ui/Button";
@@ -20,6 +21,7 @@ import { AppDetails } from "./AppDetails";
 import { HomeReach } from "./HomeReach";
 import { PortForwarding } from "./PortForwarding";
 import { GameServers } from "./GameServers";
+import { Domains } from "./Domains";
 import { PublishFlow, type FlowTarget } from "./PublishFlow";
 import { ChatServerFlow, type ChatTarget } from "./ChatServerFlow";
 import { HostRedirectFlow, type HostRedirectTarget } from "./HostRedirectFlow";
@@ -49,6 +51,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
   const exposure = useExposure();
   const ddns = useDdns();
   const apps = useAppList();
+  const cf = useApi<CloudflareStatus>("/api/cloudflare", { refresh: 60_000 });
   const [confirm, confirmNode] = useConfirm();
 
   const [hop, setHop] = React.useState<HopId | null>(landing?.kind === "hop" ? landing.hop : null);
@@ -99,6 +102,8 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
       if (!cur) throw new Error("The addresses haven't loaded yet.");
       try {
         const res = await saveRoutes(cur.rev, next, opts.fallback, opts.certs);
+        // Cloudflare writes the new names' records a moment after the save.
+        setTimeout(() => void cf.mutate(), 4_000);
         await routes.mutate({ ...cur, ...res, driftInfo: null, caddyRunning: true }, { revalidate: true });
         void status.mutate();
         void exposure.mutate();
@@ -116,7 +121,7 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
         throw e;
       }
     },
-    [routes, status, exposure],
+    [routes, status, exposure, cf],
   );
 
   async function recheck() {
@@ -434,6 +439,8 @@ export function NetworkView({ initial, landing }: { initial: RoutesResponse | nu
               </NetworkMap>
             </Panel>
           </div>
+
+          <Domains cf={cf.data} config={data.config} />
 
           {status.error && (
             <Notice tone="fault" title="Couldn't check the addresses" action={<Button size="sm" loading={checking} onClick={() => void recheck()}>Try again</Button>}>

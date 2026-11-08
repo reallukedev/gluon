@@ -32,7 +32,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
       serverName={getSetting("serverName")}
       viewer={{ id: user.id, username: user.username, displayName: user.displayName, role: user.role, mfa: user.mfa, zone: session.zone, mustChangePassword: user.mustChangePassword, mustSetUpMfa: mustSetUpMfa(user, session.zone) }}
     >
-      <Shell memberStatus={getSetting("householdCanSeeStatus")} memberFiles={memberFiles} initial={initial}>
+      <Shell memberFiles={memberFiles} initial={initial}>
         {children}
       </Shell>
     </PrefsProvider>

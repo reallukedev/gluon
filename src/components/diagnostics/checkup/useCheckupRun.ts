@@ -14,6 +14,7 @@ export interface RunView extends CheckupRun {
 export const toView = (r: CheckupRun): RunView => ({ ...r, running: [], live: false });
 
 export const STATE_URL = "/api/diagnostics/checkup";
+export const SECURITY_URL = "/api/diagnostics/security";
 
 function reduce(v: RunView | null, e: CheckupEvent): RunView | null {
   switch (e.type) {
@@ -99,6 +100,7 @@ export async function startCheckup(kind: CheckupKind, target: string | null = nu
       set((s) => ({ pending: null, view: s.view?.live && !s.view.summary ? { ...s.view, live: false, running: [] } : s.view }));
     }
     void mutate(STATE_URL);
+    if (kind === "safety") void mutate(SECURITY_URL);
   }
 }
 

@@ -85,6 +85,17 @@ export function withStart(layout: HomeLayout): HomeLayout {
   return { ...layout, items: [...lead, ...layout.items].slice(0, 80), migrated: [...(layout.migrated ?? []), "start"] };
 }
 
+/** The problem list that used to be the Status page, for admins' layouts made before it was a widget: once, after the status hero. */
+export function withProblems(layout: HomeLayout): HomeLayout {
+  if (layout.migrated?.includes("problems")) return layout;
+  const migrated = [...(layout.migrated ?? []), "problems"];
+  if (layout.items.some((i) => i.type === "problems")) return { ...layout, migrated };
+  const hero = layout.items.findIndex((i) => i.type === "status");
+  const at = hero === -1 ? insertIndex(layout.items) : hero + 1;
+  const item: WidgetItem = { id: widgetId(), type: "problems", size: "w", config: {} };
+  return { ...layout, items: [...layout.items.slice(0, at), item, ...layout.items.slice(at)].slice(0, 80), migrated };
+}
+
 /*
  * Defaults are laid out in whole bands of the 12-column grid so nothing is left ragged at 1440. Apps are Row cards,
  * four to a line; whatever follows them is full width (or the end), so a short last row of apps leaves a gap at the
@@ -92,13 +103,14 @@ export function withStart(layout: HomeLayout): HomeLayout {
  */
 export const ADMIN_DEFAULT: HomeLayout = {
   version: 1,
-  migrated: ["start"],
+  migrated: ["start", "problems"],
   items: [
     { id: "wgreeting", type: "greeting", size: "h", config: {} },
     { id: "wsearch", type: "search", size: "h", config: {} },
     { id: "wstatus", type: "status", size: "m", config: {} },
     { id: "wvitals", type: "vitals", size: "s", config: {} },
     { id: "wbusy", type: "server.busy", size: "s", config: { by: "memory" } },
+    { id: "wproblems", type: "problems", size: "w", config: {} },
     { id: "wapps", type: ALL_APPS, size: "c", config: {} },
     { id: "wuptime", type: "server.uptime", size: "w", config: {} },
     { id: "wnetwork", type: "network", size: "m", config: {} },
