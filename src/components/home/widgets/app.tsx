@@ -106,6 +106,7 @@ export function Vitals({ app, name }: { app: ApiApp; name: string }) {
   const cpuMax = Math.max(5, ...series.map((p) => p.cpu)) * 1.15;
   const memMax = Math.max(...series.map((p) => p.mem)) * 1.15;
   const [memValue, memUnit] = fmt.bytes(last.mem).split(" ");
+  const span = fmt.plural(Math.max(1, Math.round((last.t - series[0]!.t) / 60_000)), "minute");
   return (
     <div className={s.vitals}>
       <div className={s.vital}>
@@ -114,7 +115,7 @@ export function Vitals({ app, name }: { app: ApiApp; name: string }) {
           {last.cpu < 0.05 ? "0" : last.cpu < 10 ? last.cpu.toFixed(1) : Math.round(last.cpu)}
           <small>%</small>
         </span>
-        <Trace values={series.map((p) => p.cpu)} max={cpuMax} label={`${name} CPU over the last ${Math.max(1, Math.round((last.t - series[0]!.t) / 60_000))} minutes`} />
+        <Trace values={series.map((p) => p.cpu)} max={cpuMax} label={`${name} CPU over the last ${span}`} />
       </div>
       <div className={s.vital}>
         <span className="label">Memory</span>
@@ -122,7 +123,7 @@ export function Vitals({ app, name }: { app: ApiApp; name: string }) {
           {memValue}
           <small> {memUnit}</small>
         </span>
-        <Trace values={series.map((p) => p.mem)} max={memMax} label={`${name} memory over the last ${Math.max(1, Math.round((last.t - series[0]!.t) / 60_000))} minutes`} />
+        <Trace values={series.map((p) => p.mem)} max={memMax} label={`${name} memory over the last ${span}`} />
       </div>
     </div>
   );

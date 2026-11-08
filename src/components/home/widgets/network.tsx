@@ -73,7 +73,7 @@ export function NetworkWidget({ size }: WidgetProps) {
   // The router's view of the whole home, when Gluon can read it (AT&T BGW gateways). Bigger sizes only.
   const { data: home } = useApi<RouterGlance | null>(roomy ? "/api/network/router/glance" : null, { refresh: 60_000 });
   const label = samples.length
-    ? `Network traffic over the last ${minutes} minutes. Now ${fmt.rate(last?.net.rx)} in, ${fmt.rate(last?.net.tx)} out. Busiest: ${fmt.rate(peakIn)} in, ${fmt.rate(peakOut)} out.`
+    ? `Network traffic over the last ${fmt.plural(minutes, "minute")}. Now ${fmt.rate(last?.net.rx)} in, ${fmt.rate(last?.net.tx)} out. Busiest: ${fmt.rate(peakIn)} in, ${fmt.rate(peakOut)} out.`
     : "Network traffic, waiting for the first readings";
 
   return (

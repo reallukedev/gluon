@@ -10,7 +10,7 @@ import { docker } from "../docker/client";
 import { hostPath, readHostFileOr } from "../host/paths";
 import { host, local } from "../host/exec";
 import { getSetting } from "../settings";
-import { formatBytes } from "@/lib/format";
+import { formatBytes, plural } from "@/lib/format";
 import { AppError } from "../errors";
 import { all } from "../db";
 
@@ -77,7 +77,7 @@ function daysToFull(mount: string, avail: number): number | null {
 }
 
 function humanDays(d: number) {
-  if (d < 1) return `in ${Math.max(1, Math.round(d * 24))} hours`;
+  if (d < 1) return `in ${plural(Math.max(1, Math.round(d * 24)), "hour")}`;
   if (d < 1.5) return "in about a day";
   return `in about ${Math.round(d)} days`;
 }

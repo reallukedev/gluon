@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
         <BondField className={s.lines} />
         <div className={s.name}>
-          <h1>{name}</h1>
+          <div className={s.plateName}>{name}</div>
           <p>Apps, files and health for the server at home.</p>
         </div>
       </aside>

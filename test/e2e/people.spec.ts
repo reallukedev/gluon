@@ -60,7 +60,7 @@ test("an admin invites a household member, who can't reach admin pages", async (
   const strangerCtx = await newContext(browser, testInfo, signedOut);
   const stranger = await strangerCtx.newPage();
   await open(stranger, invitePath);
-  await expect(stranger.getByText("This invite has expired")).toBeVisible();
+  await expect(stranger.getByRole("heading", { level: 1, name: "This invite has been used" })).toBeVisible();
   await expect(stranger.getByRole("button", { name: "Create my account" })).toHaveCount(0);
 
   // And the admin sees them, in the household.
@@ -72,4 +72,16 @@ test("an admin invites a household member, who can't reach admin pages", async (
 
   await memberCtx.close();
   await strangerCtx.close();
+});
+
+test("Invite someone opens on the first click, right as the page appears", async ({ page }) => {
+  // No retry here: a click made between the page showing and its section hydrating used to be dropped.
+  for (let i = 0; i < 3; i++) {
+    await open(page, "/settings/people");
+    await page.getByRole("button", { name: "Invite someone" }).click();
+    const dialog = page.getByRole("dialog", { name: "Invite someone" });
+    await expect(dialog).toBeVisible({ timeout: 2_000 });
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  }
 });

@@ -38,8 +38,21 @@ function useSheet(open: boolean) {
   return [held ?? phone, done] as const;
 }
 
+/**
+ * Notes what had focus as the dialog opens. It renders before the dialog, so its layout effect runs before a field
+ * inside with autoFocus takes focus; Base UI looks only after that, and without a Trigger it can't tell the opener.
+ */
+function OpenerMark({ open, into }: { open: boolean; into: React.RefObject<HTMLElement | null> }) {
+  React.useLayoutEffect(() => {
+    if (open && document.activeElement instanceof HTMLElement && document.activeElement !== document.body) into.current = document.activeElement;
+  }, [open, into]);
+  return null;
+}
+
 export function Dialog({ open, onOpenChange, title, description, children, footer, footerStart, size = "default", keepMounted, initialFocus }: DialogProps) {
   const [sheet, onComplete] = useSheet(open);
+  const opener = React.useRef<HTMLElement | null>(null);
+  const focusOnClose = React.useCallback(() => (opener.current?.isConnected ? opener.current : true), []);
   const P = (sheet ? Drawer : BaseDialog) as typeof BaseDialog;
   const content = (
     <>
@@ -65,34 +78,37 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   const popupRef = React.useRef<HTMLDivElement>(null);
   const focusOnOpen = initialFocus ?? ((type: string) => (type === "keyboard" ? true : popupRef.current));
 
-  if (sheet) {
-    return (
-      <Drawer.Root open={open} onOpenChange={(o) => onOpenChange(o)} onOpenChangeComplete={onComplete} swipeDirection="down">
-        <Drawer.Portal keepMounted={keepMounted}>
-          <Drawer.Backdrop className={`${s.backdrop} ${s.sheetBackdrop}`} data-motion-gentle="" />
-          <Drawer.VirtualKeyboardProvider>
-            <Drawer.Viewport className={s.viewport}>
-              <Drawer.Popup ref={popupRef} className={`${popupClass} ${s.sheet}`} initialFocus={focusOnOpen} data-motion-gentle="">
-                {content}
-              </Drawer.Popup>
-            </Drawer.Viewport>
-          </Drawer.VirtualKeyboardProvider>
-        </Drawer.Portal>
-      </Drawer.Root>
-    );
-  }
-
-  return (
+  const root = sheet ? (
+    <Drawer.Root open={open} onOpenChange={(o) => onOpenChange(o)} onOpenChangeComplete={onComplete} swipeDirection="down">
+      <Drawer.Portal keepMounted={keepMounted}>
+        <Drawer.Backdrop className={`${s.backdrop} ${s.sheetBackdrop}`} data-motion-gentle="" />
+        <Drawer.VirtualKeyboardProvider>
+          <Drawer.Viewport className={s.viewport}>
+            <Drawer.Popup ref={popupRef} className={`${popupClass} ${s.sheet}`} initialFocus={focusOnOpen} finalFocus={focusOnClose} data-motion-gentle="">
+              {content}
+            </Drawer.Popup>
+          </Drawer.Viewport>
+        </Drawer.VirtualKeyboardProvider>
+      </Drawer.Portal>
+    </Drawer.Root>
+  ) : (
     <BaseDialog.Root open={open} onOpenChange={(o) => onOpenChange(o)} onOpenChangeComplete={onComplete}>
       <BaseDialog.Portal keepMounted={keepMounted}>
         <BaseDialog.Backdrop className={s.backdrop} data-motion-gentle="" />
         <BaseDialog.Viewport className={s.viewport}>
-          <BaseDialog.Popup ref={popupRef} className={popupClass} initialFocus={focusOnOpen} data-motion-gentle="">
+          <BaseDialog.Popup ref={popupRef} className={popupClass} initialFocus={focusOnOpen} finalFocus={focusOnClose} data-motion-gentle="">
             {content}
           </BaseDialog.Popup>
         </BaseDialog.Viewport>
       </BaseDialog.Portal>
     </BaseDialog.Root>
+  );
+
+  return (
+    <>
+      <OpenerMark open={open} into={opener} />
+      {root}
+    </>
   );
 }
 

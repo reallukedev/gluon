@@ -7,6 +7,7 @@ import type { DiskView, VolumeView } from "@/lib/storage-types";
 import { DiskGlyph } from "./DiskGlyph";
 import { diskLine, MEDIA_SHORT, notPermanent, smartLine, smartPhrase, transportLabel, volumeLine } from "./shared";
 import s from "./storage.module.css";
+import { plural } from "@/lib/format";
 
 interface Segment {
   key: string;
@@ -239,7 +240,7 @@ function SegmentView({ p, disk, pct }: { p: Placed; disk: DiskView; pct: (px: nu
 }
 
 export function onForText(hours: number): string {
-  if (hours < 48) return `${Math.round(hours)} hours`;
+  if (hours < 48) return plural(Math.round(hours), "hour");
   const days = hours / 24;
   if (days < 60) return `${Math.round(days)} days`;
   const months = days / 30.44;
