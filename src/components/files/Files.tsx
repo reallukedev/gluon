@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { NavArrowLeft } from "iconoir-react";
 import type { FileEntry, Listing as ListingT, Places, SearchHit, TrashSummary } from "@/lib/files-types";
 import { useApi, type ApiError } from "@/lib/client/api";
@@ -13,12 +14,14 @@ import { clearSearchCache, folderSentence, folderTitle, inLightbox, statEntry } 
 import { CommandBar } from "./CommandBar";
 import { Front } from "./Front";
 import { Browser, type BrowserApi } from "./Browser";
-import { Lightbox } from "./Lightbox";
-import { Preview } from "./Preview";
 import { Shortcuts } from "./Shortcuts";
 import { TrashView } from "./TrashView";
 import { filesHref, isDirLike, joinPath, parentOf, useModKey } from "./lib";
 import s from "./shell.module.css";
+
+// Quick look is closed until someone opens a file: its code comes then.
+const Lightbox = dynamic(() => import("./Lightbox").then((m) => m.Lightbox), { ssr: false });
+const Preview = dynamic(() => import("./Preview").then((m) => m.Preview), { ssr: false });
 
 // Files: a front page of what you keep (Shelves), folders as columns or a grid (Browser), and one
 // command bar on every screen to find, jump and act. This component owns where you are, what's
@@ -192,6 +195,9 @@ export function Files({ initialPlaces }: { initialPlaces: Places | null }) {
   }
 
   const lightbox = look && inLightbox(look.entry);
+  // Once the preview has opened it stays mounted, so it can animate out.
+  const [previewed, setPreviewed] = React.useState(false);
+  if (look && !lightbox && !previewed) setPreviewed(true);
   return (
     <Ctx.Provider value={state}>
       <BarCtx.Provider value={bar}>
@@ -211,15 +217,17 @@ export function Files({ initialPlaces }: { initialPlaces: Places | null }) {
           {screen === "front" ? <Front /> : screen === "trash" ? <TrashView data={trash.data} error={trash.error} isAdmin={admin} refresh={() => void trash.mutate()} onJob={actions.upsertJob} onNavigate={(p) => go(p)} /> : <Browser />}
         </Page>
         {look && lightbox && <Lightbox entry={look.entry} siblings={look.siblings} onChange={changeLook} onClose={closeLook} />}
-        <Preview
-          entry={look && !lightbox ? look.entry : null}
-          siblings={(look?.siblings ?? []).filter((x): x is FileEntry => "mode" in x)}
-          onNavigate={changeLook}
-          onClose={closeLook}
-          canWrite={!!look && (selection.writable || (here?.access === "write" && !here.protectedReason && parentOf(look.entry.path) === here.path))}
-          onExtract={(e) => void actions.extract(e)}
-          onSaved={refresh}
-        />
+        {previewed && (
+          <Preview
+            entry={look && !lightbox ? look.entry : null}
+            siblings={(look?.siblings ?? []).filter((x): x is FileEntry => "mode" in x)}
+            onNavigate={changeLook}
+            onClose={closeLook}
+            canWrite={!!look && (selection.writable || (here?.access === "write" && !here.protectedReason && parentOf(look.entry.path) === here.path))}
+            onExtract={(e) => void actions.extract(e)}
+            onSaved={refresh}
+          />
+        )}
         <Shortcuts open={keys} onClose={() => setKeys(false)} mod={mod} />
         {nodes}
       </BarCtx.Provider>
