@@ -18,10 +18,6 @@ import { Thumb } from "./Thumb";
 import { useClip } from "./clip";
 import s from "./bar.module.css";
 
-// The command bar: one line on every Files screen. Typing finds (here and in every folder inside,
-// or everywhere), a path jumps (with completion), ">" lists what you can do to the selection, and
-// "move to …" picks a destination. Results replace the screen until Esc.
-
 type CmdGroup = "Selection" | "This folder" | "View" | "Sort" | "Files";
 const GROUPS: CmdGroup[] = ["Selection", "This folder", "View", "Sort", "Files"];
 
@@ -33,7 +29,6 @@ interface Cmd {
   words: string;
   hint?: string;
   danger?: boolean;
-  /** Keep the bar open with this text instead of closing (move to …). */
   next?: string;
   run: () => void;
 }
@@ -51,7 +46,6 @@ interface Section {
   title: string;
   meta?: React.ReactNode;
   items: Item[];
-  /** What to say while it's empty. */
   empty?: string;
 }
 
@@ -59,7 +53,6 @@ export interface CommandState {
   text: string;
   setText: (t: string) => void;
   parsed: Parsed;
-  /** Something is typed and the results panel is showing. */
   active: boolean;
   setOpen: (o: boolean) => void;
   everywhere: boolean;
@@ -79,7 +72,6 @@ export interface CommandState {
 /** Actions that act on what's selected (the rest act on the folder you're in). */
 const SELECTION_IDS = new Set<CommandId>(["download", "zip", "move", "copy", "rename", "duplicate", "cut", "copy-clip", "pin", "extract", "copy-path", "properties", "used-by", "ownership", "measure", "trash"]);
 
-/** The same icons the menus use, so an action looks the same wherever it's offered. */
 const ICONS: Partial<Record<CommandId, React.ReactNode>> = {
   download: <Download />,
   zip: <Download />,
@@ -168,7 +160,6 @@ export function useCommand(c: {
   const browsing = c.screen === "browse" && !!c.path;
   const scope = browsing && !everywhere ? c.path! : null;
 
-  // ---- what can be done right now
   const commands: Cmd[] = React.useMemo(() => {
     const one = sel.length === 1 ? sel[0]! : null;
     const n = sel.length;
@@ -230,7 +221,6 @@ export function useCommand(c: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, c.selection.writable, c.selection.dir, here, browsing, c.admin, prefs.filesShowHidden, fmt, held, writable]);
 
-  // ---- searching (debounced, from two letters or a recognised word)
   const roots = React.useMemo(() => collectionRoots(c.places), [c.places]);
   const [spec, setSpec] = React.useState<SearchSpec | null>(null);
   React.useEffect(() => {
@@ -247,7 +237,6 @@ export function useCommand(c: {
   }, [parsed, scope, roots, c.path, sel.length]);
   const found = useFileSearch(spec);
 
-  // ---- completing a typed path
   const typed = React.useMemo(() => (parsed.mode === "path" ? splitTypedPath(parsed.text) : null), [parsed]);
   const completions = useApi<ListingT>(typed ? `/api/files/list?path=${encodeURIComponent(typed.dir)}&only=dirs&limit=400${prefs.filesShowHidden || typed.stem.startsWith(".") ? "&hidden=1" : ""}` : null, { keepPreviousData: true, shouldRetryOnError: false });
 
@@ -362,7 +351,6 @@ export function useCommand(c: {
     [setText],
   );
 
-  // ---- keys anywhere on Files: ⌘F finds, ⌘L types a path, > lists actions, ? shows the keys
   const keysRef = React.useRef({ here, focus, showKeys: c.showKeys });
   keysRef.current = { here, focus, showKeys: c.showKeys };
   React.useEffect(() => {
@@ -419,8 +407,6 @@ export function useCommand(c: {
     scope: scope ?? "",
   };
 }
-
-// ---------------------------------------------------------------- the bar
 
 export function CommandBar() {
   const f = useFiles();

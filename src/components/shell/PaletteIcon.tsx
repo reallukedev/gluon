@@ -61,7 +61,6 @@ import s from "./palette.module.css";
 
 type Icon = React.ComponentType<{ strokeWidth?: number }>;
 
-/** Icons for result types that aren't sidebar sections. Anything else falls back to the sidebar's set. */
 const TYPES: Record<string, Icon> = {
   // Gluon's own things
   container: Cube,
@@ -129,7 +128,6 @@ const TYPES: Record<string, Icon> = {
 // "light" is both the theme switch and a Homebridge light; results from apps say so with `tier`.
 const APP_TYPES: Record<string, Icon> = { light: LightBulb };
 
-/** The 28px tile at the start of a result: an app's icon, a thumbnail, or a line icon. */
 export const PaletteIcon = React.memo(function PaletteIcon({ icon, image, label, fromApp }: { icon?: string; image?: string | null; label: string; fromApp: boolean }) {
   const [broken, setBroken] = React.useState<string | null>(null);
   if (icon === "app" || (icon?.startsWith("open") && image)) {

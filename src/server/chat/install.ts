@@ -39,8 +39,8 @@ async function portConflicts(a: ChatInstall): Promise<string[]> {
 }
 
 /**
- * What the install flow needs to know first: chat servers already here, ports in use, and for
- * Quark the port set it will use (the standard one, or the first alternate nothing holds).
+ * For Quark this includes the port set it will use: the standard one, or the first alternate nothing
+ * holds.
  */
 export async function installPlan(domain: string | null, server: ChatServerKind = "quark") {
   const existing = (await chatApps()).map(({ app, kind }) => ({ id: app.id, name: app.name, server: kind }));
@@ -57,7 +57,6 @@ export async function installPlan(domain: string | null, server: ChatServerKind 
     ports: picked.ports,
     /** Quark gets the alternate ports because something holds the standard ones. */
     alternatePorts: alternate,
-    /** What that means for DNS and the router, in sentences. */
     portNotes: alternate && picked.ports ? alternatePortNotes(d, picked.ports) : [],
     baseDomain: cfg?.base_domain ?? null,
     network: !!cfg,
@@ -82,7 +81,6 @@ export async function startChatInstall(user: User, where: Where, a: ChatInstall)
   return createDraft(user, where, { source: "compose", spec: { ...spec, details: { ...spec.details, slug: await freeSlug(a.server) } } });
 }
 
-/** The server's public IPv4 as Network knows it, for Quark's call relay; null when unknown or slow. */
 async function publicIpv4(): Promise<string | null> {
   if (process.platform !== "linux") return null; // from a laptop, "the public address" is someone else's network
   const timeout = new Promise<null>((r) => setTimeout(() => r(null), 10_000));
@@ -103,10 +101,7 @@ async function until<T>(what: string, fn: () => Promise<T>, ms = 60_000): Promis
   throw new AppError("install_timeout", `${what} didn't happen within a minute${last instanceof Error ? ` (${last.message})` : ""}.`, 504);
 }
 
-/**
- * After the builder started the app: write Gluon's settings, make the first account, and publish
- * the chat domain on Network so Caddy gets its certificate (which Gluon then copies in).
- */
+/** Publishing the chat domain on Network gets Caddy a certificate, which Gluon then copies in. */
 export async function finishChatInstall(user: User, where: Where, draftId: string, a: ChatInstall): Promise<{ appId: string; jid: string; password: string; routeAdded: boolean; notes: string[] }> {
   const d = await appDetail(draftId);
   const appId = d.appId;
@@ -126,9 +121,8 @@ export async function finishChatInstall(user: User, where: Where, draftId: strin
 }
 
 /**
- * Quark writes its own config from the environment on first start; Gluon waits until its admin
- * console answers and serves the domain, then applies the settings and makes the first account
- * through it. Every step is safe to run again.
+ * Quark writes its own config from the environment on first start, so Gluon waits for its admin
+ * console to answer and serve the domain before applying settings. Every step is safe to run again.
  */
 async function setUpQuark(appId: string, a: ChatInstall, settings: ChatSettings, password: string): Promise<string> {
   const app = await getApp(appId);
@@ -184,7 +178,6 @@ async function setUpProsody(appId: string, a: ChatInstall, settings: ChatSetting
   return t2.name;
 }
 
-/** Publish the chat domain on Network so Caddy gets its certificate, which Gluon then copies in. */
 async function publishChatDomain(user: User, where: Where, appId: string, a: ChatInstall, settings: ChatSettings, container: string, ports: QuarkPorts | null, notes: string[]): Promise<boolean> {
   let routeAdded = false;
   const cfg = tryReadConfig();

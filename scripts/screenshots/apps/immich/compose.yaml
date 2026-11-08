@@ -1,0 +1,31 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  immich-server:
+    <<: *stand-in
+    image: ghcr.io/immich-app/immich-server:v2.1.0
+    command: [port=2283, mb=900, work=90000]
+    environment: { TZ: Europe/Amsterdam, DB_HOSTNAME: database, REDIS_HOSTNAME: redis, UPLOAD_LOCATION: /data }
+    ports: ["2283:2283"]
+    volumes: ["/srv/apps/immich/data:/data", "/DATA/photos:/mnt/photos"]
+  immich-machine-learning:
+    <<: *stand-in
+    image: ghcr.io/immich-app/immich-machine-learning:v2.1.0
+    command: [mb=1100, work=30000]
+    environment: { TZ: Europe/Amsterdam, MACHINE_LEARNING_CACHE_FOLDER: /cache }
+    volumes: ["/srv/apps/immich/data:/cache"]
+  redis:
+    <<: *stand-in
+    image: valkey/valkey:8-bookworm
+    command: [mb=40]
+    volumes: ["/srv/apps/immich/data:/data"]
+  database:
+    <<: *stand-in
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3
+    command: [mb=300, work=6000]
+    environment: { POSTGRES_USER: postgres, POSTGRES_DB: immich, POSTGRES_INITDB_ARGS: --data-checksums }
+    volumes: ["/srv/apps/immich/data:/var/lib/postgresql/data"]

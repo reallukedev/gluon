@@ -33,9 +33,9 @@ interface Options<B, Q> {
   query?: z.ZodType<Q>;
   /** Require a password/2FA re-entry within the last 10 minutes. */
   recent?: boolean;
-  /** Flood control per client address (in memory): at most `limit` requests per `windowMs`. */
+  /** In memory, per client address. */
   burst?: { limit: number; windowMs: number };
-  /** Largest JSON body accepted, in bytes (default 8 MB). */
+  /** Default 8 MB. */
   maxBody?: number;
 }
 
@@ -89,10 +89,9 @@ function zodMessage(err: z.ZodError): { message: string; field?: string } {
 }
 
 /**
- * Same-origin check for state-changing requests (CSRF). Browsers send `Sec-Fetch-Site` (all current
- * ones) and `Origin` on every cross-origin POST/PUT/PATCH/DELETE, including plain HTML form posts, so
- * a request carrying neither is not from a web page (curl, scripts) and can't be a forgery. The
- * session cookie is also SameSite=Lax, so a cross-site form post arrives without it anyway.
+ * Browsers send `Sec-Fetch-Site` and `Origin` on every cross-origin write, including plain form
+ * posts, so a request carrying neither isn't from a web page and can't be a forgery. The session
+ * cookie is SameSite=Lax as well.
  */
 function sameOrigin(req: NextRequest): boolean {
   const site = req.headers.get("sec-fetch-site");
@@ -108,9 +107,8 @@ function sameOrigin(req: NextRequest): boolean {
 }
 
 /**
- * Reads can be triggered cross-site too (an <img> or <script> tag pointing at /api/…), which matters
- * for GETs that make the server do work (fetch a URL, run a command). Only same-origin requests and
- * top-level navigations (opening a link to a file) may read the API.
+ * Reads can be triggered cross-site too (an <img> pointing at /api/...), which matters for GETs that
+ * make the server do work. Only same-origin requests and top-level navigations may read the API.
  */
 function readAllowed(req: NextRequest): boolean {
   const site = req.headers.get("sec-fetch-site");
@@ -213,10 +211,7 @@ export function route<B, Q>(opts: Options<B, Q>, fn: Handler<B, Q> | PublicHandl
   };
 }
 
-/**
- * Server-Sent Events. `start` receives `send` and returns a cleanup function; it runs until the
- * client disconnects. A heartbeat comment every 20 s keeps proxies from closing the stream.
- */
+/** Runs until the client disconnects; a heartbeat every 20 s keeps proxies from closing the stream. */
 export function sse(req: NextRequest, start: (send: (event: string, data: unknown) => void, close: () => void) => (() => void) | void | Promise<(() => void) | void>) {
   const encoder = new TextEncoder();
   let cleanup: (() => void) | void;
@@ -289,10 +284,7 @@ export function sse(req: NextRequest, start: (send: (event: string, data: unknow
   });
 }
 
-/**
- * Stream newline-delimited JSON from a POST handler (long operations: compose apply, updates).
- * The client reads it with `readNdjson()`. Errors thrown inside become a final {type:"error"} line.
- */
+/** Errors thrown inside become a final {type:"error"} line. */
 export function ndjson(run: (emit: (event: unknown) => void, signal: AbortSignal) => Promise<void>, signal: AbortSignal) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

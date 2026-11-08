@@ -1,4 +1,3 @@
-/* Network → Game servers. */
 .pad { padding: 14px 18px; }
 .skeleton { display: grid; gap: 12px; }
 .lead { margin: 0; padding: 14px 18px; font-size: var(--text-md); color: var(--ink-2); line-height: 1.5; max-width: 80ch; }
@@ -95,7 +94,6 @@
 .noticeText { margin: 0; }
 .excerpt { margin: 10px 0 0; padding: 10px 12px; border-radius: var(--radius-control); background: var(--panel); border: 1px solid var(--line); font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-xs); line-height: 1.55; color: var(--ink-2); max-height: 200px; overflow: auto; white-space: pre; }
 
-/* Dialogs */
 .form { display: grid; gap: 16px; }
 .formPair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 @media (max-width: 480px) { .formPair { grid-template-columns: 1fr; } }

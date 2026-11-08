@@ -20,7 +20,6 @@ export interface XtermPaneProps {
   label: string;
   cwd: string | null;
   active: boolean;
-  /** Bumped to start a fresh session, optionally typing a command into it. */
   launch: { n: number; command: string | null };
 }
 
@@ -37,7 +36,6 @@ const KEYS: { label: string; aria: string; seq: string }[] = [
   { label: "→", aria: "Right", seq: "\x1b[C" },
 ];
 
-/** Terminal mode: a real shell in xterm.js, sized to the pane, coloured from the theme. */
 export default function XtermPane({ target, label, cwd, active, launch }: XtermPaneProps) {
   const host = React.useRef<HTMLDivElement>(null);
   const term = React.useRef<Terminal | null>(null);
@@ -48,7 +46,6 @@ export default function XtermPane({ target, label, cwd, active, launch }: XtermP
   const cwdRef = React.useRef(cwd);
   cwdRef.current = cwd;
 
-  // The terminal itself: made once, themed from the page, refitted whenever its box changes.
   React.useEffect(() => {
     const el = host.current!;
     const { theme, fontFamily } = readTheme(el);
@@ -93,7 +90,6 @@ export default function XtermPane({ target, label, cwd, active, launch }: XtermP
 
     const ro = new ResizeObserver(refit);
     ro.observe(el);
-    // Follow the theme: light, dark, contrast and colour choices all change the tokens.
     const retheme = () => {
       t.options.theme = readTheme(el).theme;
     };

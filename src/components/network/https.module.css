@@ -1,5 +1,3 @@
-/* Who handles HTTPS for an address: one quiet line, with the choices behind "Change". */
-
 .wrap { display: grid; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--panel); min-width: 0; }
 .row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; padding: 6px 6px 6px 14px; }
 .icon { display: inline-flex; color: var(--muted); }

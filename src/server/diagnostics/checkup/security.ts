@@ -11,8 +11,6 @@ import { fail, go, kv, ok, skip, warn, type CheckCtx, type CheckSpec, type Outco
 import { mfaRequired } from "../../auth/policy";
 import * as h from "./hardening";
 
-/** Security: sshd settings, what's reachable, and admins without two-step sign-in. */
-
 export const exposure = (ctx: CheckCtx, force = false) => ctx.memo(`exposure:${force}`, () => exposureReport(force ? { force: true } : { maxAgeMs: 5 * 60_000 }));
 
 export interface SshdConfig {
@@ -159,7 +157,7 @@ export async function sshFailuresOutcome(): Promise<Outcome> {
   return ok(`${plural(fails.length, "failed SSH sign-in")} this week, all from your own network`, { evidence });
 }
 
-/** Gluon's own failed sign-ins in the last day (login_attempts keeps 24 hours). */
+/** login_attempts keeps 24 hours. */
 export function gluonLoginsOutcome(): Outcome {
   const rows = all<{ key: string; n: number }>("SELECT key, COUNT(*) AS n FROM login_attempts WHERE ok = 0 AND key LIKE 'ip:%' AND at > ? GROUP BY key ORDER BY n DESC LIMIT 20", Date.now() - 86_400_000);
   const total = rows.reduce((a, r) => a + r.n, 0);
@@ -171,7 +169,7 @@ export function gluonLoginsOutcome(): Outcome {
   return ok(`${plural(total, "failed sign-in")} to Gluon in the last day, ${outsideN ? `${outsideN} from outside` : "all from your network"}`, { evidence });
 }
 
-/** The full checkup's Security row: the checks that catch the worst problems. The security checkup goes further. */
+/** Only the checks that catch the worst problems; the security checkup goes further. */
 export function securityChecks(): CheckSpec[] {
   const g = "security";
   return [

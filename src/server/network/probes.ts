@@ -9,8 +9,8 @@ import { isCloudflareIp } from "./cloudflare";
 import type { BackendResult, DnsResult, HttpResult, TlsResult } from "@/lib/network-types";
 
 /**
- * Low-level probes used by the route status page and the checks. Every probe has a hard timeout and
- * never throws: failures come back as data with a plain-language message.
+ * Every probe has a hard timeout and never throws: failures come back as data with a plain-language
+ * message.
  */
 
 export const CADDY_HOST = (process.env.GLUON_CADDY_PROBE_HOST ?? process.env.TEND_CADDY_PROBE_HOST) ?? "127.0.0.1";
@@ -47,10 +47,9 @@ function askDocker(): void {
 }
 
 /**
- * Where host.docker.internal leads from a container: Docker's bridge gateway (172.17.0.1 by
- * default). Caddy reaches route backends there, so a port an app publishes only on the bridge
- * ("172.17.0.1:8470:8443") works through Caddy but isn't on loopback. Probing the same address
- * Caddy uses keeps those from looking down. Falls back to loopback when there's no bridge.
+ * Docker's bridge gateway, where Caddy reaches route backends. A port published only on the bridge
+ * works through Caddy but isn't on loopback, so probing the address Caddy uses keeps it from looking
+ * down.
  */
 export function dockerHostAddress(): string {
   if (LOCAL_OVERRIDE) return LOCAL_OVERRIDE;
@@ -68,23 +67,16 @@ export function isLocalBackend(host: string): boolean {
   return host === "host.docker.internal" || host === "localhost" || host === "::1" || /^127\./.test(host);
 }
 
-/** The address Gluon uses to reach a backend: where Caddy would, for ones on this machine. */
 export function localBackendHost(host: string): string {
   return isLocalBackend(host) ? dockerHostAddress() : host;
 }
 
-/**
- * Where Gluon reaches a port this machine listens on, from the addresses it's bound to: loopback
- * when it listens everywhere or on loopback, otherwise the one address it's bound to (a port
- * published only on the Docker bridge, say).
- */
+/** Loopback when the port listens everywhere or on loopback, otherwise the one address it's bound to. */
 export function listenProbeHost(addresses: Iterable<string>): string {
   const list = [...addresses].map((a) => a.replace(/^\[(.*)\]$/, "$1"));
   if (!list.length || list.some((a) => a === "0.0.0.0" || a === "::" || a === "*" || a === "::1" || /^127\./.test(a))) return LOCAL_HOST;
   return list.find((a) => net.isIPv4(a)) ?? list[0]!;
 }
-
-// ---------------------------------------------------------------- DNS
 
 const PUBLIC_RESOLVERS = ["1.1.1.1", "1.0.0.1", "8.8.8.8"];
 
@@ -105,10 +97,7 @@ async function lookupType(r: dns.promises.Resolver, name: string, type: "A" | "A
   }
 }
 
-/**
- * Resolve A + AAAA through public resolvers (what the internet sees, not the router's cache) and
- * compare with this network's public address.
- */
+/** Through public resolvers: what the internet sees, not the router's cache. */
 export async function resolveName(name: string, publicIp: { v4: string | null; v6: string[] }): Promise<DnsResult> {
   const r = resolver();
   const [a, aaaa] = await Promise.all([lookupType(r, name, "A"), lookupType(r, name, "AAAA")]);
@@ -140,8 +129,6 @@ export async function resolveName(name: string, publicIp: { v4: string | null; v
   return { ...base, proxied: false, matchesPublicIp: matches, status: "ok", message: `${name} points straight at this network${matches === null ? "" : " (DNS only)"}.` };
 }
 
-// ---------------------------------------------------------------- TLS
-
 function nameOf(x: unknown): string | null {
   if (!x || typeof x !== "object") return null;
   const o = x as Record<string, string | string[]>;
@@ -149,10 +136,7 @@ function nameOf(x: unknown): string | null {
   return pick("O") ? `${pick("O")}${pick("CN") ? ` (${pick("CN")})` : ""}` : (pick("CN") ?? null);
 }
 
-/**
- * Judge the certificate a TLS socket was handed for `servername`. `who` names the server in the
- * messages ("Caddy", "The chat server"). Null when the server sent no certificate at all.
- */
+/** `who` names the server in the messages. Null when the server sent no certificate at all. */
 export function certResult(socket: tls.TLSSocket, servername: string, certDays: number, who: string): TlsResult | null {
   const cert = socket.getPeerCertificate();
   if (!cert || !Object.keys(cert).length) return null;
@@ -200,7 +184,6 @@ export function certResult(socket: tls.TLSSocket, servername: string, certDays: 
   return { ...r, status: "ok", message: `Valid for ${daysLeft} more days, issued by ${issuer ?? "an unknown issuer"}.` };
 }
 
-/** Handshake with Caddy for `servername` and read the certificate it serves. */
 export function probeTls(servername: string, certDays: number, timeoutMs = 5000): Promise<TlsResult> {
   const base: TlsResult = { servername, status: "error", issuer: null, subject: null, names: [], validFrom: null, validTo: null, daysLeft: null, trusted: null, issueError: null, message: "" };
   return new Promise((resolve) => {
@@ -228,8 +211,6 @@ export function probeTls(servername: string, certDays: number, timeoutMs = 5000)
     });
   });
 }
-
-// ---------------------------------------------------------------- HTTP through Caddy
 
 /** Request `path` from Caddy with the right SNI/Host, without following redirects. `plain` uses port 80 without TLS. */
 export function probeHttpViaCaddy(host: string, path: string, timeoutMs = 6000, plain = false): Promise<HttpResult> {
@@ -269,8 +250,6 @@ export function probeHttpViaCaddy(host: string, path: string, timeoutMs = 6000, 
     req.end();
   });
 }
-
-// ---------------------------------------------------------------- TCP
 
 export function tcpConnect(host: string, port: number, timeoutMs = 3000): Promise<{ ok: boolean; ms: number | null; code: string | null; address: string | null }> {
   const t0 = Date.now();
@@ -314,8 +293,6 @@ export async function probeBackend(host: string, port: number): Promise<BackendR
   const r = await tcpConnect(target, port, 3000);
   return { host, port, reachable: r.ok, ms: r.ms, error: r.ok ? null : explainConnectError(r.code) };
 }
-
-// ---------------------------------------------------------------- public IP fallback
 
 let traceCache: { at: number; ip: string | null } | null = null;
 

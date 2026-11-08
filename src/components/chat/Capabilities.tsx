@@ -5,7 +5,7 @@ import { Panel } from "@/components/ui/Surface";
 import { StateLine } from "@/components/ui/StateLine";
 import s from "./chat.module.css";
 
-/** What turning a capability on changes in the settings. Contact needs words, so it goes to the form. */
+/** Contact needs words, so it goes to the form. */
 function patchFor(c: ChatCapability, cur: ChatSettings): Partial<ChatSettings> | null {
   switch (c.fix) {
     case "push":
@@ -28,11 +28,6 @@ function patchFor(c: ChatCapability, cur: ChatSettings): Partial<ChatSettings> |
   }
 }
 
-/**
- * What chat apps can do with this server, as a spec sheet: the line says on or off, the words say
- * what a person notices, the standards sit quietly to the side, and a gap Gluon can close has its
- * switch right there.
- */
 export function Capabilities({ host, canFix, saving, onFix, onCalls }: { host: ChatHostSnapshot; canFix: boolean; saving: boolean; onFix: (patch: Partial<ChatSettings>) => void; onCalls: () => void }) {
   const on = host.capabilities.filter((c) => c.on).length;
   return (

@@ -1,5 +1,4 @@
 import "server-only";
-// Side-effect module: keeps an eye on the home router (status, traffic, restarts, broadband drops).
 import { every, onStart } from "../jobs";
 import { pruneRouter, tick } from "./monitor";
 

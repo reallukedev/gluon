@@ -15,7 +15,6 @@ const body = z.object({ code: z.string().trim().min(6, "Enter the 6-digit code."
 const MAX_TRIES_PER_SIGNIN = 5;
 const tries = new Map<string, number>();
 
-/** Second step of signing in: a code from the authenticator app, or a recovery code. */
 export const POST = route({ auth: "public", body, burst: { limit: 20, windowMs: 60_000 } }, async ({ body, session, ip, zone, req }) => {
   // 410, not 401: the client treats 401 as "go to the sign-in page", and we're already on it.
   if (!session || session.pending !== "code") throw new AppError("no_pending", "Your sign-in timed out. Enter your password again.", 410);

@@ -8,12 +8,9 @@ import { confirmFromOutside, maxAgeOf, portcheckerIo, targetKey, type OutsideCac
 import type { ReachOutcome } from "@/lib/network-types";
 
 /**
- * Connecting to this network's public address from inside, through the router, to see whether
- * chat and voice ports get through to this server. Every answer is checked against what the same
- * port says on the LAN (the certificate it presents, or Mumble's ping reply), so a router that
- * answers on its own public address isn't mistaken for this server.
- *
- * Only meaningful on the server the router forwards to; elsewhere (development) it stays off.
+ * Every answer is checked against what the same port says on the LAN (its certificate, or Mumble's
+ * ping reply), so a router answering on its own public address isn't mistaken for this server. Only
+ * meaningful on the server the router forwards to.
  */
 
 export const REACH_PROBING = (process.env.GLUON_REACH_PROBE ?? (process.platform === "linux" ? "on" : "off")) === "on";
@@ -47,8 +44,8 @@ const g = globalThis as G;
 const cache = () => (g.__gluonReach ??= new Map());
 
 /**
- * What each target does on the public address, cached a few minutes per address and port. TCP ports
- * that don't answer through the router are then checked once more from the internet (reach-outside.ts).
+ * Cached a few minutes per address and port. TCP ports that don't answer through the router are
+ * checked once more from the internet.
  */
 export async function outsideOutcomes(ip: string, targets: ReachTarget[], force = false, checker: PortChecker = portcheckerIo): Promise<Map<string, ReachOutcome>> {
   const out = new Map<string, ReachOutcome>();

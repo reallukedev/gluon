@@ -5,10 +5,7 @@ import { host } from "../host/exec";
 import { hostPath, isWithin, normalizeHostPath } from "../host/paths";
 import { AppError } from "../errors";
 
-/**
- * Readers for the host's mount table and helpers for validating mount points.
- * With `pid: host`, /proc/1 is the host's init, so /proc/1/mountinfo is the host's mount table.
- */
+/** With `pid: host`, /proc/1 is the host's init, so /proc/1/mountinfo is the host's mount table. */
 
 export interface MountEntry {
   id: number;
@@ -62,7 +59,6 @@ export function readMountinfo(): MountEntry[] {
   return out;
 }
 
-/** Active swap devices/files (host-wide). */
 export function readSwaps(): string[] {
   try {
     return fs
@@ -91,13 +87,11 @@ export function mountAt(target: string, mounts = readMountinfo()): MountEntry | 
   return found;
 }
 
-/** Mounts strictly inside `target`. */
 export function mountsUnder(target: string, mounts = readMountinfo()): MountEntry[] {
   const t = normalizeHostPath(target);
   return mounts.filter((m) => m.target !== t && isWithin(m.target, t));
 }
 
-/** The mount that contains a path (longest prefix). */
 export function mountContaining(p: string, mounts = readMountinfo()): MountEntry | null {
   const n = normalizeHostPath(p);
   let best: MountEntry | null = null;
@@ -108,8 +102,6 @@ export function mountContaining(p: string, mounts = readMountinfo()): MountEntry
 }
 
 export const isBlockMount = (m: MountEntry) => m.source.startsWith("/dev/") && !m.majMin.startsWith("0:");
-
-// ---------------------------------------------------------------- path safety
 
 /** Places a drive must never be mounted at or inside. */
 const FORBIDDEN_WITHIN = ["/proc", "/sys", "/dev", "/run", "/boot", "/etc", "/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/tmp", "/root", "/snap", "/var/lib/docker", "/var/lib/containerd", "/var/lib/casaos", "/var/log", "/var/cache", "/var/tmp"];
@@ -153,8 +145,8 @@ export interface TargetCheck {
 }
 
 /**
- * Validate a folder a filesystem is about to be mounted at. Throws a human AppError.
- * `ignoreMount` lets a rename treat the filesystem being moved as not in the way.
+ * Throws a human AppError. `ignoreMount` lets a rename treat the filesystem being moved as not in the
+ * way.
  */
 export async function validateMountTarget(raw: string, opts: { ignoreMount?: string; systemMounts?: Set<string> } = {}): Promise<TargetCheck> {
   if (typeof raw !== "string" || !raw.trim()) throw new AppError("invalid_path", "Choose a folder to mount it at, like /mnt/photos.");
@@ -210,7 +202,7 @@ export async function validateMountTarget(raw: string, opts: { ignoreMount?: str
   return { path: p, exists };
 }
 
-/** mkdir -p on the host. Returns the first directory it created (for undo), or null. */
+/** Returns the first directory it created (for undo), or null. */
 export async function hostMkdirs(p: string): Promise<string | null> {
   const n = normalizeHostPath(p);
   // Find the highest missing ancestor so undo can remove exactly what we made.

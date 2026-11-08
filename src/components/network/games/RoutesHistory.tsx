@@ -14,7 +14,6 @@ const change = (summary: string) => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-/** mc-router's routes file as it was before each change Gluon made, newest first, each one a click from coming back. */
 export function RoutesHistory({ open, onOpenChange, file, onRestored }: { open: boolean; onOpenChange: (o: boolean) => void; file: string | null; onRestored: (r: McChangeResult) => void }) {
   const { data, error, mutate } = useApi<{ entries: McHistoryEntry[] }>(open ? `${GAMES_URL}/minecraft/history` : null);
   const [busy, setBusy] = React.useState<number | null>(null);

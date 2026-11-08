@@ -1,9 +1,7 @@
 export interface SettingsSection {
   id: string;
   label: string;
-  /** Short line in the settings list. */
   hint: string;
-  /** Sentence under the section title when there's no live state to state. */
   summary: string;
   group: "You" | "Watch" | "Server";
   admin?: boolean;
@@ -13,7 +11,6 @@ export interface SettingsSection {
   wide?: boolean;
 }
 
-/** The settings list's groups, in order. "Keep watch" is admins only (every section in it is). */
 export const GROUPS: { id: SettingsSection["group"]; label: string }[] = [
   { id: "You", label: "Just for you" },
   { id: "Watch", label: "Keep watch" },

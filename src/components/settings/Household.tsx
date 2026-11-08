@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import { api, useApi } from "@/lib/client/api";
 import { HOUSEHOLD_DEFAULT, SIZES, type HomeLayout } from "@/lib/home";
 import { allWidgets } from "@/components/home/registry";

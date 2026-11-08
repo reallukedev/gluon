@@ -16,9 +16,8 @@ import { isCompressed } from "./kinds";
 import { disposition } from "./stream";
 
 /**
- * Folder downloads as a streamed zip. The client first asks for an estimate (POST) which also
- * returns a short-lived token; the download itself is a plain GET with that token so the browser's
- * own download manager handles it. Links are stored as links, never followed.
+ * The estimate (POST) returns a short-lived token so the download can be a plain GET that the
+ * browser's own download manager handles. Links are stored as links, never followed.
  */
 
 const TOKEN_MS = 15 * 60_000;
@@ -113,10 +112,9 @@ export async function prepareZip(user: User, paths: string[]): Promise<ZipEstima
 const AHEAD = 8;
 
 /**
- * Walk and add entries as the archive drains, so a 100k-file tree never holds 100k open files or
- * queues a million entries in memory. Each file is opened here, through folders opened without
- * following links and checked to be the file that was looked at, never later by path: a member who
- * can write in the share could otherwise swap it for a link to a file they may not read.
+ * Entries are added as the archive drains, so a huge tree never holds every file open. Each file is
+ * opened through folders opened without following links and checked, never later by path: a member
+ * who can write in the share could otherwise swap it for a link to a file they may not read.
  */
 interface Feed {
   signal: AbortSignal;

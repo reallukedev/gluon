@@ -1,5 +1,3 @@
-/* The compact "connect this app" step (catalog, widgets, Settings → Connected apps). */
-
 .form { display: grid; gap: 16px; }
 
 .identity { display: flex; align-items: center; gap: 12px; min-width: 0; }

@@ -1,7 +1,4 @@
-/**
- * What an XMPP message says. Chat apps show plain text only, so: the title, one line of the body
- * (a summary or a list keeps a few lines), and the link on its own line so apps make it tappable.
- */
+/** Chat apps show plain text only, so the link goes on its own line where apps make it tappable. */
 
 export interface XmppOut {
   title: string;

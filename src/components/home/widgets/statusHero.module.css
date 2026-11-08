@@ -1,8 +1,4 @@
-/*
- * The status hero. One sentence at headline size, the why under it in body text, then the fix. The coil sits
- * beside it, vertically centred. Calm sits on the ground with no plate (home.module.css drops the frame);
- * needs-you gets the attention wash, the same one a Notice uses.
- */
+/* Calm sits on the ground with no plate (home.module.css drops the frame). */
 .hero {
   height: 100%;
   min-height: 0;
@@ -43,16 +39,13 @@
 @media (hover: hover) and (pointer: fine) { .more:hover { color: var(--ink); text-decoration-color: currentColor; } }
 .coil { min-width: 0; display: grid; align-items: center; }
 
-/* Small: the sentence carries it; the coil shrinks into the corner. */
 .hero[data-size="s"] { grid-template-columns: minmax(0, 1fr) 56px; align-items: start; padding: 16px; gap: 8px 12px; }
 .hero[data-size="s"] .say { font-size: 1.5rem; }
 .hero[data-size="s"] .why { font-size: var(--text-sm); -webkit-line-clamp: 3; }
 
-/* Tall: coil above, words below. */
 .hero[data-size="t"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: end; padding: 20px; }
 .hero[data-size="t"] .coil { order: -1; width: min(160px, 70%); }
 
-/* Full width: the coil leads, like a signature, and the sentence gets room. */
 .hero:is([data-size="w"], [data-size="l"]) { grid-template-columns: clamp(120px, 16%, 200px) minmax(0, 1fr); padding: 20px 28px; gap: 8px 36px; }
 .hero:is([data-size="w"], [data-size="l"]) .coil { order: -1; }
 .hero:is([data-size="w"], [data-size="l"]) .say { font-size: clamp(2rem, 3.2vw, 2.75rem); }

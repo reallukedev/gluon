@@ -7,6 +7,7 @@ import type { DiskView, VolumeView } from "@/lib/storage-types";
 import { DiskGlyph } from "./DiskGlyph";
 import { diskLine, MEDIA_SHORT, notPermanent, smartLine, smartPhrase, transportLabel, volumeLine } from "./shared";
 import s from "./storage.module.css";
+import { plural } from "@/lib/format";
 
 interface Segment {
   key: string;
@@ -39,8 +40,6 @@ function roleWord(v: VolumeView): string {
       return v.fstype ?? "unknown";
   }
 }
-
-// ---------------------------------------------------------------- layout
 
 const MIN_SEG = 5;
 const PAD = 24;
@@ -88,9 +87,8 @@ function widths(sizes: number[], W: number): number[] {
 }
 
 /**
- * Where every label goes. A partition wide enough carries its name inside; the rest hang their label
- * below on a hairline dropped from their middle (like the spectrum's stack callouts): each takes the
- * first of three rows where it clears the previous label, else the row that frees up soonest.
+ * A partition wide enough carries its name inside; the rest hang their label below, taking the first of three rows
+ * where it clears the previous one.
  */
 function layout(segs: { seg: Segment; name: string; mono: boolean; sub: string }[], W: number): { placed: Placed[]; rows: number } {
   const ws = widths(
@@ -137,12 +135,6 @@ function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] 
   return [ref, w];
 }
 
-// ---------------------------------------------------------------- the strip
-
-/**
- * The partitions of a disk drawn to scale as one strip, each filled to how much of it is used, with
- * its state carried by the mark on its left edge. Tiny partitions stay legible through callouts.
- */
 export function DiskSegments({ disk, tall }: { disk: DiskView; tall?: boolean }) {
   const fmt = useFormat();
   const [ref, W] = useWidth<HTMLDivElement>();
@@ -247,11 +239,8 @@ function SegmentView({ p, disk, pct }: { p: Placed; disk: DiskView; pct: (px: nu
   );
 }
 
-// ---------------------------------------------------------------- the disk as an object
-
-/** "4 months", "3.2 years": how long a drive has been powered on, in words a person uses. */
 export function onForText(hours: number): string {
-  if (hours < 48) return `${Math.round(hours)} hours`;
+  if (hours < 48) return plural(Math.round(hours), "hour");
   const days = hours / 24;
   if (days < 60) return `${Math.round(days)} days`;
   const months = days / 30.44;
@@ -259,7 +248,6 @@ export function onForText(hours: number): string {
   return `${(days / 365.25).toFixed(1)} years`;
 }
 
-/** The spec line under each disk, like the label on the drive itself: engraved names, plain values. */
 export function DiskFacts({ disk }: { disk: DiskView }) {
   const fmt = useFormat();
   const sm = disk.smart;
@@ -294,7 +282,6 @@ export function DiskFacts({ disk }: { disk: DiskView }) {
   );
 }
 
-/** A disk as it appears on the overview: what it is, its state, the strip, the spec line. Opens the disk. */
 export function DiskRow({ disk }: { disk: DiskView }) {
   const href = `/storage/${encodeURIComponent(disk.id)}`;
   return (

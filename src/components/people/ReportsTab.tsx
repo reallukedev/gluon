@@ -15,7 +15,6 @@ import s from "./people.module.css";
 
 type Show = "new" | "seen" | "fixed" | "all";
 
-/** Problem reports from the household as a small inbox: new → seen → fixed. */
 export function ReportsTab({ focus }: { focus: string | null }) {
   const { data, error, isLoading, mutate } = useApi<ProblemReport[]>(REPORTS_URL, { refresh: 30_000 });
   const [show, setShow] = React.useState<Show | null>(null);

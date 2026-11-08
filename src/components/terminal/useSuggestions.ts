@@ -17,11 +17,7 @@ interface Caches {
   inflight: Set<string>;
 }
 
-/**
- * Suggestions for the prompt. Works out what the word under the cursor needs, fetches only that
- * (a program's spec once, a folder's listing debounced and cached briefly, units and containers once
- * per visit) and ranks it all with the person's history.
- */
+/** Fetches only what the word under the cursor needs. */
 export function useSuggestions(o: { target: TargetId; line: string; cursor: number; probe: TargetProbe | undefined; cwd: string | null; history: string[]; enabled: boolean }) {
   const caches = React.useRef<Caches>({ specs: new Map(), dirs: new Map(), units: new Map(), containers: new Map(), inflight: new Set() });
   const [, bump] = React.useReducer((n: number) => n + 1, 0);
@@ -36,7 +32,6 @@ export function useSuggestions(o: { target: TargetId; line: string; cursor: numb
   const absDir = a.dir !== null && o.cwd ? resolveDir(o.cwd, o.probe?.home ?? null, a.dir) : null;
   const dirKey = absDir ? `${o.target}|${absDir}` : null;
 
-  // A program's spec: fetched once, the first time it's typed.
   React.useEffect(() => {
     if (!o.enabled || !program || !KNOWN.has(program) || c.specs.has(program)) return;
     let live = true;
@@ -49,7 +44,6 @@ export function useSuggestions(o: { target: TargetId; line: string; cursor: numb
     };
   }, [o.enabled, program, c]);
 
-  // A folder's contents: after a short pause in typing, kept for a few seconds.
   React.useEffect(() => {
     if (!o.enabled || !absDir || !dirKey) return;
     const hit = c.dirs.get(dirKey);

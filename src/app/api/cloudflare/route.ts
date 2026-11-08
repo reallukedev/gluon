@@ -2,7 +2,7 @@ import { z } from "zod";
 import { route } from "@/server/api";
 import { connect, disconnect, setOptions, status } from "@/server/cloudflare/service";
 
-/** Settings → Integrations → Cloudflare. The token is never sent back. */
+/** The token is never sent back. */
 export const GET = route({ auth: "admin" }, () => status());
 
 const connectBody = z.object({

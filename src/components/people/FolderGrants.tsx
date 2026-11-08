@@ -11,10 +11,6 @@ import { toast } from "@/components/ui/Toast";
 import { errorMessage } from "./bits";
 import s from "./people.module.css";
 
-/**
- * Share a folder: browse to it, name it, choose view or change. With `userId` it's for that person;
- * otherwise the dialog asks who (from `members`).
- */
 export function ShareFolderDialog({
   open,
   onOpenChange,

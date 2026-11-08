@@ -4,25 +4,18 @@ import { AppError } from "../errors";
 import { parsePage, type Button, type Form, type Page, formPayload } from "./bgw-pages";
 
 /**
- * A browser for an AT&T BGW gateway's admin pages, written to be a good guest on a slow box with
- * a handful of web sessions and no logout:
- *
- * - One thing talks to the gateway at a time (`withRouter` queues everything per gateway).
- * - Every visit without a cookie costs the gateway a session, so cookies are always kept: one
- *   jar for the pages anyone can read, a second only for signing in with the access code, so
- *   Gluon's routine reads never keep a signed-in session alive.
- * - Pages take up to 40 seconds to answer, so timeouts are generous and named.
- * - The sign-in is the page's own: GET login.ha sets the session cookie, a second GET shows the
- *   form and its nonce, and the POST carries md5(access code + nonce) as "hashpassword" (the code
- *   itself never leaves Gluon; "password" is asterisks, as the page's script sends it).
+ * Written to be a good guest on a slow box with a handful of web sessions and no logout. One thing
+ * talks to the gateway at a time. Every visit without a cookie costs the gateway a session, so
+ * cookies are always kept: one jar for open pages and a second only for signing in, so routine reads
+ * never keep a signed-in session alive. The sign-in is the page's own: GET login.ha sets the cookie,
+ * a second GET shows the form and nonce, and the POST carries md5(code + nonce) as "hashpassword", so
+ * the code itself never leaves Gluon.
  */
 
 type Jar = Map<string, string>;
 interface Gateway {
   origin: string;
-  /** Cookies for the pages that need no sign-in. */
   open: Jar;
-  /** Cookies for the signed-in session. */
   auth: Jar;
   loggedIn: boolean;
   busy: Promise<unknown>;
@@ -125,7 +118,7 @@ async function login(s: Gateway, code: string): Promise<void> {
   throw new AppError("router_login", "Your router didn't show its sign-in form. Try again in a minute.", 502);
 }
 
-/** Run `fn` with the gateway to ourselves: two things at once confuse its nonces and sessions. */
+/** Two things at once confuse the gateway's nonces and sessions. */
 export function withRouter<T>(address: string, code: string | null, fn: (r: RouterPages) => Promise<T>): Promise<T> {
   const s = gatewayFor(address);
   const run = s.busy.then(() => fn(new RouterPages(s, code)));
@@ -139,21 +132,20 @@ export class RouterPages {
     private code: string | null,
   ) {}
 
-  /** The router's address, as Gluon reaches it. */
   get gateway() {
     return this.s.origin.slice(7);
   }
 
   /**
-   * Sign in with this code from here on. For a stored code, read it once the queue reaches this
-   * job, so a code entered while it waited is the one used.
+   * For a stored code, it's read once the queue reaches this job, so a code entered while it waited
+   * is the one used.
    */
   useCode(code: string) {
     if (code !== this.code) this.s.loggedIn = false;
     this.code = code;
   }
 
-  /** A page anyone on the network can open. No sign-in, and never the signed-in session. */
+  /** No sign-in, and never the signed-in session. */
   async read(page: string, timeoutMs?: number): Promise<string> {
     const res = await request(this.s, this.s.open, `/cgi-bin/${page}.ha`, { timeoutMs });
     if (res.status >= 400) throw new AppError("router_page", `Your router answered ${res.status} for its ${page} page.`, 502);
@@ -161,7 +153,7 @@ export class RouterPages {
     return res.html;
   }
 
-  /** A page behind the access code, signing in when the gateway asks for it. */
+  /** Signs in when the gateway asks for it. */
   async get(page: string): Promise<{ page: Page; html: string }> {
     if (!this.code) throw new AppError("router_not_connected", "Connect Gluon to your router first.", 409);
     if (!this.s.loggedIn) await login(this.s, this.code);
@@ -181,9 +173,8 @@ export class RouterPages {
   }
 
   /**
-   * Submit `form` (as read from `page` just now) with some fields changed and one button pressed.
-   * `drops` is for a button that takes the router's web server down with it (a restart): no
-   * answer is the expected answer.
+   * `drops` is for a button that takes the router's web server down with it (a restart): no answer is
+   * the expected answer.
    */
   async submit(page: string, form: Form, changes: Record<string, string>, pressed: Button, opts: { drops?: boolean } = {}): Promise<Answer | null> {
     const action = form.action ? (form.action.startsWith("/") ? form.action : `/cgi-bin/${form.action}`) : `/cgi-bin/${page}.ha`;
@@ -210,10 +201,7 @@ export class RouterPages {
   }
 }
 
-/**
- * Sign in again before the next protected page (the code changed or was removed). The cookie is
- * kept, so the next sign-in reuses the router's session instead of taking another.
- */
+/** The cookie is kept, so the next sign-in reuses the router's session instead of taking another. */
 export function signOut(address: string) {
   const s = gateways().get(`http://${address}`);
   if (s) s.loggedIn = false;
@@ -221,7 +209,7 @@ export function signOut(address: string) {
 
 export type Identity = { kind: "bgw"; model: string; firmware: string | null; html: string } | { kind: "other"; name: string | null } | { kind: "unreachable" };
 
-/** Is there an AT&T BGW gateway at this address? Reads System Information, no sign-in. */
+/** Reads System Information, no sign-in. */
 export async function identify(address: string): Promise<Identity> {
   return withRouter(address, null, async (r) => {
     let html: string;

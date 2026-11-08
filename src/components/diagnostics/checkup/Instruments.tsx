@@ -3,7 +3,6 @@ import * as React from "react";
 import type { CheckPlanItem, CheckResult, CheckState, CheckupGroup } from "@/lib/diagnostics-types";
 import s from "./checkup.module.css";
 
-/** Where a check is: its result, probing now, or not reached yet. */
 export type TickState = CheckState | "running" | "pending";
 
 export const STATE_WORD: Record<TickState, string> = {
@@ -15,7 +14,7 @@ export const STATE_WORD: Record<TickState, string> = {
   pending: "Waiting",
 };
 
-/** StateLine geometry for a check. Probing marks keep breathing under reduced motion (opacity only). */
+/** Probing marks keep breathing under reduced motion (opacity only). */
 export function Mark({ state, className }: { state: TickState; className?: string }) {
   return <i className={`${s.mark} ${className ?? ""}`} data-state={state} data-motion-gentle={state === "running" ? "" : undefined} aria-hidden />;
 }
@@ -64,10 +63,6 @@ function rowSummary(states: TickState[], live: boolean): React.ReactNode {
   return passed === states.length ? (states.length === 1 ? "Passed" : `All ${states.length} passed`) : `${passed} of ${states.length} passed`;
 }
 
-/**
- * The sweep: one row of hairline ticks per category, one tick per check, settling as results stream in.
- * One tab stop; arrow keys move between ticks (left/right) and rows (up/down); Enter opens the result.
- */
 export function Sweep({ groups, plan, results, running, live, onOpen }: { groups: CheckupGroup[]; plan: CheckPlanItem[]; results: Map<string, CheckResult>; running: Set<string>; live: boolean; onOpen: (id: string) => void }) {
   const rows = React.useMemo(() => groups.map((g) => ({ g, items: plan.filter((p) => p.group === g.id) })).filter((r) => r.items.length), [groups, plan]);
   const flat = React.useMemo(() => rows.flatMap((r) => r.items), [rows]);
@@ -163,10 +158,6 @@ export function Sweep({ groups, plan, results, running, live, onOpen }: { groups
   );
 }
 
-/**
- * The probe path: this server → … → the app, one hop per step. The rail into each hop is dotted until
- * reached, dashed while probing, drawn solid when it passes, and short red where it breaks.
- */
 export function ProbePath({ origin, plan, results, running, live, onOpen }: { origin: string | null; plan: CheckPlanItem[]; results: Map<string, CheckResult>; running: Set<string>; live: boolean; onOpen: (id: string) => void }) {
   const hops = plan.filter((p) => p.hop);
   const label = `${origin ?? "Start"} to ${hops.at(-1)?.label ?? "the end"}`;

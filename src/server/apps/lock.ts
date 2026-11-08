@@ -1,11 +1,7 @@
 import "server-only";
 import { conflict } from "../errors";
 
-/**
- * One lock per app id for anything that changes an app: a move (held on the original and the new
- * id for the whole move), an uninstall, and start/stop/restart/update. Whoever holds an id gets it
- * alone; everyone else is refused with what's going on. In memory: Gluon runs as one process.
- */
+/** A move holds its original and new ids for the whole move. In memory, since Gluon runs as one process. */
 
 type G = typeof globalThis & { __gluonAppLocks?: Map<string, { token: symbol; what: string }> };
 const g = globalThis as G;
@@ -17,22 +13,20 @@ export interface AppLock {
   release(): void;
 }
 
-/** Why `id` can't be changed right now, or null. */
 export function lockedBy(id: string): string | null {
   return locks.get(id)?.what ?? null;
 }
 
 /**
- * Refuse server-wide cleanups (removing stopped containers or unused volumes) while any app is
- * moving or uninstalling: mid-move the original's containers are stopped and its volumes look
- * unused, but they're the copy Gluon promised to keep.
+ * Mid-move the original's containers are stopped and its volumes look unused, but they're the copy
+ * Gluon promised to keep.
  */
 export function assertNoAppWork(what: string) {
   const held = [...new Set([...locks.values()].map((l) => l.what))];
   if (held.length) throw conflict(`Gluon won't ${what} right now: ${held[0]}. Try again when it's done.`);
 }
 
-/** Throw when someone else holds `id`. For re-checking right before a destructive step. */
+/** For re-checking right before a destructive step. */
 export function assertFree(id: string, mine?: AppLock) {
   const l = locks.get(id);
   if (l && (!mine || !(mine as Lock).owns(l.token))) throw conflict(`Wait a moment: ${l.what}.`);
@@ -56,7 +50,7 @@ class Lock implements AppLock {
   }
 }
 
-/** Take the lock on `ids` (all or none), described as `what` ("Immich is moving to Gluon"). */
+/** All or none. */
 export function lockApps(ids: string[], what: string): AppLock {
   for (const id of ids) assertFree(id);
   const l = new Lock(what);

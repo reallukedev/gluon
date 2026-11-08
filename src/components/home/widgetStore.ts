@@ -1,6 +1,6 @@
 import type { WidgetDef } from "./types";
 
-/** Registry for integration widgets (kept separate from registry.tsx to avoid an import cycle). */
+/** Kept separate from registry.tsx to avoid an import cycle. */
 export const extraWidgets: WidgetDef[] = [];
 
 export function registerWidget<C>(d: WidgetDef<C>) {

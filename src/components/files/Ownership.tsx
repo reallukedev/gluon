@@ -19,10 +19,6 @@ interface AppLite {
 
 type Phase = { kind: "choose" } | { kind: "checking"; done: number; toChange: number } | { kind: "ready"; preview: OwnershipPreview } | { kind: "error"; message: string };
 
-/**
- * "Fix ownership for an app": pick the app, count what would change (streamed), confirm, then run
- * it as a background task. The task keeps a record so it can be undone from the tray.
- */
 export function Ownership({ path, onClose, onStarted }: { path: string | null; onClose: () => void; onStarted: (job: FileJob) => void }) {
   const fmt = useFormat();
   const { data: used } = useApi<{ uses: AppUse[] }>(path ? `/api/files/used-by?path=${encodeURIComponent(path)}` : null);

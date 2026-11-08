@@ -13,10 +13,7 @@ import {
 import { channelConfigSchemas } from "@/lib/alerts-schemas";
 import { splitServer } from "./xmpp-format";
 
-/**
- * Channel configuration: validation, secret masking and "keep the stored secret unless a new one was
- * typed" merging. Stored configs are the fully parsed objects, encrypted with encryptJson.
- */
+/** Stored configs are the fully parsed objects, encrypted with encryptJson. */
 
 export type StoredConfig = Record<string, unknown>;
 
@@ -44,7 +41,6 @@ function maskValue(v: unknown, kind: ChannelKind, field: string): string | null 
 
 const isMasked = (v: unknown) => typeof v === "string" && v.includes(MASK);
 
-/** Config safe to send to the browser plus which secrets are set. */
 export function maskConfig(kind: ChannelKind, cfg: StoredConfig): { config: Record<string, unknown>; secrets: Record<string, boolean> } {
   const out: Record<string, unknown> = { ...cfg };
   const secrets: Record<string, boolean> = {};
@@ -60,7 +56,7 @@ export function maskConfig(kind: ChannelKind, cfg: StoredConfig): { config: Reco
   return { config: out, secrets };
 }
 
-/** Where a channel delivers to. When any of these change, kept secrets would go to the new place. */
+/** When any of these change, kept secrets would go to the new place. */
 const DESTINATION_FIELDS: Record<ChannelKind, string[]> = {
   ntfy: ["server"],
   pushover: [],
@@ -71,9 +67,8 @@ const DESTINATION_FIELDS: Record<ChannelKind, string[]> = {
 };
 
 /**
- * Merge what the person typed over the stored config, keeping secrets they didn't retype. If the
- * destination changed, kept secrets are dropped instead: a token or password stored for one server
- * must never be sent to another one just because someone edited the address.
+ * If the destination changed, kept secrets are dropped: a token stored for one server must never be
+ * sent to another just because someone edited the address.
  */
 export function mergeConfig(kind: ChannelKind, stored: StoredConfig | null, input: Record<string, unknown>): Record<string, unknown> {
   const merged = mergeKeeping(kind, stored, input);
@@ -133,7 +128,7 @@ const need = (ok: unknown, field: string, message: string) => {
   if (!ok) throw new AppError("invalid", message, 400, { field: `config.${field}` });
 };
 
-/** Parse + check the cross-field rules zod can't express nicely. */
+/** For the cross-field rules zod can't express nicely. */
 export function validateConfig(kind: ChannelKind, merged: Record<string, unknown>): StoredConfig {
   const parsed = channelConfigSchemas[kind].safeParse(merged);
   if (!parsed.success) zodFail(parsed.error);
@@ -194,7 +189,7 @@ export function validateConfig(kind: ChannelKind, merged: Record<string, unknown
   return c;
 }
 
-/** One line describing where messages go (no secrets). */
+/** No secrets. */
 export function summarize(kind: ChannelKind, c: StoredConfig, viaName?: string | null): string {
   switch (kind) {
     case "ntfy": {

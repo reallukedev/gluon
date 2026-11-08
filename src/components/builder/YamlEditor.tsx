@@ -12,10 +12,7 @@ import { editorHighlight, editorTheme } from "@/components/code/CodeEditor";
 import s from "@/components/code/code.module.css";
 import b from "./builder.module.css";
 
-/**
- * The compose editor: CodeEditor's theme and highlighting plus what the builder needs on top,
- * problems drawn on their lines and a handle to jump to a line from the problem list.
- */
+/** Problems drawn on their lines, plus a handle to jump to a line from the problem list. */
 const lintTheme = EditorView.theme({
   // Errors get a red underline and a diamond in the gutter (red always has a glyph); warnings an ink-2 one.
   ".cm-lintRange-error": { backgroundImage: "none", textDecoration: "underline wavy var(--fault)", textUnderlineOffset: "3px" },
@@ -41,7 +38,6 @@ interface Props {
   onChange?: (v: string) => void;
   issues?: Issue[];
   readOnly?: boolean;
-  /** Show changes against this text. */
   original?: string;
   height?: number | string;
   label: string;

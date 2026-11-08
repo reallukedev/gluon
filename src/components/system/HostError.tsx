@@ -7,16 +7,12 @@ import { Empty, Notice, Panel } from "@/components/ui/Surface";
 import { hostFailure } from "./hostFailure";
 import s from "./system.module.css";
 
-/** The `program` -> one line on what the person can do, for a host that lacks it. */
 export interface MissingCopy {
   title: string;
   body: React.ReactNode;
 }
 
-/**
- * A host command failed. A missing program is a fact about this machine, not a fault, so it reads
- * as an empty state; a timeout or real failure is a fault Notice with the raw output tucked away.
- */
+/** A missing program is a fact about this machine, not a fault, so it reads as an empty state. */
 export function HostError({
   error,
   title,
@@ -24,7 +20,6 @@ export function HostError({
   onRetry,
 }: {
   error: ApiError;
-  /** "Couldn't …": what failed, for timeouts and other faults. */
   title: string;
   missing: MissingCopy;
   onRetry: () => unknown;

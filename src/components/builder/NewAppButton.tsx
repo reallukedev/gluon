@@ -9,10 +9,6 @@ import { Button } from "@/components/ui/Button";
 const ChatInstallFlow = dynamic(() => import("@/components/chat/ChatInstallFlow").then((m) => m.ChatInstallFlow), { ssr: false });
 const VoiceInstallFlow = dynamic(() => import("@/components/voice/VoiceInstallFlow").then((m) => m.VoiceInstallFlow), { ssr: false });
 
-/**
- * "Make an app" for the Apps headers: the four ways to start, plus the servers Gluon sets up
- * and manages itself (chat and voice). `variant` lets a header keep one primary button.
- */
 export function NewAppButton({ variant = "secondary", label = "Make an app" }: { variant?: "primary" | "secondary" | "ghost"; label?: string }) {
   const router = useRouter();
   const [flow, setFlow] = React.useState<"chat" | "voice" | null>(null);

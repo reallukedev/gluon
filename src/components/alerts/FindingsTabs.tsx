@@ -13,12 +13,6 @@ import s from "./alerts.module.css";
 
 export const isSnoozed = (f: Finding, now = Date.now()) => !!f.snoozedUntil && f.snoozedUntil > now;
 
-// ---------------------------------------------------------------- quiet
-
-/**
- * The rest of the open list, under Status's "Needs you": things worth knowing (no alerts are sent),
- * snoozed ones and ones marked as not a problem, each with a way back onto the list.
- */
 export function QuietFindings({ findings, onChange }: { findings: Finding[]; onChange: () => void }) {
   const [busy, setBusy] = React.useState<string | null>(null);
   async function restore(f: Finding) {
@@ -113,8 +107,6 @@ function FindingList({
     </ul>
   );
 }
-
-// ---------------------------------------------------------------- history
 
 export function HistoryTab() {
   const fmt = useFormat();

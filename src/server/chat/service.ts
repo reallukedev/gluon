@@ -128,8 +128,8 @@ export async function applySettings(
 }
 
 /**
- * Quark takes the settings as they are and applies them live, per chat domain, so there's no
- * restart to ask about, no version to check and several domains are fine.
+ * Quark applies settings live, per chat domain, so there's no restart to ask about and several
+ * domains are fine.
  */
 async function applyQuarkSettings(user: User, where: Where, t: QuarkTarget, appId: string, host: string, next: ChatSettings, rev: string | null): Promise<{ restarted: boolean; notes: string[] }> {
   return withAppLock([appId], `Chat settings for ${t.app.name} are being saved`, async () => {

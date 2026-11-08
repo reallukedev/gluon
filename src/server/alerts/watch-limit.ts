@@ -8,10 +8,9 @@ import { hostPath } from "../host/paths";
 import { AppError } from "../errors";
 
 /**
- * Linux caps how many files and folders one user's programs may watch for changes
- * (fs.inotify.max_user_watches). When one program takes nearly all of them, every other program
- * that watches files quietly stops noticing changes: Jellyfin and Immich miss new media, sync
- * tools miss edits, development servers fail to start. Nothing crashes, so it's easy to miss.
+ * When one program takes nearly all of fs.inotify.max_user_watches, every other program that watches
+ * files quietly stops noticing changes (Jellyfin and Immich miss new media, dev servers fail to
+ * start). Nothing crashes, so it's easy to miss.
  */
 
 const LIMIT_FILE = "/proc/sys/fs/inotify/max_user_watches";
@@ -31,7 +30,7 @@ async function readNum(p: string): Promise<number | null> {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** Watches held per process (Gluon shares the host's process list). Reads only /proc. */
+/** Gluon shares the host's process list. Reads only /proc. */
 async function holders(): Promise<Holder[]> {
   const pids = (await fs.readdir("/proc").catch(() => [] as string[])).filter((d) => /^\d+$/.test(d));
   const out: Holder[] = [];

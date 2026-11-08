@@ -11,16 +11,9 @@ const body = z.object({
 });
 
 /**
- * Start installing updates and stream the output as NDJSON (client: `streamPost`).
- *
- * Refusals (busy, another apt running, nothing to do, reauth) are normal HTTP errors, because the
- * run is started before the stream opens. Events:
- *   { type: "step", text, runId, run }      once, first
- *   { type: "line", text, stream: "out", n } apt/dpkg output
- *   { type: "done", ok, message, run }       when apt exits
- *
- * The install runs as a systemd unit on the host, so closing the page (or Docker restarting Gluon
- * mid-upgrade) doesn't stop it. Reattach with GET /api/system/updates/runs/[runId]/stream.
+ * Refusals (busy, another apt running, nothing to do, reauth) are plain HTTP errors because the run starts
+ * before the stream opens. The install runs as a systemd unit on the host, so closing the page (or Docker
+ * restarting Gluon mid-upgrade) doesn't stop it; reattach with /api/system/updates/runs/[runId]/stream.
  */
 export const POST = route({ auth: "admin", recent: true, body }, async ({ req, body, user, ip, zone }) => {
   const run = await startRun(user, body.repair ? { kind: "repair", packages: null } : { kind: "upgrade", packages: body.packages?.length ? body.packages : null }, { ip, zone });

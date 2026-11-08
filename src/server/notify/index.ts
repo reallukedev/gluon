@@ -8,8 +8,6 @@ import { followUps, kick, tick, TICK_MS } from "./dispatcher";
 import { allChannels, canSee } from "./channels";
 import { runWatchers } from "./watchers";
 
-/** Side-effect module: the notification dispatcher and channel search. */
-
 onStart("notify", () => {
   // Wait for the alert engine's first pass (it starts after 8 s) so a restart doesn't send a burst of
   // half-evaluated findings.

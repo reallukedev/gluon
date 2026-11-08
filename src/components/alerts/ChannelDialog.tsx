@@ -187,16 +187,13 @@ function configOf(d: Draft, editing: boolean): Cfg {
 export interface ChannelDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  /** Editing this channel; null = adding one. */
+  /** Null when adding one. */
   channel: ChannelView | null;
   scope: "server" | "personal";
-  /** The viewer is an admin (may enter mail server details). */
   admin: boolean;
   kinds: ChannelKind[];
-  /** Server-wide email channels a new email channel can send through. */
   emailVias: { id: string; name: string }[];
   onSaved: (c: ChannelView) => void;
-  /** Start a new channel on this kind (skips the "where should alerts go?" step). */
   initialKind?: ChannelKind | null;
 }
 
@@ -779,7 +776,7 @@ function XmppFields({
   );
 }
 
-/** Known addresses as checkboxes that add to or take from the typed list, which stays the one source of truth. */
+/** The typed list stays the one source of truth. */
 function Picks({ known, value, onChange, label }: { known: string[]; value: string; onChange: (v: string) => void; label: string }) {
   const chosen = list(value);
   return (

@@ -6,10 +6,8 @@ import { listContainerRefs, type ContainerRef } from "./compose";
 import type { Holder } from "@/lib/storage-types";
 
 /**
- * Who is keeping a filesystem busy: the same thing `fuser -vm` does, done by walking /proc
- * (the host's psmisc isn't installed, and the container has neither fuser nor lsof).
- * A process holds the mount if its cwd, root, executable, an open file or a mapped file lives on
- * the filesystem's device. Running containers that bind a folder from it hold it too, even when idle.
+ * What `fuser -vm` does, by walking /proc: the host's psmisc isn't installed and the container has
+ * neither fuser nor lsof. Running containers that bind a folder from it hold it too, even when idle.
  */
 
 function users(): Map<number, string> {
@@ -138,10 +136,7 @@ export interface HolderScan {
   containerIds: Set<string>;
 }
 
-/**
- * Everything using the filesystem mounted at `target`.
- * `ignoreContainers`: containers the caller is about to stop (rename): their processes are skipped.
- */
+/** `ignoreContainers` are ones the caller is about to stop (rename); their processes are skipped. */
 export async function findHolders(target: string, opts: { ignoreContainers?: Set<string>; containers?: ContainerRef[] } = {}): Promise<HolderScan> {
   const mounts = readMountinfo();
   const m = mountAt(target, mounts);
@@ -193,7 +188,6 @@ export async function findHolders(target: string, opts: { ignoreContainers?: Set
     });
   }
 
-  // Processes.
   let dev: number | null = null;
   try {
     dev = fs.statSync(hostPath(m.target)).dev;

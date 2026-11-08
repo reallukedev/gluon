@@ -1,11 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { REQUESTED_PATH_HEADER } from "@/lib/safe-next";
 
 /**
- * Security headers for pages: a per-request nonce Content-Security-Policy (Next applies the nonce to
- * its own scripts), HSTS when the browser came in over HTTPS, and no indexing.
- *
- * Pages only. API responses get their static headers from next.config.ts; running this for /api would
- * also make Next buffer request bodies (uploads).
+ * Per-request nonce CSP, plus HSTS over HTTPS. Pages only: API headers come from next.config.ts, and
+ * running this for /api would make Next buffer request bodies (uploads).
  */
 export function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
@@ -37,6 +35,15 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("content-security-policy", csp);
+  // Where a signed-out visitor was headed, so sign-in can return there. Always set here, never the browser's own.
+  const url = request.nextUrl;
+  let search = url.search;
+  if (url.searchParams.has("_rsc")) {
+    const params = new URLSearchParams(url.searchParams);
+    params.delete("_rsc");
+    search = params.size ? `?${params}` : "";
+  }
+  requestHeaders.set(REQUESTED_PATH_HEADER, url.pathname + search);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
   if (https) response.headers.set("Strict-Transport-Security", "max-age=31536000");

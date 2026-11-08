@@ -115,7 +115,7 @@ export async function appDetail(id: string): Promise<AppDetail> {
   };
 }
 
-/** Reveal one secret env value (admin, recent auth, audited by the caller). */
+/** Admin, recent auth, audited by the caller. */
 export async function revealEnv(appId: string, container: string, key: string): Promise<string> {
   const app = await getApp(appId);
   const c = app?.containers.find((x) => x.name === container);

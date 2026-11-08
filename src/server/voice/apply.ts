@@ -16,11 +16,9 @@ import type { MumbleFacts } from "./container";
 import type { ManageOption } from "./types";
 
 /**
- * Changing how a Mumble app runs, for the two kinds of app Gluon can change:
- * - builder apps: the compose file is generated from the builder's spec on every publish, so the
- *   spec (and the builder's secret store) is changed and the app republished;
- * - compose apps: the compose file is edited and applied the way the Compose tab does it, with a
- *   backup and an automatic roll-back if it doesn't come up.
+ * Builder apps regenerate their compose file from the spec on every publish, so the spec is what
+ * changes for them; compose apps get the file edited, with a backup and a roll-back if it doesn't
+ * come up.
  */
 
 type Where = { ip?: string; zone?: string };
@@ -60,7 +58,6 @@ export async function changeTarget(f: MumbleFacts): Promise<{ target: ChangeTarg
   return { target: { via: "compose", service, file, dir: path.posix.dirname(file) }, option: { ok: true, via: "compose", why: null } };
 }
 
-/** A free port on this server's loopback for Ice, starting at 6502. */
 export async function freeIcePort(start = 6502): Promise<number> {
   const used = new Set<number>();
   for (const l of await hostListeners().catch(() => [])) if (l.proto === "tcp" && l.local.port) used.add(l.local.port);
@@ -81,17 +78,14 @@ function canBind(port: number): Promise<boolean> {
 }
 
 export interface Change {
-  /** New compose text from the current one (the builder's spec compose, or the file). */
   compose: (text: string, service: string) => string;
-  /** Builder apps: secret variables to set and remove for the Mumble service. */
+  /** Builder apps only. */
   secrets?: { set?: Record<string, string>; remove?: string[] };
-  /** Compose apps: a private file next to the compose file. */
+  /** Compose apps only: a private file next to the compose file. */
   envFile?: string;
-  /** What to call it in the activity log and the progress. */
   label: string;
 }
 
-/** Make the change and bring the app back up. Throws AppError with what went wrong. */
 export async function applyChange(target: ChangeTarget, appId: string, change: Change, user: User, where: Where, emit: Emit): Promise<void> {
   if (target.via === "builder") {
     const d = await appDetail(target.builderId);

@@ -5,13 +5,12 @@ import { safeFetch, NetError } from "../integrations/net";
 import { imageError, isLocalImage, parseImage } from "@/lib/builder/names";
 import { hubQuery, mapHubSearch, mapHubTags, pageTags, retryAt, sortTags } from "@/lib/builder/hub";
 import type { HubSearchResult, ImageLookup, TagPage } from "@/lib/builder-types";
+import { plural } from "@/lib/format";
 
 /**
- * Looks an image up where Docker would: this server first, then its registry (Docker Hub, GHCR,
- * Quay, lscr.io… anything speaking the registry v2 API with anonymous pull tokens). Reads the
- * image's config so the form can suggest its ports, folders and variables. Registry hosts come
- * from what the person typed, so requests go through Gluon's guarded fetch with the "member"
- * policy: public internet only, never this server or the LAN.
+ * This server first, then its registry (anything speaking registry v2 with anonymous pull tokens).
+ * Registry hosts come from what the person typed, so requests use the "member" fetch policy: public
+ * internet only, never this server or the LAN.
  */
 
 type G = typeof globalThis & { __gluonImageCache?: Map<string, { at: number; value: ImageLookup }> };
@@ -78,7 +77,6 @@ export async function lookupImage(ref: string): Promise<ImageLookup> {
   const hit = cache.get(clean);
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit.value;
 
-  // On this server already?
   let result: ImageLookup = { ...empty };
   try {
     const info = await docker().getImage(clean.includes(":") || clean.includes("@") ? clean : `${clean}:latest`).inspect();
@@ -157,8 +155,6 @@ class RegistryAnswer extends Error {
   }
 }
 
-// ---------------------------------------------------------------- Docker Hub search and tag pages
-
 /**
  * Docker Hub allows anonymous clients about 180 requests a minute per address, shared by
  * everything on this network. Answers are cached for 10 minutes, and after a 429 nothing is sent
@@ -185,7 +181,7 @@ function remember<T>(c: Cache<T>, key: string, value: T) {
 
 const limitedText = () => {
   const s = Math.max(1, Math.ceil((hub.blockedUntil - Date.now()) / 1000));
-  return `Docker Hub is limiting requests from this network for ${s < 90 ? `${s} seconds` : `${Math.ceil(s / 60)} minutes`}. Type the full image name instead, like jellyfin/jellyfin.`;
+  return `Docker Hub is limiting requests from this network for ${s < 90 ? plural(s, "second") : `${Math.ceil(s / 60)} minutes`}. Type the full image name instead, like jellyfin/jellyfin.`;
 };
 
 export async function searchHub(input: string): Promise<HubSearchResult> {

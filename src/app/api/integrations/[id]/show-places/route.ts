@@ -6,10 +6,7 @@ import { getRecord, updateIntegration } from "@/server/integrations/store";
 
 const body = z.object({ show: z.boolean() });
 
-/**
- * Admin: whether Who's home names the places people are ("At Work"). Off by default. It lives on the connection,
- * so every Who's home widget reading it follows the same choice and a member can't turn it on for themselves.
- */
+/** Stored on the connection, so every Who's home widget follows it and a member can't turn it on for themselves. */
 export const PUT = route({ auth: "admin", body, recent: true }, ({ user, body, params, ip, zone }) => {
   const id = String(Array.isArray(params.id) ? params.id[0] : params.id);
   const rec = getRecord(id);

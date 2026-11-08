@@ -16,10 +16,8 @@ const body = z.object({
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 /**
- * Press something on a Home Assistant widget: switch a light, run a scene, open a blind.
  * Admins may use any control Gluon offers; household members only what an admin shared with the household.
- * Every press that reaches Home Assistant, and every refused one (bad input, not allowed, not shared), is in the
- * activity log.
+ * Every press, including refused ones, is in the activity log.
  */
 export const POST = route({ auth: "user", body, burst: { limit: 40, windowMs: 60_000 } }, async ({ user, body, params, ip, zone }): Promise<HomeAssistantControlResult> => {
   const rawId = String(Array.isArray(params.id) ? params.id[0] : params.id);

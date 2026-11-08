@@ -31,7 +31,6 @@ export function resolveDir(cwd: string, home: string | null, typed: string): str
   return normalize(`${cwd}/${typed}`);
 }
 
-/** The working folder written short for a prompt: home becomes ~. */
 export function shortPath(cwd: string, home: string | null): string {
   if (home && home !== "/" && (cwd === home || cwd.startsWith(`${home}/`))) return `~${cwd.slice(home.length)}`;
   return cwd;

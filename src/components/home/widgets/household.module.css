@@ -1,6 +1,3 @@
-/* Household widgets: Internet, Guest Wi-Fi, On this day. */
-
-/* ---------------------------------------------------------------- Internet */
 .net { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: var(--pt, 16px) var(--px, 16px) var(--pb, 14px); overflow: hidden; }
 .netHead { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .netWords { flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -30,20 +27,17 @@
 
 .net[data-size="s"] { --figure: 1.375rem; gap: 6px; }
 .net[data-size="s"] .sentence { -webkit-line-clamp: 1; font-size: var(--text-xs); }
-/* Wide sizes: the figure and the sentence side by side, the strip underneath. */
 .net[data-size="m"], .net[data-size="w"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); grid-template-rows: auto auto 1fr; column-gap: 24px; row-gap: 6px; }
 .net[data-size="m"] .netHead, .net[data-size="w"] .netHead { grid-column: 1; }
 .net[data-size="m"] .netFigures, .net[data-size="w"] .netFigures { grid-column: 1; }
 .net[data-size="m"] .sentence, .net[data-size="w"] .sentence { grid-column: 2; grid-row: 1 / 3; align-self: start; padding-top: 1px; -webkit-line-clamp: 3; }
 .net[data-size="m"] .stripWrap, .net[data-size="m"] .learning, .net[data-size="w"] .stripWrap, .net[data-size="w"] .learning { grid-column: 1 / -1; align-self: end; }
-/* Phones: one column, the sentence under the strip. */
 @media (max-width: 720px) {
   .net[data-size="m"], .net[data-size="w"] { display: flex; gap: 6px; }
   .net[data-size="m"] .sentence, .net[data-size="w"] .sentence { order: 1; -webkit-line-clamp: 2; }
   .net[data-size="m"] .stripWrap, .net[data-size="w"] .stripWrap { align-self: stretch; }
 }
 
-/* ---------------------------------------------------------------- Guest Wi-Fi */
 .wifi { height: 100%; min-height: 0; display: flex; align-items: center; gap: 16px; padding: 12px var(--px, 16px); overflow: hidden; }
 .qr { flex: none; height: 100%; width: auto; aspect-ratio: 1; max-height: 156px; }
 .qrPlate { fill: var(--panel); stroke: var(--line); stroke-width: 0.12; }
@@ -63,7 +57,6 @@
 .wifi[data-size="s"] { gap: 12px; }
 .wifi[data-size="s"] .ssid { font-size: var(--text-md); }
 
-/* ---------------------------------------------------------------- On this day */
 .memory { position: relative; height: 100%; min-height: 0; overflow: hidden; background: var(--sunk); }
 .photoLink { position: absolute; inset: 0; display: block; }
 .photoLink:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; border-radius: 10px; }
@@ -87,7 +80,6 @@
 .memory[data-size="s"] .ago, .memory[data-size="s"] .count { display: none; }
 .memory[data-size="s"] .year { font-size: var(--text-lg); }
 
-/* Settings */
 .form { display: grid; gap: 16px; }
 .figure[data-word] { border-radius: 4px; cursor: default; text-decoration: underline dotted var(--line-strong); text-decoration-thickness: 2px; text-underline-offset: 6px; }
 .figure[data-word]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

@@ -17,7 +17,7 @@ import {
 } from "@/lib/widgets-types";
 import { widgetConfigSchemas } from "@/lib/widgets-schemas";
 
-/** How long a last-good answer may be shown (marked stale) while the source is failing. 0 = never. */
+/** 0 means never. */
 const STALE_MS: Record<WidgetType, number> = {
   "jellyfin.nowPlaying": 0,
   "jellyfin.recent": 30 * 60_000,
@@ -45,7 +45,7 @@ export function isWidgetType(t: unknown): t is WidgetType {
   return typeof t === "string" && (WIDGET_TYPES as readonly string[]).includes(t);
 }
 
-/** Stable JSON for cache keys (sorted keys). */
+/** Sorted keys. */
 function stable(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
   if (v && typeof v === "object") {

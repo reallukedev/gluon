@@ -12,7 +12,7 @@ import { rebootStatus } from "./apt";
 
 export type PowerAction = "restart" | "shutdown";
 
-/** A pending `shutdown -r HH:MM`: ask logind, fall back to its state file. */
+/** Asks logind, falling back to its state file. */
 export async function scheduledShutdown(): Promise<PowerStatus["scheduled"]> {
   try {
     const { stdout } = await host("busctl", ["get-property", "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "ScheduledShutdown"], { timeoutMs: 5000 });
@@ -64,8 +64,8 @@ async function restartPolicies(ids: string[]): Promise<Map<string, string>> {
 }
 
 /**
- * What a restart does: which running apps come back on their own (restart policy always /
- * unless-stopped; on-failure doesn't restart after a clean shutdown), and who gets disconnected.
+ * Restart policy always or unless-stopped comes back on its own; on-failure doesn't restart after a
+ * clean shutdown.
  */
 export async function powerImpact(): Promise<PowerImpact | null> {
   try {
@@ -121,9 +121,8 @@ function guardUpdates(force: boolean) {
 }
 
 /**
- * Restart or shut down in 3 seconds. The delay lets this request's response (and the audit entry)
- * reach the person before the machine goes down. The timer lives in the host's systemd, so it fires
- * even though Gluon's own container is stopped along the way.
+ * The 3 s delay lets the response (and the audit entry) reach the person first. The timer lives in
+ * the host's systemd, so it fires even though Gluon's container is stopped along the way.
  */
 export async function powerNow(action: PowerAction, opts: { force?: boolean } = {}): Promise<{ at: number }> {
   guardUpdates(!!opts.force);

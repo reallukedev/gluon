@@ -6,10 +6,6 @@ import { useFormat } from "@/components/PrefsProvider";
 import { Skeleton } from "@/components/ui/Surface";
 import s from "./instruments.module.css";
 
-/**
- * The processor and memory at a glance: one hairline per CPU thread (its height is how busy it is),
- * and memory as one strip split by who holds it. Hover a segment to see who it is.
- */
 export function Faceplate({ snap }: { snap: ProcessSnapshot | null }) {
   const fmt = useFormat();
   const live = useLive();

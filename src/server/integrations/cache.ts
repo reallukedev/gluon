@@ -2,10 +2,9 @@ import "server-only";
 import { AppError } from "../errors";
 
 /**
- * In-memory TTL cache for upstream data.
- * - concurrent callers for the same key share one request
- * - failures are remembered briefly so a dead app isn't hammered by every open Home page
- * - when a refresh fails, the last good value is served (marked stale) for `staleMs`
+ * Concurrent callers for a key share one request; failures are remembered briefly so a dead app isn't
+ * hammered by every open Home page; when a refresh fails the last good value is served (marked stale)
+ * for `staleMs`.
  */
 
 interface Entry {

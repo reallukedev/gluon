@@ -7,8 +7,6 @@ import { formatRelative } from "@/lib/format";
 import type { JournalEntry, ServiceAction, ServiceDetail, ServiceInfo } from "@/lib/system-types";
 import { aboutUnit, blockedReason, friendlyName, isImportant, isValidUnit, parseShow, policyFor, showList, showNumber, showTimestamp, takesGluonDown } from "./units";
 
-// ---------------------------------------------------------------- listing
-
 interface ListedUnit {
   unit: string;
   load: string;
@@ -169,7 +167,6 @@ type G = typeof globalThis & {
 };
 const g = globalThis as G;
 
-/** Every systemd service: loaded ones plus installed-but-not-loaded unit files (enabled/disabled/masked). */
 export async function listServices(opts: { fresh?: boolean; maxAgeMs?: number } = {}): Promise<ServiceInfo[]> {
   const c = g.__gluonServices;
   if (!opts.fresh && c && Date.now() - c.at < (opts.maxAgeMs ?? 3000)) return c.list;
@@ -220,7 +217,7 @@ export function invalidateServices() {
   if (g.__gluonServices) g.__gluonServices.at = 0;
 }
 
-/** Only the failed services (cheap enough for a check every minute). */
+/** Cheap enough for a check every minute. */
 export async function failedServices(): Promise<ServiceInfo[]> {
   let names: string[] = [];
   try {
@@ -269,7 +266,6 @@ function statusSentence(s: ServiceInfo): string {
   }
 }
 
-/** Why a unit failed, in words. */
 export function failureReason(s: Pick<ServiceInfo, "result" | "exitStatus">): string {
   switch (s.result) {
     case "exit-code":
@@ -319,8 +315,6 @@ export async function getService(unit: string): Promise<ServiceDetail> {
   };
 }
 
-// ---------------------------------------------------------------- actions
-
 const VERB: Record<ServiceAction, [string, string]> = {
   start: ["Started", "start"],
   stop: ["Stopped", "stop"],
@@ -338,8 +332,8 @@ export interface ActionResult {
 }
 
 /**
- * Run a service action. Callers must have checked role and, when `policyFor(unit).needsRecentAuth`
- * includes the action, recent authentication.
+ * Callers must have checked role and, when `policyFor(unit).needsRecentAuth` includes the action,
+ * recent authentication.
  */
 export async function serviceAction(unit: string, action: ServiceAction, opts: { confirm?: boolean } = {}): Promise<ActionResult> {
   if (!isValidUnit(unit)) throw new AppError("invalid_unit", "That isn't a valid service name.", 400);
@@ -421,8 +415,6 @@ export async function serviceAction(unit: string, action: ServiceAction, opts: {
   return { message: `${past} ${name}`, service, queued: false };
 }
 
-// ---------------------------------------------------------------- journal
-
 const FIELDS = "--output-fields=MESSAGE,PRIORITY,SYSLOG_IDENTIFIER,_PID,_COMM";
 const CURSOR_RE = /^[A-Za-z0-9=;_\-]{1,400}$/;
 
@@ -488,7 +480,7 @@ export async function journal(unit: string, q: JournalQuery = {}): Promise<Journ
     .filter((e): e is JournalEntry => !!e);
 }
 
-/** Follow a unit's journal. Returns a stop function. */
+/** Returns a stop function. */
 export function followJournal(unit: string, opts: { afterCursor?: string; backlog?: number }, onEntry: (e: JournalEntry) => void, onEnd: () => void): () => void {
   if (!isValidUnit(unit)) throw new AppError("invalid_unit", "That isn't a valid service name.", 400);
   const args = ["-u", unit, "-o", "json", "-f", "--no-pager", "-q", FIELDS];

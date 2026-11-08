@@ -14,7 +14,7 @@ const body = z.object({
   confirm: z.boolean().optional(),
 });
 
-/** Start/stop/restart/reload/enable/disable. Stop/disable of important services need a fresh sign-in. */
+/** Stopping or disabling important services needs a fresh sign-in. */
 export const POST = route({ auth: "admin", body }, async ({ params, body, user, session, ip, zone }) => {
   const unit = parseUnit(params.unit);
   const pol = policyFor(unit);

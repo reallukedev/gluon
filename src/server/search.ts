@@ -5,10 +5,9 @@ import { matchScore, prepare, type Query } from "@/lib/search-match";
 import type { SearchAction, SearchEvent, SearchGroupOut, SearchItem, SearchTier } from "@/lib/search-types";
 
 /**
- * Universal search (⌘K). Feature modules register providers; `runSearch` asks all of them at once,
- * gives each a time budget, and hands every group to `emit` the moment it is ready, so a slow app
- * never holds back the rest. Queries are never logged or written anywhere; results are cached in
- * memory for a few seconds per person.
+ * Every provider runs at once with its own time budget and each group is emitted when ready, so a
+ * slow app never holds back the rest. Queries are never logged; results are cached in memory for a
+ * few seconds per person.
  */
 
 /** The older provider shape (still used by the network module). */
@@ -21,9 +20,8 @@ export interface SearchGroup {
 export interface ProviderItem extends SearchItem {
   keywords?: string;
   /**
-   * The provider's `score` is the whole story: don't raise it from how the text matches. For results
-   * a provider deliberately keeps out of "best match" (an ambiguous restart) or puts there (the
-   * action that was asked for).
+   * The provider's `score` is the whole story: for results a provider deliberately keeps out of "best
+   * match" (an ambiguous restart) or puts there.
    */
   final?: boolean;
 }
@@ -74,10 +72,7 @@ const NAME_PRIORITY: Record<string, number> = {
   "Public addresses": 22,
 };
 
-/**
- * Feature modules register a provider (apps, files, disks, people…). Registering the same key again
- * (hot reload) replaces it. The older `(user, q) => group` form still works.
- */
+/** Registering the same key again (hot reload) replaces it. */
 export function registerSearch(p: ProviderDef | LegacyProvider) {
   if (typeof p === "function") {
     // Same source text means the same provider re-registered by a hot reload.
@@ -105,8 +100,6 @@ export function registeredProviders(): ProviderDef[] {
   return [...defs.values()];
 }
 
-// ------------------------------------------------------------------ running
-
 export const LOCAL_BUDGET_MS = 900;
 export const APP_BUDGET_MS = 2000;
 const MAX_PER_GROUP = 8;
@@ -117,7 +110,7 @@ export class SearchTimeout extends Error {
   }
 }
 
-/** Resolve with the promise, or reject when the signal fires (the work itself may run on, unobserved). */
+/** The work itself may run on, unobserved. */
 export function withSignal<T>(p: Promise<T> | T, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(new SearchTimeout());
   return new Promise<T>((resolve, reject) => {
@@ -136,7 +129,7 @@ export function withSignal<T>(p: Promise<T> | T, signal: AbortSignal): Promise<T
   });
 }
 
-/** Score, sort and trim one group. Provider order breaks ties, so an app's own relevance survives. */
+/** Provider order breaks ties, so an app's own relevance survives. */
 export function finishGroup(def: Pick<ProviderDef, "key" | "name" | "tier" | "priority">, grp: ProviderGroup, q: Query): SearchGroupOut | null {
   const tier = def.tier ?? "local";
   const items = grp.items
@@ -202,8 +195,8 @@ export interface RunOptions {
   /** Extra providers for this request (connected apps, files), on top of the registered ones. */
   extra?: ProviderDef[];
   /**
-   * Changes whenever what this person may see changes (apps, shared folders, connections, role), so
-   * a revoked share is never answered from the cache. See `grantsKey` in search-sources.
+   * Changes whenever what this person may see changes, so a revoked share is never answered from the
+   * cache.
    */
   grants?: string;
   /** For tests: skip the per-person cache. */
@@ -211,9 +204,8 @@ export interface RunOptions {
 }
 
 /**
- * One person's answer to one query, per provider, each stamped with when that provider actually
- * answered. A replay keeps the original stamp, so repeating a query can't keep old results alive;
- * providers that failed or timed out aren't kept at all and are asked again.
+ * A replay keeps the original stamp, so repeating a query can't keep old results alive; providers
+ * that failed or timed out aren't kept.
  */
 interface CacheEntry {
   groups: Map<string, { at: number; groups: SearchGroupOut[] }>;
@@ -232,10 +224,7 @@ function runs(def: ProviderDef, scope: string): boolean {
   return scope === "all" || def.scope === scope;
 }
 
-/**
- * Run every provider that applies to `scope` in parallel and emit groups as they finish:
- * start → group/fail (any order) → done. Resolves when all have answered or run out of time.
- */
+/** start, then group/fail in any order, then done. */
 export async function runSearch(user: User, q: string, o: RunOptions): Promise<void> {
   const started = Date.now();
   const term = q.trim();
@@ -297,7 +286,7 @@ export async function runSearch(user: User, q: string, o: RunOptions): Promise<v
 /** Explained failures (an app said no, a folder vanished) are shown in the result; don't fill the log. */
 const isQuiet = (e: unknown) => e instanceof AppError;
 
-/** Everything at once, for callers that can't read a stream (GET /api/search). */
+/** For callers that can't read a stream (GET /api/search). */
 export async function searchAll(user: User, q: string, o: { scope?: string; zone?: "home" | "away"; extra?: ProviderDef[]; grants?: string; signal?: AbortSignal } = {}): Promise<{ groups: SearchGroupOut[] }> {
   const groups: SearchGroupOut[] = [];
   await runSearch(user, q, {

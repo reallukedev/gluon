@@ -1,10 +1,6 @@
 import { MARK_64 } from "@/components/brand/mark";
 import o from "./onboarding.module.css";
 
-/**
- * The first-run picture: Gluon's coil holding two points together, you and the server. On the first
- * step it draws itself in once; on the last it's simply there, joined.
- */
 export function Bond({ from, to, draw = false }: { from: string; to: string; draw?: boolean }) {
   const { coil, y, x0, x1 } = MARK_64;
   return (

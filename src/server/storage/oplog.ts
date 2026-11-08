@@ -7,9 +7,8 @@ import type { User } from "../auth/users";
 import type { JobKind, JobStatus, JobStep, StepStatus, StorageJob } from "@/lib/storage-types";
 
 /**
- * Storage operations are recorded in `storage_jobs` step by step, so a page reload (or a Gluon restart
- * in the middle of a rename) still shows exactly what happened. Live updates go out on the
- * "storage.job" topic.
+ * Recorded step by step so a reload, or a restart in the middle of a rename, still shows exactly what
+ * happened.
  */
 
 interface Row {
@@ -171,7 +170,6 @@ export class Job {
     }
   }
 
-  /** Mark a declared step as not needed. */
   skip(label: string, why?: string) {
     const s = this.data.steps.find((x) => x.label === label && x.status === "pending");
     if (!s) return;
@@ -208,7 +206,7 @@ export class Job {
   }
 }
 
-/** Jobs that were running when Gluon stopped. Returns them so the caller can raise findings. */
+/** Returned so the caller can raise findings. */
 export function markInterrupted(): StorageJob[] {
   try {
     const rows = all<Row>("SELECT * FROM storage_jobs WHERE status = 'running'");
@@ -231,7 +229,6 @@ export function pruneJobs() {
   }
 }
 
-/** Follow one job's updates until it finishes. Returns an unsubscribe function. */
 export function followJob(id: string, onUpdate: (job: StorageJob) => void): () => void {
   return subscribe("storage.job", (d) => {
     const m = d as { id: string; job: StorageJob };
@@ -293,8 +290,6 @@ export function pipeJob(id: string, emit: (e: Record<string, unknown>) => void, 
     push(job);
   });
 }
-
-// ---------------------------------------------------------------- lock
 
 type G = typeof globalThis & { __gluonStorageLock?: { label: string; since: number } | null };
 const g = globalThis as G;

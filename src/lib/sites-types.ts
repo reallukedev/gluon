@@ -1,19 +1,13 @@
-/** Sites: types and path rules shared by the server and the editor. No server imports. */
-
 import type { HttpsModeT, HttpsSettingsT } from "./network-types";
 
 export const SITE_LIMITS = {
-  /** Files in one site. */
   files: 2000,
-  /** One file. */
   fileBytes: 25 * 1024 * 1024,
   /** Everything in the draft together. */
   siteBytes: 100 * 1024 * 1024,
   /** Largest file the editor opens as text. */
   textBytes: 2 * 1024 * 1024,
-  /** Largest .zip that can be imported. */
   zipBytes: 100 * 1024 * 1024,
-  /** Folders inside folders. */
   depth: 12,
   pathLength: 400,
   nameLength: 120,
@@ -23,7 +17,6 @@ export const SITE_LIMITS = {
 
 export type SiteFileKind = "text" | "image" | "other";
 
-/** How the editor treats a file, from its extension. */
 export type SiteLanguage = "html" | "css" | "javascript" | "json" | "markdown" | "xml" | "text";
 
 const TEXT: Record<string, SiteLanguage> = {
@@ -103,7 +96,6 @@ export interface SiteFile {
 
 export interface SiteTree {
   files: SiteFile[];
-  /** Every folder, empty ones included. */
   dirs: string[];
   bytes: number;
   /** Changes with every edit, so the editor can tell when another tab changed something. */
@@ -117,7 +109,6 @@ export interface SiteAddress {
   url: string;
   https: HttpsModeT;
   httpsSetting?: HttpsSettingsT;
-  /** The wildcard DNS record already covers it. */
   wildcard: boolean;
 }
 
@@ -135,7 +126,6 @@ export interface SiteSummary {
    */
   state: SiteState;
   live: { version: string; at: number | null; by: string | null } | null;
-  /** The draft has edits the live version doesn't. */
   changes: boolean;
 }
 
@@ -176,7 +166,6 @@ export interface SiteBinaryFile {
   kind: "binary";
   size: number;
   etag: string;
-  /** Why it doesn't open as text. */
   reason: "binary" | "too-large";
 }
 
@@ -185,7 +174,6 @@ export type SiteFileContent = SiteTextFile | SiteBinaryFile;
 export interface SitePreview {
   /** Opens the site's start page in the preview; other pages are relative to it. */
   url: string;
-  /** The part before the page path, to open another page in the preview. */
   base: string;
   expiresAt: number;
 }

@@ -8,8 +8,6 @@ import { pressure } from "./probes";
 import { inventory } from "./storage";
 import { fail, go, kv, ok, skip, warn, type CheckSpec, type Outcome } from "./core";
 
-/** Hardware: temperatures, memory pressure, swap, and load against the number of cores. */
-
 export function cpuTempOutcome(): Outcome {
   const list = sensors().length ? sensors() : temperatures();
   const t = latestHost()?.temp ?? cpuTemperature(list);

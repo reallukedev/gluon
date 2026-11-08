@@ -1,7 +1,6 @@
 import "server-only";
 import { StringDecoder } from "node:string_decoder";
 import { docker } from "../docker/client";
-import { AppError } from "../errors";
 import { dockerError, findContainer } from "./core";
 import type { ContainerInspect, ExecEvent } from "@/lib/docker-types";
 
@@ -65,8 +64,6 @@ export async function inspectContainer(idOrName: string): Promise<ContainerInspe
   };
 }
 
-// ---------------------------------------------------------------- one-off commands
-
 const MAX_OUTPUT = 1024 * 1024;
 
 export interface PreparedExec {
@@ -79,9 +76,8 @@ export interface PreparedExec {
 }
 
 /**
- * Run one command inside a running container, without a terminal or input, and stream what it
- * prints. It's stopped after the time limit (Gluon shares the host's process table, so it can
- * signal the process directly), and output past 1 MB is dropped.
+ * Gluon shares the host's process table, so it can signal the process directly at the time limit.
+ * Output past 1 MB is dropped.
  */
 export async function execInContainer(p: PreparedExec, emit: (e: ExecEvent) => void, signal: AbortSignal): Promise<{ exitCode: number | null; argv: string[]; name: string; timedOut: boolean }> {
   const { argv, user, workdir } = p;

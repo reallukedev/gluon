@@ -1,5 +1,3 @@
-/* The front page: collections first, places as plates. */
-
 .front { display: grid; gap: 38px; min-width: 0; padding-bottom: 24px; }
 .shelf { display: grid; gap: 12px; min-width: 0; }
 .head { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
@@ -22,7 +20,6 @@
 .sub { margin-top: -3px; overflow: hidden; font-size: var(--text-xs); color: var(--muted); white-space: nowrap; text-overflow: ellipsis; }
 @media (hover: hover) and (pointer: fine) { .tile:hover .face { box-shadow: 0 0 0 1px var(--line-strong); } }
 
-/* What's taking the space: a ledger with a size rule per line. */
 .ledger { display: grid; margin: 0; padding: 4px 0; list-style: none; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); }
 .ledger li { display: flex; align-items: center; gap: 4px; padding-right: 8px; }
 .ledger li + li { box-shadow: inset 0 1px 0 color-mix(in oklab, var(--line) 60%, transparent); }
@@ -33,7 +30,6 @@
 .ledgerRule { position: absolute; left: 16px; right: 6px; bottom: 6px; }
 @media (hover: hover) and (pointer: fine) { .ledgerRow:hover { background: var(--panel-2); } }
 
-/* Places: a rack of plates with their meters. */
 .rack { display: grid; gap: 18px; }
 .rackGroup { display: grid; gap: 8px; }
 .rackRow { display: flex; flex-wrap: wrap; gap: 8px; }

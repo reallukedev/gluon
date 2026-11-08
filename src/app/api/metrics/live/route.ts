@@ -3,7 +3,7 @@ import { subscribe } from "@/server/events";
 import { containerHistory, hostHistory, type HostSample } from "@/server/metrics/sampler";
 import { getSetting } from "@/server/settings";
 
-/** Live host + container samples. Starts with the last few minutes so charts aren't empty. */
+/** Starts with the last few minutes so charts aren't empty. */
 export const GET = route({ auth: "user" }, ({ req, user }) =>
   sse(req, (send) => {
     const admin = user.role === "admin";

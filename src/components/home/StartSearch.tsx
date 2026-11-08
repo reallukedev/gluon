@@ -9,10 +9,6 @@ import type { HomeApp } from "./widgets/core";
 import { useSmartUrl } from "./widgets/core";
 import s from "./home.module.css";
 
-/**
- * The start page's search: type to jump to an app, press Enter to search the web with your engine.
- * (⌘K still searches everything inside Gluon.)
- */
 export function StartSearch({ className }: { className?: string } = {}) {
   const { prefs } = usePrefs();
   const url = useSmartUrl();
@@ -35,7 +31,6 @@ export function StartSearch({ className }: { className?: string } = {}) {
 
   const engine = prefs.searchEngine === "custom" ? { name: "the web", url: prefs.searchCustomUrl || SEARCH_ENGINES.duckduckgo.url } : SEARCH_ENGINES[prefs.searchEngine];
 
-  // "/" focuses the search on the home page.
   React.useEffect(() => {
     if (!prefs.shortcuts) return;
     const onKey = (e: KeyboardEvent) => {

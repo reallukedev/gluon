@@ -17,8 +17,6 @@ import { KIND_HELP, KIND_ORDER, KIND_WORDS, methodWords, ZONE_WORDS } from "./lo
 import s from "./signins.module.css";
 import { HostError } from "./HostError";
 
-// ---------------------------------------------------------------- tab
-
 export function SignInsTab({ live }: { live: SWRResponse<LiveLogins, ApiError> }) {
   const history = useApi<SignInHistory>("/api/system/logins/history", {
     refresh: 60_000,
@@ -50,8 +48,6 @@ export function SignInsTab({ live }: { live: SWRResponse<LiveLogins, ApiError> }
     </div>
   );
 }
-
-// ---------------------------------------------------------------- connected now
 
 function ConnectedNow({ data, onChanged }: { data: LiveLogins; onChanged: () => void }) {
   const fmt = useFormat();
@@ -205,8 +201,6 @@ function SessionRow({ x, ending, onEnd }: { x: LiveSession; ending: boolean; onE
   );
 }
 
-// ---------------------------------------------------------------- the week
-
 function WeekPanel({ history, live }: { history: SWRResponse<SignInHistory, ApiError>; live: LiveLogins }) {
   const fmt = useFormat();
   const h = history.data;
@@ -312,8 +306,6 @@ function FailureDetails({ h }: { h: SignInHistory }) {
   );
 }
 
-// ---------------------------------------------------------------- where sign-ins come from
-
 function SourcesPanel({ history, loading }: { history?: SignInHistory; loading: boolean }) {
   const fmt = useFormat();
   return (
@@ -369,8 +361,6 @@ function SourceRow({ x, plural }: { x: SignInSource; plural: (n: number, one: st
     </li>
   );
 }
-
-// ---------------------------------------------------------------- posture
 
 interface Fact {
   key: string;
@@ -535,8 +525,6 @@ function PosturePanel({ posture }: { posture: SshPosture }) {
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- skeleton
 
 export function SignInsSkeleton() {
   return (

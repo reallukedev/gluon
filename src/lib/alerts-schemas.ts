@@ -2,15 +2,12 @@ import "server-only";
 import { z } from "zod";
 import { JID_RE, MONITOR_KINDS, NOTIFY_KINDS, WEBHOOK_FORMATS } from "./alerts-types";
 
-/** What the server validates channels, subscriptions and monitors with. */
-
 const url = z
   .string()
   .trim()
   .max(2000)
   .refine((v) => /^https?:\/\/[^\s/]+/i.test(v), "Use a full address starting with https:// (or http://).");
 
-/** ntfy priority 1 (min) … 5 (urgent). */
 const ntfyPriority = z.number().int().min(1).max(5);
 /** Pushover priority −2 (silent) … 1 (high). Emergency (2) needs acknowledgement, so it isn't offered. */
 const pushoverPriority = z.number().int().min(-2).max(1);
@@ -49,16 +46,12 @@ export const pushoverConfigSchema = z.object({
 });
 
 export const emailConfigSchema = z.object({
-  /**
-   * Send through another (server-wide) email channel's mail server instead of entering SMTP details.
-   * Household members use this: the admin sets up the mail server once.
-   */
+  /** Send through a server-wide email channel's mail server, so household members needn't enter SMTP details. */
   via: z.string().max(64).nullable().optional(),
   host: z.string().trim().max(253).nullable().optional(),
   port: z.number().int().min(1).max(65535).nullable().optional(),
   /** "tls" = implicit TLS (usually 465); "starttls" = upgrade (usually 587); "none" = plain (LAN relays only). */
   security: z.enum(["tls", "starttls", "none"]).default("starttls"),
-  /** Accept self-signed certificates (LAN mail relays). */
   allowSelfSigned: z.boolean().default(false),
   user: z.string().trim().max(256).nullable().optional(),
   pass: secretInput,
@@ -73,7 +66,7 @@ export const webhookConfigSchema = z.object({
   format: z.enum(WEBHOOK_FORMATS).default("json"),
   /** The URL is a secret for Discord/Slack (it embeds the token), so it is masked too. */
   url: secretInput,
-  /** Extra headers for generic webhooks (e.g. Authorization). Values are secrets. */
+  /** Extra headers for generic webhooks. Values are secrets. */
   headers: z
     .array(z.object({ name: z.string().trim().min(1).max(64).regex(/^[A-Za-z0-9-]+$/, "Header names use letters, numbers and dashes."), value: secretInput }))
     .max(8)
@@ -101,13 +94,10 @@ export const xmppConfigSchema = z.object({
   jid: z.string().trim().toLowerCase().max(320).nullable().optional(),
   password: secretInput,
   server: z.string().trim().max(260).nullable().optional(),
-  /** account: accept a certificate that isn't trusted (self-signed). Off unless someone turns it on for this channel. */
+  /** account: accept a self-signed certificate. */
   allowUntrusted: z.boolean().default(false),
-  /** People to message, one chat each. */
   to: z.array(jid).max(10).default([]),
-  /** Group chats to post in. */
   rooms: z.array(jid).max(3).default([]),
-  /** The name Gluon uses in group chats. */
   nick: z.string().trim().min(1).max(40).default("Gluon"),
 });
 
@@ -151,7 +141,6 @@ export const subscriptionFilterSchema = z.object({
   /** Kept in step with `kinds`. Admins: the daily digest (Settings → Server sets the hour). */
   digest: z.boolean().default(false),
   quiet: quietHoursSchema.nullable().default(null),
-  /** IANA time zone for quiet hours and the digest hour, e.g. "Europe/London". */
   tz: z.string().max(64).default("UTC"),
 });
 export type ParsedFilter = z.infer<typeof subscriptionFilterSchema>;
@@ -159,21 +148,17 @@ export type ParsedFilter = z.infer<typeof subscriptionFilterSchema>;
 export const monitorConfigSchema = z.object({
   intervalSec: z.number().int().min(20).max(3600).default(60),
   timeoutSec: z.number().int().min(1).max(60).default(10),
-  /** Consecutive failures before it counts as down. */
   failAfter: z.number().int().min(1).max(20).default(3),
   // http only
   method: z.enum(["GET", "HEAD"]).default("GET"),
-  /** Inclusive status range that counts as up. */
   expectStatus: z
     .object({ min: z.number().int().min(100).max(599), max: z.number().int().min(100).max(599) })
     .refine((r) => r.min <= r.max, "The lowest status must be below the highest.")
     .default({ min: 200, max: 399 }),
   /** Text that must appear in the response (first 1 MB). */
   keyword: z.string().max(200).nullable().default(null),
-  /** Up when the keyword is absent instead. */
   keywordAbsent: z.boolean().default(false),
   followRedirects: z.boolean().default(true),
-  /** Accept self-signed/expired certificates (LAN apps). */
   ignoreTls: z.boolean().default(false),
   /** Severity when down. Auto monitors choose for you (public/household → fault). */
   severity: z.enum(["fault", "attention"]).default("attention"),

@@ -62,7 +62,6 @@ export function LinkButton({ variant, size, block, icon, iconEnd, className, chi
 type IconButtonProps = Omit<ButtonProps, "children" | "icon" | "iconEnd"> & {
   label: string;
   children: React.ReactNode;
-  /** Show the label as a tooltip on hover (default true). */
   tooltip?: boolean;
   shortcut?: string;
   /** Keep keyboard focus while disabled, e.g. a menu trigger that is busy after its own action. */

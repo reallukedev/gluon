@@ -4,9 +4,9 @@ import { MumbleServer } from "./generated/MumbleServer";
 import { AppError } from "../errors";
 
 /**
- * Talking to Mumble over ZeroC Ice (Mumble 1.5's admin API). One communicator serves every voice
- * server; each call carries that server's secret in its context. Mumble answers with proxies that
- * name its own (container-internal) address, so every proxy is re-pointed at the published port.
+ * One communicator serves every voice server; each call carries that server's secret in its context.
+ * Mumble answers with proxies naming its container-internal address, so every proxy is re-pointed at
+ * the published port.
  */
 
 type G = typeof globalThis & { __gluonIce?: Ice.Communicator };
@@ -79,7 +79,6 @@ export function isUnreachable(e: unknown): boolean {
   return /ConnectionRefused|ConnectTimeout|ConnectFailed|ConnectionLost|Socket|Timeout|DNS|CloseConnection|ConnectionManuallyClosed/.test(id);
 }
 
-/** An Ice failure as something a person can act on. */
 export function iceError(e: unknown, what = "That"): AppError {
   if (e instanceof AppError) return e;
   const id = iceId(e);

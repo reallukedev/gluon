@@ -1,6 +1,6 @@
 {
   "name": "gluon",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "engines": {
     "node": ">=22"
@@ -74,6 +75,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/archiver": "^8.0.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/busboy": "^1.5.4",
@@ -91,13 +93,13 @@
   },
   "description": "A home server manager: health, apps, files, storage, network and diagnostics in one calm web app.",
   "license": "GPL-3.0-or-later",
-  "homepage": "https://github.com/reallukedev/gluon",
+  "homepage": "https://github.com/slukedev/gluon",
   "bugs": {
-    "url": "https://github.com/reallukedev/gluon/issues"
+    "url": "https://github.com/slukedev/gluon/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/reallukedev/gluon.git"
+    "url": "https://github.com/slukedev/gluon.git"
   },
   "allowScripts": {
     "better-sqlite3": true,

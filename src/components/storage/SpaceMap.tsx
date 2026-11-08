@@ -4,12 +4,10 @@ import { useFormat } from "@/components/PrefsProvider";
 import type { UsageChildren, UsageEntry, UsageResult } from "@/lib/storage-types";
 import s from "./storage.module.css";
 
-/** Something Gluon can clean up, hung on the block of the folder it lives in. */
 export interface SpaceHint {
   path: string;
   bytes: number;
   title: string;
-  /** Opens the confirmation for this cleanup. */
   run: () => void;
   action: string;
 }
@@ -28,8 +26,6 @@ export interface Block {
   h: number;
   parent?: string;
 }
-
-// ---------------------------------------------------------------- squarified treemap
 
 interface Rect {
   x: number;
@@ -109,7 +105,6 @@ function itemsOf(entries: UsageEntry[], otherBytes: number, otherCount: number, 
 
 const HEAD = 24;
 
-/** Lay out one level, and inside every block big enough, the level below it. */
 export function layoutMap(result: UsageResult, W: number, H: number, withFree: boolean): Block[] {
   const free = withFree && result.filesystem ? result.filesystem.avail : null;
   const items = itemsOf(result.entries, result.otherBytes, result.otherCount, free, result.path);
@@ -157,7 +152,6 @@ function useSize<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
   return [ref, w];
 }
 
-/** Cleanups inside a folder, one per kind (an old copy split over two folders counts once). */
 export function hintsFor(path: string | null, hints: SpaceHint[]): SpaceHint[] {
   if (!path) return [];
   const byTitle = new Map<string, SpaceHint>();
@@ -169,11 +163,6 @@ export function hintsFor(path: string | null, hints: SpaceHint[]): SpaceHint[] {
   return [...byTitle.values()];
 }
 
-/**
- * What's using space, as a map: every block is a folder or file drawn at its share of the space, in
- * 1px rules; the biggest folders show what's inside them. Hover or focus a block to read it below
- * the map; click (or Enter) to look inside. Blocks holding something Gluon can clean up carry a mark.
- */
 export function SpaceMap({
   result,
   withFree,
@@ -186,7 +175,6 @@ export function SpaceMap({
   result: UsageResult;
   withFree: boolean;
   hints: SpaceHint[];
-  /** The drive is nearly full: cleanups need the person (sodium), not just "could". */
   urgent: boolean;
   active: string | null;
   onActive: (block: Block | null) => void;

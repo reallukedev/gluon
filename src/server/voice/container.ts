@@ -9,8 +9,6 @@ import { ICE_CONTAINER_PORT } from "./compose-edit";
 import type { VoicePort } from "./types";
 import { countEstablished } from "./proc-net";
 
-/** What Docker says about an app's Mumble container: where Ice and the voice port are published, its settings. */
-
 export interface MumbleFacts {
   app: AppSummary;
   id: string;
@@ -23,7 +21,6 @@ export interface MumbleFacts {
   env: Record<string, string>;
   hostNetwork: boolean;
   ports: VoicePort[];
-  /** The port Mumble listens on inside the container, and where that's published on the server. */
   voicePort: number;
   voiceHostPort: number | null;
   /** Where Gluon reaches Ice: a published 127.0.0.1 port, or the port itself on the host's network. */
@@ -93,10 +90,7 @@ export async function mumbleFacts(appId: string): Promise<MumbleFacts> {
   };
 }
 
-/**
- * How many people are connected, without Ice: established TCP connections to Mumble's port,
- * read from the container's own network table. Null when it can't be read.
- */
+/** From the container's own TCP table, so it works without Ice. Null when it can't be read. */
 export async function countConnections(f: Pick<MumbleFacts, "id" | "name" | "voicePort" | "running">): Promise<number | null> {
   if (!f.running) return 0;
   let out = "";

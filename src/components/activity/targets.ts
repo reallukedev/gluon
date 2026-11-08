@@ -8,7 +8,7 @@ export interface Names {
   apps: Map<string, string>;
 }
 
-/** Where an entry's target lives in Gluon, and what to call it. Null when there's nowhere useful to go. */
+/** Null when there's nowhere useful to go. */
 export function targetLink(e: ActivityItem, names: Names): { href: string | null; label: string } | null {
   const t = e.target;
   if (!t) return null;
@@ -37,7 +37,7 @@ export function targetLink(e: ActivityItem, names: Names): { href: string | null
 
 export type Outcome = { kind: "failed" | "problem" | "cleared" | "ok"; label: string };
 
-/** Plain words for how it went. System "problem found" entries are stored as failed; say what they are. */
+/** System "problem found" entries are stored as failed; say what they are. */
 export function outcomeOf(e: ActivityItem): Outcome {
   const finding = e.action.startsWith("finding.");
   if (finding && e.action.endsWith(".resolved")) return { kind: "cleared", label: "Cleared" };
@@ -49,7 +49,6 @@ export function outcomeOf(e: ActivityItem): Outcome {
   return { kind: "ok", label: "Done" };
 }
 
-/** Entries that say the same thing in a row (five sign-ins in an hour) read as one line. */
 export function sameRun(a: ActivityItem, b: ActivityItem): boolean {
   return a.kind === b.kind && a.userId === b.userId && a.action === b.action && a.target === b.target && a.outcome === b.outcome && a.summary === b.summary && Math.abs(a.at - b.at) < 6 * 3_600_000;
 }

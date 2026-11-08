@@ -26,9 +26,6 @@ const DOCKER = /^(docker-ce|docker\.io|containerd|containerd\.io|moby-engine)$/;
 
 type ApplyEvent = StreamEvent & { runId?: string; n?: number };
 
-// ---------------------------------------------------------------- following a run over SSE
-
-/** Reattach to a run's live output (after a reload, or when Gluon restarted mid-install). */
 function useRunFollow(runId: string | null, onDone: (run: UpdateRunSummary) => void) {
   const [state, setState] = React.useState<StreamState>(emptyStream);
   const last = React.useRef(-1);
@@ -83,8 +80,6 @@ function useRunFollow(runId: string | null, onDone: (run: UpdateRunSummary) => v
   return { state, status };
 }
 
-// ---------------------------------------------------------------- tab
-
 export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiError> }) {
   const fmt = useFormat();
   const { data, error, mutate } = status;
@@ -123,7 +118,6 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
     refreshAll();
   });
 
-  // Drop selections for packages that are no longer waiting.
   React.useEffect(() => {
     if (!data) return;
     const names = new Set(data.packages.map((p) => p.name));
@@ -415,9 +409,6 @@ export function UpdatesTab({ status }: { status: SWRResponse<UpdatesStatus, ApiE
   );
 }
 
-// ---------------------------------------------------------------- what installing does
-
-/** The consequences of installing, sorted by how much they disturb: the one picture for this tab. */
 function Impact({ pkgs }: { pkgs: PendingPackage[] }) {
   const fmt = useFormat();
   const docker = pkgs.filter((p) => DOCKER.test(p.name));
@@ -491,8 +482,6 @@ function Impact({ pkgs }: { pkgs: PendingPackage[] }) {
     </div>
   );
 }
-
-// ---------------------------------------------------------------- package list
 
 function PackageGroup({
   title,
@@ -589,8 +578,6 @@ function PackageGroup({
     </Panel>
   );
 }
-
-// ---------------------------------------------------------------- history
 
 const OUTCOME: Record<UpdateRunSummary["outcome"], { state: LineState; label: string }> = {
   running: { state: "starting", label: "Installing" },

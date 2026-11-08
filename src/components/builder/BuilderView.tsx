@@ -56,7 +56,6 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
     window.history.replaceState(null, "", u.toString());
   }, []);
 
-  // ---------------------------------------------------------------- checks
   const published = d.status === "published";
   const ctx = React.useMemo(() => ({ source: d.source, target, web: draft.spec.web, secrets: draft.secrets }), [d.source, target, draft.spec.web, draft.secrets]);
   const analysis = React.useMemo(() => analyze(draft.spec.compose, ctx), [draft.spec.compose, ctx]);
@@ -71,7 +70,7 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
         const r = await api.post<ServerCheck>(`/api/custom-apps/${d.id}/check`, {});
         if (!cancelled) setServer(r);
       } catch {
-        /* checks are advisory here; publishing runs them for real */
+        /* Advisory here; publishing runs them for real. */
       }
     }, 800);
     return () => {
@@ -123,7 +122,6 @@ export function BuilderView({ initial, initialTab, target: platformTarget }: { i
     [analysis.parsed.issues.length, setTab],
   );
 
-  // ---------------------------------------------------------------- actions
   const openJob = (m?: JobMode) => {
     setMode(m);
     setJobOpen(true);

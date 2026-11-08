@@ -5,7 +5,6 @@ import { CopyButton } from "@/components/ui/CopyButton";
 import { Skeleton } from "@/components/ui/Surface";
 import s from "./chat.module.css";
 
-/** A QR code for an xmpp: link or invite page, drawn by the server. */
 export function ChatQr({ appId, text, label }: { appId: string; text: string; label: string }) {
   const [svg, setSvg] = React.useState<string | null>(null);
   const [failed, setFailed] = React.useState(false);
@@ -25,7 +24,6 @@ export function ChatQr({ appId, text, label }: { appId: string; text: string; la
   return svg ? <div className={s.qr} role="img" aria-label={label} dangerouslySetInnerHTML={{ __html: svg }} /> : <Skeleton width={156} height={156} radius={10} />;
 }
 
-/** Chat apps worth suggesting, by platform. Kept short: the ones that support everything Gluon turns on. */
 export function AppSuggestions() {
   return (
     <ul className={s.apps} aria-label="Chat apps to use">
@@ -55,7 +53,6 @@ export function AppSuggestions() {
   );
 }
 
-/** "luke@chat.example.com" with the @ quieter, as people read an address. */
 export function Jid({ jid }: { jid: string }) {
   const at = jid.indexOf("@");
   if (at < 0) return <>{jid}</>;
@@ -68,7 +65,6 @@ export function Jid({ jid }: { jid: string }) {
   );
 }
 
-/** What someone needs to sign in: address, password, a code to scan, and which app to get. Shown once. */
 export function Credentials({ appId, jid, password }: { appId: string; jid: string; password: string | null }) {
   const message = password
     ? `Your chat account is ready\n\nAddress: ${jid}\nPassword: ${password}\n\nUse any XMPP app`

@@ -12,15 +12,12 @@ import { Gate, IntegrationPicker, perSize, Poster, Quiet, RowsSkeleton, ShelfSke
 export { TitleField };
 import l from "./live.module.css";
 
-// ---------------------------------------------------------------- common bits
-
 export interface IntegrationConfig {
   integration?: string;
   title?: string;
 }
 
 
-/** 83 min → "1:23:00"; 4 min → "4:00". */
 function clock(ms: number | null): string {
   if (ms === null || !Number.isFinite(ms)) return "";
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -38,7 +35,6 @@ function Progress({ value, paused, label }: { value: number; paused?: boolean; l
   );
 }
 
-/** Wrap content in a link to the app when Gluon knows its address. */
 function AppLink({ src, children, className, title }: { src: IntegrationRef | null; children: React.ReactNode; className?: string; title?: string }) {
   const url = useSmartUrl();
   const { prefs } = usePrefs();
@@ -56,8 +52,6 @@ function AppLink({ src, children, className, title }: { src: IntegrationRef | nu
     </a>
   );
 }
-
-// ---------------------------------------------------------------- Jellyfin: now watching
 
 export function JellyfinNowPlaying({ item, size }: WidgetProps<IntegrationConfig>) {
   const q = useIntegrationWidget("jellyfin", "jellyfin.nowPlaying", item.config.integration, {});
@@ -118,8 +112,6 @@ function SessionRow({ s, compact }: { s: NowPlayingSession; compact?: boolean })
     </li>
   );
 }
-
-// ---------------------------------------------------------------- Jellyfin: recently added
 
 export interface RecentConfig extends IntegrationConfig {
   include?: ("movie" | "episode" | "album")[];
@@ -213,8 +205,6 @@ export function IntegrationSettingsFor(kind: IntegrationKind, placeholder: strin
   };
 }
 
-// ---------------------------------------------------------------- Jellyfin: libraries
-
 const COUNT_LABELS: [keyof import("@/lib/widgets-types").JellyfinLibrariesData["counts"], string][] = [
   ["movies", "Movies"],
   ["series", "Shows"],
@@ -270,8 +260,6 @@ export function JellyfinLibraries({ item, size }: WidgetProps<IntegrationConfig>
     </Gate>
   );
 }
-
-// ---------------------------------------------------------------- Immich
 
 export interface ImmichConfig extends IntegrationConfig {
   memories?: boolean;
@@ -363,8 +351,6 @@ export function ImmichSettings({ config, onChange }: SettingsProps<ImmichConfig>
   );
 }
 
-// ---------------------------------------------------------------- Subsonic / Navidrome / Octo
-
 export function SubsonicNowPlaying({ item, size }: WidgetProps<IntegrationConfig>) {
   const q = useIntegrationWidget("subsonic", "subsonic.nowPlaying", item.config.integration, {});
   const one = size === "s";
@@ -428,13 +414,10 @@ export function SubsonicRecent({ item, size }: WidgetProps<IntegrationConfig>) {
 }
 
 
-// ---------------------------------------------------------------- Immich: latest photos
-
 export interface ImmichRecentConfig extends IntegrationConfig {
   show?: "all" | "photos" | "videos";
 }
 
-/** The newest photos as an even wall of squares that fills the widget; videos carry a play mark. */
 export function ImmichRecent({ item, size }: WidgetProps<ImmichRecentConfig>) {
   const fmt = useFormat();
   const limit = perSize(size, { s: 4, m: 8, t: 12, l: 24, w: 16, x: 40 }, 16);

@@ -6,8 +6,6 @@ import { parseFeed } from "./feed";
 import { isIanaZone, resolveTzid, UTC, zoneName, type Zone } from "./tz";
 import type { CalendarData, FeedData, GeocodeResult, LinkStatusData, WeatherData, WeatherIcon } from "@/lib/widgets-types";
 
-/** Personal widget sources: public services and URLs people put in their own widgets. */
-
 class SourceError extends AppError {
   constructor(message: string, code = "source_failed") {
     super(code, message, 502);
@@ -38,8 +36,6 @@ async function get(url: string, what: string, policy: NetPolicy, opts: { maxByte
     throw e;
   }
 }
-
-// ------------------------------------------------------------------ weather (Open-Meteo)
 
 const WMO: Record<number, [string, WeatherIcon]> = {
   0: ["Clear", "clear"],
@@ -185,8 +181,6 @@ export async function geocode(q: string): Promise<GeocodeResult> {
   };
 }
 
-// ------------------------------------------------------------------ calendar (ICS)
-
 export async function calendar(cfg: { url: string; days: number; limit: number; tz?: string }, policy: NetPolicy): Promise<CalendarData> {
   const r = await get(cfg.url, "The calendar", policy, { maxBytes: 4 * 1024 * 1024, accept: "text/calendar, text/plain;q=0.8, */*;q=0.5" });
   const text = decodeText(r.body, String(r.headers["content-type"] ?? ""));
@@ -208,8 +202,6 @@ export async function calendar(cfg: { url: string; days: number; limit: number; 
   };
 }
 
-// ------------------------------------------------------------------ feed
-
 export async function feed(cfg: { url: string; limit: number }, policy: NetPolicy): Promise<FeedData> {
   const r = await get(cfg.url, "The feed", policy, {
     maxBytes: 5 * 1024 * 1024,
@@ -226,8 +218,6 @@ export async function feed(cfg: { url: string; limit: number }, policy: NetPolic
     );
   }
 }
-
-// ------------------------------------------------------------------ link status
 
 export async function linkStatus(url: string, policy: NetPolicy): Promise<LinkStatusData> {
   const checkedAt = Date.now();

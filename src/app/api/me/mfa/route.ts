@@ -8,13 +8,12 @@ import { decrypt } from "@/server/crypto";
 import { audit } from "@/server/audit";
 import { mfaRequired } from "@/server/auth/policy";
 
-/** Two-step status for Settings → Security. */
 export const GET = route({ auth: "user" }, ({ user, zone }) => {
   const row = findById(user.id)!;
   return {
     enabled: !!row.totp_enabled,
     recoveryLeft: row.totp_enabled ? recoveryCodesLeft(row) : 0,
-    // Kept as requiredAway for the settings page: true when the server's rule covers this person.
+    // True when the server's rule covers this person.
     requiredAway: mfaRequired(user.role, "away"),
     zone,
   };

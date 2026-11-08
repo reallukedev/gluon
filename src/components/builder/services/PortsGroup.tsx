@@ -13,7 +13,6 @@ import s from "../builder.module.css";
 const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(/\D/g, "").slice(0, 5)) || null);
 const complete = (r: PortRow) => r.raw !== null || (!!r.container && r.container > 0 && r.container < 65536 && (r.host === null || (r.host > 0 && r.host < 65536)));
 
-/** Ports other devices connect to directly. The web page has its own setting and needs no row. */
 export function PortsGroup({ draft, form: f, issues, isWeb, target, usedPorts, onFix }: { draft: Draft; form: ServiceForm; issues: Issue[]; isWeb: boolean; target: BuilderTarget; usedPorts?: Map<number, string>; onFix: (id: string) => void }) {
   const base = `services.${f.name}.ports`;
   const [rows, setRows] = useRows<PortRow>(f.ports, complete, (r) => (r.raw !== null ? r : parsePortString(portString(r))), (done) => draft.editCompose((doc) => setPorts(doc, f.name, done)));

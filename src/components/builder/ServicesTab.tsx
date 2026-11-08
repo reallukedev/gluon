@@ -25,7 +25,6 @@ interface Props {
   onOpenCompose: () => void;
 }
 
-/** Every service of the app, edited as a form that writes into the compose file. */
 export function ServicesTab({ draft, services, issues, target, source, yamlBroken, usedPorts, onFix, onOpenCompose }: Props) {
   const [adding, setAdding] = React.useState(false);
   const { data: places } = useApi<Places>("/api/files/places", { revalidateOnFocus: false });

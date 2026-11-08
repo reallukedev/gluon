@@ -3,8 +3,6 @@ import { registerSearch } from "../search";
 import { rank } from "@/lib/search-match";
 import { listSites } from "./service";
 
-/** Side-effect module: Sites in search (admins). */
-
 registerSearch({
   key: "sites",
   name: "Sites",

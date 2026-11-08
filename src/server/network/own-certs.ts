@@ -10,9 +10,8 @@ import { checkOwnCert, describeCert, type CertCheck } from "./own-cert-check";
 import type { CertUploads, OwnCertInfo, OwnCertState } from "@/lib/network-types";
 
 /**
- * Certificates people supply for their addresses. Caddy serves them from ./certs next to the
- * Caddyfile (its container sees the same folder read-only). Pasted ones are written once; ones that
- * live in files on the server (certbot's live folder) are copied again whenever they change.
+ * Caddy serves these from ./certs next to the Caddyfile. Pasted ones are written once; ones kept in
+ * files on the server (certbot's live folder) are copied again whenever they change.
  */
 
 const MAX_FILE = 64 * 1024;
@@ -28,7 +27,6 @@ function readIf(p: string): Buffer | null {
   }
 }
 
-/** The stored certificate and key Caddy serves for `host`. */
 export function readOwnCert(host: string): { crt: Buffer; key: Buffer; info: CertInfo } | null {
   const f = ownCertFiles(host);
   const crt = readIf(f.crt);
@@ -103,7 +101,6 @@ function certError(check: Extract<CertCheck, { ok: false }>, routeId: string, fr
   return new AppError("invalid_cert", check.message, 400, { route: routeId, field: fromFiles ? FILE_FIELD[check.field] : check.field });
 }
 
-/** Check a certificate before saving (from pasted text or files), without storing anything. */
 export function previewCert(host: string, src: { cert: string; key: string } | { files: { cert: string; key: string } }): OwnCertInfo {
   const fromFiles = "files" in src;
   const check = fromFiles ? readCertFiles(src.files, host) : checkOwnCert(src.cert, src.key, host);
@@ -112,9 +109,8 @@ export function previewCert(host: string, src: { cert: string; key: string } | {
 }
 
 /**
- * Put every own certificate the next config needs in place before Caddy loads it: pasted ones
- * from this save, and file-based ones that are new or point somewhere new. Throws (with the field
- * at fault) when one is missing or doesn't check out. `rollback` restores what was there.
+ * Runs before Caddy loads the next config. Throws (with the field at fault) when one is missing or
+ * doesn't check out; `rollback` restores what was there.
  */
 export function stageOwnCerts(next: RoutesConfig, prev: RoutesConfig | null, uploads: CertUploads, keyUid: number | null): { changed: boolean; rollback: () => void } {
   const backups: { path: string; data: Buffer | null }[] = [];
@@ -160,8 +156,6 @@ export function stageOwnCerts(next: RoutesConfig, prev: RoutesConfig | null, upl
   return { changed: backups.length > 0, rollback };
 }
 
-// ---------------------------------------------------------------- certificates kept in files
-
 type G = typeof globalThis & { __gluonOwnCertFiles?: Map<string, { copiedAt: number | null; error: string | null }> };
 const fileState = () => ((globalThis as G).__gluonOwnCertFiles ??= new Map());
 
@@ -174,10 +168,7 @@ export function ownCertStates(cfg: RoutesConfig): Record<string, OwnCertState> {
   return out;
 }
 
-/**
- * Copy certificates kept in files (renewed by certbot or similar) when they change, then have Caddy
- * load them. A file that's missing or doesn't check out leaves the copy Caddy has in place.
- */
+/** A file that's missing or doesn't check out leaves the copy Caddy has in place. */
 export async function syncOwnCertFiles(keyUid: number | null): Promise<void> {
   const cfg = tryReadConfig();
   if (!cfg) return;

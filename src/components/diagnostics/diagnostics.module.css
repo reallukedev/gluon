@@ -10,7 +10,6 @@
 .cols3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 @media (max-width: 1000px) { .cols, .cols3 { grid-template-columns: 1fr; } }
 
-/* ---------------------------------------------------------------- toolbar */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .panelToolbar { padding: 12px 14px 12px 18px; border-bottom: 1px solid var(--line); }
 .filter {
@@ -35,7 +34,6 @@
 .status[data-status="connecting"]::before, .status[data-status="offline"]::before { background: repeating-linear-gradient(to bottom, var(--ink-2) 0 2px, transparent 2px 4px); }
 .status[data-status="paused"]::before { background: var(--faint); }
 
-/* ---------------------------------------------------------------- stats */
 .statsRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); }
 .stat { display: grid; gap: 4px; align-content: start; padding: 14px 18px; border-left: 1px solid var(--line); min-width: 0; }
 .stat:first-child { border-left: 0; }
@@ -51,7 +49,6 @@
 .topSub { font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .panelNote { padding: 10px 18px; border-bottom: 1px solid var(--line); font-size: var(--text-sm); color: var(--muted); }
 
-/* ---------------------------------------------------------------- tables */
 /* Each table is sized by its own width (sidebar and density change it), not the viewport. */
 .table { min-width: 0; container: dtable / inline-size; }
 .head, .row { display: grid; align-items: center; gap: 14px; padding: 0 14px 0 18px; }
@@ -69,7 +66,6 @@
 .cellSub { display: block; min-width: 0; font-size: var(--text-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .numCell { text-align: right; font-size: var(--text-sm); }
 
-/* traffic */
 .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 28px; }
 .charts > :only-child { grid-column: 1 / -1; }
 @media (max-width: 860px) { .charts { grid-template-columns: 1fr; } }
@@ -124,8 +120,7 @@
   .ifMac { grid-column: 1; grid-row: 3; }
 }
 
-/* connections */
-/* Connections. Full: 70+110+200+100+110 + 4×14 + 32 = 678px. */
+/* Full: 70+110+200+100+110 + 4×14 + 32 = 678px. */
 .connGrid { grid-template-columns: 70px 110px minmax(200px, 2fr) minmax(100px, 1fr) 110px; }
 .groupRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px 6px 18px; border-top: 1px solid var(--line); font-size: var(--text-sm); background: var(--panel-2); }
 .head + div > .groupRow { border-top: 0; }
@@ -145,7 +140,6 @@
   .connGrid > :nth-child(2) { display: none; }
 }
 
-/* requests */
 .reqGrid { display: grid; grid-template-columns: 78px 58px minmax(0, 1fr) 64px 70px minmax(110px, 0.35fr); gap: 12px; align-items: center; }
 .reqHead { height: 32px; padding: 0 14px 0 18px; border-bottom: 1px solid var(--line); font-size: var(--text-2xs); font-weight: 600; font-family: var(--font-display); font-stretch: 85%; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .feed { height: min(60dvh, 620px); overflow: auto; contain: strict; position: relative; }
@@ -178,8 +172,6 @@
 .notices li[data-level="error"] > span { color: var(--fault); }
 @media (max-width: 640px) { .notices li { grid-template-columns: 1fr; gap: 2px; } }
 
-/* processes */
-/* Processes. Full: 70+200+120+110+120+110 + 5×14 + 32 = 832px. */
 .procGrid { display: grid; grid-template-columns: 70px minmax(200px, 2.2fr) minmax(120px, 1fr) 110px 120px 110px; gap: 14px; align-items: center; }
 .procGrid > * { min-width: 0; }
 .table > .head.procGrid { padding: 0 14px 0 18px; }
@@ -218,10 +210,8 @@
   .procGrid > :nth-child(6) { display: none; }
 }
 
-/* logs */
 .who16 { width: 18ch; }
 
-/* ---------------------------------------------------------------- tools */
 .tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
 .toolWide { grid-column: 1 / -1; }
 @media (max-width: 960px) { .tools { grid-template-columns: 1fr; } }

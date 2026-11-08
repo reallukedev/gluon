@@ -2,10 +2,7 @@ import "server-only";
 import { db, now, one, run, all } from "../db";
 import { decryptJson, encryptJson } from "../crypto";
 
-/**
- * What Gluon remembers per voice server: Ice's secrets (encrypted at rest with the server key)
- * and which public address's certificate it keeps Mumble's current with.
- */
+/** Ice's secrets (encrypted at rest with the server key) and the address whose certificate Mumble follows. */
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS voice_servers (

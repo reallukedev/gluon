@@ -2,7 +2,6 @@ import { route } from "@/server/api";
 import { readCaddyfile, renderCaddyfile } from "@/server/caddy/routes";
 import { currentConfig, driftInfo } from "@/server/network/routes-service";
 
-/** The Caddyfile on disk next to what Gluon would generate from routes.json. */
 export const GET = route({ auth: "admin" }, () => {
   const cfg = currentConfig();
   let text = "";

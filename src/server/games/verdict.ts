@@ -2,8 +2,6 @@ import type { LineState } from "@/lib/types";
 import type { HostDns, McPing, McTarget } from "@/lib/games-types";
 import type { DnsResult } from "@/lib/network-types";
 
-/** What one Minecraft address does right now, in a line. Pure. */
-
 const players = (p: McPing) => (p.online === null ? null : p.online === 0 ? "nobody playing" : `${p.online}${p.max ? ` of ${p.max}` : ""} playing`);
 
 export function routeVerdict(ping: McPing | null, target: McTarget, router: "missing" | "stopped" | "running", backend: string): { state: LineState; summary: string } {
@@ -27,7 +25,7 @@ export function routeVerdict(ping: McPing | null, target: McTarget, router: "mis
   return { state: "unhealthy", summary: "Not answering" };
 }
 
-/** Does `host` lead players here? Minecraft can't go through Cloudflare's proxy, which only carries web traffic. */
+/** Minecraft can't go through Cloudflare's proxy, which only carries web traffic. */
 export function hostDns(host: string, r: DnsResult | null, publicKnown: boolean): HostDns {
   if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return { status: "literal", message: "An IP address, so there's nothing to look up.", addresses: [host] };
   if (!r) return { status: "error", message: `Couldn't look up ${host}.`, addresses: [] };

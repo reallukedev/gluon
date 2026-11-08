@@ -10,16 +10,11 @@ import { GIT_ENV, REPO_NAME, STORE_DIR } from "./repo";
 import { getStoreRow } from "./db";
 
 /**
- * Serves Gluon's app store to Umbrel over git's smart HTTP protocol (Umbrel clones stores with
- * isomorphic-git, which speaks nothing else). Every request is handed to `git http-backend` as a
- * CGI with a fixed argument list and a fixed environment; only the two read-only endpoints of
- * upload-pack are allowed, so nothing can be pushed.
- *
- * Who may read it:
- * - the URL carries a random 256-bit token (the store id alone isn't secret);
- * - the peer must be this server (loopback) or a container on one of Docker's networks, which is
- *   where Umbrel runs; a request that came through a proxy for someone else, or that names the
- *   public hostname, is refused.
+ * Umbrel clones stores with isomorphic-git, which speaks only git's smart HTTP. Requests go to `git
+ * http-backend` as a CGI with fixed arguments and environment, and only upload-pack's two read-only
+ * endpoints are allowed. The URL carries a random 256-bit token (the store id alone isn't secret),
+ * and the peer must be loopback or a container on one of Docker's networks; anything that came
+ * through a proxy or names the public hostname is refused.
  */
 
 type G = typeof globalThis & { __gluonDockerNets?: { at: number; list: net.BlockList } };
@@ -76,7 +71,6 @@ export async function peerAllowed(req: NextRequest): Promise<boolean> {
 
 const notFound = () => new Response("Not found\n", { status: 404, headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" } });
 
-/** Handle /api/appstore/<token>/<storeId>.git/<rest>. */
 export async function serveGit(req: NextRequest, segments: string[]): Promise<Response> {
   const store = getStoreRow();
   const [token, repo, ...rest] = segments;

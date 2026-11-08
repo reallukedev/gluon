@@ -14,10 +14,8 @@ import { inParent, openFileIn } from "./safe";
 const PROC_FD = process.platform === "linux" && fs.existsSync("/proc/self/fd");
 
 /**
- * Small WebP thumbnails for the grid view, made with sharp (which ships with Next.js) and kept in
- * /data/thumbs keyed by the file's identity, so a photo is decoded once, not every time a folder
- * scrolls past it. If sharp can't load, or the format isn't one it reads, the client falls back to
- * the file's glyph.
+ * Kept in /data/thumbs keyed by the file's identity, so a photo is decoded once. If sharp can't load
+ * or read the format, the client falls back to the file's glyph.
  */
 
 const DIR = path.join(DATA_DIR, "thumbs");

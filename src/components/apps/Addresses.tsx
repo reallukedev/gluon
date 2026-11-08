@@ -15,11 +15,6 @@ interface Address {
   partly: boolean;
 }
 
-/**
- * Where an app opens, as one hairline tag (never a pill) that reads as a link: the address that works
- * from where the viewer is (the home port at home, a public address away), and the rest one click
- * deeper behind "+N", so a row stays one line however many addresses an app has.
- */
 export function Addresses({ app, empty = "No web page" }: { app: Pick<AppSummary, "urls" | "webPort" | "routes">; empty?: string }) {
   const { viewer } = usePrefs();
   const all: Address[] = [];

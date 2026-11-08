@@ -4,6 +4,6 @@
 
 **How you checked it**
 
-- [ ] `npm run typecheck`, `npm test` and `npm run build` pass
+- [ ] `npm run typecheck`, `npm test`, `npm run test:e2e` and `npm run build` pass
 - [ ] Screenshots for anything visible
 - [ ] No real hostnames, addresses, MAC addresses or names in fixtures

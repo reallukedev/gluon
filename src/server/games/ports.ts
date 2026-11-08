@@ -4,7 +4,7 @@ import { all, db, now, one, run } from "../db";
 import type { GameProtocol } from "@/lib/games-types";
 import type { PortNeed } from "../router/plan";
 
-/** Game ports Luke adds by hand: games that need a port of their own, kept in Gluon's database. */
+/** Games that need a port of their own, added by hand. */
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS game_ports (
@@ -92,9 +92,8 @@ export interface Reserved {
 }
 
 /**
- * Public ports a game port must leave alone: whatever else Gluon forwards (from the router's list
- * of needs, game ports aside since they're checked against each other), plus 80 and 443, which the
- * web server needs whether or not it's set up yet (443 over UDP too, for HTTP/3).
+ * Everything else Gluon forwards (game ports aside, they're checked against each other), plus 80 and
+ * 443, which the web server needs whether or not it's set up yet (443 over UDP too, for HTTP/3).
  */
 export function reservedPorts(needs: PortNeed[]): Reserved[] {
   const out: Reserved[] = needs.filter((n) => !n.key.startsWith("game-port-")).map((n) => ({ min: n.min, max: n.max, protocol: n.protocol, label: n.label }));
@@ -103,7 +102,6 @@ export function reservedPorts(needs: PortNeed[]): Reserved[] {
   return out;
 }
 
-/** Another entry, or something else Gluon forwards, already using some of these ports. */
 export function clash(p: GamePortInput, others: GamePortRow[], reserved: Reserved[]): string | null {
   const host = { min: p.hostMin, max: p.hostMax };
   const pub = { min: p.publicMin, max: p.publicMin + (p.hostMax - p.hostMin) };

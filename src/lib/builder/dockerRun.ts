@@ -1,10 +1,6 @@
 /**
- * `docker run …` → a compose service. Reads the command the way a POSIX shell would split it
- * (quotes, backslash and backtick line continuations, LinuxServer's `#optional` comments), then
- * maps every flag it knows to compose. Flags that can't carry over, or that it doesn't know, are
- * reported in plain words rather than dropped.
- *
- * Isomorphic and pure: the New app flow runs it as the person types.
+ * `docker run …` → a compose service. Splits the command like a POSIX shell would, then maps every flag it
+ * knows. Flags that can't carry over, or that it doesn't know, are reported rather than dropped.
  */
 import { Document, Scalar, isScalar, isSeq, isMap, type YAMLMap } from "yaml";
 import { DATA_PREFIX, PENDING_KEY, parsePortString, stringify } from "./compose";
@@ -14,7 +10,6 @@ import type { BuilderTarget } from "@/lib/builder-types";
 
 export interface RunNote {
   level: "info" | "warning";
-  /** The flag it is about, as typed ("--env-file"), when there is one. */
   flag?: string;
   text: string;
 }
@@ -24,25 +19,19 @@ export interface DockerRun {
   /** Why nothing could be made (no docker run, no image). */
   error: string | null;
   image: string;
-  /** From --name, as typed. */
   containerName: string | null;
   service: string;
-  /** The compose service, as plain data. */
   spec: Record<string, unknown>;
   /** Existing networks it joins (become external networks). */
   networks: string[];
   notes: RunNote[];
-  /** Flags Gluon doesn't know, as typed. */
   unknown: string[];
 }
-
-// ---------------------------------------------------------------- shell words
 
 /** A `$` that was inside single quotes: literal, never a variable. */
 const LIT = "\u0001";
 
 interface Split {
-  /** Each command's words; commands are separated by &&, ||, ; or |. */
   commands: string[][];
 }
 
@@ -110,13 +99,11 @@ export function splitCommand(input: string): Split {
       continue;
     }
     if (c === "#" && !has && !cur) {
-      // A comment runs to the end of its line.
       const nl = src.indexOf("\n", i);
       i = nl < 0 ? src.length : nl - 1;
       continue;
     }
     if (c === ";" || c === "|" || c === "&" || c === "\n") {
-      // A newline without a continuation ends the command too.
       end();
       while (i + 1 < src.length && "|&".includes(src[i + 1]!)) i++;
       continue;
@@ -131,8 +118,6 @@ export function splitCommand(input: string): Split {
   end();
   return { commands };
 }
-
-// ---------------------------------------------------------------- flags
 
 type Kind = "bool" | "value";
 
@@ -184,7 +169,6 @@ const UNSUPPORTED: Record<string, string> = {
   annotation: "sets OCI annotations, which compose doesn't carry.",
 };
 
-/** Simple flag → compose key with the value as written. */
 const DIRECT: Record<string, string> = {
   hostname: "hostname", domainname: "domainname", workdir: "working_dir", user: "user", "shm-size": "shm_size",
   "stop-signal": "stop_signal", pid: "pid", ipc: "ipc", uts: "uts", userns: "userns_mode", platform: "platform",
@@ -192,7 +176,6 @@ const DIRECT: Record<string, string> = {
   "cpuset-cpus": "cpuset",
 };
 
-/** Flags that may repeat and become a list. */
 const LISTS: Record<string, string> = {
   "cap-add": "cap_add", "cap-drop": "cap_drop", device: "devices", "add-host": "extra_hosts", dns: "dns", "dns-search": "dns_search",
   "dns-option": "dns_opt", "dns-opt": "dns_opt", "security-opt": "security_opt", expose: "expose", "group-add": "group_add",
@@ -206,8 +189,6 @@ const NUMBERS: Record<string, string> = {
 
 const RESTARTS = /^(no|always|unless-stopped|on-failure(:\d+)?)$/;
 
-// ---------------------------------------------------------------- parse
-
 /** [sudo [-E]] [VAR=x…] docker|podman|nerdctl [global flags] [container] run|create … */
 function isRun(c: string[]): boolean {
   let i = 0;
@@ -219,7 +200,6 @@ function isRun(c: string[]): boolean {
   return c[i] === "run" || c[i] === "create";
 }
 
-/** Read `docker run` (or podman/nerdctl) with its flags; the rest is the image and its command. */
 export function parseDockerRun(input: string): DockerRun {
   const notes: RunNote[] = [];
   const unknown: string[] = [];
@@ -236,7 +216,6 @@ export function parseDockerRun(input: string): DockerRun {
   if (commands.length > 1) notes.push({ level: "info", text: "Only the docker run command is used; the other commands are left out." });
   let w = commands[runAt]!;
 
-  // sudo [-E], env assignments, then docker [container] run.
   if (w[0] === "sudo") {
     w = w.slice(1);
     while (w[0]?.startsWith("-")) w = w.slice(1);
@@ -557,7 +536,6 @@ interface VolumeCtx {
   notes: RunNote[];
   typed: string;
   placeholders: { path: string; folder: string }[];
-  /** Media library targets waiting for the person to choose a server folder. */
   pending: string[];
 }
 
@@ -655,8 +633,6 @@ function gpusFrom(v: string): Record<string, unknown> {
   return out;
 }
 
-// ---------------------------------------------------------------- to compose
-
 /** Strings as compose reads them: `$` from single quotes stays literal ($$). */
 const forCompose = (v: unknown): unknown => {
   if (typeof v === "string") return v.replace(new RegExp(LIT, "g"), "$$$$");
@@ -676,7 +652,6 @@ export interface RunCompose {
   unknown: string[];
 }
 
-/** The compose file for a docker run command. */
 export function composeFromDockerRun(input: string): RunCompose {
   const r = parseDockerRun(input);
   if (!r.ok) return { ok: false, error: r.error, compose: "", service: r.service, name: null, image: "", notes: r.notes, unknown: r.unknown };
@@ -692,7 +667,6 @@ export function composeFromDockerRun(input: string): RunCompose {
   return { ok: true, error: null, compose: stringify(doc), service: r.service, name, image: r.image, notes: r.notes, unknown: r.unknown };
 }
 
-/** The New app flow's draft from a docker run command: the compose file, made ready like a pasted one. */
 export function draftFromDockerRun(input: string, target: BuilderTarget): { run: RunCompose; prepared: Prepared | null } {
   const run = composeFromDockerRun(input);
   if (!run.ok) return { run, prepared: null };

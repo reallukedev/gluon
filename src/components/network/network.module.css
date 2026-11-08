@@ -7,7 +7,6 @@
 .metaHide { display: inline; }
 @media (max-width: 720px) { .metaHide { display: none; } }
 
-/* ---------------------------------------------------------------- apps on the internet */
 .appTable { min-width: 0; }
 .appGrid {
   display: grid;
@@ -125,7 +124,6 @@
   .fixActions { grid-column: 2; justify-content: flex-start; }
 }
 
-/* ---------------------------------------------------------------- details dialog */
 .dTitle { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
 .dBody { display: grid; gap: 22px; min-width: 0; }
 .dSection { display: grid; gap: 10px; min-width: 0; }
@@ -185,7 +183,6 @@
 .dDanger > p { max-width: 52ch; line-height: 1.45; }
 .dNote { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.55; max-width: 70ch; overflow-wrap: anywhere; }
 
-/* ---------------------------------------------------------------- hop details + tables */
 .hopBody { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 .hopLead { font-size: var(--text-sm); color: var(--ink-2); line-height: 1.55; max-width: 84ch; }
 .hopIntro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
@@ -227,12 +224,10 @@
   .trow { padding: 10px 12px; }
 }
 
-/* ---------------------------------------------------------------- at home */
 .panelNote { padding: 12px 18px; font-size: var(--text-sm); color: var(--ink-2); line-height: 1.5; max-width: 90ch; }
 .foldRow { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; padding: 0 18px 12px; }
 .metaChecks { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--text-sm); }
 
-/* ---------------------------------------------------------------- history / caddyfile */
 .history { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 18px; min-height: 420px; }
 @media (max-width: 760px) { .history { grid-template-columns: 1fr; } }
 .historyList { list-style: none; margin: 0; padding: 0; max-height: 480px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-control); }

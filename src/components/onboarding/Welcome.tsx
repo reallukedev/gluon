@@ -53,11 +53,7 @@ function useKeyboardLast() {
   return ref;
 }
 
-/**
- * First run. One step on screen at a time; every move is saved to prefs.onboarding, so signing out
- * (or closing the tab) and coming back resumes on the same step. Finishing or skipping marks it done
- * and it never shows again.
- */
+/** Every move is saved to prefs.onboarding, so signing out or closing the tab resumes on the same step. */
 export function Welcome({ plan }: { plan: Plan }) {
   const router = useRouter();
   const { setPrefs, serverName } = usePrefs();
@@ -146,10 +142,6 @@ export function Welcome({ plan }: { plan: Plan }) {
   );
 }
 
-/**
- * Where you are: one hairline per step, filled as steps are done, with the current step's name.
- * Steps already done can be revisited. Phones show only the current name and "2 of 5".
- */
 function Progress({ steps, current, onJump }: { steps: StepId[]; current: number; onJump: (i: number) => void }) {
   return (
     <nav className={o.progress} aria-label="Setup steps">

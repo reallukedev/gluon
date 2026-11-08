@@ -1,16 +1,7 @@
 "use client";
 /**
- * HoldButton: press and hold to confirm the most dangerous actions (power off, wipe a disk).
- *
- *   <HoldButton holdMs={1500} onConfirm={shutDown}>Hold to shut down</HoldButton>
- *
- * - A darkening sweep fills the button left to right while held (clip-path, linear: it is a
- *   progress indicator), and snaps back in 200ms if released early.
- * - Works with a mouse, a finger (no long-press callout), and the keyboard (hold Enter or Space).
- * - Assistive tech that can only "click" confirms on activation: that click is deliberate.
- * - `onConfirm` may return a promise; the button shows its loading state until it settles.
- *   Pass `loading` to control that yourself.
- * - Reduced motion keeps the sweep (it is progress, not travel).
+ * A click from assistive tech confirms on activation: that click is deliberate. Reduced motion keeps the sweep (it is
+ * progress, not travel).
  */
 import * as React from "react";
 import { Button, type ButtonSize, type ButtonVariant } from "./Button";
@@ -27,7 +18,6 @@ export interface HoldButtonProps {
   loading?: boolean;
   icon?: React.ReactNode;
   className?: string;
-  /** Read to screen readers after the label. */
   hint?: string;
 }
 

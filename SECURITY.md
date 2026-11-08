@@ -7,7 +7,7 @@ they shouldn't.
 ## Reporting a vulnerability
 
 Report it privately through GitHub: **Security → Report a vulnerability** on
-[the repository](https://github.com/reallukedev/gluon/security/advisories/new). Please don't open a
+[the repository](https://github.com/slukedev/gluon/security/advisories/new). Please don't open a
 public issue for it.
 
 Say what you found, how to reproduce it, and which version (Settings → About) you were running. You'll

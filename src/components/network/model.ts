@@ -6,17 +6,12 @@ import { FALLBACK_ID, bare, isRedirectRoute, redirectTarget } from "./shared";
 
 const siteOf = (r: RouteT | null) => (r?.type === "subdomain" ? (r.site ?? null) : null);
 
-/**
- * The Network page's model: one entry per app on the internet, with every address that leads to it
- * folded underneath, and the health of each hop between a visitor and the app. Pure functions, so the
- * page, the map and the details dialog all read the same answers.
- */
+/** Pure functions, so the page, the map and the details dialog all read the same answers. */
 
 export type Lane = "direct" | "cloudflare";
 export type AddressRole = "main" | "shortLink" | "path" | "subdomain" | "fallback" | "redirect";
 
 export interface Address {
-  /** Route id, or FALLBACK_ID. */
   id: string;
   route: RouteT | null;
   url: string;
@@ -31,7 +26,6 @@ export interface ExtraPathInfo {
   port: number;
   host: string;
   note?: string;
-  /** App that answers on that port, when Gluon can tell. */
   app: string | null;
 }
 
@@ -47,9 +41,7 @@ export interface LoginWords {
 export interface Health {
   state: LineState | null;
   label: string;
-  /** The full sentence, for the details and a title attribute. */
   sentence: string;
-  /** The address that caused a non-ok state, if not the main one. */
   culprit: Address | null;
 }
 
@@ -64,15 +56,11 @@ export interface AppEntry {
   onlyPaths: string[] | null;
   exposure: InternetExposure | null;
   isFallback: boolean;
-  /** A redirect that doesn't lead to one of our own subdomains. */
   isRedirect: boolean;
-  /** Any of its addresses is on. */
   on: boolean;
   health: Health;
   login: LoginWords;
-  /** Plain sentence of what's wrong with protection, for the inline needs-you strip. */
   needsLogin: boolean;
-  /** A site from Sites: Caddy serves its files, there's no app behind it, and it's managed there. */
   site: { id: string } | null;
 }
 
@@ -91,7 +79,6 @@ function laneOf(r: RouteT | null, st: RouteStatus | undefined, baseProxied: bool
   return "direct";
 }
 
-/** Short words for one address's live state. */
 export function healthOf(st: RouteStatus | undefined, redirect: boolean): { state: LineState; label: string; sentence: string } | null {
   if (!st) return null;
   const days = st.tls?.daysLeft;
@@ -157,7 +144,6 @@ export function buildEntries(data: RoutesResponse, status: NetworkStatus | undef
   };
   const appByPort = (port: number) => (apps ?? []).find((a) => a.containers.some((c) => c.ports.some((p) => p.proto === "tcp" && p.host === port)));
 
-  // 1. Group the routes that serve an app.
   const groups = new Map<string, RouteT[]>();
   for (const r of cfg.routes) {
     if (isRedirectRoute(r)) continue;
@@ -165,7 +151,6 @@ export function buildEntries(data: RoutesResponse, status: NetworkStatus | undef
     const key = site ? `site:${site.id}` : (data.apps[r.id]?.appId ?? r.app ?? `route:${r.id}`);
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
-  // 2. Fold redirects into the app whose subdomain they point at.
   const hostToKey = new Map<string, string>();
   for (const [key, rs] of groups) for (const r of rs) if (r.type === "subdomain") hostToKey.set(r.host.toLowerCase(), key);
   const redirectsFor = new Map<string, RouteT[]>();
@@ -286,12 +271,9 @@ export function buildEntries(data: RoutesResponse, status: NetworkStatus | undef
   return entries.sort((a, b) => Number(!a.on) - Number(!b.on) || Number(a.isRedirect) - Number(b.isRedirect) || a.name.localeCompare(b.name));
 }
 
-/** Which entry an address id belongs to (for ?route=). */
 export function entryFor(entries: AppEntry[], routeId: string): AppEntry | undefined {
   return entries.find((e) => e.main.id === routeId || e.also.some((a) => a.id === routeId));
 }
-
-// ---------------------------------------------------------------- hops
 
 export type HopId = "dns" | "router" | "caddy" | "apps";
 
@@ -329,7 +311,6 @@ export function dnsHop(status: NetworkStatus | undefined): { direct: HopState; p
   return { direct, proxy, overall };
 }
 
-/** Gluon itself as the address updater, through its Cloudflare connection. null: not connected. */
 export function gluonUpdater(cf: CloudflareStatus | undefined): { state: LineState; label: string; sentence: string } | null {
   if (!cf?.connected || !cf.zone) return null;
   const s = cf.sync;

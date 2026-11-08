@@ -8,10 +8,9 @@ import { formatBytes } from "@/lib/format";
 import { checkSitePath, isJunk, SITE_LIMITS } from "@/lib/sites-types";
 
 /**
- * Reading a .zip into a site, safely. Nothing is written until every entry has been checked:
- * an entry that tries to climb out of the site ("../x", "/etc/x", "C:\x") refuses the whole zip,
- * links and hidden files are skipped and listed, and sizes are counted as bytes come out, never
- * trusted from the zip's own directory (a zip bomb can claim anything).
+ * Nothing is written until every entry is checked. An entry that climbs out ("../x", "/etc/x",
+ * "C:\x") refuses the whole zip, links and hidden files are skipped, and sizes are counted as bytes
+ * come out, never trusted from the zip's directory.
  */
 
 export interface ZipPlan {
@@ -33,7 +32,7 @@ function escapes(name: string): boolean {
   return n.startsWith("/") || /^[A-Za-z]:/.test(n) || n.split("/").includes("..");
 }
 
-/** Read the zip's directory and decide what goes where. Throws when the zip itself isn't safe. */
+/** Throws when the zip itself isn't safe. */
 export async function planZip(buf: Buffer): Promise<ZipPlan> {
   let dir: Awaited<ReturnType<typeof Open.buffer>>;
   try {
@@ -81,7 +80,7 @@ export async function planZip(buf: Buffer): Promise<ZipPlan> {
   return { entries, skipped, bytes };
 }
 
-/** Extract one entry to `tmp`, stopping when it gives more than it declared (or more than a file may be). */
+/** Stops when it gives more than it declared (or more than a file may be). */
 export async function extractEntry(file: ZipFile, tmp: string): Promise<number> {
   const cap = Math.min(file.uncompressedSize, SITE_LIMITS.fileBytes);
   let n = 0;

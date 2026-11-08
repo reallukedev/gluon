@@ -1,14 +1,10 @@
 import type { VoiceChannel, VoiceUser } from "@/server/voice/types";
 
-/** The channel tree laid out for drawing: depth-first, siblings by Mumble's position then name. Pure. */
-
 export interface TreeRow {
   channel: VoiceChannel;
   depth: number;
-  /** For each ancestor level (and this one), whether a sibling follows below: where to draw the guide lines. */
   rails: boolean[];
   last: boolean;
-  /** People in this channel itself, and in it plus everything inside it. */
   here: VoiceUser[];
   total: number;
   descendants: number;
@@ -54,7 +50,6 @@ export function layoutTree(channels: VoiceChannel[], users: VoiceUser[]): TreeRo
   return out;
 }
 
-/** "Games › Raid night", without the top channel. */
 export function channelPath(c: VoiceChannel, byId: Map<number, VoiceChannel>): string {
   if (c.id === 0) return c.name;
   const parts: string[] = [];
@@ -66,7 +61,6 @@ export function channelPath(c: VoiceChannel, byId: Map<number, VoiceChannel>): s
   return parts.join(" › ");
 }
 
-/** The channel and everything inside it. */
 export function subtree(id: number, channels: VoiceChannel[]): Set<number> {
   const out = new Set([id]);
   let grew = true;

@@ -11,7 +11,6 @@ export function uiBits(p: Prefs): UiBits {
 export function encodeUiCookie(b: UiBits): string {
   return [b.theme, b.attention, b.contrast, b.density, b.textSize, b.motion].join(".");
 }
-/** html data-attributes for the UI bits. */
 export function htmlAttrs(b: UiBits): Record<string, string> {
   return {
     "data-theme": b.theme,

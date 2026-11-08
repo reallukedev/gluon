@@ -80,7 +80,6 @@ async function memories(ctx: KindContext<Config>): Promise<{ list: ImmichMemory[
   return { list, note: null };
 }
 
-/** One entry per earlier year with photos from today's date, each with larger (preview) images. */
 async function onThisDay(ctx: KindContext<Config>): Promise<ImmichOnThisDayData> {
   const raw = await rawMemories(ctx);
   if (!raw.list) return { years: [], note: raw.note };
@@ -155,8 +154,6 @@ async function recent(ctx: KindContext<Config>, params: Record<string, unknown>)
   return { items, note: null };
 }
 
-// ------------------------------------------------------------------ universal search
-
 const base = (ctx: KindContext<Config>) => ctx.baseUrl.replace(/\/+$/, "");
 
 function yearOf(a: Record<string, unknown>): number | null {
@@ -213,10 +210,7 @@ export function albumHit(ctx: KindContext<Config>, a: Record<string, unknown>): 
   };
 }
 
-/**
- * People, places and albums by name, and photos by what's in them (Immich's smart search, so "beach
- * at sunset" works). Each part fails on its own: a library without machine learning still finds people.
- */
+/** Uses Immich's smart search, so "beach at sunset" works. */
 async function search(ctx: KindContext<Config>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]> {
   const h = http(ctx);
   const term = q.slice(0, 100);

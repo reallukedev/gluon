@@ -35,7 +35,6 @@ export interface CreateBody {
   token?: string | null;
 }
 
-/** Where to go once the draft exists: the guided setup, or straight to the full builder. */
 export type Create = (body: CreateBody, then: "flow" | "builder") => void;
 
 const SOURCES: { value: FlowSource; title: string; desc: string; icon: React.ReactNode }[] = [
@@ -45,17 +44,12 @@ const SOURCES: { value: FlowSource; title: string; desc: string; icon: React.Rea
   { value: "github", title: "GitHub", desc: "Read from GitHub and built on this server when needed.", icon: <Github /> },
 ];
 
-/** Secret names and values from a prepared compose file, as the create request wants them. */
 function secretsOf(p: Prepared) {
   const out: Record<string, Record<string, string>> = {};
   for (const [svc, keys] of Object.entries(p.secrets)) out[svc] = Object.fromEntries(keys.map((k) => [k, p.secretValues[svc]?.[k] ?? ""]));
   return out;
 }
 
-/**
- * The first step: what to run. The picker is a radio group (arrow keys move between sources),
- * and the chosen source's form sits right under it.
- */
 export function SourceStep({ source, onSource, target, busy, io, onCreate }: { source: FlowSource; onSource: (v: FlowSource) => void; target: BuilderTarget; busy: "flow" | "builder" | null; io: SourceIO; onCreate: Create }) {
   const current = SOURCES.find((o) => o.value === source)!;
   return (
@@ -84,7 +78,6 @@ export function SourceStep({ source, onSource, target, busy, io, onCreate }: { s
   );
 }
 
-/** Continue (into the guided setup) and a quieter way straight into the full builder. */
 function Actions({ ready, busy, onGo, children }: { ready: boolean; busy: "flow" | "builder" | null; onGo: (then: "flow" | "builder") => void; children?: React.ReactNode }) {
   return (
     <div className={s.formActions}>
@@ -107,13 +100,10 @@ function NameField({ value, onChange, touched, placeholder, description }: { val
   );
 }
 
-/** A name that follows a suggestion until the person types their own. */
 function useSuggestedName({ inputs, set }: SourceIO, source: FlowSource, suggestion: string) {
   const typed = inputs.names[source];
   return { name: typed ?? suggestion, touched: typed !== undefined, setName: (v: string) => set({ names: { [source]: v } }) };
 }
-
-// ---------------------------------------------------------------- image
 
 function FromImage({ io, busy, onCreate }: { io: SourceIO; busy: "flow" | "builder" | null; onCreate: Create }) {
   const image = io.inputs.image;
@@ -153,7 +143,7 @@ function FromImage({ io, busy, onCreate }: { io: SourceIO; busy: "flow" | "build
           <div className={s.suggest}>
             <span>Set up from the image:</span>
             <ul>
-              {webPort && <li>Its web page, on port {webPort}</li>}
+              {webPort ? <li>Its web page, on port {webPort}</li> : null}
               {otherPorts.length > 0 && <li>{otherPorts.length === 1 ? "Port" : "Ports"} {otherPorts.map((p) => `${p.port}${p.proto === "udp" ? "/udp" : ""}`).join(", ")}, open on the server too</li>}
               {r.volumes.length > 0 && <li>{r.volumes.length === 1 ? "Its folder" : "Its folders"} {r.volumes.join(", ")}, kept in the app&apos;s data folder</li>}
               {draft.said.map((t) => (
@@ -168,8 +158,6 @@ function FromImage({ io, busy, onCreate }: { io: SourceIO; busy: "flow" | "build
     </div>
   );
 }
-
-// ---------------------------------------------------------------- docker run
 
 const RUN_EXAMPLE = `docker run -d \\
   --name=jellyfin \\
@@ -237,13 +225,10 @@ function FromRun({ io, target, busy, onCreate }: { io: SourceIO; target: Builder
   );
 }
 
-/** Website and version from the image reference, like the image source does. */
 function imageDetails(image: string) {
   const d = draftFromImage(image, null).spec.details;
   return { website: d.website, version: d.version };
 }
-
-// ---------------------------------------------------------------- compose
 
 function FromCompose({ io, target, busy, onCreate }: { io: SourceIO; target: BuilderTarget; busy: "flow" | "builder" | null; onCreate: Create }) {
   const text = io.inputs.compose;
@@ -368,8 +353,6 @@ function FromCompose({ io, target, busy, onCreate }: { io: SourceIO; target: Bui
     </div>
   );
 }
-
-// ---------------------------------------------------------------- GitHub
 
 function FromGithub({ io, target, busy, onCreate }: { io: SourceIO; target: BuilderTarget; busy: "flow" | "builder" | null; onCreate: Create }) {
   const { repo, branch, path } = io.inputs;

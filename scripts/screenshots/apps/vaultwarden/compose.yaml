@@ -1,0 +1,13 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  vaultwarden:
+    <<: *stand-in
+    image: vaultwarden/server:1.34
+    command: [port=8222, mb=40]
+    ports: ["8222:8222"]
+    volumes: ["/srv/apps/vaultwarden/data:/data"]

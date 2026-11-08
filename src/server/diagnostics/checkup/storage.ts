@@ -9,8 +9,6 @@ import { formatBytes, listJoin, plural } from "@/lib/format";
 import type { DiskView } from "@/lib/storage-types";
 import { fail, go, kv, ok, skip, warn, type CheckCtx, type CheckSpec, type Outcome } from "./core";
 
-/** Storage: free space per filesystem, inodes, SMART health, and mounts that won't survive a restart. */
-
 export const inventory = (ctx: CheckCtx) => ctx.memo("inventory", () => getInventoryState());
 
 export function realFilesystems(): FsUsage[] {
@@ -32,7 +30,7 @@ export function daysToFull(mount: string, avail: number): { days: number | null;
   return { days: avail / perDay, perDay };
 }
 
-const humanDays = (d: number) => (d < 1 ? `in about ${Math.max(1, Math.round(d * 24))} hours` : d < 1.5 ? "in about a day" : `in about ${Math.round(d)} days`);
+const humanDays = (d: number) => (d < 1 ? `in about ${plural(Math.max(1, Math.round(d * 24)), "hour")}` : d < 1.5 ? "in about a day" : `in about ${Math.round(d)} days`);
 
 export function spaceOutcome(f: FsUsage): Outcome {
   const { diskAttention, diskFault } = getSetting("thresholds");
@@ -72,7 +70,7 @@ function spaceCheck(mount: string): CheckSpec {
   };
 }
 
-/** Inode use per filesystem (running out of inodes looks like "disk full" with space left). */
+/** Running out of inodes looks like "disk full" with space left. */
 export function inodeOutcome(list: FsUsage[]): Outcome {
   const rows: [string, string][] = [];
   const high: { mount: string; pct: number }[] = [];

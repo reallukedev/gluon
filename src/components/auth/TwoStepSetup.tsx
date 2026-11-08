@@ -13,19 +13,13 @@ export interface Enrolment {
 }
 
 interface Props {
-  /** Ask the server for a fresh secret + QR code. */
   begin: () => Promise<Enrolment>;
-  /** Link it: resolves with the recovery codes. */
   confirm: (e: Enrolment, code: string) => Promise<string[]>;
   onDone: (codes: string[]) => void;
   onCancel?: () => void;
   confirmLabel?: string;
 }
 
-/**
- * Link an authenticator app: scan (or type) the key, then prove it with the first code. The code
- * submits itself when the sixth digit lands; a wrong one clears the boxes and says why.
- */
 export function TwoStepSetup({ begin, confirm, onDone, onCancel, confirmLabel = "Turn on" }: Props) {
   const [enrol, setEnrol] = React.useState<Enrolment | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);

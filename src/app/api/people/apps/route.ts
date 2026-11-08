@@ -4,13 +4,11 @@ import { audit } from "@/server/audit";
 import { findById } from "@/server/auth/users";
 import { setAppVisibility, setUserApps, visibility } from "@/server/people/access";
 
-/** Which apps household members see: per app, "everyone" (household) and individual members. */
 export const GET = route({ auth: "admin" }, () => visibility());
 
 const body = z.union([
   z.object({
     appId: z.string().min(1).max(200),
-    /** Every household member sees it. */
     household: z.boolean().optional(),
     /** Exactly these members see it individually (replaces the list). */
     users: z.array(z.string().max(64)).max(200).optional(),

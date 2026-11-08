@@ -1,14 +1,7 @@
 /**
- * Shared types for integrations (connected apps) and live widget data.
- * Isomorphic: no server imports. The Home widget grid is built from these shapes.
- *
- * Conventions for every data shape below:
- * - Timestamps are epoch milliseconds (UTC). Durations are milliseconds unless the name says otherwise.
- * - Temperatures are °C, wind km/h, precipitation mm, sizes bytes, speeds bytes/second. Format on the client with
- *   `src/lib/format.ts` and the person's prefs.
- * - `image` fields are same-origin URLs to the image proxy (`/api/integrations/<id>/image?...`), ready for <img src>.
- *   Append nothing; the `w` in the URL is already a sensible size for the widget.
- * - Anything that may be missing is `null`, never `undefined`.
+ * Shared, isomorphic types for connected apps and live widget data. Conventions for every shape below:
+ * timestamps are epoch ms (UTC), durations ms unless the name says otherwise; °C, km/h, mm, bytes, bytes/second;
+ * `image` fields are same-origin image proxy URLs already sized for the widget; anything missing is `null`.
  */
 import type { WidgetConfig } from "./widgets-schemas";
 import type { LineState } from "./types";
@@ -16,14 +9,9 @@ import type { LocalWidgetAvailability } from "./home-widgets-types";
 
 export type { WidgetConfig };
 
-// =====================================================================================================================
-// Integrations
-// =====================================================================================================================
-
 export const INTEGRATION_KINDS = ["jellyfin", "immich", "subsonic", "slskd", "homebridge", "homeassistant", "coolify", "crafty", "generic-json"] as const;
 export type IntegrationKind = (typeof INTEGRATION_KINDS)[number];
 
-/** One input on the "connect an app" form. */
 export interface IntegrationField {
   key: string;
   label: string;
@@ -38,16 +26,13 @@ export interface IntegrationField {
   showWhen?: { key: string; in: string[] };
 }
 
-/** GET /api/integrations/kinds: everything the admin form needs to render one kind. */
 export interface IntegrationKindInfo {
   kind: IntegrationKind;
   label: string;
   description: string;
-  /** Label + placeholder for the address input (the `baseUrl` of the integration). */
   baseUrlLabel: string;
   baseUrlPlaceholder: string;
   fields: IntegrationField[];
-  /** Plain-language steps for finding the key/credentials inside that app. */
   keyHelp: string;
   widgets: WidgetType[];
 }
@@ -64,13 +49,11 @@ export interface Integration {
   kind: IntegrationKind;
   name: string;
   baseUrl: string;
-  /** Compose project / container the integration talks to (from suggestions), if known. */
   appId: string | null;
   /** When true every signed-in person may use it in their widgets; otherwise only admins. */
   shared: boolean;
   /** Non-secret settings. For generic-json, `headers` values are replaced by "" (names kept). */
   config: Record<string, unknown>;
-  /** Which secret fields are stored. */
   secrets: Record<string, SecretState>;
   widgets: WidgetType[];
   /** Last result seen by Gluon (tests and widget fetches), in memory since the last restart. */
@@ -91,19 +74,15 @@ export interface IntegrationRef {
   kind: IntegrationKind;
   name: string;
   widgets: WidgetType[];
-  /** Where to open the app in a browser, if Gluon knows it. */
   links: { home: string | null; away: string | null };
-  /** The installed app this connection reads from, and its state right now (null when unknown). */
   appId: string | null;
   appLine: LineState | null;
 }
 
-/** POST /api/integrations/test and /api/integrations/[id]/test. Always 200; `ok` says whether it worked. */
+/** Always 200; `ok` says whether it worked. */
 export interface IntegrationTestResult {
   ok: boolean;
-  /** One sentence for people: "Connected to Jellyfin 10.11.10 as “homeserver”." / "Jellyfin answered 401: the API key is wrong." */
   message: string;
-  /** Optional extra line (e.g. a missing permission that limits one widget). */
   detail: string | null;
   version: string | null;
   serverName: string | null;
@@ -114,31 +93,21 @@ export interface IntegrationTestResult {
   ms: number;
 }
 
-/** GET /api/integrations/suggestions: apps on this server Gluon knows how to connect to. */
 export interface IntegrationSuggestion {
   /** Stable key: `${kind}:${appId}:${port}`. */
   key: string;
   kind: IntegrationKind;
-  /** Suggested integration name, e.g. "Jellyfin". */
   name: string;
   appId: string;
   appName: string;
   icon: string | null;
   baseUrl: string;
-  /** Where to find the API key/credentials in that app, in plain steps. */
   keyHelp: string;
-  /** Extra context, e.g. "Octo passes requests on to Navidrome; either works." */
   note: string | null;
   running: boolean;
-  /** An integration with the same kind and address already exists. */
   alreadyAdded: boolean;
-  /** Prefill for non-secret fields. */
   config: Record<string, unknown>;
 }
-
-// =====================================================================================================================
-// Widgets
-// =====================================================================================================================
 
 export const WIDGET_TYPES = [
   "jellyfin.nowPlaying",
@@ -209,24 +178,13 @@ export const WIDGET_REFRESH_MS: Record<WidgetType, number> = {
   "link.status": 60_000,
 };
 
-// ------------------------------------------------------------------ widget config (what the widget stores + sends)
-//
 // Integration widgets send `{ type, integration: "<id>", config }`; personal widgets send `{ type, config }`.
-// The schemas the server validates with are in widgets-schemas.ts, kept apart so client bundles carry no zod.
+// The zod schemas are in widgets-schemas.ts, kept apart so client bundles carry no zod.
 
-/** `light.kitchen`, `sensor.living_room_temperature`: Home Assistant's own format. */
 export const HA_ENTITY_ID = /^[a-z0-9_]{1,64}\.[a-z0-9_]{1,190}$/;
-/** Most entities one Home Assistant widget may show. */
 export const HA_MAX_PICKED = 60;
 
-// ------------------------------------------------------------------ request / response envelopes
-
-/**
- * GET  /api/widgets/data?type=<type>&integration=<id>&<config fields as query params>
- * POST /api/widgets/data  body: WidgetRequest                      → WidgetResponse
- * POST /api/widgets/data  body: { widgets: WidgetRequest[] (≤40) } → WidgetBatchResponse
- * Personal sources (weather/calendar/feed/link.status) should use POST so URLs stay out of logs and history.
- */
+/** Personal sources (weather, calendar, feed, link status) should use POST so URLs stay out of logs and history. */
 export interface WidgetRequest {
   /** Echoed back in batch responses. */
   key?: string;
@@ -240,7 +198,6 @@ export interface WidgetResponse<T extends WidgetType = WidgetType> {
   data: WidgetDataMap[T];
   /** When the upstream data was fetched (may be earlier than now because of the cache). */
   fetchedAt: number;
-  /** Suggested polling interval. */
   refreshMs: number;
   /** Set when the upstream failed and this is the last good answer (shown with a quiet "last updated" note). */
   stale: { message: string } | null;
@@ -259,12 +216,9 @@ export interface WidgetBatchResponse {
  * Members only get services that are connected and shared; `connect` is admin-only.
  */
 export interface AppService {
-  /** `${kind}:${appId}` */
   key: string;
   kind: IntegrationKind;
-  /** "Jellyfin", "Navidrome", "slskd". */
   label: string;
-  /** State of the container that serves it. */
   line: LineState;
   widgets: WidgetType[];
   /** connected = a working (or untested) connection; broken = the last check failed; none = not connected. */
@@ -306,13 +260,10 @@ export type SignInKind = (typeof SIGN_IN_KINDS)[number];
 export interface SignInResult {
   integration: Integration;
   test: IntegrationTestResult;
-  /** The account Gluon signed in as, for the success message. */
   account: string;
 }
 
-/** GET /api/widgets/catalog: what this person can add. */
 export interface WidgetCatalog {
-  /** Installed apps this person can see, integrable ones first. */
   apps: InstalledApp[];
   types: {
     type: WidgetType;
@@ -320,21 +271,17 @@ export interface WidgetCatalog {
     description: string;
     source: IntegrationKind | null;
     refreshMs: number;
-    /** Integrations this person may use for it (empty for personal sources). */
     integrations: IntegrationRef[];
     /** false when an integration is needed and none is available to this person. */
     available: boolean;
   }[];
-  /** Home widgets that read this machine (Internet, Power…): whether they work here, and why not. */
   local: LocalWidgetAvailability[];
 }
 
-/** GET /api/widgets/geocode?q=berlin */
 export interface GeocodeResult {
   results: {
     id: number;
     name: string;
-    /** "State of Berlin, Germany" */
     region: string | null;
     country: string | null;
     countryCode: string | null;
@@ -344,22 +291,17 @@ export interface GeocodeResult {
   }[];
 }
 
-// ------------------------------------------------------------------ Jellyfin
-
 export type MediaKind = "movie" | "series" | "episode" | "album" | "track" | "video" | "other";
 
 export interface NowPlayingSession {
   id: string;
   user: string | null;
-  /** App the person is watching in, e.g. "Jellyfin Web". */
   client: string | null;
   device: string | null;
   item: {
     id: string;
     kind: MediaKind;
-    /** Episode/track/movie title. */
     title: string;
-    /** "Show name · S2 E5", "Artist · Album", or null. */
     subtitle: string | null;
     year: number | null;
     image: string | null;
@@ -371,7 +313,6 @@ export interface NowPlayingSession {
   paused: boolean;
   /** "direct" plays the file as is; "transcode" means the server converts it on the fly (uses CPU). */
   playMethod: "direct" | "directStream" | "transcode" | null;
-  /** Plain reason when transcoding, e.g. "Audio codec not supported". */
   transcodeReason: string | null;
 }
 
@@ -386,12 +327,10 @@ export interface RecentMediaItem {
   id: string;
   kind: MediaKind;
   title: string;
-  /** Series name + "3 new episodes", or album artist. */
   subtitle: string | null;
   year: number | null;
   addedAt: number | null;
   image: string | null;
-  /** For collapsed episodes: how many new episodes of this series. */
   count: number | null;
 }
 
@@ -419,11 +358,8 @@ export interface JellyfinLibrariesData {
     books: number;
   };
   activeStreams: number;
-  /** Something about Jellyfin itself that makes these numbers misleading, with what to do about it. */
   note?: string | null;
 }
-
-// ------------------------------------------------------------------ Immich
 
 export interface ImmichStatsData {
   /** "server" = everyone's library (admin key); "user" = only the key owner's library. */
@@ -433,15 +369,12 @@ export interface ImmichStatsData {
   /** null in "user" scope (Immich doesn't report it per user without admin). */
   usageBytes: number | null;
   users: { id: string; name: string; photos: number; videos: number; usageBytes: number; quotaBytes: number | null }[];
-  /** "On this day" memories when requested and allowed, else null. */
   memories: ImmichMemory[] | null;
-  /** Why memories are null although requested (e.g. missing permission). */
   memoriesNote: string | null;
 }
 
 export interface ImmichRecentData {
   items: { id: string; kind: "image" | "video"; image: string; takenAt: number | null }[];
-  /** Why nothing could be shown although Immich answered (e.g. the key lacks a permission). */
   note: string | null;
 }
 
@@ -450,23 +383,18 @@ export interface ImmichOnThisDayData {
   years: {
     id: string;
     year: number;
-    /** How many years ago (from the server's date). */
     yearsAgo: number;
     photos: { id: string; kind: "image" | "video"; image: string; takenAt: number | null }[];
   }[];
-  /** Why nothing could be shown although Immich answered (e.g. a missing permission, an old Immich). */
   note: string | null;
 }
 
 export interface ImmichMemory {
   id: string;
-  /** "3 years ago" */
   title: string;
   year: number | null;
   assets: { id: string; kind: "image" | "video"; image: string }[];
 }
-
-// ------------------------------------------------------------------ Subsonic (Navidrome, Octo…)
 
 export interface SubsonicNowPlayingData {
   entries: {
@@ -478,7 +406,6 @@ export interface SubsonicNowPlayingData {
     durationMs: number | null;
     user: string | null;
     player: string | null;
-    /** How long ago the track started, from the server's point of view. */
     minutesAgo: number | null;
   }[];
 }
@@ -497,13 +424,10 @@ export interface SubsonicRecentData {
   scan: { scanning: boolean; count: number | null; folderCount: number | null; lastScan: number | null } | null;
 }
 
-// ------------------------------------------------------------------ slskd
-
 export interface SlskdTransfer {
   id: string;
   direction: "download" | "upload";
   user: string;
-  /** File name without folders. */
   file: string;
   folder: string | null;
   sizeBytes: number;
@@ -512,7 +436,6 @@ export interface SlskdTransfer {
   percent: number;
   speedBps: number | null;
   state: "active" | "queued" | "done" | "failed";
-  /** slskd's own words, e.g. "Queued, Remotely", "Completed, Errored". */
   stateLabel: string;
   placeInQueue: number | null;
   remainingSec: number | null;
@@ -526,8 +449,6 @@ export interface SlskdTransfersData {
   /** Active first, then queued, then recently finished/failed; limited to the widget's `limit`. */
   items: SlskdTransfer[];
 }
-
-// ------------------------------------------------------------------ Homebridge
 
 export type AccessoryKind =
   | "light"
@@ -546,12 +467,10 @@ export type AccessoryKind =
   | "other";
 
 export interface HomebridgeAccessory {
-  /** Homebridge uniqueId. */
   id: string;
   name: string;
   room: string | null;
   kind: AccessoryKind;
-  /** Homebridge's service type, e.g. "Lightbulb". */
   type: string;
   on: boolean | null;
   /** 0…100 */
@@ -573,9 +492,6 @@ export interface HomebridgeAccessoriesData {
   rooms: string[];
 }
 
-// ------------------------------------------------------------------ Home Assistant
-
-/** Which icon a thing gets: the domain, refined by its device class (a door sensor, a garage cover). */
 export type HaIcon =
   | "light"
   | "switch"
@@ -615,7 +531,6 @@ export type HaIcon =
 export type HaControl = "toggle" | "cover" | "run" | "press";
 
 export interface HomeAssistantEntity {
-  /** entity_id, e.g. "light.kitchen". */
   id: string;
   domain: string;
   name: string;
@@ -627,32 +542,25 @@ export interface HomeAssistantEntity {
   value: number | null;
   /** Unit of `value` and `target` as Home Assistant reports it ("°C", "%", "kWh"). Temperatures are converted on the client. */
   unit: string | null;
-  /** A thermostat's or humidifier's target. */
   target: number | null;
-  /** Extra line: what a media player is playing. */
   detail: string | null;
   /** Lit, open, running, playing, motion seen: drawn as an active tile. */
   active: boolean;
-  /** Home Assistant says "unavailable" or "unknown". */
   unavailable: boolean;
   control: HaControl | null;
   /** For toggle and cover controls: whether it's on / open right now. */
   on: boolean | null;
-  /** An admin shared it with the household: members may see it. */
   shared: boolean;
   /** An admin let household members press it (never for locks, alarms, garage doors, gates or doors). Admins always can. */
   household: boolean;
   changedAt: number | null;
-  /** Scenes, scripts and buttons: when it was last used. */
   lastUsedAt: number | null;
 }
 
 export interface HomeAssistantEntitiesData {
-  /** The home's name in Home Assistant ("Home"). */
   location: string | null;
   /** The picked entities that still exist, in the picked order. */
   entities: HomeAssistantEntity[];
-  /** Picked entity ids Home Assistant doesn't have any more. */
   missing: string[];
   /**
    * Household members only: picked ids an admin hasn't shared with the household. Nothing about them is sent, not
@@ -666,7 +574,6 @@ export interface HomeAssistantPerson {
   name: string;
   /** home, away (not_home), a named zone ("Work"), or unknown. */
   where: "home" | "away" | "zone" | "unknown";
-  /** The zone's name when `where` is "zone". */
   place: string | null;
   since: number | null;
   image: string | null;
@@ -679,7 +586,6 @@ export interface HomeAssistantPeopleData {
   places: boolean;
 }
 
-/** GET /api/integrations/[id]/entities: what a Home Assistant widget can show, for its settings. */
 export interface HomeAssistantPickable {
   id: string;
   name: string;
@@ -687,9 +593,7 @@ export interface HomeAssistantPickable {
   area: string | null;
   icon: HaIcon;
   control: HaControl | null;
-  /** Shared with the household to look at. */
   shared: boolean;
-  /** Household members may press it. */
   household: boolean;
   /** Members could be allowed to press it at all (false for locks, alarms, garage doors, gates and doors). */
   memberPressable: boolean;
@@ -702,7 +606,6 @@ export interface HomeAssistantPickableList {
   areasNote: string | null;
 }
 
-/** POST /api/integrations/[id]/control */
 export const HA_ACTIONS = ["turn_on", "turn_off", "open", "close", "run", "press"] as const;
 export type HaAction = (typeof HA_ACTIONS)[number];
 
@@ -711,29 +614,22 @@ export interface HomeAssistantControlResult {
   entity: HomeAssistantEntity | null;
 }
 
-/** PUT /api/integrations/[id]/household-controls (admin): what household members may see, and what they may press. */
 export interface HouseholdControlsBody {
   see?: { allow: string[]; deny: string[] };
   press?: { allow: string[]; deny: string[] };
 }
 
-/** PUT /api/integrations/[id]/show-places (admin): whether Who's home names the places people are. */
 export interface ShowPlacesBody {
   show: boolean;
 }
 
-// ------------------------------------------------------------------ Coolify
-
 export type CoolifyDeploymentStatus = "queued" | "in_progress" | "finished" | "failed" | "cancelled";
 
 export interface CoolifyDeployment {
-  /** deployment_uuid */
   id: string;
   app: string;
   status: CoolifyDeploymentStatus;
-  /** Short commit hash. */
   commit: string | null;
-  /** First line of the commit message. */
   message: string | null;
   startedAt: number | null;
   finishedAt: number | null;
@@ -748,7 +644,6 @@ export interface CoolifyResource {
   name: string;
   type: "application" | "service" | "database" | "other";
   line: LineState;
-  /** Coolify's own words, e.g. "exited:unhealthy". */
   status: string;
 }
 
@@ -761,14 +656,11 @@ export interface CoolifyDeploymentsData {
   resources: {
     total: number;
     running: number;
-    /** Resources that aren't running or aren't healthy. */
     problems: CoolifyResource[];
   };
   /** Why the history is missing (an older Coolify, a token without read access), else null. */
   historyNote: string | null;
 }
-
-// ------------------------------------------------------------------ Crafty Controller
 
 /**
  * What a Crafty server is doing, from its latest stats. "starting" means the process is up but the game isn't
@@ -781,10 +673,8 @@ export const CRAFTY_ACTIONS = ["start", "stop", "restart", "kill"] as const;
 export type CraftyAction = (typeof CRAFTY_ACTIONS)[number];
 
 export interface CraftyServer {
-  /** Crafty's server id (a UUID). */
   id: string;
   name: string;
-  /** "Minecraft", "Minecraft Bedrock", "Hytale"…, from Crafty's server type. */
   game: string;
   state: CraftyServerState;
   line: LineState;
@@ -794,7 +684,6 @@ export interface CraftyServer {
   players: { online: number; max: number; names: string[] } | null;
   /** From the server's own answer, or the last one Gluon saw while it ran. */
   version: string | null;
-  /** When the current run started, or null when stopped or unknown. */
   startedAt: number | null;
   /** Opaque marker of the current run: changes when the server restarts. */
   run: string | null;
@@ -802,12 +691,10 @@ export interface CraftyServer {
   cpu: number | null;
   memory: number | null;
   port: number | null;
-  /** How long Crafty waits for a clean stop before giving up (ms). */
   stopTimeoutMs: number;
 }
 
 export interface CraftyServersData {
-  /** Crafty's own version, e.g. "4.11.0". */
   version: string | null;
   servers: CraftyServer[];
 }
@@ -826,8 +713,6 @@ export interface CraftyServerResult {
   server: CraftyServer | null;
 }
 
-// ------------------------------------------------------------------ Generic JSON
-
 export const JSON_FIELD_FORMATS = ["text", "number", "bytes", "percent", "duration", "date", "relative", "boolean"] as const;
 export type JsonFieldFormat = (typeof JSON_FIELD_FORMATS)[number];
 
@@ -838,7 +723,6 @@ export interface JsonFieldValue {
   value: string | number | boolean | null;
   /** Formatted with default settings, for quick display. Re-format `value` with prefs if you like. */
   display: string;
-  /** Set when the path found nothing. */
   missing: boolean;
 }
 
@@ -846,13 +730,10 @@ export interface JsonFieldsData {
   fields: JsonFieldValue[];
 }
 
-// ------------------------------------------------------------------ Weather (Open-Meteo)
-
 export type WeatherIcon = "clear" | "partly-cloudy" | "cloudy" | "fog" | "drizzle" | "rain" | "freezing-rain" | "snow" | "showers" | "snow-showers" | "thunder";
 
 export interface WeatherData {
   place: string | null;
-  /** IANA zone of the place. */
   timezone: string;
   current: {
     at: number;
@@ -880,8 +761,6 @@ export interface WeatherData {
   hours: { at: number; temperature: number; code: number; icon: WeatherIcon; precipitationChance: number | null; isDay: boolean }[];
 }
 
-// ------------------------------------------------------------------ Calendar (ICS)
-
 export interface CalendarEvent {
   /** UID + occurrence start; stable across refreshes. */
   id: string;
@@ -892,29 +771,23 @@ export interface CalendarEvent {
   allDay: boolean;
   /** All-day only: "2026-09-25" (inclusive): show these instead of converting `start`. */
   startDate: string | null;
-  /** All-day only: last day, inclusive. */
   endDate: string | null;
   location: string | null;
   recurring: boolean;
-  /** Happening right now. */
   ongoing: boolean;
 }
 
 export interface CalendarData {
   name: string | null;
   events: CalendarEvent[];
-  /** Zone used for floating times and all-day dates. */
   timezone: string;
 }
-
-// ------------------------------------------------------------------ Feed (RSS / Atom / JSON Feed)
 
 export interface FeedItem {
   id: string;
   title: string;
   url: string | null;
   publishedAt: number | null;
-  /** Plain text, at most ~280 characters. */
   summary: string | null;
   author: string | null;
   /** Remote image URL from the feed (http/https only), or null. Not proxied. */
@@ -927,20 +800,14 @@ export interface FeedData {
   items: FeedItem[];
 }
 
-// ------------------------------------------------------------------ Link status
-
 export interface LinkStatusData {
   url: string;
   up: boolean;
-  /** HTTP status, or null when nothing answered. */
   status: number | null;
   latencyMs: number | null;
-  /** "Responding (200) in 45 ms" / "Didn't answer within 5 seconds" */
   message: string;
   checkedAt: number;
 }
-
-// ------------------------------------------------------------------
 
 export interface WidgetDataMap {
   "jellyfin.nowPlaying": JellyfinNowPlayingData;

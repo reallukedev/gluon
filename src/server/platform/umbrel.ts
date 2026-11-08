@@ -5,11 +5,8 @@ import { hostExists, readHostFile } from "../host/paths";
 import { AppError } from "../errors";
 
 /**
- * First-party Umbrel client. umbreld's own CLI authenticates by signing a short-lived HS256 JWT
- * ({ loggedIn: true }) with the secret in Umbrel's data folder and calling its tRPC API; Gluon does
- * the same over plain HTTP, so it never needs the user's Umbrel password. Works with umbrelOS on
- * the host (umbreld on :80, data in /home/umbrel/umbrel) and with Umbrel in a container (the
- * container that mounts a folder holding secrets/jwt and publishes port 80).
+ * umbreld's own CLI authenticates by signing a short-lived HS256 JWT with the secret in Umbrel's data
+ * folder; Gluon does the same, so it never needs the user's Umbrel password.
  */
 
 export interface UmbrelEndpoint {
@@ -88,8 +85,6 @@ async function call<T>(path: string, input?: unknown, opts: { mutation?: boolean
   return body.result!.data;
 }
 
-// ---------------------------------------------------------------- types
-
 export type UmbrelAppState =
   | "unknown" | "installing" | "starting" | "running" | "ready" | "stopping" | "stopped" | "restarting"
   | "uninstalling" | "updating" | "not-installed";
@@ -129,8 +124,6 @@ export interface UmbrelStore {
   apps: UmbrelStoreApp[];
 }
 
-// ---------------------------------------------------------------- reads
-
 const GALLERY = "https://getumbrel.github.io/umbrel-apps-gallery";
 
 export async function umbrelVersion(): Promise<string | null> {
@@ -140,7 +133,7 @@ export async function umbrelVersion(): Promise<string | null> {
 
 let listCache: { at: number; value: UmbrelInstalledApp[] } | null = null;
 
-/** Installed apps with their Umbrel state. Cached briefly: the app list polls this. */
+/** Cached briefly: the app list polls this. */
 export async function umbrelApps(maxAgeMs = 5_000): Promise<UmbrelInstalledApp[]> {
   if (listCache && Date.now() - listCache.at < maxAgeMs) return listCache.value;
   const raw = await call<Record<string, unknown>[]>("apps.list");
@@ -200,14 +193,11 @@ export async function umbrelAppState(appId: string): Promise<{ state: UmbrelAppS
   return call("apps.state", { appId });
 }
 
-// ---------------------------------------------------------------- actions
-
 export type UmbrelAction = "install" | "uninstall" | "update" | "start" | "stop" | "restart";
 
 /**
- * Starts an Umbrel app action. Install, update and uninstall can run for minutes (image pulls,
- * builds), so the call isn't awaited: the caller polls umbrelAppState for progress. Failures show
- * up there too, as the app falling back to "not-installed" or its previous state.
+ * Not awaited, since install, update and uninstall can run for minutes: the caller polls
+ * umbrelAppState, where failures show up too.
  */
 export async function umbrelAction(appId: string, action: UmbrelAction): Promise<void> {
   listCache = null;

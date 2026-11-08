@@ -17,7 +17,6 @@ import s from "../builder.module.css";
 const editable = (r: VolumeRow) => !(r.kind === "other" || r.kind === "named" || r.kind === "relative" || (r.long && r.raw !== null && r.kind !== "data" && r.kind !== "host"));
 const complete = (r: VolumeRow) => !editable(r) || (!!r.source && !!r.target && !(r.kind === "data" ? dataFolderError(r.source) : hostPathError(r.source)) && !containerPathError(r.target));
 
-/** Folders: app data (kept with the app) or a folder of this server, mounted somewhere in the app. */
 export function VolumesGroup({ draft, form: f, issues, places, onFix }: { draft: Draft; form: ServiceForm; issues: Issue[]; places: Places | undefined; onFix: (id: string) => void }) {
   const base = `services.${f.name}.volumes`;
   const [picking, setPicking] = React.useState<number | null>(null);
@@ -148,10 +147,6 @@ export function VolumesGroup({ draft, form: f, issues, places, onFix }: { draft:
   );
 }
 
-/**
- * A media library the app expects (/music, /movies…). Gluon doesn't guess where it is: app data is
- * deleted with the app, so the person points it at a server folder before the app can start.
- */
 function PendingFolder({ target, onChoose, onPick, onSkip }: { target: string; onChoose: (path: string) => void; onPick: () => void; onSkip: () => void }) {
   const [typed, setTyped] = React.useState("");
   const kind = mediaKind(target) ?? "media";

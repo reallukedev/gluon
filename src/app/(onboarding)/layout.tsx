@@ -6,10 +6,7 @@ import { PrefsProvider } from "@/components/PrefsProvider";
 import { ReauthDialog } from "@/components/shell/ReauthDialog";
 import { ForcePasswordChange } from "@/components/shell/ForcePasswordChange";
 
-/**
- * Full-screen pages for a signed-in person, outside the app shell (first run). Same prefs, theme and
- * "confirm it's you" handling as the shell, none of its navigation.
- */
+/** First-run pages: the shell's prefs and "confirm it's you" handling, without its navigation. */
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const { user, session } = await requireUser();
   const tzCookie = (await cookies()).get("gluon_tz")?.value;

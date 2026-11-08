@@ -4,10 +4,8 @@ import { Notice } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 import s from "./people.module.css";
 
-/** SWR key for the household's problem reports (the People tabs' count and the Reports tab share it). */
 export const REPORTS_URL = "/api/household/reports?status=all&limit=300";
 
-/** A person's initial in a hairline circle. */
 export function Avatar({ name, size = 34, off }: { name: string; size?: number; off?: boolean }) {
   const letter = (name.trim()[0] ?? "?").toUpperCase();
   return (
@@ -17,7 +15,6 @@ export function Avatar({ name, size = 34, off }: { name: string; size?: number; 
   );
 }
 
-/** "Safari on iPhone" from a user agent. */
 export function device(ua: string | null): string {
   if (!ua) return "Unknown device";
   const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : /curl|wget|python|node/i.test(ua) ? "Script" : "Browser";
@@ -46,7 +43,6 @@ const STAGES: { id: ReportStage; label: string }[] = [
   { id: "fixed", label: "Fixed" },
 ];
 
-/** Sent → Seen → Fixed as three hairline marks on a rule: reached ones solid, the rest dashed. */
 export function ReportSteps({ stage }: { stage: ReportStage }) {
   const at = STAGES.findIndex((x) => x.id === stage);
   return (

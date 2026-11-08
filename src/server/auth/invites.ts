@@ -62,10 +62,17 @@ export function peekInvite(raw: string): InviteRow | null {
   return row;
 }
 
+/** Why a link `peekInvite` turned down doesn't work. Null for one that never existed or was cancelled. */
+export function closedInvite(raw: string): "used" | "expired" | null {
+  const row = one<Pick<InviteRow, "used_at" | "expires_at">>("SELECT used_at, expires_at FROM invites WHERE token_hash = ?", sha256(raw));
+  if (!row) return null;
+  if (row.used_at) return "used";
+  return row.expires_at < now() ? "expired" : null;
+}
+
 /**
- * Use an invite. The invite is claimed first (a single conditional UPDATE), so the same link opened
- * twice at once can only ever create one account; if creating the account then fails (username
- * taken), the claim is released so the person can try another name.
+ * The invite is claimed first with one conditional UPDATE, so the same link opened twice at once can
+ * only create one account; if creating it then fails (username taken), the claim is released.
  */
 export async function acceptInvite(raw: string, input: { username: string; displayName: string; password: string }): Promise<User> {
   const row = peekInvite(raw);

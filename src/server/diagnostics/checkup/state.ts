@@ -8,8 +8,6 @@ import { activeRuns } from "./runner";
 import { latestFull, latestOf, recentRuns } from "./history";
 import { displayUrl } from "./addresses";
 
-/** What the Checkup tab needs on load: runs in progress, the last full checkup, history and pickers. */
-
 export async function checkupTargets(): Promise<CheckupTargets> {
   const [apps, inv] = await Promise.all([listApps().catch(() => [] as AppSummary[]), getInventory().catch(() => null)]);
   const cfg = tryReadConfig();
@@ -34,7 +32,6 @@ export async function checkupState(): Promise<CheckupState> {
   return { active: activeRuns(), latest: latestFull(), recent: recentRuns(20), targets };
 }
 
-/** What the Security tab needs: the last security checkup, earlier ones, and whether one is running. */
 export function securityState(): SecurityState {
   return { latest: latestOf("safety"), recent: recentRuns(20, "safety"), active: activeRuns().filter((r) => r.kind === "safety") };
 }

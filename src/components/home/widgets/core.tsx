@@ -16,8 +16,6 @@ import { Reading } from "@/components/charts/Reading";
 import { useMachineReadings } from "@/components/charts/readings";
 import s from "./widgets.module.css";
 
-// ---------------------------------------------------------------- helpers
-
 export interface HomeApp {
   id: string;
   name: string;
@@ -28,7 +26,6 @@ export interface HomeApp {
   description?: string | null;
 }
 
-/** The right address for where you are: LAN address at home, public address when away. */
 export function useSmartUrl() {
   const { viewer } = usePrefs();
   return (urls: HomeApp["urls"]) => (viewer.zone === "home" ? (urls.home ?? urls.away) : (urls.away ?? urls.home));
@@ -61,8 +58,6 @@ function useNow(everyMs: number) {
   }, [everyMs]);
   return now;
 }
-
-// ---------------------------------------------------------------- clock
 
 export interface ClockConfig {
   seconds?: boolean;
@@ -190,11 +185,7 @@ export function ClockSettings({ config, onChange }: SettingsProps<ClockConfig>) 
   );
 }
 
-// ---------------------------------------------------------------- status
-
 export { StatusWidget } from "./status-hero";
-
-// ---------------------------------------------------------------- machine
 
 export function VitalsWidget({ size }: WidgetProps) {
   const { readings, last, status, span, windowMs } = useMachineReadings();
@@ -347,8 +338,6 @@ export function SpectrumWidget() {
   );
 }
 
-// ---------------------------------------------------------------- bookmarks
-
 export interface BookmarksConfig {
   title?: string;
   links?: { id: string; title: string; url: string }[];
@@ -485,8 +474,6 @@ export function BookmarksSettings({ config, onChange }: SettingsProps<BookmarksC
     </div>
   );
 }
-
-// ---------------------------------------------------------------- notes
 
 export interface NotesConfig {
   text?: string;

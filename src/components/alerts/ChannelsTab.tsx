@@ -13,7 +13,6 @@ import { ChannelList } from "./ChannelList";
 import { CHANNELS_URL } from "./shared";
 import s from "./alerts.module.css";
 
-/** Server-wide channels (admins manage), plus a read-out of household members' personal ones. */
 export function ChannelsTab({ highlight }: { highlight: string | null }) {
   const { data, error, isLoading, mutate } = useApi<ChannelView[]>(CHANNELS_URL, { refresh: 30_000 });
   const [open, setOpen] = React.useState(false);

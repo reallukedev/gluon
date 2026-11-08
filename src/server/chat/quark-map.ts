@@ -5,14 +5,7 @@ import { clientName } from "./names";
 import { XMPP_SENDER } from "../notify/xmpp-format";
 import type { ChatAccount, ChatHostSnapshot, ChatInvite, ChatRoom, ChatSettings, ChatSnapshot } from "@/lib/chat-types";
 
-/**
- * Quark's admin protocol (docs/admin-api.md in Quark's repository), the pure half: reading what
- * `quark ctl` prints, and turning its snapshot into the ChatSnapshot the Chat server tab shows.
- * Quark already speaks Gluon's shapes (settings, invites, milliseconds), so this is mostly
- * filling in what Gluon adds: owners from the config file, Gluon's sender account, the web side.
- */
-
-// ---------------------------------------------------------------- wire shapes
+/** The pure half of Quark's admin protocol (docs/admin-api.md in Quark's repository). */
 
 /** Quark's settings: Gluon's, minus the "custom" history only Prosody's hand-written config can produce. */
 export type QuarkSettings = Omit<ChatSettings, "history" | "calls"> & {
@@ -75,14 +68,11 @@ export interface QuarkStatus {
   dataDir: string;
 }
 
-// ---------------------------------------------------------------- `quark ctl` output
-
 export type CtlResult = { kind: "ok"; value: unknown } | { kind: "refused"; code: string; error: string } | { kind: "unreachable"; detail: string };
 
 /**
- * One JSON line on standard output: `{"ok":true,"value":…}` or `{"ok":false,"code":…,"error":…}`.
- * Quark exits 0 for both, and non-zero only when it couldn't reach the server, so a refusal still
- * counts even with a non-zero exit, and anything else is "couldn't reach Quark".
+ * Quark exits 0 for both answers and non-zero only when it couldn't reach the server, so a refusal
+ * still counts with a non-zero exit, and anything else is "couldn't reach Quark".
  */
 export function parseCtl(stdout: string, stderr: string, exitCode: number | null): CtlResult {
   const lines = stdout.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -105,7 +95,6 @@ export function parseCtl(stdout: string, stderr: string, exitCode: number | null
   return { kind: "unreachable", detail: detail || (exitCode === null ? "no answer" : `exit code ${exitCode}`) };
 }
 
-/** Quark's refusal as an AppError, its sentence shown as it is. */
 export function refusalError(code: string, error: string): AppError {
   const status = code === "not_found" ? 404 : code === "exists" || code === "config" ? 409 : 400;
   return new AppError(code, error, status);
@@ -126,13 +115,11 @@ export function ctlValue<T>(r: CtlResult): T {
   throw unreachableError(r.detail);
 }
 
-// ---------------------------------------------------------------- settings
-
 const DEFAULT_HISTORY: QuarkSettings["history"] = "1w";
 
 /**
- * Gluon's settings in Quark's shape. "custom" history can't come from Quark, but a page from before a
- * switch might still send it, so it keeps what Quark has; calls are filled in for old saves.
+ * A page from before a switch might still send "custom" history, so that keeps what Quark has; calls
+ * are filled in for old saves.
  */
 export function toQuarkSettings(next: ChatSettings, current: ChatSettings, host: string): QuarkSettings {
   const history = next.history === "custom" ? (current.history === "custom" ? DEFAULT_HISTORY : current.history) : next.history;
@@ -144,8 +131,6 @@ export function settingsRev(hosts: { host: string; settings: unknown }[]): strin
   const text = JSON.stringify(hosts.map((h) => [h.host, h.settings]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
   return crypto.createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
-
-// ---------------------------------------------------------------- snapshot
 
 export function inviteFrom(i: QuarkInvite, host: string, publicBase: string | null): ChatInvite {
   return {

@@ -5,11 +5,6 @@ import { Disclosure } from "@/components/ui/Disclosure";
 import type { JobView } from "./state";
 import s from "./builder.module.css";
 
-/**
- * A running (or finished) builder job: where it is in its plan, what it's doing now, Umbrel's
- * own percentage while it downloads, the full output, and how it ended. Nothing advances on a
- * timer; every stage comes from the server.
- */
 export function JobProgress({ view, stages, running, openOutput, label, closeNote = "It keeps going if you close this. Custom apps shows how it went." }: { view: JobView; stages: { key: string; label: string }[]; running: boolean; openOutput?: boolean; label: string; closeNote?: string | null }) {
   const current = view.stage ?? stages[0]?.key ?? "";
   const ok = view.result?.ok === true;

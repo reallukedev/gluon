@@ -3,8 +3,8 @@ import { z } from "zod";
 import { ENV_NAME_RE, SERVICE_RE, SLUG_RE, MAX_ICON_BYTES, BRANCH_RE } from "@/lib/builder/names";
 
 /**
- * Request shapes. Drafts may be incomplete or wrong (that's what the checks are for), so these
- * bound sizes and types; the publish step runs the full checks.
+ * Drafts may be incomplete or wrong (that's what the checks are for), so these only bound sizes and
+ * types.
  */
 
 const text = (max: number) => z.string().max(max, `Keep it under ${max.toLocaleString("en")} characters.`);

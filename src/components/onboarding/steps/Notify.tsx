@@ -19,7 +19,6 @@ import o from "../onboarding.module.css";
 const ChannelDialog = dynamic(() => import("@/components/alerts/ChannelDialog").then((m) => m.ChannelDialog), { ssr: false });
 
 const SUBS_URL = "/api/alerts/subscriptions";
-/** The "Send through" choice for entering mail server details instead. */
 const OWN_SERVER = "own";
 
 /** What a new channel sends: Settings' "Problems only" (problems, when they clear, reports, sign-in warnings, a failed update). */
@@ -57,12 +56,7 @@ function suggestTopic(serverName: string): string {
   return `${base}-alerts-${tail}`;
 }
 
-/**
- * Admin: where problems reach this person. Alerts are per person, so every admin sees this step.
- * If they already hear about problems somewhere (a channel they're subscribed to), it says where and
- * offers a test. If the server already has channels, one click subscribes. Otherwise: set up ntfy
- * (a topic and the free app) or email right here, send a test, save.
- */
+/** Alerts are per person, so every admin sees this step. */
 export function NotifyStep() {
   const { next } = useFlow();
   const { serverName, timeZone } = usePrefs();
@@ -227,7 +221,6 @@ export function NotifyStep() {
     );
   }
 
-  // Already reaching them somewhere: say where, let them try it.
   if (subscribed.length > 0) {
     return (
       <>

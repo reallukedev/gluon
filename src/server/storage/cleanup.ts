@@ -14,8 +14,8 @@ import { withLock } from "./oplog";
 import { hostRealpath, readMountinfo } from "./mounts";
 
 /**
- * Where a folder's bytes really live: links followed, and when it's a bind mount of part of another
- * mounted filesystem (Docker moved to /srv and bound back to /var/lib/docker), that other place.
+ * Links followed, and for a bind mount of part of another filesystem (Docker moved to /srv and bound
+ * back to /var/lib/docker), that other place.
  */
 async function realHome(p: string): Promise<string> {
   const real = await hostRealpath(p);
@@ -32,11 +32,7 @@ async function realHome(p: string): Promise<string> {
 import { afterChange, type Where } from "./ops";
 import type { CleanupPreview, DockerUsage } from "@/lib/storage-types";
 
-/**
- * Space cleanups, each previewed first: APT's download cache, the systemd journal, and Docker
- * leftovers (dangling images, build cache, stopped containers, unused volumes). Containers and volumes
- * are only removed when named explicitly by the person, from the list they were shown.
- */
+/** Containers and volumes are only removed when the person names them, from the list they were shown. */
 
 function dirBytes(p: string, depth = 0): { bytes: number; files: number } {
   let bytes = 0;

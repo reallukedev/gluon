@@ -52,9 +52,6 @@ const KIND_NAME: Record<IntegrationKind, string> = {
 // Only widgets that still need connecting show the connect step, so its form loads with the first of them.
 const ConnectDialog = dynamic(() => import("../../connect/Connect").then((m) => m.ConnectDialog), { ssr: false });
 
-// ---------------------------------------------------------------- integrations this viewer can use
-
-/** Connected apps the viewer may use, grouped by kind (from the widget catalog, refreshed every 5 minutes). */
 export function useUsableIntegrations() {
   const { data, error, isLoading } = useApi<WidgetCatalog>("/api/widgets/catalog", { refresh: 300_000, revalidateOnFocus: false });
   const byKind = React.useMemo(() => {
@@ -73,7 +70,6 @@ export function useUsableIntegrations() {
 
 export type Source = { state: "loading" } | { state: "none" } | { state: "gone" } | { state: "ok"; ref: IntegrationRef };
 
-/** The integration a widget reads from: the configured one, else the first one available. */
 export function useSource(kind: IntegrationKind, configured: string | undefined): Source {
   const { byKind, loaded } = useUsableIntegrations();
   if (!loaded) return { state: "loading" };
@@ -84,8 +80,6 @@ export function useSource(kind: IntegrationKind, configured: string | undefined)
   }
   return list[0] ? { state: "ok", ref: list[0] } : { state: "none" };
 }
-
-// ---------------------------------------------------------------- data
 
 async function fetchWidget([, type, integration, config]: readonly [string, WidgetType, string | undefined, string]) {
   const res = await api.post<WidgetBatchResponse>("/api/widgets/data", {
@@ -104,10 +98,7 @@ async function fetchWidget([, type, integration, config]: readonly [string, Widg
   return r as unknown as WidgetResponse;
 }
 
-/**
- * Widget data through one batched POST, keyed by type + integration + config, polled at the type's interval.
- * Keeps the last answer on screen while refreshing or when a refresh fails.
- */
+/** Keeps the last answer on screen while refreshing or when a refresh fails. */
 export function useWidgetData<T extends WidgetType>(type: T, integration: string | null | undefined, config: Record<string, unknown>, enabled = true) {
   const key = enabled ? (["widget", type, integration ?? undefined, JSON.stringify(config)] as const) : null;
   const swr = useSWR<WidgetResponse, ApiError>(key, fetchWidget, {
@@ -127,9 +118,6 @@ export function useWidgetData<T extends WidgetType>(type: T, integration: string
   };
 }
 
-// ---------------------------------------------------------------- states
-
-/** The installed app a widget of this kind can connect to (or reconnect, when it already has a connection). */
 export function useConnectTarget(kind: IntegrationKind, integrationId?: string | null): ConnectTarget | null {
   const { data } = useApi<WidgetCatalog>("/api/widgets/catalog", {
     refresh: 300_000,
@@ -150,7 +138,6 @@ export function useConnectTarget(kind: IntegrationKind, integrationId?: string |
   }, [data, kind, integrationId]);
 }
 
-/** One calm block for every widget state: an optional line glyph, a title, a sentence, and at most one action. */
 export function WidgetState({ line, title, children, action }: { line?: LineState; title: string; children?: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className={l.state} role="status">
@@ -166,7 +153,6 @@ export function WidgetState({ line, title, children, action }: { line?: LineStat
   );
 }
 
-/** A button that opens the compact connect step for this kind, right on the widget. */
 function ConnectButton({ kind, integrationId, label }: { kind: IntegrationKind; integrationId?: string | null; label: string }) {
   const target = useConnectTarget(kind, integrationId);
   const [open, setOpen] = React.useState(false);
@@ -187,7 +173,6 @@ function ConnectButton({ kind, integrationId, label }: { kind: IntegrationKind; 
   );
 }
 
-/** "Not connected" / "removed" states: admins connect right here, members get who to ask. */
 export function NotConnected({ kind, gone }: { kind: IntegrationKind; gone?: boolean }) {
   const { viewer } = usePrefs();
   const admin = viewer.role === "admin";
@@ -209,7 +194,6 @@ export function NotConnected({ kind, gone }: { kind: IntegrationKind; gone?: boo
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** The app behind a connection is stopped: say so plainly, and let admins start it from here. */
 export function AppStopped({ kind, source }: { kind: IntegrationKind; source: IntegrationRef }) {
   const { viewer } = usePrefs();
   const [busy, setBusy] = React.useState(false);
@@ -250,7 +234,6 @@ export function AppStopped({ kind, source }: { kind: IntegrationKind; source: In
   );
 }
 
-/** A failed fetch with no data to show: auth failed → reconnect; can't reach → retry; bad settings → fix them. */
 export function Problem({
   error,
   kind,
@@ -321,7 +304,6 @@ export function Problem({
   );
 }
 
-/** Centered empty message, same voice as core widgets. */
 export function Quiet({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
     <div className={l.state}>
@@ -333,7 +315,6 @@ export function Quiet({ title, children }: { title: string; children?: React.Rea
   );
 }
 
-/** Subtle "last updated" line when showing an old answer because the source is failing. */
 export function StaleNote({ response, error }: { response?: WidgetResponse; error?: ApiError }) {
   if (!response || (!response.stale && !error)) return null;
   const why = response.stale?.message ?? error?.message ?? "";
@@ -343,8 +324,6 @@ export function StaleNote({ response, error }: { response?: WidgetResponse; erro
     </p>
   );
 }
-
-// ---------------------------------------------------------------- skeletons shaped like content
 
 export function RowsSkeleton({ rows = 3, thumb = 0, ratio = 1 }: { rows?: number; thumb?: number; ratio?: number }) {
   return (
@@ -391,9 +370,6 @@ export function ShelfSkeleton({ rows = 1, square }: { rows?: number; square?: bo
   );
 }
 
-// ---------------------------------------------------------------- images
-
-/** Fixed-aspect image box: lazy, no layout shift, falls back to a lettered tile. */
 export function Poster({ src, title, square, className }: { src: string | null | undefined; title: string; square?: boolean; className?: string }) {
   // State is tied to the src it was recorded for, so a new src starts fresh without an effect
   // (an effect could reset "loaded" after a cached image already fired onLoad).
@@ -417,8 +393,6 @@ export function Poster({ src, title, square, className }: { src: string | null |
     </span>
   );
 }
-
-// ---------------------------------------------------------------- settings: pick the integration
 
 export function IntegrationPicker({ kind, value, onChange }: { kind: IntegrationKind; value: string | undefined; onChange: (id: string | undefined) => void }) {
   const { byKind, loaded } = useUsableIntegrations();
@@ -449,7 +423,6 @@ export function IntegrationPicker({ kind, value, onChange }: { kind: Integration
   );
 }
 
-/** Value that settles `ms` after the last change (for previews while typing). */
 export function useDebounced<T>(value: T, ms = 600): T {
   const [v, setV] = React.useState(value);
   React.useEffect(() => {
@@ -459,12 +432,9 @@ export function useDebounced<T>(value: T, ms = 600): T {
   return v;
 }
 
-/** How many items fit at each size (used as the request limit). */
 export function perSize<T>(size: string, map: Partial<Record<"s" | "m" | "t" | "l" | "w" | "x", T>>, fallback: T): T {
   return (map as Record<string, T>)[size] ?? fallback;
 }
-
-// ---------------------------------------------------------------- gate: source → data → content
 
 interface Query<T> {
   data?: T;
@@ -474,7 +444,6 @@ interface Query<T> {
   retry?: () => void;
 }
 
-/** Integration widgets: resolve the connection, fetch, and render loading / not connected / error / content. */
 export function useIntegrationWidget<T extends WidgetType>(kind: IntegrationKind, type: T, integration: string | undefined, params: Record<string, unknown>) {
   const source = useSource(kind, integration);
   const q = useWidgetData(type, source.state === "ok" ? source.ref.id : null, params, source.state === "ok");

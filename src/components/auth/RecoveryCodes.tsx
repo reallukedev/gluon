@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
 import s from "./parts.module.css";
 
-/** The ten single-use recovery codes, shown once, with copy and download. */
 export function RecoveryCodes({ codes, username, serverName }: { codes: string[]; username: string; serverName: string }) {
   const text = `Gluon recovery codes for ${username} on ${serverName}\nEach code works once, instead of a code from your authenticator app.\n\n${codes.join("\n")}\n`;
   const download = React.useCallback(() => {

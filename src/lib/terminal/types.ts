@@ -1,6 +1,5 @@
 import type { LineState } from "@/lib/types";
 
-/** Where commands run: the server itself, or one container by name. */
 export type TargetId = "host" | `container:${string}`;
 
 const CONTAINER_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
@@ -27,7 +26,6 @@ export interface TargetOption {
 
 export interface TargetGroup {
   key: string;
-  /** The app's name, or the compose project, or "Other containers". */
   name: string;
   icon: string | null;
   href: string | null;
@@ -39,7 +37,6 @@ export interface TargetList {
   groups: TargetGroup[];
 }
 
-/** What a target is like, asked once per visit: its shell, user, folders and programs. */
 export interface TargetProbe {
   shell: string;
   user: string;
@@ -48,7 +45,6 @@ export interface TargetProbe {
   commands: string[];
 }
 
-/** One line of the stream for a running command or a terminal session. */
 export type TermEvent =
   | { type: "open"; id: string; shell: string; cwd: string | null }
   | { type: "out"; data: string }

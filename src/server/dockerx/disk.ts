@@ -36,10 +36,8 @@ export function invalidateDisk() {
 }
 
 /**
- * The mounted filesystem holding a host path (longest mount point that contains it). Read in the
- * background with a time limit: statfs on a share whose server is gone (NFS, CIFS, sshfs) blocks
- * forever. A read still stuck is never started again (it would tie up another worker thread), and
- * until one answers the space shows as unknown.
+ * Read in the background with a time limit: statfs on a share whose server is gone blocks forever. A
+ * read still stuck is never started again (it would tie up another worker thread).
  */
 const statfsPending = new Set<string>();
 /** /proc/mounts writes space, tab, newline and backslash as octal escapes. */
@@ -103,8 +101,6 @@ export async function diskOverview(fresh = false): Promise<DockerDisk> {
     buildCache: { count: build.length, bytes: buildBytes, reclaimable: build.filter((b) => !b.InUse && !b.Shared).reduce((a, b) => a + (b.Size ?? 0), 0) },
   };
 }
-
-// ---------------------------------------------------------------- previews
 
 const reason = (why: string, label: string) => ({ label, reason: why });
 
@@ -227,16 +223,13 @@ export async function cleanupPlan(kind: CleanupKind): Promise<CleanupPlan> {
   }
 }
 
-// ---------------------------------------------------------------- running
-
 type G = typeof globalThis & { __gluonDockerCleanup?: boolean };
 const g = globalThis as G;
 
 /**
- * Remove exactly what the person ticked in the preview, each checked again against a fresh plan
- * (so something that started being used since is left alone). Docker's prune endpoints would also
- * take whatever became unused after the preview, and can't spare Gluon's base image or a named
- * volume, so only the build cache (which has no other way) uses one.
+ * Each item is checked again against a fresh plan. Docker's prune endpoints would also take whatever
+ * became unused after the preview and can't spare Gluon's base image or a named volume, so only the
+ * build cache uses one.
  */
 export async function runCleanup(kind: CleanupKind, ids: string[]): Promise<CleanupResult> {
   // Images too: an update or install in progress has images downloaded that no container runs yet.

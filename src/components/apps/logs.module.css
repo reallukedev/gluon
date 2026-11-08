@@ -95,7 +95,6 @@
 .text [data-b] { font-weight: 700; }
 .empty { padding: 28px 16px; color: var(--muted); font-family: var(--font-sans); font-size: var(--text-md); }
 
-/* Overview strip: where the errors (short red), warnings and matches are in what's loaded. */
 .map { position: relative; border-radius: 6px; background: var(--sunk); border: 1px solid var(--line); overflow: hidden; }
 .mapView { position: absolute; left: 0; right: 0; background: color-mix(in oklab, var(--ink) 10%, transparent); pointer-events: none; }
 .mark { position: absolute; left: 2px; right: 2px; height: 2px; padding: 0; border: 0; background: var(--ink-2); cursor: pointer; transform: translateY(-1px); }
@@ -115,7 +114,6 @@
   .frame { grid-template-columns: minmax(0, 1fr) 8px; gap: 4px; }
   .errNav { margin-left: 0; }
   .viewport { font-size: 12px; }
-  /* Phones: time and container sit above the message, which gets the full width. */
   .viewport[data-wrap] .line { flex-wrap: wrap; column-gap: 10px; row-gap: 0; padding: 3px 12px; }
   .viewport[data-wrap] .line .text { flex-basis: 100%; }
   .viewport[data-wrap] .ts, .viewport[data-wrap] .ctr { font-size: 11px; line-height: 16px; }

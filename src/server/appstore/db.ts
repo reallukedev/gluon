@@ -4,8 +4,8 @@ import { decryptJson, encryptJson, id as newId } from "../crypto";
 import type { AppSpec, BuilderSource, BuilderTarget, BuildStatus, CustomAppStatus, GithubSource, PublishedVersion, BuildSummary } from "@/lib/builder-types";
 
 /**
- * The app builder's tables. The same SQL is migration 13 in db/migrations.ts; it's also run here
- * on first use (idempotent) so a running server picks the tables up before its next restart.
+ * Same SQL as migration 13 in db/migrations.ts, also run here on first use so a running server picks
+ * the tables up before its next restart.
  */
 export const BUILDER_SCHEMA = `
   CREATE TABLE IF NOT EXISTS custom_apps (
@@ -74,8 +74,6 @@ export function ensureSchema() {
   g.__gluonBuilderSchema = true;
 }
 
-// ---------------------------------------------------------------- apps
-
 interface AppRowRaw {
   id: string;
   source: BuilderSource;
@@ -97,7 +95,7 @@ interface AppRowRaw {
   updated_at: number;
 }
 
-/** Stored secrets: env values per service, and the GitHub token. Encrypted as one blob. */
+/** Encrypted as one blob. */
 export interface Secrets {
   env: Record<string, Record<string, string>>;
   githubToken?: string;
@@ -215,7 +213,7 @@ export function writeSecrets(id: string, s: Secrets) {
   run("UPDATE custom_apps SET secrets = ?, updated_at = ? WHERE id = ?", empty ? null : encryptJson(s), now(), id);
 }
 
-/** `spec` is what was published; the draft carries on from it, with release notes cleared for the next version. */
+/** `spec` is what was published; the draft carries on from it with release notes cleared. */
 export function markPublished(id: string, p: { target: BuilderTarget; appId: string; version: string; spec: AppSpec; revision: number }) {
   const draft: AppSpec = { ...p.spec, details: { ...p.spec.details, releaseNotes: "" } };
   run(
@@ -241,8 +239,6 @@ export function markUnpublished(id: string) {
 export function deleteApp(id: string) {
   run("DELETE FROM custom_apps WHERE id = ?", id);
 }
-
-// ---------------------------------------------------------------- versions
 
 export function addVersion(app: string, v: { revision: number; version: string; files: Record<string, string>; storeCommit: string | null; sourceCommit: string | null; images: Record<string, string>; userId: string | null; username: string | null }) {
   run(
@@ -275,13 +271,11 @@ export function latestVersionFiles(app: string): { files: Record<string, string>
   return r ? { files: JSON.parse(r.files) as Record<string, string>, images: r.images ? (JSON.parse(r.images) as Record<string, string>) : {} } : null;
 }
 
-/** Images the version before the latest ran with (kept when pruning, for a quick way back). */
+/** Kept when pruning, for a quick way back. */
 export function previousImages(app: string): Record<string, string> {
   const r = one<{ images: string | null }>("SELECT images FROM custom_app_versions WHERE app = ? ORDER BY revision DESC LIMIT 1 OFFSET 1", app);
   return r?.images ? (JSON.parse(r.images) as Record<string, string>) : {};
 }
-
-// ---------------------------------------------------------------- builds
 
 export function startBuild(app: string, user: { id: string; username: string } | null): string {
   const bid = newId(9);
@@ -313,13 +307,10 @@ export function buildLog(app: string, bid: string): { log: string; status: Build
   return r ?? null;
 }
 
-/** Builds left "running" by a restart can't finish any more. */
 export function failInterruptedBuilds() {
   ensureSchema();
   run("UPDATE custom_app_builds SET status = 'failed', error = 'Gluon restarted during the build.', finished_at = ? WHERE status = 'running'", now());
 }
-
-// ---------------------------------------------------------------- store
 
 export interface StoreRow {
   storeId: string;

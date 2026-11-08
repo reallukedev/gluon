@@ -12,10 +12,6 @@ import s from "./move.module.css";
 
 type Mode = "keep" | "everything";
 
-/**
- * Uninstall an app Gluon can remove itself. Keeping the data is the default; deleting it is a
- * deliberate second choice that lists every folder and volume by name and needs a hold to confirm.
- */
 export function UninstallDialog({
   app,
   open,
@@ -33,7 +29,6 @@ export function UninstallDialog({
 }) {
   const fmt = useFormat();
   const [mode, setMode] = React.useState<Mode>(initialMode);
-  /** Media libraries and big folders the person ticked to delete too. */
   const [extra, setExtra] = React.useState<Set<string>>(new Set());
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

@@ -60,11 +60,7 @@ export function DockerSpace({ data }: { data: CleanupPreview | undefined }) {
   );
 }
 
-/**
- * The cleanups that need no picking (the old Docker copy, apt's cache, the journal), each behind its
- * confirmation. Shared by the Clean up panel and the Space map, which hangs them on the blocks where
- * the space actually is.
- */
+/** Shared by the Clean up panel and the Space map. */
 export function useCleanupActions(onChanged?: () => void) {
   const fmt = useFormat();
   const { data, mutate } = useApi<CleanupPreview>("/api/storage/cleanup", { refresh: 60_000 });
@@ -131,7 +127,6 @@ export function useCleanupActions(onChanged?: () => void) {
   return { data, mutate, run, confirm, confirmNode, leftovers, apt, journal };
 }
 
-/** A journal size to keep that reads as a round number ("Keep 200 MB"). */
 export function keepFor(data: CleanupPreview | undefined): number {
   return KEEP.find((k) => k >= (data?.journal.suggestedKeep ?? 0)) ?? 200 * MB;
 }

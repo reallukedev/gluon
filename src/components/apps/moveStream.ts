@@ -24,7 +24,6 @@ export function reduceMove(v: MoveView, e: MoveEvent): MoveView {
 
 export const replay = (events: MoveEvent[]) => events.reduce(reduceMove, emptyMove);
 
-/** Moves whose outcome the person has already seen (in the dialog or a toast), by job start time. */
 const seen = new Set<string>();
 export const jobKey = (j: { appId: string; startedAt: number }) => `${j.appId}:${j.startedAt}`;
 export const markSeen = (j: { appId: string; startedAt: number }) => void seen.add(jobKey(j));

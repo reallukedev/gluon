@@ -17,12 +17,6 @@ import { Certificate } from "./Certificate";
 import { ManageDialog, NotManaged } from "./Manage";
 import s from "./voice.module.css";
 
-/**
- * Apps → Mumble → Voice server: who's connected and where, the channel tree, registered people,
- * the server's settings and its certificate, all read live from Mumble over its admin connection
- * (Ice). Until Gluon can reach that connection it shows what Docker can tell, and the one-time
- * change that opens it.
- */
 export function VoicePanel({ appId, appName, running }: { appId: string; appName: string; running: boolean }) {
   const { data, error, mutate } = useApi<VoiceLive>(voiceUrl(appId), { refresh: running ? 4000 : 15_000 });
   const managed = !!data?.managed;
@@ -111,7 +105,6 @@ export function VoicePanel({ appId, appName, running }: { appId: string; appName
   );
 }
 
-/** Address, one sentence of state, and the facts underneath. */
 function Lead({ live, actions }: { live: VoiceLive; actions?: React.ReactNode }) {
   const n = live.users.length;
   const inChannels = new Set(live.users.map((u) => u.channel)).size;

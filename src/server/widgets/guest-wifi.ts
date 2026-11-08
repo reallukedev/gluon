@@ -6,10 +6,7 @@ import { decrypt, encrypt } from "../crypto";
 import { badRequest } from "../errors";
 import type { GuestWifiData, WifiSecurity } from "@/lib/home-widgets-types";
 
-/**
- * The household's guest network, entered once by an admin and shown to everyone as a scannable code. The password is
- * stored encrypted with the server key, like integration secrets.
- */
+/** The password is stored encrypted with the server key, like integration secrets. */
 
 type G = typeof globalThis & { __gluonGuestWifiTable?: boolean };
 const g = globalThis as G;

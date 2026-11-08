@@ -2,10 +2,6 @@
 import * as React from "react";
 import s from "./store.module.css";
 
-/**
- * Categories as a row of plain words with their counts (never pills); the chosen one is underlined
- * like a tab. "Installed" narrows any category to what's already on this server.
- */
 export function CategoryBar({
   categories,
   value,

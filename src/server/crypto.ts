@@ -7,7 +7,6 @@ import { DATA_DIR } from "./db";
 type G = typeof globalThis & { __gluonKey?: Buffer };
 const g = globalThis as G;
 
-/** 32-byte key used to encrypt secrets at rest (integration tokens, channel credentials, TOTP secrets). */
 function key(): Buffer {
   if (g.__gluonKey) return g.__gluonKey;
   const file = path.join(DATA_DIR, "secret.key");
@@ -53,7 +52,7 @@ export function safeEqual(a: string, b: string): boolean {
   return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
 }
 
-/** HMAC-SHA256 keyed with the server's secret key, domain-separated by `purpose`. */
+/** Domain-separated by `purpose`. */
 export function hmac(purpose: string, value: string): string {
   return crypto.createHmac("sha256", key()).update(`${purpose}\0${value}`).digest("hex");
 }

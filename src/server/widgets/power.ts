@@ -6,13 +6,9 @@ import { hostPath } from "../host/paths";
 import type { PowerData } from "@/lib/home-widgets-types";
 
 /**
- * The processor's power draw from Intel RAPL (also exposed by recent kernels on AMD Zen): each package's
- * `energy_uj` counter under /sys/class/powercap, read every 10 seconds. The counter wraps at `max_energy_range_uj`.
- * Only package domains are summed (package-0, package-1…): DRAM, the disks and the rest of the machine aren't
+ * Intel RAPL (also on recent AMD Zen kernels): each package's `energy_uj` counter, which wraps at
+ * `max_energy_range_uj`. Only package domains are summed, so DRAM, disks and the rest aren't
  * measured, and the widget says so.
- *
- * Minute averages go into the shared `metrics` table as `power.package` (watts), so they get the same hourly
- * rollup and 400-day retention as every other metric.
  */
 
 const ROOT = "/sys/class/powercap";
@@ -49,7 +45,7 @@ function readNum(file: string): number | null {
   }
 }
 
-/** Find the package domains once. Sets `reason` when there's nothing to read. */
+/** Sets `reason` when there's nothing to read. */
 export function discoverPower(): { domains: Domain[]; reason: string | null } {
   const s = st();
   if (s.domains) return { domains: s.domains, reason: s.reason };
@@ -158,7 +154,6 @@ export function powerAvailable(): { available: boolean; reason: string | null } 
   return { available: domains.length > 0, reason };
 }
 
-/** Average of [ts, v] points into buckets of `ms`. */
 function buckets(points: [number, number][], ms: number): [number, number][] {
   const m = new Map<number, { sum: number; n: number }>();
   for (const [t, v] of points) {

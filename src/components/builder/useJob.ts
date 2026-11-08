@@ -7,9 +7,8 @@ import { emptyJob, jobFrom, reduceJob, type JobView } from "./state";
 export type JobMode = { kind: "publish"; rebuild?: boolean } | { kind: "build" } | { kind: "remove"; keepData: boolean; forget: boolean } | { kind: "attach" };
 
 /**
- * Runs a builder job (publish, build, remove) and follows its NDJSON stream. The job belongs to
- * the server: a second start while one runs attaches to it, and after a reload the polled
- * `detail.job` keeps the view current.
+ * The job belongs to the server: a second start attaches to it, and after a reload the polled `detail.job` keeps the
+ * view current.
  */
 export function useJob(detail: CustomAppDetail, opts: { beforeStart: () => Promise<void>; onFinished: () => void }) {
   const [view, setView] = React.useState<JobView | null>(null);
@@ -59,12 +58,10 @@ export function useJob(detail: CustomAppDetail, opts: { beforeStart: () => Promi
     [detail.id],
   );
 
-  /** Show the server's copy of the job (after a reload, or when someone else started it). */
   const follow = React.useCallback(() => {
     if (job) setView({ ...jobFrom(job.events), stages: job.stages, kind: job.kind });
   }, [job]);
 
-  /** Forget a previous attempt's error (a dialog opening again starts clean). */
   const reset = React.useCallback(() => setStartError(null), []);
 
   return { view, setView, running, startError, start, follow, reset, serverRunning: !!job && !job.finishedAt };

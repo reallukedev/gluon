@@ -8,9 +8,8 @@ import type { EmailConfig, NtfyConfig, PushoverConfig, WebhookConfig, ChannelKin
 import type { StoredConfig } from "./config";
 
 /**
- * The actual senders. Each either resolves (delivered) or throws DeliveryError whose message is a
- * sentence a person can act on ("ntfy answered 401: check the token"). No retries here; the
- * dispatcher owns retry and backoff.
+ * Each throws DeliveryError with a sentence a person can act on. No retries here; the dispatcher owns
+ * retry and backoff.
  */
 
 export class DeliveryError extends Error {
@@ -50,8 +49,6 @@ export interface SendContext {
 
 const TIMEOUT_MS = 15_000;
 
-// ---------------------------------------------------------------- address safety
-
 function blocked(ip: string): boolean {
   // parseAddr also unwraps IPv4-mapped IPv6 in hex form (::ffff:7f00:1), which the URL parser produces.
   const a = parseAddr(ip);
@@ -68,9 +65,8 @@ function blocked(ip: string): boolean {
 export const hostKey = (hostname: string, port: number | string) => `${hostname.toLowerCase().replace(/^\[|\]$/g, "")}:${port}`;
 
 /**
- * Personal channels created by household members may not point inside the home network (otherwise
- * "test send" becomes a way to probe LAN services). Hosts an admin already uses for a server-wide
- * channel (e.g. a household ntfy server) are fine.
+ * Otherwise "test send" from a member's personal channel becomes a way to probe LAN services. Hosts
+ * an admin already uses for a server-wide channel are fine.
  */
 export async function assertReachableTarget(hostname: string, port: number, ctx: SendContext): Promise<string | null> {
   if (!ctx.restricted) return null;
@@ -99,8 +95,6 @@ export async function assertReachableTarget(hostname: string, port: number, ctx:
 function portOf(u: URL): number {
   return u.port ? Number(u.port) : u.protocol === "https:" ? 443 : 80;
 }
-
-// ---------------------------------------------------------------- HTTP helpers
 
 function describeNetError(e: unknown, host: string): DeliveryError {
   const err = e as { name?: string; code?: string; message?: string; cause?: { code?: string; message?: string } };
@@ -192,8 +186,6 @@ function jsonError(text: string): string | null {
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-// ---------------------------------------------------------------- ntfy
-
 const NTFY_TAGS: Record<MessageLevel, string[]> = {
   fault: ["rotating_light"],
   attention: ["warning"],
@@ -234,8 +226,6 @@ async function sendNtfy(c: NtfyConfig, m: OutMessage, ctx: SendContext) {
   throw new DeliveryError(`ntfy answered ${status}${why ? `: ${why}` : ""}.`);
 }
 
-// ---------------------------------------------------------------- Pushover
-
 async function sendPushover(c: PushoverConfig, m: OutMessage, ctx: SendContext) {
   const priority = m.level === "fault" ? c.priorities.fault : m.level === "attention" ? c.priorities.attention : m.level === "resolved" ? c.priorities.resolved : c.priorities.digest;
   const form = new URLSearchParams({
@@ -262,8 +252,6 @@ async function sendPushover(c: PushoverConfig, m: OutMessage, ctx: SendContext) 
   }
   throw new DeliveryError(`Pushover answered ${status}${why ? `: ${why}` : ""}. It'll try again.`);
 }
-
-// ---------------------------------------------------------------- email
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 
@@ -339,8 +327,6 @@ async function sendEmail(c: EmailConfig, m: OutMessage, ctx: SendContext) {
   }
 }
 
-// ---------------------------------------------------------------- webhooks
-
 const DISCORD_COLOR: Record<MessageLevel, number> = { fault: 0xd23c2d, attention: 0xe8a33a, resolved: 0x3a9a5b, digest: 0x6b6a63, info: 0x6b6a63 };
 const slackEsc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -388,8 +374,6 @@ async function sendWebhook(c: WebhookConfig, m: OutMessage, ctx: SendContext) {
   throw new DeliveryError(`${label} answered ${status}${why ? `: ${why}` : ""}.`);
 }
 
-// ---------------------------------------------------------------- entry point
-
 export async function deliver(kind: ChannelKind, config: StoredConfig, m: OutMessage, ctx: SendContext): Promise<void> {
   switch (kind) {
     case "ntfy":
@@ -413,7 +397,6 @@ export async function deliver(kind: ChannelKind, config: StoredConfig, m: OutMes
   }
 }
 
-/** Where a config sends to, for the "hosts admins already use" allow-list. */
 export function configHosts(kind: ChannelKind, c: StoredConfig): string[] {
   try {
     if (kind === "ntfy") {

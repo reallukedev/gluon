@@ -13,11 +13,7 @@ import s from "./lightbox.module.css";
 
 const isEntry = (x: FileEntry | SearchHit): x is FileEntry => "mode" in x;
 
-/**
- * Quick look for photos and video: the picture as large as the window allows, a strip of the
- * others beside it, details on I, arrows or a swipe to step, Esc to leave. Opens and closes
- * without animation because it's used dozens of times in a row.
- */
+/** Opens and closes without animation because it's used dozens of times in a row. */
 export function Lightbox({ entry, siblings, onChange, onClose }: { entry: FileEntry; siblings: (FileEntry | SearchHit)[]; onChange: (e: FileEntry) => void; onClose: () => void }) {
   const f = useFiles();
   const fmt = useFormat();

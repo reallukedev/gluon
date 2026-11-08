@@ -3,16 +3,8 @@ import { formatBytes, formatDuration, formatPercent, formatRelative } from "@/li
 import type { JsonFieldFormat, JsonFieldValue } from "@/lib/widgets-types";
 
 /**
- * JSONPath-lite. Supported:
- *   $.a.b          a.b            (leading "$" optional)
- *   a[0]  a[-1]    array index (negative from the end)
- *   a['key with spaces']  a["x"]
- *   a[*]  a.*      every element / value (results flatten into a list)
- *   …then optionally one trailing function:
- *   .length | .count()   size of a list/string/object
- *   .sum() .avg() .min() .max()   over numbers in a list
- *   .first() .last()   .join()   ", "-joined list
- * No filters, recursion or scripts.
+ * JSONPath-lite: $.a.b, a[0], a[-1], a['key'], a[*] / a.*, then optionally one of .length .count()
+ * .sum() .avg() .min() .max() .first() .last() .join(). No filters, recursion or scripts.
  */
 
 type Seg = { k: "key"; v: string } | { k: "idx"; v: number } | { k: "all" };

@@ -22,21 +22,16 @@ function platformOf(ua: string): Platform {
   return "desktop";
 }
 
-/**
- * Where a chat invite link leads (Prosody's invites_page, or a Quark invite when Quark's own web
- * page is off). Says which app to get for this device,
- * then hands the invite to it. Nothing here signs anyone in to Gluon.
- */
+/** Where a chat invite link leads. Nothing here signs anyone in to Gluon. */
 export default async function ChatInvitePage({ params }: { params: Promise<{ host: string; token: string }> }) {
-  const { host, token } = await params;
-  const h = await headers();
+  const [{ host, token }, h] = await Promise.all([params, headers()]);
   const { ip } = clientInfo(h);
   const invite = await findChatInvite(param(host).toLowerCase(), param(token), ip).catch(() => null);
 
   if (!invite) {
     return (
       <div className={s.form}>
-        <h2>This invite doesn&rsquo;t work any more</h2>
+        <h1>This invite doesn&rsquo;t work any more</h1>
         <p className={s.lede}>It was used, cancelled or ran out of time. Ask whoever sent it for a new link.</p>
       </div>
     );
@@ -50,7 +45,7 @@ export default async function ChatInvitePage({ params }: { params: Promise<{ hos
 
   return (
     <div className={s.form} data-wide="">
-      <h2>You&rsquo;re invited to chat on {invite.host}</h2>
+      <h1>You&rsquo;re invited to chat on {invite.host}</h1>
       <p className={s.lede}>
         {invite.username ? (
           <>

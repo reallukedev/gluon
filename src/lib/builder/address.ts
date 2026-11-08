@@ -1,12 +1,8 @@
-/**
- * A public address for a new app: one subdomain route in the Network page's routes, added
- * through the same API the Network page uses. Pure, so the route it adds can be tested.
- */
+/** A public address for a new app, added through the same routes API the Network page uses. Pure, so it can be tested. */
 import type { RouteT, RoutesConfigT, SubdomainRouteT } from "@/lib/network-types";
 
 const LABEL_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
-/** What's wrong with a subdomain label under `cfg.base_domain`, or null. */
 export function labelError(label: string, cfg: Pick<RoutesConfigT, "base_domain" | "routes">): string | null {
   const l = label.trim().toLowerCase();
   if (!l) return "Choose the name people will type, like photos.";
@@ -20,13 +16,11 @@ export function labelError(label: string, cfg: Pick<RoutesConfigT, "base_domain"
 export interface AddressInput {
   id: string;
   label: string;
-  /** What the Network page calls it: the app's name. */
   name: string;
   /** Gluon's app id once it runs, so the Network page links the address to the app. */
   appId: string | null;
   /** How Caddy reaches this server from its container. */
   backendHost: string;
-  /** The port the app's web page opens on. */
   port: number;
 }
 
@@ -42,10 +36,7 @@ export function addressRoute(cfg: Pick<RoutesConfigT, "base_domain">, a: Address
   };
 }
 
-/**
- * The routes to save: everything as it is, plus this one. Saving again after a reload must not
- * add it twice, so an existing route for the same host and port counts as already done.
- */
+/** Saving again after a reload must not add the route twice, so one for the same host and port counts as done. */
 export function routesWith(cfg: RoutesConfigT, route: SubdomainRouteT): { routes: RouteT[]; already: boolean } {
   const same = cfg.routes.find((r) => r.type === "subdomain" && r.host === route.host);
   if (same && same.type === "subdomain" && same.backend.port === route.backend.port) return { routes: cfg.routes, already: true };

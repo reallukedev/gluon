@@ -4,9 +4,9 @@ import { z } from "zod";
 import { one, run } from "./db";
 import { normalizeChannel } from "@/lib/updates-types";
 
-/** Server-wide settings (admin). Each key has a schema and a default so reads never fail. */
+/** Each key has a default so reads never fail. */
 const schemas = {
-  /** Defaults to the machine's own hostname (Gluon shares the host's network, so it sees it). */
+  /** Gluon shares the host's network, so it sees the machine's own hostname. */
   serverName: z.string().min(1).max(40).default(() => (os.hostname().split(".")[0] || "server").slice(0, 40)),
   /** The public name Gluon is reached at from outside (e.g. gluon.example.com), or "" for none. */
   publicHost: z.string().max(253).default(""),
@@ -43,8 +43,8 @@ const schemas = {
     })
     .default({ diskAttention: 85, diskFault: 95, tempAttention: 80, certDays: 14, memoryAttention: 92 }),
   /**
-   * Settings → Integrations → Cloudflare. Tokens are sealed with the server key (crypto.encrypt);
-   * `adopted` are names whose existing records the admin handed over to Gluon.
+   * Tokens are sealed with the server key; `adopted` are names whose existing records the admin
+   * handed to Gluon.
    */
   cloudflare: z
     .object({
@@ -69,10 +69,7 @@ const schemas = {
   /** Which home server OS Gluon works alongside: where apps are installed, updated and removed. */
   platform: z.enum(["auto", "umbrel", "casaos", "none"]).default("auto"),
   setupDone: z.boolean().default(false),
-  /**
-   * Settings → Updates: the channel (Stable = tagged releases, Nightly = every commit on main), and
-   * automatic updates. Older copies stored the channel as "releases" / "main"; those still read.
-   */
+  /** Older copies stored the channel as "releases" / "main"; those still read. */
   updates: z
     .object({
       auto: z.boolean(),

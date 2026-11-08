@@ -11,8 +11,8 @@ export const BIG_FOLDER = 50e9;
 import type { RuntimeMount, VolumeInfo } from "./rewrite";
 
 /**
- * What uninstalling an app removes, in both modes. Pure. The one rule it exists to keep: nothing
- * outside the app's own folder, and no volume another container uses, ever lands in `removes`.
+ * The one rule this exists to keep: nothing outside the app's own folder, and no volume another
+ * container uses, ever lands in `removes`.
  */
 
 export interface UninstallInput {
@@ -110,7 +110,6 @@ export function buildUninstallPlan(input: UninstallInput): UninstallPlan {
       all.removes.push(vol(v));
     }
   }
-
 
   if (input.source === "gluon") {
     const f = input.gluonFolder;

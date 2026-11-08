@@ -4,7 +4,6 @@ import { AppError } from "../../errors";
 import { describeNetError, NetError, openStream, safeFetch, type FetchResult, type StreamResult } from "../net";
 import type { IntegrationField, IntegrationKind, IntegrationTestResult, WidgetDataMap, WidgetType } from "@/lib/widgets-types";
 
-/** The integration as the kind implementation sees it (config decrypted and validated). */
 export interface KindContext<C> {
   /** null while testing an unsaved integration (no image URLs can be issued then). */
   id: string | null;
@@ -23,12 +22,10 @@ export interface KindContext<C> {
 export type TestOutcome = Omit<IntegrationTestResult, "ms">;
 
 export interface ImageRequest {
-  /** Path + query on the upstream app. */
   path: string;
   query: Record<string, string>;
 }
 
-/** Something found inside a connected app by universal search: a film, a photo, a light, a song. */
 export interface KindSearchHit {
   /** Stable within the integration. */
   id: string;
@@ -55,7 +52,6 @@ export interface KindDef<C = Record<string, unknown>> {
   fields: IntegrationField[];
   /** Full config incl. secrets (base URL lives outside, in its own column). */
   schema: z.ZodType<C>;
-  /** Top-level config keys stored as secrets (never returned). */
   secretKeys: string[];
   widgets: WidgetType[];
   test(ctx: KindContext<C>): Promise<TestOutcome>;
@@ -67,14 +63,12 @@ export interface KindDef<C = Record<string, unknown>> {
     ref(params: Record<string, string | number>): string;
     request(ctx: KindContext<C>, params: Record<string, string | number>): ImageRequest;
   };
-  /** Adds auth to an outgoing request (headers and/or query). May be async (e.g. login for a token). */
   authorize?(ctx: KindContext<C>, req: { headers: Record<string, string>; query: Record<string, string> }): Promise<void> | void;
   /**
    * Universal search inside the app. Optional. Must answer within `signal` (search gives each app
    * about two seconds) and return at most `limit` hits, best first.
    */
   search?(ctx: KindContext<C>, q: string, opts: { limit: number; signal: AbortSignal }): Promise<KindSearchHit[]>;
-  /** Allow self-signed TLS for this integration. */
   insecureTls?(config: C): boolean;
   /** Widget data depends on `ctx.viewer.role`, so it's cached per role. Default false: one answer for everyone. */
   viewerScoped?: boolean;
@@ -119,7 +113,7 @@ function hostOf(base: string) {
   }
 }
 
-/** HTTP helpers bound to one integration; errors become human UpstreamErrors naming the app. */
+/** Errors become human UpstreamErrors naming the app. */
 export function client<C>(def: KindDef<C>, ctx: KindContext<C>, authMessage: (status: number, body: string) => string | null) {
   const label = def.noun ?? def.label;
   const Label = label.charAt(0).toUpperCase() + label.slice(1);
@@ -229,7 +223,6 @@ export function client<C>(def: KindDef<C>, ctx: KindContext<C>, authMessage: (st
   return { raw, json, stream };
 }
 
-/** Wrap a test so every failure becomes a readable `{ ok: false, message }`. */
 export async function runTest(fn: () => Promise<TestOutcome>): Promise<TestOutcome> {
   try {
     return await fn();
@@ -246,8 +239,6 @@ export function ok(message: string, extra: Partial<TestOutcome> = {}): TestOutco
 export function fail(message: string, extra: Partial<TestOutcome> = {}): TestOutcome {
   return { ok: false, message, detail: null, version: null, serverName: null, options: null, preview: null, ...extra };
 }
-
-// ------------------------------------------------------------------ small parsing helpers shared by kinds
 
 export const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
 export const num = (v: unknown): number | null => {

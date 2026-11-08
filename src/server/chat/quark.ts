@@ -9,9 +9,8 @@ import { ctlValue, inviteFrom, parseCtl, quarkSnapshot, type QuarkInvite, type Q
 import type { ChatInvite, ChatSnapshot } from "@/lib/chat-types";
 
 /**
- * Quark, run by Gluon. Everything goes through `quark ctl` inside the container: one JSON request on
- * standard input, one JSON line back (see quark-map.ts). No port is opened and no secret shows up
- * in a process list. Quark applies every change live, so there is never a restart here.
+ * One JSON request on stdin to `quark ctl`, one JSON line back: no port opened and no secret in a
+ * process list. Quark applies every change live, so there is never a restart here.
  */
 
 export interface QuarkTarget {
@@ -38,8 +37,6 @@ export async function quarkCtl<T>(t: { id: string }, cmd: string, args: Record<s
 
 export const quarkStatus = (t: QuarkTarget) => quarkCtl<QuarkStatus>(t, "status", {}, 8_000);
 
-// ---------------------------------------------------------------- snapshot
-
 function routeFor(hosts: string[]): { host: string; httpPort: number | null } | null {
   const cfg = tryReadConfig();
   const r = cfg?.routes.find((x) => x.type === "subdomain" && !!x.xmpp && hosts.includes(x.host));
@@ -54,8 +51,6 @@ export async function quarkSnapshotOf(t: QuarkTarget): Promise<ChatSnapshot> {
   return quarkSnapshot(raw, { app: { id: t.app.id, name: t.app.name }, container: t.name, route: routeFor(hosts.map((h) => h.host)), publicBase: publicBase() });
 }
 
-// ---------------------------------------------------------------- accounts
-
 export const createQuarkAccount = (t: QuarkTarget, a: { host: string; user: string; password: string; role: "member" | "admin" }) => quarkCtl<true>(t, "account.create", a);
 
 export function updateQuarkAccount(
@@ -69,8 +64,6 @@ export function updateQuarkAccount(
 
 export const deleteQuarkAccount = (t: QuarkTarget, a: { host: string; user: string }) => quarkCtl<true>(t, "account.delete", a);
 
-// ---------------------------------------------------------------- invites
-
 export async function createQuarkInvite(t: QuarkTarget, a: { host: string; username: string | null; role: "member" | "admin"; days: number; reusable: boolean }): Promise<ChatInvite> {
   const raw = await quarkCtl<QuarkInvite>(t, "invite.create", { ...a, username: a.username || null });
   return inviteFrom(raw, a.host, publicBase());
@@ -81,14 +74,10 @@ export const revokeQuarkInvite = (t: QuarkTarget, a: { host: string; token: stri
 /** For the public invite page: is this token a live account invite on that host? */
 export const peekQuarkInvite = (t: QuarkTarget, a: { host: string; token: string }) => quarkCtl<{ expires: number; username: string | null; uri: string } | null>(t, "invite.peek", a, 8_000);
 
-// ---------------------------------------------------------------- rooms
-
 export const createQuarkRoom = (t: QuarkTarget, a: { service: string; room: string; name: string; description: string | null; public: boolean; membersOnly: boolean; owner: string | null }) =>
   quarkCtl<{ jid: string }>(t, "room.create", a);
 
 export const destroyQuarkRoom = (t: QuarkTarget, a: { jid: string; reason: string | null }) => quarkCtl<true>(t, "room.destroy", a);
-
-// ---------------------------------------------------------------- settings and config
 
 export const quarkSettings = (t: QuarkTarget, host: string) => quarkCtl<QuarkSettings>(t, "settings.get", { host });
 
@@ -103,16 +92,12 @@ export const saveQuarkConfig = (t: QuarkTarget, text: string) => quarkCtl<{ ok: 
 
 export const reloadQuark = (t: { id: string }) => quarkCtl<{ reloaded: true; certs: number }>(t, "reload", {}, 20_000);
 
-// ---------------------------------------------------------------- messages
-
 /** A server notification (Gluon's alerts), sent without signing in as a client. */
 export const sendQuarkMessage = (t: QuarkTarget, m: { from: string; to: string; body: string; subject?: string }) => quarkCtl<true>(t, "message.send", m, 10_000);
 
-// ---------------------------------------------------------------- for Network
-
 const signUpCache = new Map<string, { at: number; value: boolean | null }>();
 
-/** Whether strangers can make an account on `host`, asked of Quark. null when it can't be asked. Cached five minutes. */
+/** null when it can't be asked. Cached five minutes. */
 export async function quarkOpenSignUp(appId: string, host: string): Promise<boolean | null> {
   const key = `${appId}:${host}`;
   const hit = signUpCache.get(key);

@@ -1,4 +1,3 @@
-/** Just enough of a finding to name what's wrong with an app. */
 interface FindingLike {
   kind: string;
   severity: string;
@@ -13,7 +12,6 @@ export function findingWord(f: FindingLike): string {
   return f.severity === "fault" ? "Not working" : "Needs you";
 }
 
-/** The most serious open finding per app id. */
 export function findingsByApp<F extends FindingLike & { subject: string | null }>(findings: readonly F[] | undefined): Map<string, F> {
   const m = new Map<string, F>();
   for (const f of findings ?? []) {

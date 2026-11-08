@@ -1,4 +1,3 @@
-/* Monitor trace: uptime ticks + response-time line on one time axis. */
 .trace { position: relative; width: 100%; min-width: 0; cursor: crosshair; border-radius: 3px; touch-action: pan-y; }
 .trace:focus-visible { outline-offset: 4px; }
 .svg { display: block; overflow: visible; }

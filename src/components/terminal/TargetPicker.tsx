@@ -22,7 +22,6 @@ interface Group {
   items: Item[];
 }
 
-/** Where commands run: This server, or any container, grouped by app and searchable. */
 export function TargetPicker({ list, value, onChange, hostName }: { list: TargetList | undefined; value: TargetId; onChange: (t: TargetId) => void; hostName: string }) {
   const groups = React.useMemo<Group[]>(() => {
     const out: Group[] = [{ value: "Server", icon: null, items: [{ id: "host", name: "This server", group: "Server", icon: null, option: null }] }];

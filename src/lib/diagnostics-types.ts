@@ -1,7 +1,3 @@
-/** Types shared between the Diagnostics API and the client. No server imports. */
-
-// ---------------------------------------------------------------- throughput
-
 export interface InterfaceInfo {
   name: string;
   kind: "ethernet" | "wireless" | "bridge" | "veth" | "loopback" | "vpn" | "other";
@@ -20,8 +16,6 @@ export interface InterfaceInfo {
   physical: boolean;
 }
 
-// ---------------------------------------------------------------- connections
-
 export type Owner =
   | { kind: "container"; id: string; name: string; appId: string | null; appName: string | null }
   | { kind: "service"; unit: string }
@@ -38,7 +32,6 @@ export interface Connection {
   direction: "in" | "out";
   process: { pid: number; name: string } | null;
   owner: Owner;
-  /** Human label for the owner: app name, container, unit or process. */
   ownerLabel: string;
   netns: "host" | "container";
   recvQ: number;
@@ -53,8 +46,6 @@ export interface ConnectionsSnapshot {
   topOwners: { label: string; inbound: number; outbound: number; total: number }[];
   truncated: boolean;
 }
-
-// ---------------------------------------------------------------- requests (Caddy access log)
 
 export interface RequestEntry {
   id: number;
@@ -109,8 +100,6 @@ export interface RequestFeedState {
   format: "json" | "console" | null;
 }
 
-// ---------------------------------------------------------------- processes
-
 export interface ProcessInfo {
   pid: number;
   ppid: number;
@@ -142,8 +131,6 @@ export interface ProcessSnapshot {
   byMem: ProcessInfo[];
 }
 
-// ---------------------------------------------------------------- logs
-
 export type LogLevel = "emergency" | "alert" | "critical" | "error" | "warning" | "notice" | "info" | "debug";
 
 export interface LogEntry {
@@ -156,8 +143,6 @@ export interface LogEntry {
   pid: number | null;
   cursor: string | null;
 }
-
-// ---------------------------------------------------------------- tools
 
 export interface DnsToolResult {
   name: string;
@@ -229,14 +214,11 @@ export interface TracerouteToolResult {
   message: string;
 }
 
-// ---------------------------------------------------------------- checkup
-
 /** ok = passed, warn = worth a look, fail = broken, skip = couldn't or didn't need to check. */
 export type CheckState = "ok" | "warn" | "fail" | "skip";
 
 export type CheckupKind = "full" | "app" | "address" | "internet" | "server" | "space" | "drive" | "safety";
 
-/** A fix offered next to a result: a server-side remedy (same as the ones on Status) or a place to go. */
 export interface CheckFix {
   label: string;
   /** Registered remedy action ("apps.start"); empty when `href` is set. */
@@ -251,16 +233,11 @@ export interface CheckFix {
 export interface CheckResult {
   id: string;
   state: CheckState;
-  /** A plain sentence of the result: "/var is 93% full". */
   title: string;
-  /** Why it matters or what to do, in a sentence or two. */
   detail?: string | null;
-  /** Short measured value for instruments ("12 ms", "240 Mb/s"). */
   value?: string | null;
-  /** Raw numbers or command output behind the result, shown in a disclosure. */
   evidence?: string | null;
   fix?: CheckFix | null;
-  /** How long the check took. */
   ms: number;
 }
 
@@ -268,11 +245,8 @@ export interface CheckPlanItem {
   id: string;
   /** Group id (a category for full checkups, "path" for the hops of a probe path). */
   group: string;
-  /** What is being checked, short: "DNS through 1.1.1.1". */
   label: string;
-  /** A hop on the probe path (drawn as a node in order). */
   hop?: boolean;
-  /** Secondary text under a hop: the address or port it probes. */
   sub?: string | null;
 }
 
@@ -285,7 +259,6 @@ export interface CheckupMeta {
   id: string;
   kind: CheckupKind;
   target: string | null;
-  /** "Full checkup", "Jellyfin won't open". */
   title: string;
   layout: "sweep" | "path";
   /** Path runs: where the path starts ("This server"). */
@@ -305,7 +278,6 @@ export interface CheckupSummary {
   status: "done" | "cancelled" | "failed";
   finishedAt: number;
   counts: Record<CheckState, number>;
-  /** One sentence, state first: "Everything checks out." */
   verdict: string;
   /** Compared with the previous finished run of the same kind (and target). */
   diff: { previousId: string; previousAt: number; appeared: CheckupDiffItem[]; fixed: CheckupDiffItem[] } | null;
@@ -333,7 +305,6 @@ export interface CheckupRunRow {
 
 export type CheckupEvent =
   | { type: "start"; meta: CheckupMeta; plan: CheckPlanItem[]; results: CheckResult[]; running: string[]; attached: boolean }
-  /** A check started probing. */
   | { type: "begin"; id: string }
   | { type: "result"; result: CheckResult }
   | { type: "done"; summary: CheckupSummary }
@@ -346,15 +317,12 @@ export interface CheckupTargets {
 }
 
 export interface CheckupState {
-  /** Runs happening right now (any admin). */
   active: CheckupRunRow[];
-  /** The most recent finished full checkup, with its results. */
   latest: CheckupRun | null;
   recent: CheckupRunRow[];
   targets: CheckupTargets;
 }
 
-/** The security checkup's areas, in the order the instrument draws them. */
 export const SECURITY_GROUPS: CheckupGroup[] = [
   { id: "internet", label: "From the internet" },
   { id: "network", label: "Network" },
@@ -365,9 +333,7 @@ export const SECURITY_GROUPS: CheckupGroup[] = [
 ];
 
 export interface SecurityState {
-  /** The most recent finished security checkup, with its results. */
   latest: CheckupRun | null;
   recent: CheckupRunRow[];
-  /** Security checkups running right now (any admin). */
   active: CheckupRunRow[];
 }

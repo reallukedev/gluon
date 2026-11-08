@@ -13,8 +13,6 @@ import type { DiskView } from "@/lib/storage-types";
 const diskHref = (d: DiskView) => `/storage/${encodeURIComponent(d.id)}`;
 const named = (d: DiskView) => `${d.title}${d.model ? ` (${d.model})` : ""}`;
 
-// ---------------------------------------------------------------- mounts that won't survive a restart
-
 async function checkPersistence(s: InventoryState) {
   const missing = notPersistent(s);
   if (!missing.length) {
@@ -61,8 +59,6 @@ async function checkPersistence(s: InventoryState) {
   });
 }
 
-// ---------------------------------------------------------------- unused disks
-
 function checkUnused(s: InventoryState) {
   const open = new Set<string>();
   for (const d of s.view.disks) {
@@ -83,8 +79,6 @@ function checkUnused(s: InventoryState) {
   }
   resolveMissing("storage.unused", open);
 }
-
-// ---------------------------------------------------------------- SMART and temperature
 
 function tempLimits(d: DiskView): { attention: number; fault: number } {
   const limit = d.smart?.tempLimit ?? null;
@@ -173,8 +167,6 @@ function checkSmart(s: InventoryState) {
   resolveMissing("storage.temperature", openTemp);
 }
 
-// ---------------------------------------------------------------- read-only filesystems
-
 const RO_BY_NATURE = new Set(["iso9660", "squashfs", "udf", "erofs", "cramfs"]);
 
 function checkReadOnly(s: InventoryState) {
@@ -200,7 +192,7 @@ function checkReadOnly(s: InventoryState) {
   resolveMissing("storage.readonly", open);
 }
 
-// ---------------------------------------------------------------- fstab that could stop a boot
+// fstab lines that could stop a boot.
 
 function checkFstab(s: InventoryState) {
   const open = new Set<string>();
@@ -227,8 +219,6 @@ function checkFstab(s: InventoryState) {
   }
   resolveMissing("storage.fstab-missing", open);
 }
-
-// ---------------------------------------------------------------- registration
 
 registerCheck("storage", 5 * 60_000, async () => {
   const s = await getInventoryState(true);

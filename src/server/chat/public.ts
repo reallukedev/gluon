@@ -2,8 +2,8 @@ import "server-only";
 import { chatApps, chatTarget, peekInvite } from "./backend";
 
 /**
- * The public invite page asks the chat server (Prosody or Quark) whether a token is live. Anyone
- * can load that page, so lookups are capped per address: a wrong guess costs an admin console call.
+ * Anyone can load the public invite page, so lookups are capped per address: a wrong guess costs an
+ * admin console call.
  */
 
 type G = typeof globalThis & { __gluonChatInviteLookups?: Map<string, number[]> };

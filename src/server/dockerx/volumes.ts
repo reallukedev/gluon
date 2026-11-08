@@ -79,13 +79,11 @@ function guardFor(v: DockerVolume): Guard | null {
   return null;
 }
 
-// ---------------------------------------------------------------- sizes (slow)
-
 let sizeCache: { at: number; value: Promise<VolumeSizes> } | null = null;
 
 /**
- * Docker measures volumes by walking every file, which can take a while on a big media library.
- * Asked for separately (and cached a minute) so the list never waits on it.
+ * Docker measures volumes by walking every file, so this is asked for separately (cached a minute)
+ * and the list never waits on it.
  */
 export function volumeSizes(fresh = false): Promise<VolumeSizes> {
   if (!fresh && sizeCache && Date.now() - sizeCache.at < 60_000) return sizeCache.value;
@@ -110,8 +108,6 @@ export function volumeSizes(fresh = false): Promise<VolumeSizes> {
   sizeCache = { at: Date.now(), value };
   return value;
 }
-
-// ---------------------------------------------------------------- create / remove
 
 export async function createVolume(name: string, labels: Record<string, string> = {}): Promise<{ message: string }> {
   const n = name.trim();
@@ -140,7 +136,7 @@ export async function getVolume(name: string): Promise<DockerVolume> {
   return v;
 }
 
-/** Remove one volume. Docker refuses volumes any container (even a stopped one) mounts; so does Gluon, first, in words. */
+/** Docker refuses volumes any container mounts; Gluon refuses first, in words. */
 export async function removeVolume(name: string, confirm?: string): Promise<{ message: string; freed: number | null }> {
   assertNoAppWork("remove volumes");
   const v = await getVolume(name);

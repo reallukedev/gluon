@@ -26,7 +26,7 @@ export interface UserRow {
   must_change_password?: number;
 }
 
-/** What the rest of the app (and the client) sees. Never includes secrets. */
+/** Never includes secrets. */
 export interface User {
   id: string;
   username: string;
@@ -56,7 +56,7 @@ const ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2 as 
 
 export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{1,31}$/i;
 
-/** Checked whenever a password is set, against the rules in Settings → Server; existing passwords keep working. */
+/** Existing passwords keep working when the rules change. */
 export function validatePassword(pw: string, username?: string) {
   const problem = passwordProblem(pw, username, passwordPolicy());
   if (problem) throw badRequest(problem, { field: "password" });

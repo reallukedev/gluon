@@ -3,8 +3,8 @@ import fs from "node:fs";
 import { hostPath } from "../host/paths";
 
 /**
- * `.gluon-app` in an app's folder says Gluon runs it. The builder writes its draft id there; a
- * move writes a JSON line saying where the app came from. Either way Apps shows it as Gluon's.
+ * The builder writes its draft id into `.gluon-app`; a move writes a JSON line saying where the app
+ * came from.
  */
 
 export interface GluonMarker {
@@ -41,7 +41,7 @@ export function moveMarker(from: { source: string; id: string; name: string }, m
 
 const cache = new Map<string, { mtime: number; value: GluonMarker }>();
 
-/** The marker in `dir`, or null when there's none. Cached by modification time. */
+/** Cached by modification time. */
 export function readMarker(dir: string): GluonMarker | null {
   const file = `${dir}/${MARKER}`;
   let st: fs.Stats;

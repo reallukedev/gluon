@@ -8,8 +8,6 @@ import { schedule } from "./runner";
 import { syncAutoMonitors } from "./auto";
 import { pruneChecks } from "./stats";
 
-/** Side-effect module: uptime monitor scheduler, auto-monitor sync, pruning and search. */
-
 onStart("monitors", () => {
   // Let Docker and the routes file settle before the first sync, then check continuously.
   setTimeout(() => {

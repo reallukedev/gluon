@@ -55,9 +55,8 @@ function parseRange(header: string | null, size: number): Range | "unsatisfiable
 }
 
 /**
- * Stream a file with Range support. Inline for previewable types, attachment when `download` or
- * when the type isn't safe to render. Every response gets a sandboxing CSP so an uploaded HTML/SVG
- * file can never run script on Gluon's origin.
+ * Every response gets a sandboxing CSP so an uploaded HTML/SVG file can never run script on Gluon's
+ * origin.
  */
 export async function streamFile(req: NextRequest, user: User, rawPath: string, download: boolean): Promise<Response> {
   const t = await authorize(user, rawPath, "read");
@@ -108,7 +107,6 @@ export async function streamFile(req: NextRequest, user: User, rawPath: string, 
       "X-Frame-Options": "SAMEORIGIN",
     };
 
-    // Conditional requests.
     const inm = req.headers.get("if-none-match");
     const ims = req.headers.get("if-modified-since");
     if ((inm && inm.split(/\s*,\s*/).some((v) => v === etag || v === `W/${etag}` || v === "*")) || (!inm && ims && Date.parse(ims) >= Date.parse(lastModified))) {

@@ -13,11 +13,8 @@ export interface SpectrumLine {
   id: string;
   label: string;
   state: LineState;
-  /** Extra readout text, e.g. "92% of 6.7 GB". Live CPU/memory is added for containers automatically. */
   detail?: string;
-  /** Said before the state in the readout, e.g. "Old copy from CasaOS". */
   note?: string;
-  /** Leave a small gap before this line (a sub-cluster inside the group, like an old copy). */
   gapBefore?: boolean;
   container?: string;
   href?: string;
@@ -32,7 +29,6 @@ export interface SpectrumGroup {
 
 interface Props {
   groups: SpectrumGroup[];
-  /** Show the legend row. */
   legend?: boolean;
   height?: number;
   /** Label rows below the lines (1–3). Labels use the fewest rows that keep every name whole. */
@@ -51,16 +47,11 @@ const LEGEND: { state: LineState; text: string }[] = [
 const ROW_H = 17;
 const GAP = 16;
 
-/** A group's own width: its lines' hit areas, gaps and side padding. */
 const natural = (g: SpectrumGroup) => g.lines.length * 12 + g.lines.filter((l) => l.gapBefore).length * 8 + 22;
 
 // The rise plays once per page session: the first spectrum to mount claims it.
 let playedIntro = false;
 
-/**
- * The machine at a glance: every container (grouped by app) and every filesystem as one line.
- * State is carried by the line's form. Hover or arrow keys isolate a line and pin a live readout.
- */
 export function Spectrum({ groups, legend = true, height = 88, labelRows: maxRows = 3, label = "Everything running on this server" }: Props) {
   const router = useRouter();
   const stats = useContainerStats();

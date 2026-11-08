@@ -33,9 +33,8 @@ const CHANNELS: { value: UpdateChannel; title: string; body: string }[] = [
 ];
 
 /**
- * Admin: how Gluon updates itself (server-wide, so only shown until someone has chosen). Saving asks
- * for the password again if the sign-in is more than a few minutes old: automatic updates install
- * code as root.
+ * Saving asks for the password again if the sign-in is more than a few minutes old: automatic updates install code as
+ * root.
  */
 export function UpdatesStep() {
   const { next } = useFlow();
@@ -167,7 +166,6 @@ export function UpdatesStep() {
   );
 }
 
-/** Stable or Nightly, as two described choices (a radio group: arrows move, Space/Enter pick). */
 export function ChannelChoice({ value, onChange }: { value: UpdateChannel; onChange: (v: UpdateChannel) => void }) {
   const group = React.useRef<HTMLDivElement>(null);
   return (

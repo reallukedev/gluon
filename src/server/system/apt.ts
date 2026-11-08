@@ -11,11 +11,7 @@ import { publish } from "../events";
 import type { AptLockHolder, PendingPackage, RebootStatus, RestartNeeded, UpdateRunSummary } from "@/lib/system-types";
 import { friendlyName, isImportant, isValidUnit } from "./units";
 
-/**
- * Debian package updates: what's waiting (`apt list --upgradable` + a dry-run for origins and new
- * packages), refreshing package lists (`apt-get update`), who holds apt's locks, and whether the
- * machine needs a restart. Installing lives in ./apt-runner.ts.
- */
+/** Installing lives in ./apt-runner.ts. */
 
 type G = typeof globalThis & {
   __gluonApt?: {
@@ -30,34 +26,29 @@ const state = () => (g.__gluonApt ??= {});
 
 const PENDING_TTL = 10 * 60_000;
 
-// ---------------------------------------------------------------- versions
-
-/** Loose Debian-ish version compare: numeric runs compare as numbers, "~" sorts before anything. */
+/** Debian version order (dpkg's verrevcmp, without epochs): numeric runs compare as numbers, "~" sorts before anything, letters before other symbols. */
 export function compareVersions(a: string, b: string): number {
-  const ta = a.match(/\d+|~|[^\d~]+/g) ?? [];
-  const tb = b.match(/\d+|~|[^\d~]+/g) ?? [];
-  for (let i = 0; i < Math.max(ta.length, tb.length); i++) {
-    const x = ta[i];
-    const y = tb[i];
-    if (x === y) continue;
-    if (x === undefined) return y === "~" ? 1 : -1;
-    if (y === undefined) return x === "~" ? -1 : 1;
-    if (x === "~") return -1;
-    if (y === "~") return 1;
-    const nx = /^\d+$/.test(x);
-    const ny = /^\d+$/.test(y);
-    if (nx && ny) {
-      const d = Number(x) - Number(y);
+  const order = (c: string | undefined) => (c === undefined ? 0 : c === "~" ? -1 : /[A-Za-z]/.test(c) ? c.charCodeAt(0) : c.charCodeAt(0) + 256);
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    while ((i < a.length && !/\d/.test(a[i]!)) || (j < b.length && !/\d/.test(b[j]!))) {
+      const x = i < a.length && !/\d/.test(a[i]!) ? a[i] : undefined;
+      const y = j < b.length && !/\d/.test(b[j]!) ? b[j] : undefined;
+      const d = order(x) - order(y);
       if (d) return d;
-      continue;
+      i++;
+      j++;
     }
-    if (nx !== ny) return nx ? 1 : -1;
-    return x < y ? -1 : 1;
+    const na = /^\d*/.exec(a.slice(i))![0];
+    const nb = /^\d*/.exec(b.slice(j))![0];
+    i += na.length;
+    j += nb.length;
+    const d = Number(na || 0) - Number(nb || 0);
+    if (d) return d;
   }
   return 0;
 }
-
-// ---------------------------------------------------------------- parsing
 
 export interface ListedUpgrade {
   name: string;
@@ -148,8 +139,6 @@ function rebootReason(name: string): PendingPackage["rebootReason"] {
 
 const isSecurity = (suites: string[], origins: string[]) => suites.some((s) => /-security$/.test(s)) || origins.some((o) => /security/i.test(o));
 
-// ---------------------------------------------------------------- first-seen bookkeeping
-
 interface SeenRow {
   package: string;
   candidate: string;
@@ -206,8 +195,6 @@ function trackSeen(pkgs: { name: string; candidate: string; security: boolean }[
     return rows;
   });
 }
-
-// ---------------------------------------------------------------- listing
 
 async function computePending(): Promise<{
   list: PendingPackage[];
@@ -273,7 +260,7 @@ async function computePending(): Promise<{
   return { list, removals: sim.removals };
 }
 
-/** Waiting updates (cached for 10 minutes; pass fresh after apt-get update or an install). */
+/** Cached for 10 minutes; pass fresh after apt-get update or an install. */
 export async function pendingUpdates(opts: { fresh?: boolean } = {}): Promise<{ list: PendingPackage[]; removals: string[]; at: number }> {
   const s = state();
   if (!opts.fresh && s.pending && Date.now() - s.pending.at < PENDING_TTL) return s.pending;
@@ -308,8 +295,6 @@ export function pendingClock(): {
     oldestSecurityAt: r?.sec ?? null,
   };
 }
-
-// ---------------------------------------------------------------- locks
 
 const APT_LOCKS = ["/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/var/lib/apt/lists/lock", "/var/cache/apt/archives/lock"];
 
@@ -393,8 +378,6 @@ export function dpkgInterrupted(): boolean {
   }
 }
 
-// ---------------------------------------------------------------- refresh (apt-get update)
-
 export interface RefreshResult {
   ok: boolean;
   at: number;
@@ -454,7 +437,6 @@ export function explainAptError(out: string): string {
   return line ? line.replace(/^(?:E:|W:|Err:\d*)\s*/, "").slice(0, 240) : "apt couldn't refresh the package lists.";
 }
 
-/** Run `apt-get update` (one at a time), record it, and re-list waiting updates. */
 export async function refreshLists(
   opts: {
     reason: "daily" | "manual" | "retry";
@@ -549,8 +531,6 @@ export function listsUpdatedAt(): number | null {
   return best || null;
 }
 
-// ---------------------------------------------------------------- reboot required
-
 function kernelFlavour(release: string): string {
   const variant = release.match(/-(cloud|rt)-/)?.[1] ?? "";
   return `${variant}:${release.split("-").at(-1)}`;
@@ -628,8 +608,6 @@ export function rebootStatus(): RebootStatus {
     since,
   };
 }
-
-// ---------------------------------------------------------------- services using old libraries
 
 function unitOfPid(pid: number): string | null {
   try {
@@ -748,7 +726,7 @@ async function askNeedrestart(): Promise<RestartNeeded | null> {
   }
 }
 
-/** Reboot status plus services still running old code after an update. Cached for 5 minutes. */
+/** Cached for 5 minutes. */
 export async function restartNeeded(opts: { fresh?: boolean } = {}): Promise<RestartNeeded> {
   const s = state();
   if (!opts.fresh && s.restartNeeded && Date.now() - s.restartNeeded.checkedAt < 5 * 60_000) return { ...s.restartNeeded, reboot: rebootStatus() };

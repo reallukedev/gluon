@@ -7,7 +7,6 @@ import type { VoiceServerCandidate } from "@/lib/network-types";
 /** mumblevoip/mumble-server, the older murmur images, and the like. */
 export const MUMBLE_IMAGE = /(^|\/)(mumble-server|mumblevoip\/mumble-server|murmur)[^/]*(:|$)|murmur/i;
 
-/** Containers on this server that look like a Mumble voice server, for the Network editor. */
 export async function voiceServerCandidates(): Promise<VoiceServerCandidate[]> {
   const list = await docker().listContainers({ all: true });
   return list
@@ -30,9 +29,9 @@ export async function voiceServerCandidates(): Promise<VoiceServerCandidate[]> {
 }
 
 /**
- * Host ports where Mumble answers, each with the host port its UDP side is published on. Mumble
- * bans an address after 10 connections in 2 minutes (successful ones count), so Gluon never sends
- * HTTP or TLS to these and only pings them over UDP, which doesn't count.
+ * Values are the host port each one's UDP side is published on. Mumble bans an address after 10
+ * connections in 2 minutes (successful ones count), so Gluon never sends HTTP or TLS to these and
+ * only pings over UDP, which doesn't count.
  */
 export function mumblePorts(apps: AppSummary[]): Map<number, number> {
   const out = new Map<number, number>([[MUMBLE_PORT, MUMBLE_PORT]]);

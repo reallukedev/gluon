@@ -1,23 +1,5 @@
 "use client";
-/**
- * SegmentBar: one bar split into labelled parts: memory by app, a disk by folder, space by user.
- *
- *   <SegmentBar
- *     label="Memory by app"
- *     total={memTotal}
- *     segments={apps.map((a) => ({ key: a.id, label: a.name, value: a.mem }))}
- *     format={fmt.bytes}
- *     summary={`${fmt.bytes(used)} of ${fmt.bytes(memTotal)} in use`}
- *   />
- *
- * - Parts are drawn in ink at stepped strengths with 1px plate gaps; what is left of `total`
- *   stays as the sunk track. `tone: "attn" | "fault"` marks a part that needs you or is broken
- *   (the readout names it, so colour is never the only signal).
- * - Hover or focus a part (or its legend row) to isolate it: the others drop back and the readout
- *   above the bar names it with its value and share. Arrow keys walk the parts; Escape clears.
- * - `onSelect(key)` makes parts clickable (e.g. open that app).
- * - Values are data: they never animate. Only the isolation fades (150ms).
- */
+/** Values are data: they never animate. Only the isolation fades. */
 import * as React from "react";
 import s from "./segmentBar.module.css";
 
@@ -26,25 +8,19 @@ export interface Segment {
   label: string;
   value: number;
   tone?: "ink" | "attn" | "fault";
-  /** Extra words for the readout, e.g. "3 containers". */
   meta?: string;
 }
 
 interface SegmentBarProps {
   label: string;
   segments: Segment[];
-  /** The whole (e.g. total memory). Defaults to the sum of the parts. */
   total?: number;
   format: (v: number) => string;
-  /** What the readout says when nothing is isolated. */
   summary?: React.ReactNode;
-  /** Name for the unused remainder in the legend, e.g. "Free". Omit to leave it unlabelled. */
   restLabel?: string;
   legend?: boolean;
-  /** Bar thickness in px (default 12). */
   height?: number;
   onSelect?: (key: string) => void;
-  /** Show at most this many parts; the smallest are folded into "Everything else". */
   max?: number;
 }
 

@@ -3,8 +3,8 @@ import type Docker from "dockerode";
 import { docker } from "../docker/client";
 
 /**
- * Reading `docker logs` through the Docker API. Containers without a TTY send a multiplexed stream:
- * frames of [stream(1) 0 0 0 size(4, BE)] + payload. Containers with a TTY send raw bytes.
+ * Containers without a TTY send a multiplexed stream, frames of [stream(1) 0 0 0 size(4, BE)] +
+ * payload; with a TTY, raw bytes.
  */
 
 export interface FoundContainer {
@@ -37,7 +37,6 @@ export async function findContainer(name: string, fallback?: (c: Docker.Containe
   }
 }
 
-/** Streaming demultiplexer. Feed chunks; get back decoded text payloads in order. */
 export class Demuxer {
   private buf: Buffer = Buffer.alloc(0);
   constructor(private readonly tty: boolean) {}
@@ -73,8 +72,8 @@ export async function containerLogLines(c: FoundContainer, opts: { tail?: number
 }
 
 /**
- * Follow a container's logs line by line. Resolves once the stream is open; `onEnd` fires when it
- * closes (container stopped/restarted, Docker restarted). Returns a stop function.
+ * Resolves once the stream is open; `onEnd` fires when it closes (container or Docker restarted).
+ * Returns a stop function.
  */
 export async function followContainerLogs(
   c: FoundContainer,

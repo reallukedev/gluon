@@ -60,7 +60,7 @@ interface MediaFolder {
 
 let bindCache: { at: number; value: Promise<Bind[]> } | null = null;
 
-/** Every host folder a container bind-mounts, with the app it belongs to. Cached for a minute. */
+/** Cached for a minute. */
 function binds(): Promise<Bind[]> {
   if (bindCache && Date.now() - bindCache.at < 60_000) return bindCache.value;
   const value = (async () => {
@@ -107,7 +107,6 @@ export async function mediaFolders(): Promise<MediaFolder[]> {
   return out.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-/** Apps that keep any folder inside `p`. */
 async function appsWithin(p: string): Promise<PlaceApp[]> {
   const byId = new Map<string, PlaceApp>();
   try {
@@ -140,9 +139,8 @@ interface DriveName {
 }
 
 /**
- * Human names for mount points, from the storage inventory: a drive that holds one filesystem is
- * called by what it is ("2.0 TB hard drive"); a partition of a bigger disk keeps its folder name and
- * says which disk it is part of.
+ * A drive holding one filesystem is called by what it is ("2.0 TB hard drive"); a partition keeps its
+ * folder name and says which disk it's part of.
  */
 async function driveNames(): Promise<Map<string, DriveName>> {
   const out = new Map<string, DriveName>();

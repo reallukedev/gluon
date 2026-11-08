@@ -1,10 +1,5 @@
-/* The Voice server tab (Mumble): who's here, the channel tree, registered people, settings and the
-   certificate. Instrument Plate tokens only; the channel tree is drawn in the same 1px hairlines as
-   everything else. */
-
 .panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 
-/* ---------------------------------------------------------------- lead */
 .lead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
 .leadText { display: grid; gap: 6px; min-width: 0; flex: 1 1 320px; }
 .address {
@@ -38,7 +33,6 @@
   .pair { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* ---------------------------------------------------------------- shared list rows */
 .list { margin: 0; padding: 0; list-style: none; }
 .list > li + li { border-top: 1px solid var(--line); }
 .row {
@@ -97,7 +91,6 @@
 .hint { margin: 0; font-size: var(--text-sm); color: var(--muted); line-height: 1.5; max-width: 72ch; }
 .panelNote { padding: 12px 18px; border-top: 1px solid var(--line); }
 
-/* ---------------------------------------------------------------- channel tree */
 .tree { margin: 0; padding: 6px 0; list-style: none; }
 .node {
   --depth: 0;
@@ -151,7 +144,6 @@
   .node:hover { background: var(--panel-2); }
 }
 
-/* ---------------------------------------------------------------- settings */
 .settings { display: grid; }
 .settings > * + * { border-top: 1px solid var(--line); }
 .setting { padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: 10px 20px; align-items: start; }
@@ -236,7 +228,6 @@
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .saveBar { animation: none; } }
 
-/* ---------------------------------------------------------------- certificate */
 .cert { display: grid; gap: 16px; }
 .certNow { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: baseline; }
 .certNow p { margin: 0; }
@@ -246,7 +237,6 @@
 .certControls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
 .certSelect { min-width: min(280px, 100%); flex: 0 1 320px; }
 
-/* ---------------------------------------------------------------- not managed yet */
 .facts2 { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 18px; font-size: var(--text-md); }
 .facts2 dt { color: var(--muted); font-size: var(--text-sm); padding-top: 1px; }
 .facts2 dd { margin: 0; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
@@ -259,7 +249,6 @@
 .changes li::marker { color: var(--faint); }
 .dialogStack { display: grid; gap: 16px; }
 
-/* ---------------------------------------------------------------- install flow */
 .steps { display: grid; gap: 18px; }
 .portInput { width: min(200px, 100%); }
 .review { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 18px; font-size: var(--text-md); }

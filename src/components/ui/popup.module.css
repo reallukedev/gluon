@@ -1,10 +1,4 @@
-/*
- * Shared surface for tooltips, menus, popovers and select lists.
- * They grow out of their trigger (Base UI's --transform-origin): 0.96 + fade over 150ms on
- * --ease-out (opened many times a day), out in 100ms. Tooltips are faster (125ms) and instant
- * once one is already open.
- * Anything opened from the keyboard appears instantly. Reduced motion keeps only the fade.
- */
+/* Anything opened from the keyboard appears instantly. */
 
 .positioner { z-index: 60; outline: 0; }
 
@@ -113,7 +107,6 @@ a.item { cursor: pointer; }
   .popup { padding: 6px; }
 }
 
-/* Select */
 .selectTrigger {
   position: relative;
   display: inline-flex;

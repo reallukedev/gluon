@@ -17,10 +17,7 @@ const LINE_ORDER: Record<LineState, number> = {
   stopped: 3,
 };
 
-/**
- * Installed apps as the widget catalog shows them: every app this person can see, each with the services
- * Gluon can read (and whether they're connected). `apps` must already be filtered to what the person may see.
- */
+/** `apps` must already be filtered to what the person may see. */
 export function installedApps(user: Pick<User, "role">, apps: AppSummary[], records: IntegrationRecord[]): InstalledApp[] {
   const admin = user.role === "admin";
   const detected = detectServices(apps);

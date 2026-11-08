@@ -1,6 +1,5 @@
 "use client";
 
-/** A file picked or dropped for upload, with its folder path relative to the drop ("" at the top). */
 export interface Incoming {
   file: File;
   rel: string;
@@ -57,7 +56,6 @@ export function readDrop(dt: DataTransfer): Promise<{ files: Incoming[]; dirs: s
   })();
 }
 
-/** Files from an <input type="file" webkitdirectory> (webkitRelativePath = "Folder/sub/file"). */
 export function fromInput(list: FileList | null): { files: Incoming[]; dirs: string[] } {
   const files: Incoming[] = [];
   const dirs = new Set<string>();

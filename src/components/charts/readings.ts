@@ -6,20 +6,16 @@ import { useFormat } from "@/components/PrefsProvider";
 import type { HostSample } from "@/server/metrics/sampler";
 
 /**
- * Every live machine figure in the app comes from here, so Processor reads the same on Home,
- * Status and System. Each reading is the figure itself, one line of context in numbers, and the
- * series its chart draws. "Usually" is the median of the last 24 hours, and only appears once
- * there are a couple of hours to go on; until then the context gives the peak on the chart.
+ * Every live machine figure comes from here, so Processor reads the same on Home, Status and System. "Usually" is the
+ * median of the last 24 hours, shown only once there are a couple of hours to go on.
  */
 export type ReadingKey = "cpu" | "mem" | "net" | "disk" | "temp";
 
 export interface MachineReading {
   key: ReadingKey;
   label: string;
-  /** The figure without its unit, e.g. "13" or "11.4". */
   value: string;
   unit: string;
-  /** One short line of context, in numbers. */
   context: string;
   points: [number, number][];
   yMax?: number;
@@ -31,7 +27,6 @@ export interface MachineReadings {
   readings: Partial<Record<ReadingKey, MachineReading>>;
   last: HostSample | undefined;
   status: ReturnType<typeof useLive>["status"];
-  /** What the left end of every live chart says. */
   span: string;
   windowMs: number;
 }
@@ -44,7 +39,6 @@ export const LIVE_WINDOW_MS = 6 * 60_000;
 
 type History = Record<string, [number, number][]>;
 
-/** The median, once there's enough history to call it usual. */
 function usualOf(values: number[]): number | null {
   if (values.length < MIN_HISTORY) return null;
   const v = [...values].sort((a, b) => a - b);

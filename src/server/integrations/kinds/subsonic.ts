@@ -45,7 +45,6 @@ function http(ctx: KindContext<Config>) {
   return client(def, ctx, (status) => `The music server answered ${status}: it didn't accept Gluon's credentials.`);
 }
 
-/** Call a Subsonic method and unwrap `subsonic-response`, turning Subsonic errors into sentences. */
 async function call(ctx: KindContext<Config>, method: string, query: Record<string, string | number> = {}, o: { timeoutMs?: number; signal?: AbortSignal } = {}) {
   const res = obj(await http(ctx).json(`/rest/${method}.view`, { query, ...o }));
   const sr = obj(res["subsonic-response"]);
@@ -111,8 +110,6 @@ async function recent(ctx: KindContext<Config>, params: Record<string, unknown>)
         : null,
   };
 }
-
-// ------------------------------------------------------------------ universal search
 
 /** Navidrome's web app has a page per artist and album; other servers' pages aren't known, so no link. */
 function webLink(ctx: KindContext<Config>, server: string | null, kind: "artist" | "album", id: string): string | undefined {

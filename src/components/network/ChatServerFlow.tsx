@@ -17,9 +17,8 @@ import f from "./flow.module.css";
 import c from "./chat.module.css";
 
 /**
- * A chat server (XMPP) on the internet: which server → its domain → federation, web side and the
- * certificate → review. Chat apps connect straight to the server; Caddy only holds the domain's
- * certificate (which Gluon copies into the server) and fronts its optional web side.
+ * Chat apps connect straight to the server; Caddy only holds the domain's certificate (which Gluon copies in) and
+ * fronts its optional web side.
  */
 
 export type ChatTarget = { mode: "new" } | { mode: "edit"; id: string } | { mode: "convert"; id: string };
@@ -71,7 +70,6 @@ function fromRoute(r: SubdomainRouteT, convert: boolean): Form {
 interface Props {
   target: ChatTarget;
   data: RoutesResponse;
-  /** Live checks, to say whether the domain's DNS is already in place. */
   status: NetworkStatus | undefined;
   commit: Commit;
   onClose: () => void;

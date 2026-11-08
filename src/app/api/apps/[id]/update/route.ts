@@ -9,7 +9,6 @@ import { lockApps } from "@/server/apps/lock";
 
 const STATE_TEXT: Partial<Record<UmbrelAppState, string>> = { updating: "Updating", starting: "Starting", restarting: "Restarting", ready: "Running", running: "Running", stopped: "Stopped" };
 
-/** Pull newer images and recreate the containers that changed, streaming Compose's output. */
 export const POST = route({ auth: "admin", recent: true }, async ({ req, params, user, ip, zone }) => {
   const app = await getApp(decodeURIComponent(String(params.id)));
   if (!app) throw notFound("That app");

@@ -1,7 +1,3 @@
-/**
- * First drafts: what Gluon makes of an image, a pasted compose file or a repository before the
- * person has touched anything. Everything here is a suggestion shown on the New app page.
- */
 import type { AppDetails, AppSpec, BuilderSource, BuilderTarget, ImageLookup, SecretNames, WebSettings } from "@/lib/builder-types";
 import { applyAllFixes, mergeSecrets } from "./analyze";
 import { newCompose, parseCompose, readService, readServices, serviceNames, setEnv, setPendingFolders, setPorts, setVolumes, stringify, scalarText, type EnvRow } from "./compose";
@@ -23,16 +19,12 @@ export const titleize = (s: string) =>
     .trim()
     .replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 
-/** The first port from `want` up that nothing on the server uses. */
 export function nextFreePort(want: number, used: { has: (p: number) => boolean }): number | null {
   for (let p = Math.max(1024, want); p < 65536 && p < want + 2000; p++) if (!used.has(p)) return p;
   return null;
 }
 
-/**
- * The web page's port for a new draft, moved off ports something already uses (and off the
- * privileged range). `serverPorts` are the TCP ports the server already uses; this app's own count too.
- */
+/** Moves the web port off ports something already uses, and off the privileged range. */
 export function withFreeWebPort(spec: AppSpec, target: BuilderTarget, serverPorts: Iterable<number>): AppSpec {
   const want = spec.web.port;
   if (!spec.web.service || !want) return spec;
@@ -47,27 +39,23 @@ export function withFreeWebPort(spec: AppSpec, target: BuilderTarget, serverPort
   return spec;
 }
 
-/** The port most likely to be the web page. */
 export function pickWebPort(ports: { port: number; proto: "tcp" | "udp" }[]): number | null {
   const tcp = ports.filter((p) => p.proto === "tcp" && !NOT_WEB.has(p.port)).map((p) => p.port);
   return WEB_PORTS.find((p) => tcp.includes(p)) ?? tcp[0] ?? null;
 }
 
-/** What the New app flow makes of an image: the spec, secret values it lifted, and what it did in words. */
 export interface ImageDraft {
   spec: AppSpec;
   secretValues: Record<string, Record<string, string>>;
   said: string[];
 }
 
-/** The service name an image gets: its repository's last part when that's a valid name. */
 export function serviceNameFor(image: string): string {
   const last = parseImage(image).repository.split("/").pop() ?? "app";
   const svc = slugify(last);
   return SERVICE_RE.test(svc) && !RESERVED_SERVICES.has(svc) ? svc : "app";
 }
 
-/** A friendly app name from an image reference: linuxserver/jellyfin:latest → Jellyfin. */
 export function nameForImage(image: string): string {
   const parts = parseImage(image).repository.split("/");
   const last = parts.pop() ?? "";
@@ -77,11 +65,7 @@ export function nameForImage(image: string): string {
   return titleize(last);
 }
 
-/**
- * A one-service app from an image and what its registry says about it: the web page on its most
- * likely port, the other ports, each declared volume as an app-data folder, and the image's own
- * environment defaults so they can be seen and changed. Secret-looking defaults become secrets.
- */
+/** A one-service app from an image and its registry's answer. Secret-looking environment defaults become secrets. */
 export function draftFromImage(image: string, lookup: ImageLookup | null, name?: string): ImageDraft {
   const ref = parseImage(image);
   const svc = serviceNameFor(image);
@@ -130,7 +114,6 @@ export function draftFromImage(image: string, lookup: ImageLookup | null, name?:
   return { spec: { details, web, compose: stringify(doc) }, secretValues, said };
 }
 
-/** Guess the web page of a compose file: a service publishing a web-looking port. */
 export function guessWeb(text: string): Partial<WebSettings> {
   const p = parseCompose(text);
   if (!p.ok) return {};
@@ -158,10 +141,6 @@ export interface Prepared {
   name: string | null;
 }
 
-/**
- * Make a pasted (or repository) compose file ready for the builder: find the web page, apply every
- * fix Gluon can make, and lift secret-looking values out of the file.
- */
 export function prepareCompose(text: string, target: BuilderTarget, source: BuilderSource, webIn: Partial<WebSettings> = {}): Prepared {
   const web: WebSettings = { ...blankWeb(), ...guessWeb(text), ...webIn };
   const original = parseCompose(text);

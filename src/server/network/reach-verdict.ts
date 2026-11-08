@@ -1,13 +1,9 @@
 import type { PortReach, PublicReach, ReachOutcome } from "@/lib/network-types";
 
 /**
- * Reading what Gluon saw when it connected to this network's public address from inside (through
- * the router, "hairpin NAT"). Pure: the probes live in reach.ts.
- *
- * A port that answers on the LAN but not on the public address only proves the router doesn't
- * forward it when some other port on that address does get through to this server. If nothing
- * answers at all, the router may simply not loop traffic back inside, so Gluon can't tell.
- * TCP ports that don't answer are also checked from the internet; "unconfirmed" means that check failed.
+ * A port that answers on the LAN but not on the public address only proves the router doesn't forward
+ * it when some other port on that address gets through; if nothing answers, the router may just not
+ * loop traffic back inside. "unconfirmed" means the check from the internet failed.
  */
 
 export interface ReachProbe {

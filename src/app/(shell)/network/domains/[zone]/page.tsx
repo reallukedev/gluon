@@ -9,7 +9,6 @@ export async function generateMetadata({ params }: { params: Promise<{ zone: str
 export default async function DomainPage({ params }: { params: Promise<{ zone: string }> }) {
   await requireAdmin();
   const zone = decodeURIComponent((await params).zone).toLowerCase();
-  // Best effort: the page shows why if Cloudflare can't be read, and retries. Not awaited, so the
-  // title goes out before Cloudflare answers.
+  // Not awaited, so the title goes out before Cloudflare answers. The page shows why if it can't be read.
   return <DomainView zone={zone} initial={zoneRecords(zone).catch(() => null)} />;
 }

@@ -8,7 +8,7 @@ import { Time } from "@/components/ui/Time";
 import type { JobStep, StorageJob } from "@/lib/storage-types";
 import s from "./storage.module.css";
 
-/** Events from the storage job stream (NDJSON on POST, SSE on reattach: same payloads). */
+/** NDJSON on POST, SSE on reattach: same payloads. */
 export type JobEvent =
   | { type: "job"; job: StorageJob }
   | { type: "step"; id: string; text: string; state: JobStep["status"]; undo: boolean; detail: string | null; error: string | null }
@@ -46,7 +46,6 @@ export function reduceJob(st: JobRun, e: JobEvent): JobRun {
 
 const STEP_WORD: Partial<Record<JobStep["status"], string>> = { skipped: "didn't run", undone: "put back", "undo-failed": "couldn't put back", failed: "failed" };
 
-/** A checklist of the operation's steps, drawn with the state-line vocabulary. */
 export function JobSteps({ steps }: { steps: JobStep[] }) {
   const firstUndo = steps.findIndex((x) => x.undo);
   return (
@@ -82,7 +81,6 @@ export function JobOutcome({ run }: { run: JobRun }) {
   );
 }
 
-/** Follow a running (or finished) job over SSE; used after a reload (`?job=`). */
 export function useJobFollow(id: string | null) {
   const [run, setRun] = React.useState<JobRun>(emptyRun);
   const [finished, setFinished] = React.useState(false);
@@ -103,7 +101,6 @@ export function useJobFollow(id: string | null) {
   return run;
 }
 
-/** Shows an operation by id (reattaching to it if it's still running). */
 export function JobDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
   const run = useJobFollow(id);
   const running = !!run.job && !run.result && run.job.status === "running";

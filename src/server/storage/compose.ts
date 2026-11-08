@@ -8,9 +8,8 @@ import { hostPath, isWithin } from "../host/paths";
 import type { LineChange } from "@/lib/storage-types";
 
 /**
- * What Docker has bound where, and how to rewrite compose files when a mount point moves.
- * Rewrites are surgical: only the host side of volume definitions changes, the rest of the file
- * (comments, quoting, indentation, container-side paths) stays byte-for-byte identical.
+ * Rewrites are surgical: only the host side of volume definitions changes, and the rest of the file
+ * stays byte-for-byte identical.
  */
 
 export interface ContainerBind {
@@ -86,8 +85,6 @@ export async function boundVolumes(): Promise<{ name: string; device: string }[]
   }
 }
 
-// ---------------------------------------------------------------- compose commands
-
 export interface ComposeProject {
   project: string;
   files: string[];
@@ -136,8 +133,6 @@ export async function resolvedVolumes(p: ComposeProject, opts: { files?: string[
   }
   return out;
 }
-
-// ---------------------------------------------------------------- rewriting
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -191,10 +186,7 @@ function lineOf(text: string, offset: number): number {
   return n;
 }
 
-/**
- * Plan an edit to a scalar node: replace `oldPath` with `newPath` inside [from, to) of the value,
- * provided the source text is a literal copy of the value (no escapes) so offsets line up.
- */
+/** Only when the source text is a literal copy of the value (no escapes), so offsets line up. */
 function scalarEdit(text: string, node: Scalar, from: number, to: number, oldPath: string, newPath: string, problems: string[]): Edit | null {
   if (!node.range || typeof node.value !== "string") return null;
   const value = node.value;
@@ -315,8 +307,6 @@ export function lineChanges(before: string, after: string): LineChange[] {
   return out;
 }
 
-// ---------------------------------------------------------------- file access
-
 /** Read a host file through its real path (so symlinks resolve on the host, not in the container). */
 export function readHostText(realPath: string): string {
   return fs.readFileSync(hostPath(realPath), "utf8");
@@ -364,7 +354,6 @@ export function restoreHostFile(realPath: string, backup: string) {
   writeHostTextAtomic(realPath, text);
 }
 
-/** Map a path under `from` to the same place under `to`. */
 export function movePath(p: string, from: string, to: string): string {
   // Non-paths ("none" for swap, "UUID=…") are left alone.
   if (!p.startsWith("/") || p.includes("\0")) return p;

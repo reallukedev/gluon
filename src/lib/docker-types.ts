@@ -1,12 +1,7 @@
-/**
- * Shapes shared by the Docker manager's API (src/server/dockerx) and its screens
- * (src/components/docker). No server imports here.
- */
 import type { LineState } from "./types";
 
 export type AppSource = "gluon" | "casaos" | "umbrel" | "compose" | "docker";
 
-/** The app a container (or a resource through its containers) belongs to, as Apps shows it. */
 export interface AppRef {
   id: string;
   name: string;
@@ -20,14 +15,12 @@ export interface AppRef {
 export interface Guard {
   level: "block" | "warn";
   who: "gluon" | "umbrel" | "casaos";
-  /** One sentence for the row and the confirmation: "Gluon runs from this image." */
   message: string;
 }
 
 export interface ContainerRef {
   id: string;
   name: string;
-  /** Docker's state: running | exited | created | restarting | paused | dead. */
   state: string;
   line: LineState;
   app: AppRef | null;
@@ -36,24 +29,17 @@ export interface ContainerRef {
   platform: "umbrel" | null;
 }
 
-// ---------------------------------------------------------------- images
-
 export type ImageUse = "running" | "stopped" | "unused" | "leftover";
 
 export interface DockerImage {
-  /** Full id, "sha256:…". */
   id: string;
-  /** 12 hex characters. */
   short: string;
-  /** Repository name, from a tag or a digest reference, when it has one. */
   repo: string | null;
   /** "repo:tag" references (never digests). */
   tags: string[];
-  /** "repo@sha256:…" references. */
   digests: string[];
   created: number;
   size: number;
-  /** Bytes shared with other images, when Docker knows. */
   shared: number | null;
   /** What removing it alone would give back (size minus shared). */
   own: number;
@@ -77,14 +63,11 @@ export interface ImagesResponse {
   platform: "umbrel" | "casaos" | "none";
 }
 
-/** One line of a pull, normalised from Docker's progress messages. */
 export type PullEvent =
   | { type: "status"; text: string }
   | { type: "layer"; id: string; phase: "waiting" | "downloading" | "verifying" | "downloaded" | "extracting" | "done" | "exists"; current?: number; total?: number }
   | { type: "done"; ok: boolean; message: string; changed?: boolean; imageId?: string }
   | { type: "error"; message: string };
-
-// ---------------------------------------------------------------- volumes
 
 export interface VolumeMount extends ContainerRef {
   destination: string;
@@ -98,7 +81,6 @@ export interface DockerVolume {
   driver: string;
   mountpoint: string | null;
   created: number | null;
-  /** Compose project and volume name from its labels. */
   project: string | null;
   composeName: string | null;
   containers: VolumeMount[];
@@ -118,8 +100,6 @@ export interface VolumeSizes {
   at: number;
   sizes: Record<string, number | null>;
 }
-
-// ---------------------------------------------------------------- networks
 
 export interface NetworkMember extends ContainerRef {
   ipv4: string | null;
@@ -164,10 +144,7 @@ export interface NetworksResponse {
   containers: Attachable[];
 }
 
-// ---------------------------------------------------------------- disk use and cleanups
-
 export interface DockerDisk {
-  /** Where Docker keeps its data on the host, and the filesystem that holds it. */
   root: string | null;
   fs: { mount: string; size: number; free: number } | null;
   total: number;
@@ -181,16 +158,12 @@ export type CleanupKind = "images" | "containers" | "volumes" | "buildcache";
 
 export interface CleanupItem {
   id: string;
-  /** How a person recognises it: "ghcr.io/immich-app/postgres", "immich-redis". */
   label: string;
-  /** Mono text under the label (a tag, an id). */
   detail: string | null;
-  /** Plain words: "Older version of the image Immich uses". */
   note: string | null;
   bytes: number | null;
   /** Ticked when the preview opens: things that are safe to lose. */
   preselect: boolean;
-  /** Something to know before removing it (for example "May hold an app's data"). */
   caution: string | null;
   app: AppRef | null;
 }
@@ -210,8 +183,6 @@ export interface CleanupResult {
   removed: number;
   skipped: { label: string; reason: string }[];
 }
-
-// ---------------------------------------------------------------- one container
 
 export interface ContainerInspect {
   id: string;

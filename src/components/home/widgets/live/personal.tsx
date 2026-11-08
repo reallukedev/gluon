@@ -13,8 +13,6 @@ import { Gate, perSize, Quiet, RowsSkeleton, useDebounced, useWidgetData, Widget
 import { SetUp } from "../kit";
 import l from "./live.module.css";
 
-// ---------------------------------------------------------------- weather
-
 export interface WeatherConfig {
   lat?: number;
   lon?: number;
@@ -41,7 +39,6 @@ function WeatherGlyph({ icon, isDay, className }: { icon: WIcon; isDay: boolean;
   return <I className={className} aria-hidden />;
 }
 
-/** Temperatures over the next hours, scaled to their own range (works below zero). */
 function TempLine({ hours, temp }: { hours: WeatherData["hours"]; temp: (c: number) => string }) {
   const fmt = useFormat();
   if (hours.length < 2) return null;
@@ -244,8 +241,6 @@ export function WeatherSettings({ config, onChange }: SettingsProps<WeatherConfi
   );
 }
 
-// ---------------------------------------------------------------- calendar
-
 export interface CalendarConfig {
   url?: string;
   days?: 3 | 7 | 14;
@@ -328,7 +323,7 @@ export function CalendarWidget({ item, size, openSettings }: WidgetProps<Calenda
   );
 }
 
-/** A timestamp inside day `k` for labelling (noon avoids zone edge cases). */
+/** Noon avoids zone edge cases. */
 function dayStart(e: CalendarEvent, k: string) {
   const [y, m, d] = k.split("-").map(Number) as [number, number, number];
   return e.allDay ? Date.UTC(y, m - 1, d, 12) : e.start;
@@ -390,8 +385,6 @@ export function CalendarSettings({ config, onChange }: SettingsProps<CalendarCon
     </div>
   );
 }
-
-// ---------------------------------------------------------------- feed
 
 export interface FeedConfig {
   url?: string;

@@ -1,7 +1,6 @@
 import { Page, Skeleton } from "@/components/ui/Surface";
 import s from "@/components/apps/routeStates.module.css";
 
-/** An app's page while it loads: icon and name, state, tabs, then its panels. */
 export default function AppLoading() {
   return (
     <Page pending>

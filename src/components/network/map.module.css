@@ -1,4 +1,3 @@
-/* The network map: hops as hairline plates joined by 1px wires. */
 .wrap { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .map { margin: 0; padding: 18px 18px 16px; min-width: 0; }
 
@@ -96,7 +95,6 @@ button.node:active { transform: scale(calc(1 - 0.015 * var(--motion))); transiti
 .lanes b { color: var(--ink); font-weight: 620; }
 .laneKey { width: 16px; height: 16px; margin-top: 2px; color: var(--muted); }
 
-/* Details of the pressed hop. */
 .details {
   scroll-margin-top: 72px;
   min-width: 0;

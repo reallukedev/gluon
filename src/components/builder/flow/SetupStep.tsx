@@ -16,10 +16,6 @@ import { FlowNav } from "./FlowFrame";
 import s from "../builder.module.css";
 import f from "./flow.module.css";
 
-/**
- * What the app needs to run here: its name, its web page, and for each service its folders and
- * settings (secrets included). Ports, networks and the rest stay in the full builder.
- */
 export function SetupStep({ draft, detail, services, yamlBroken, issues, target, usedPorts, onFix, onNext }: { draft: Draft; detail: CustomAppDetail; services: ServiceForm[]; yamlBroken: boolean; issues: Issue[]; target: BuilderTarget; usedPorts: Map<number, string>; onFix: (id: string) => void; onNext: () => void }) {
   const { data: places } = useApi<Places>("/api/files/places", { revalidateOnFocus: false });
   const d = draft.spec.details;

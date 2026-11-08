@@ -6,8 +6,8 @@ import { cached } from "../integrations/cache";
 import type { ScheduleData, ScheduleItem } from "@/lib/home-widgets-types";
 
 /**
- * "Coming up": what the server will do on its own next. The host's systemd timers (with plain names for the common
- * ones), Gluon's automatic update window, and certificate renewals Caddy will make.
+ * What the server will do on its own next: systemd timers, Gluon's update window and Caddy's
+ * certificate renewals.
  */
 
 /** Plain names for timers every Debian/Ubuntu box has, and the usual suspects on home servers. */
@@ -85,8 +85,8 @@ function parseJson(stdout: string): Timer[] {
 }
 
 /**
- * Older systemd (no JSON): the plain table. Times there are the host's wall clock ("Tue 2026-09-29 00:35:14 CDT"), so
- * they're read with the host's current UTC offset (`date +%z`), which is right except across a DST change.
+ * Times there are the host's wall clock, read with its current UTC offset (`date +%z`), which is
+ * right except across a DST change.
  */
 function parsePlain(stdout: string, offsetMin: number): Timer[] {
   const out: Timer[] = [];
@@ -127,7 +127,6 @@ async function listTimers(): Promise<Timer[]> {
   return parsePlain(stdout, offset);
 }
 
-/** Description and last result for each unit, in one call. */
 async function describe(units: string[]): Promise<Map<string, { description: string | null; result: string | null }>> {
   const out = new Map<string, { description: string | null; result: string | null }>();
   if (!units.length) return out;
@@ -174,7 +173,7 @@ async function systemItems(): Promise<ScheduleItem[]> {
     });
 }
 
-/** Gluon's own automatic update window (server local time, as the updater checks it). */
+/** Server local time, as the updater checks it. */
 function gluonItems(): ScheduleItem[] {
   const out: ScheduleItem[] = [];
   const u = getSetting("updates");
@@ -188,7 +187,10 @@ function gluonItems(): ScheduleItem[] {
   return out;
 }
 
-/** Caddy renews a certificate once a third of its life is left. Reuses the last network check (up to 6 hours old). */
+/**
+ * Caddy renews a certificate once a third of its life is left. Reuses the last network check (up to 6
+ * hours old).
+ */
 async function certificateItems(): Promise<ScheduleItem[]> {
   try {
     const mod = await import("../network/status");

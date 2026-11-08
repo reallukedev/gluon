@@ -54,9 +54,8 @@ function once(host: string, port: number, request: Buffer, timeoutMs: number): P
 }
 
 /**
- * Ask a Minecraft Java server (or mc-router in front of it) for its status, saying `address` is
- * what the player typed. Falls back to the 1.6 ping when the server only speaks the old one.
- * Never throws.
+ * `address` is what the player typed. Falls back to the 1.6 ping when the server only speaks the old
+ * one. Never throws.
  */
 export async function slpPing(host: string, port: number, address: string, timeoutMs = 5000): Promise<McPing> {
   const at = Date.now();

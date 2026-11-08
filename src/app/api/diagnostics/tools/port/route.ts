@@ -9,5 +9,4 @@ const body = z.object({
   timeoutMs: z.coerce.number().int().min(500).max(10_000).default(4000),
 });
 
-/** Can the server open a TCP connection to host:port? */
 export const POST = route({ auth: "admin", body }, ({ body }) => portCheck(body.host, body.port, body.timeoutMs));

@@ -5,7 +5,7 @@ import { inspectSchema } from "@/server/appstore/schemas";
 import { getAppRow, readSecrets } from "@/server/appstore/db";
 import { parseGithub } from "@/lib/builder/names";
 
-/** Read a repository: what's in it and what Gluon would make of it. The token is used, never echoed. */
+/** The token is used, never echoed. */
 export const POST = route({ auth: "admin", body: inspectSchema, burst: { limit: 20, windowMs: 60_000 } }, async ({ body }) => {
   const ref = parseGithub(body.repo);
   if (!ref) throw new AppError("invalid", "Enter a GitHub repository as owner/name or its github.com address.", 400, { field: "repo" });

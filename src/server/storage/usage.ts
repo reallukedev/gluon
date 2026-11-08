@@ -12,10 +12,8 @@ import { Job, listJobs } from "./oplog";
 import type { StorageJob, UsageEntry, UsageResult } from "@/lib/storage-types";
 
 /**
- * "What's using space here?": `du -x -B1 -a -d2` over one folder, run in the background at idle I/O
- * priority. du prints each child's total as soon as that child is done, which doubles as progress.
- * The second level lets the Space map draw folders inside folders and drill in without a new scan.
- * Results are kept in storage_jobs so the answer is still there after a reload (and a restart).
+ * Runs at idle I/O priority. du prints each child's total as soon as it's done, which doubles as
+ * progress; the second level lets the Space map drill in without a new scan.
  */
 
 const TOP_N = 60;
@@ -76,7 +74,6 @@ export async function validateUsagePath(raw: string): Promise<string> {
   return real;
 }
 
-/** Start (or join) a scan of `path`. */
 export async function startUsage(user: User | null, raw: string): Promise<StorageJob> {
   const p = await validateUsagePath(raw);
   const existing = [...running().values()].find((r) => r.path === p);

@@ -7,7 +7,6 @@ import { runCleanup } from "@/server/storage/cleanup";
 import { startRename } from "@/server/storage/rename";
 import { startSetup } from "@/server/storage/setup";
 
-/** GET /api/storage/operations?kind=&limit=: recent storage operations (newest first). */
 export const GET = route(
   {
     auth: "admin",
@@ -21,11 +20,8 @@ export const GET = route(
 );
 
 /**
- * POST /api/storage/operations: change something (admin, re-auth within 10 min).
- * mount / unmount / persist / cleanup answer with JSON { message, … } when done.
- * rename / setup start a background job and answer with an NDJSON stream of its steps
- * ({type:"job"}, {type:"step"}…, {type:"done", ok, status, message}). Closing the stream doesn't stop
- * the job; follow it again with GET /api/storage/operations/:id/stream.
+ * mount, unmount, persist and cleanup answer with JSON when done. rename and setup start a background job
+ * and stream its steps as NDJSON; closing the stream doesn't stop the job (follow it on /:id/stream).
  */
 export const POST = route({ auth: "admin", recent: true, body: operationBody }, async ({ body, user, ip, zone, req }) => {
   const where = { ip, zone };

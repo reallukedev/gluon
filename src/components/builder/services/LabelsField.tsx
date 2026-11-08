@@ -10,7 +10,6 @@ import type { Draft } from "../state";
 import { useRows } from "./useRows";
 import s from "../builder.module.css";
 
-/** Docker labels, for tools that read them (Traefik, Watchtower, Homepage…). */
 export function LabelsField({ draft, form: f, issues }: { draft: Draft; form: ServiceForm; issues: Issue[] }) {
   const base = `services.${f.name}.labels`;
   const [rows, setRows] = useRows<LabelRow>(f.labels, (r) => !labelKeyError(r.key), (r) => r, (done) => draft.editCompose((doc) => setLabels(doc, f.name, done)));

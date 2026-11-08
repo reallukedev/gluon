@@ -1,0 +1,13 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  uptime-kuma:
+    <<: *stand-in
+    image: louislam/uptime-kuma:2
+    command: [port=3001, mb=90, work=4000]
+    ports: ["3001:3001"]
+    volumes: ["/srv/apps/uptime-kuma/data:/app/data"]

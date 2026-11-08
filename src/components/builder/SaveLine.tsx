@@ -2,7 +2,6 @@
 import { Time } from "@/components/ui/Time";
 import s from "./builder.module.css";
 
-/** Whether the draft is saved: a short line that turns dashed while saving and red when it can't. */
 export function SaveLine({ state, savedAt, error, onRetry }: { state: string; savedAt: number; error: string | null; onRetry: () => void }) {
   return (
     <p className={s.saveState} data-state={state} aria-live="polite">

@@ -26,12 +26,10 @@ interface Props {
   working?: boolean;
   failed?: boolean;
   complete?: boolean;
-  /** Without a web page there's nothing to publish, so the address step is left out. */
   hasAddress?: boolean;
   children: React.ReactNode;
 }
 
-/** The page around every step: where you are, one line of state, and the full builder one click away. */
 export function FlowFrame({ step, detail, draft, working, failed, complete, hasAddress = true, children }: Props) {
   const name = draft?.spec.details.name.trim() || detail?.spec.details.name.trim() || "";
   const steps = STEPS.filter((x) => hasAddress || x.key !== "address");
@@ -72,7 +70,6 @@ export function FlowFrame({ step, detail, draft, working, failed, complete, hasA
   );
 }
 
-/** Back on the left, the step's forward action on the right; on phones they share the width. */
 export function FlowNav({ back, children }: { back?: { label: string; onClick: () => void }; children: React.ReactNode }) {
   return (
     <div className={f.nav}>

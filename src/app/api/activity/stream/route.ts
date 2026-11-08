@@ -8,7 +8,6 @@ const query = z.object({
   user: z.string().max(64).optional(),
   target: z.string().max(500).optional(),
   q: z.string().trim().max(200).optional(),
-  /** "failed" = only things that failed or went wrong. */
   outcome: z.enum(["ok", "failed"]).optional(),
 });
 

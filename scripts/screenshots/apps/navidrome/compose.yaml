@@ -1,0 +1,13 @@
+x-stand-in: &stand-in
+  build: ../../stand-in
+  pull_policy: build
+  restart: unless-stopped
+  shm_size: 2g
+
+services:
+  navidrome:
+    <<: *stand-in
+    image: deluan/navidrome:0.58
+    command: [port=4533, mb=60]
+    ports: ["4533:4533"]
+    volumes: ["/srv/apps/navidrome/data:/data", "/DATA/music:/music:ro"]

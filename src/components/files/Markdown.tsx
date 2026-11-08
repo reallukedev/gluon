@@ -3,10 +3,8 @@ import * as React from "react";
 import s from "./markdown.module.css";
 
 /**
- * A small, safe Markdown reader for READMEs and notes: headings, paragraphs, lists (with task
- * boxes), quotes, code blocks, tables, rules, and inline code, emphasis and links. It builds React
- * elements (never HTML strings), so nothing in a file can run in the page. Links open only
- * http(s) and mailto addresses, in a new tab. Anything it doesn't know stays as plain text.
+ * Builds React elements (never HTML strings), so nothing in a file can run in the page. Links open only http(s) and
+ * mailto.
  */
 export function Markdown({ source }: { source: string }) {
   const blocks = React.useMemo(() => parse(source.replace(/\r\n?/g, "\n")), [source]);
@@ -28,7 +26,6 @@ function parse(src: string): Node[] {
       i++;
       continue;
     }
-    // Fenced code
     const fence = line.match(/^\s*(```+|~~~+)\s*([\w+-]*)/);
     if (fence) {
       const close = fence[1]!;
@@ -43,7 +40,6 @@ function parse(src: string): Node[] {
       );
       continue;
     }
-    // Heading
     const h = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
     if (h) {
       const level = Math.min(h[1]!.length, 4);
@@ -52,20 +48,18 @@ function parse(src: string): Node[] {
       i++;
       continue;
     }
-    // Rule
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
       out.push(<hr key={k()} />);
       i++;
       continue;
     }
-    // Quote
     if (/^\s*>/.test(line)) {
       const body: string[] = [];
       while (i < lines.length && /^\s*>/.test(lines[i]!)) body.push(lines[i++]!.replace(/^\s*>\s?/, ""));
       out.push(<blockquote key={k()}>{parse(body.join("\n"))}</blockquote>);
       continue;
     }
-    // Table: a header row, then a |---|---| row
+    // A header row, then a |---|---| row.
     if (line.includes("|") && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(lines[i + 1]!)) {
       const cells = (l: string) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
       const head = cells(line);
@@ -101,7 +95,6 @@ function parse(src: string): Node[] {
       );
       continue;
     }
-    // Lists
     const li = line.match(/^(\s*)([-*+]|\d+[.)])\s+/);
     if (li) {
       const ordered = /\d/.test(li[2]!);
@@ -139,7 +132,6 @@ function parse(src: string): Node[] {
       );
       continue;
     }
-    // Paragraph: until a blank line or another block starts
     const para: string[] = [];
     while (i < lines.length && lines[i]!.trim() && !/^\s*(#{1,6}\s|```|~~~|>|([-*+]|\d+[.)])\s+)/.test(lines[i]!)) para.push(lines[i++]!);
     if (!para.length) para.push(lines[i++]!);
@@ -150,7 +142,6 @@ function parse(src: string): Node[] {
 
 const SAFE_URL = /^(https?:\/\/|mailto:)/i;
 
-/** Inline code, links, images (as links), bold, italic, strikethrough and hard breaks. */
 function inline(text: string): Node[] {
   const out: Node[] = [];
   let rest = text;

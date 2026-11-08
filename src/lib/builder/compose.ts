@@ -1,9 +1,6 @@
 /**
- * The builder's compose model. The compose text is the source of truth: the form reads a projection
- * of each service from the YAML document and writes its edits back into the same document, so keys
- * the form doesn't know about (labels, cap_add, comments…) survive every edit.
- *
- * Isomorphic: used by the editor in the browser and by the server when it checks and publishes.
+ * The compose text is the source of truth: the form reads a projection of each service from the YAML document
+ * and writes edits back into it, so keys the form doesn't know (labels, cap_add, comments…) survive. Isomorphic.
  */
 import { Document, LineCounter, Scalar, YAMLMap, YAMLSeq, isMap, isPair, isScalar, isSeq, parseDocument, type Node, type Pair } from "yaml";
 import type { Issue } from "@/lib/builder-types";
@@ -12,7 +9,6 @@ import { shellJoin, shellSplit } from "./names";
 export interface ParsedCompose {
   doc: Document;
   lines: LineCounter;
-  /** YAML syntax problems, with line numbers. */
   issues: Issue[];
   ok: boolean;
 }
@@ -44,8 +40,6 @@ export function parseCompose(text: string): ParsedCompose {
 }
 
 export const stringify = (doc: Document) => doc.toString({ lineWidth: 0, indent: 2, indentSeq: true });
-
-// ---------------------------------------------------------------- reading helpers
 
 export function scalarText(n: unknown): string | null {
   if (isScalar(n)) return n.value === null || n.value === undefined ? "" : String(n.value);
@@ -80,14 +74,11 @@ export function nodeJs<T = unknown>(node: unknown, doc: Document): T {
   return node as T;
 }
 
-/** A plain JS view of one service, merges resolved (for reads that don't need positions). */
 export function serviceJs(doc: Document, name: string): Record<string, unknown> {
   const n = serviceNode(doc, name);
   const v = n ? nodeJs<Record<string, unknown> | null>(n, doc) : null;
   return v && typeof v === "object" ? v : {};
 }
-
-// ---------------------------------------------------------------- the form's projection
 
 export interface PortRow {
   host: number | null;
@@ -160,7 +151,6 @@ export interface ServiceForm {
   privileged: boolean;
   /** Container paths waiting for the person to choose a server folder (media libraries). */
   pendingFolders: string[];
-  /** Keys set in the compose file that the form doesn't show. */
   extraKeys: string[];
 }
 
@@ -344,7 +334,7 @@ function readHealth(v: unknown): { health: HealthForm | null; disabled: boolean 
   return { health: { test, interval: text(v.interval), timeout: text(v.timeout), retries: text(v.retries), startPeriod: text(v.start_period) }, disabled: false };
 }
 
-/** The form's view of one service. Reads merge-resolved values, so `<<: *defaults` services show fully. */
+/** Reads merge-resolved values, so `<<: *defaults` services show fully. */
 export function readService(doc: Document, name: string): ServiceForm {
   const o = serviceJs(doc, name);
   let build: ServiceForm["build"] = null;
@@ -406,8 +396,6 @@ export function readServices(doc: Document): ServiceForm[] {
   return serviceNames(doc).map((n) => readService(doc, n));
 }
 
-// ---------------------------------------------------------------- writing (edits in place)
-
 function ensureServices(doc: Document): YAMLMap {
   let m = servicesMap(doc);
   if (!m) {
@@ -424,7 +412,6 @@ function quoted(doc: Document, v: string): Scalar {
   return s;
 }
 
-/** Set, or delete when empty, one key of a service. */
 function setKey(doc: Document, service: string, key: string, value: unknown) {
   const n = serviceNode(doc, service);
   if (!n) return;
@@ -461,7 +448,6 @@ export function setMemory(doc: Document, service: string, memory: string) {
   setKey(doc, service, "mem_limit", memory.trim().toLowerCase().replace(/\s+/g, ""));
 }
 
-/** Remove empty maps left behind under deploy: after a nested delete. */
 function pruneDeploy(n: YAMLMap) {
   for (const path of [["deploy", "resources", "limits"], ["deploy", "resources", "reservations"], ["deploy", "resources"], ["deploy"]]) {
     const v = n.getIn(path, true);
@@ -512,7 +498,6 @@ export interface NetworkDecl {
   external: boolean;
 }
 
-/** Networks declared at the top of the file. */
 export function readNetworks(doc: Document): NetworkDecl[] {
   const top = doc.get("networks", true);
   if (!isMap(top)) return [];
@@ -612,7 +597,6 @@ export function setPendingFolders(doc: Document, service: string, targets: strin
   setKey(doc, service, PENDING_KEY, [...new Set(targets)]);
 }
 
-/** Mount a server folder at a pending target, and stop waiting for it. */
 export function choosePendingFolder(doc: Document, service: string, target: string, hostPath: string) {
   const f = readService(doc, service);
   setVolumes(doc, service, [...f.volumes, { kind: "host", source: hostPath, target, readOnly: false, raw: null, long: false }]);
@@ -682,13 +666,11 @@ export function renameService(doc: Document, from: string, to: string) {
   }
 }
 
-/** A fresh one-service compose document. */
 export function newCompose(service = "app", image = ""): string {
   const doc = new Document({ services: { [service]: { image, restart: "unless-stopped" } } });
   return stringify(doc);
 }
 
-/** Compose variables a text uses (`${NAME}`, `${NAME:-default}`, `$NAME`), excluding escaped `$$`. */
 export function variablesIn(text: string): { name: string; hasDefault: boolean }[] {
   const out = new Map<string, boolean>();
   const t = text.replace(/\$\$/g, "");

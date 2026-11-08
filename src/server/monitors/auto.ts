@@ -8,16 +8,15 @@ import { deleteMonitorRow, insertMonitor, listMonitorRows, updateMonitorRow } fr
 import { clearFindings, invalidateMonitors } from "./runner";
 
 /**
- * Automatic monitors: one per enabled public address (checked through its public URL, so DNS,
- * certificates, Caddy and the router are all covered) and one per app with a web port (checked on
- * the LAN side at 127.0.0.1, since Gluon shares the host network). Kept in step with the routes
- * file and Docker; the person can pause them or tune timing, but not retarget them.
+ * Public addresses are checked through their public URL, so DNS, certificates, Caddy and the router
+ * are all covered; apps on the LAN side at 127.0.0.1. The person can pause them or tune timing, but
+ * not retarget them.
  */
 
 interface Desired {
   name: string;
   target: string;
-  /** Config fields owned by the sync (overwritten every time). */
+  /** Owned by the sync and overwritten every time. */
   derived: Pick<MonitorConfig, "method" | "expectStatus" | "followRedirects" | "ignoreTls" | "severity" | "app" | "keyword" | "keywordAbsent">;
 }
 

@@ -15,9 +15,8 @@ const body = z.discriminatedUnion("action", [
 ]);
 
 /**
- * Set up two-step sign-in before the first session starts. Used when an admin accepts an invite from
- * outside home: the invite link plus a password isn't enough to run the server from the internet, so
- * the account is created and then held here until an authenticator app is linked.
+ * Two-step setup before the first session, for an admin accepting an invite from outside home: an
+ * invite link plus a password isn't enough to run the server from the internet.
  */
 export const POST = route({ auth: "public", body, burst: { limit: 20, windowMs: 60_000 } }, async ({ body, session, ip, zone, req }) => {
   if (!session || session.pending !== "enrol") throw new AppError("no_pending", "This step timed out. Sign in again from the start.", 410);

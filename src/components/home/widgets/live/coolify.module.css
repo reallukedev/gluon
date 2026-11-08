@@ -1,4 +1,3 @@
-/* Coolify deployments: rows of state lines, the same grammar as the spectrum. */
 .verdict { margin: 0; font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rows > li + li { border-top: 1px solid var(--line); }
 .rows[data-cols="2"] > li:nth-child(2) { border-top: 0; }

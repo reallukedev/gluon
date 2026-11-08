@@ -5,9 +5,8 @@ import { hostPath, isWithin, readHostFileOr } from "../host/paths";
 import type { FilesystemInfo } from "@/lib/files-types";
 
 /**
- * The host's mount table, read from /proc/1/mountinfo (pid 1's mount namespace). Used to find the
- * mount a path lives on (for trash and same-filesystem renames), to refuse mount points as
- * destructive targets, and to map container paths (/data/uploads) to host paths.
+ * Read from /proc/1/mountinfo, pid 1's mount namespace, so it's the host's table and not this
+ * container's.
  */
 
 export interface MountEntry {
@@ -99,10 +98,7 @@ export function isVirtualFs(t: string) {
   return VIRTUAL.has(t);
 }
 
-/**
- * Every host path at which the same directory is visible, via bind mounts. `/var/lib/docker` on this
- * server is a bind of `/srv/docker`; protecting one must protect the other.
- */
+/** `/var/lib/docker` on this server is a bind of `/srv/docker`; protecting one must protect the other. */
 export function hostAliases(p: string): string[] {
   const m = mountOf(p);
   if (!m) return [p];
@@ -118,10 +114,7 @@ export function hostAliases(p: string): string[] {
   return [...out];
 }
 
-/**
- * Map a path inside this container (e.g. /data/uploads/x) to the host path that is the same file,
- * preferring one on the same host mount as `near` so rename(2) works without copying.
- */
+/** Prefers a host path on the same mount as `near`, so rename(2) works without copying. */
 export function containerToHost(p: string, near?: string): string | null {
   const m = containing(selfMounts(), p);
   if (!m) return null;
@@ -206,7 +199,7 @@ export function freeBytes(p: string): number | null {
   return s ? s.bavail * s.bsize : null;
 }
 
-/** Free bytes on a container-local path (e.g. /data). */
+/** For a container-local path (e.g. /data). */
 export function localFreeBytes(p: string): number | null {
   const m = containing(selfMounts(), p);
   try {

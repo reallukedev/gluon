@@ -1,6 +1,3 @@
-/* Minecraft servers: one row per server, the state line first, commands at the end. Only whole rows show; the
-   rest are counted in a "more" line (useFit). Rows go two-up on very wide widgets; under ~380px of width the
-   commands fold into a menu (Start stays a button). */
 .wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; container-type: inline-size; overflow: hidden; padding-bottom: 4px; }
 .summary { flex: none; margin: 0; padding: var(--pt, 16px) var(--px, 16px) 6px; font-size: var(--text-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rows { list-style: none; margin: 0; padding: 0; flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; align-content: start; }
@@ -40,11 +37,9 @@
 .inline { display: flex; gap: 6px; }
 .compact { display: none; }
 
-/* "4 more servers": the rest of the list, in a sheet. */
 .more { flex: none; align-self: flex-start; margin: 2px var(--px, 16px) 6px; padding: 2px 0; font-size: var(--text-sm); color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line-strong); border-radius: 3px; }
 @media (hover: hover) and (pointer: fine) { .more:hover { color: var(--ink); text-decoration-color: currentColor; } }
 
-/* The full list inside the dialog: same rows, no clipping, edge to edge. */
 .sheet { overflow: visible; container-type: inline-size; margin: -10px -22px -10px; --px: 22px; }
 .sheet > .row:first-child { border-top-color: transparent; }
 
@@ -57,7 +52,6 @@
   .compact { display: flex; }
 }
 
-/* Short wide widgets: name and details on one line. */
 @container (min-width: 520px) {
   .wrap[data-dense] .row { min-height: 42px; padding-block: 5px; }
   .wrap[data-dense] .text { grid-template-columns: minmax(0, max-content) minmax(0, 1fr); align-items: baseline; column-gap: 12px; }

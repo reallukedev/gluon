@@ -1,4 +1,4 @@
-/** Shapes the Voice server tab reads. Types only, so client components can import them. */
+/** Types only, so client components can import them. */
 
 export type VoiceProblemCode = "stopped" | "not_managed" | "unreachable" | "wrong_secret" | "booting" | "no_server";
 
@@ -9,7 +9,6 @@ export interface VoicePort {
   ip: string;
 }
 
-/** How Gluon would make Ice reachable, or why it can't. */
 export interface ManageOption {
   ok: boolean;
   /** builder: the app's spec is changed and republished. compose: its compose file is edited and applied. */
@@ -74,11 +73,9 @@ export interface VoiceSetting {
   label: string;
   help: string;
   kind: SettingKind;
-  /** Effective value. Secrets are sent only so the admin can reveal them. */
+  /** Secrets are sent only so the admin can reveal them. */
   value: string;
-  /** Where the value comes from. */
   source: "gluon" | "compose" | "default";
-  /** The compose file's variable, when it sets this. */
   envName: string | null;
   envValue: string | null;
   /** What Mumble uses when nothing is saved here: the compose file's value or its own default. */
@@ -108,7 +105,6 @@ export interface VoiceCertView {
   writable: boolean;
   served: { subject: string | null; issuer: string | null; notAfter: number | null; selfSigned: boolean; fingerprint: string | null } | null;
   sync: { ok: boolean; message: string; checkedAt: number | null; copiedAt: number | null } | null;
-  /** Why Gluon can't keep it current here, when it can't. */
   blocked: string | null;
 }
 

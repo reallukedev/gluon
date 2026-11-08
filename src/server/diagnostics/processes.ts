@@ -7,8 +7,8 @@ import { sharedPoll } from "./poller";
 import type { ProcessInfo, ProcessSnapshot } from "@/lib/diagnostics-types";
 
 /**
- * Top processes from /proc (host PID namespace). CPU% comes from utime+stime deltas between samples.
- * Only the top entries get their command line, user and owner looked up.
+ * CPU% comes from utime+stime deltas between samples. Only the top entries get their command line,
+ * user and owner looked up.
  */
 
 const CLK_TCK = Number((process.env.GLUON_CLK_TCK ?? process.env.TEND_CLK_TCK) ?? 100);

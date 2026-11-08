@@ -13,7 +13,6 @@ export interface ConflictItem {
   name: string;
   isDir: boolean;
   existing: FileEntry | null;
-  /** Incoming size, when known (uploads). */
   size?: number | null;
 }
 

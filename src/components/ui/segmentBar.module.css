@@ -35,7 +35,6 @@
 .part[data-tone="fault"] { background: var(--fault); }
 .part[data-clickable] { cursor: pointer; }
 .rest { flex: 1 1 0; }
-/* Isolation: everything but the active part steps back. */
 .root[data-active] .part:not([data-on]) { opacity: 0.25; }
 
 .legend {

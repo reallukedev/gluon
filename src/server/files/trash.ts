@@ -17,10 +17,8 @@ import { startJob } from "./jobs";
 import { measureQuiet } from "./du";
 
 /**
- * Trash lives on the same filesystem as the thing deleted (`<mount root>/.gluon-trash/<id>/<name>`),
- * so trashing is an instant rename and never needs free space. Each item also gets a sidecar
- * `<id>.json` so the trash can be rebuilt from disk if the database is lost (or another Gluon
- * instance trashed it).
+ * Trash lives on the same filesystem as the thing deleted, so trashing is an instant rename. Each
+ * item gets a sidecar `<id>.json` so the trash can be rebuilt from disk if the database is lost.
  */
 
 interface Row {
@@ -81,10 +79,7 @@ function cachedSize(real: string): number | null {
   }
 }
 
-/**
- * Move one resolved path to its filesystem's trash. Callers have already authorised and checked
- * removability. Returns the new trash row.
- */
+/** Callers have already authorised and checked removability. */
 export async function moveToTrash(real: string, userId: string | null, expect?: Pick<fs.Stats, "dev" | "ino"> | null): Promise<TrashItem> {
   const m = mountOf(real);
   if (!m) throw new AppError("no_mount", "Couldn't work out which drive that's on.", 500);
@@ -180,7 +175,7 @@ async function exists(p: string) {
   }
 }
 
-/** Trash several paths for a person. Stops at the first refusal so nothing half-happens silently. */
+/** Stops at the first refusal so nothing half-happens silently. */
 export async function trashPaths(user: User, paths: string[], where: { ip: string; zone: string }): Promise<{ items: TrashItem[] }> {
   const scope = await scopeFor(user);
   const targets: Awaited<ReturnType<typeof authorize>>[] = [];
@@ -289,7 +284,7 @@ export async function restore(
   return { restored };
 }
 
-/** Permanently delete trash items (admin). Runs as a job: big folders take a while. */
+/** Runs as a job: big folders take a while. */
 export function deleteForever(user: User, ids: string[] | "all", where: { ip?: string; zone?: string }): FileJob {
   const rows = ids === "all" ? all<Row>("SELECT * FROM trash") : ids.map((id) => one<Row>("SELECT * FROM trash WHERE id = ?", id)).filter((r): r is Row => !!r);
   if (!rows.length) throw new AppError("empty", ids === "all" ? "The trash is already empty." : "Those items are no longer in the trash.", 409);
@@ -336,7 +331,7 @@ export function deleteForever(user: User, ids: string[] | "all", where: { ip?: s
   );
 }
 
-/** Bring the trash table in line with what's on disk (imports sidecars, drops vanished items). */
+/** Imports sidecars and drops vanished items. */
 export async function reconcileTrash() {
   const seen = new Set<string>();
   const mounts = hostMounts().filter((m) => !isVirtualFs(m.fstype) && !m.readOnly);

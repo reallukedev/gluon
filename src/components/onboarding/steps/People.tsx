@@ -19,11 +19,7 @@ const ROLES: { value: Role; title: string; body: string }[] = [
   { value: "admin", title: "An admin", body: "Can change everything on the server, including other people's accounts." },
 ];
 
-/**
- * Admin (the one who set the server up): invite the people who live there. Each invite shows its
- * link and a QR code once (only a fingerprint is stored), then the next can be made. Invites still
- * waiting (made earlier, or before a sign-out) are listed from the server.
- */
+/** Each invite's link and QR code show once: only a fingerprint is stored. */
 export function PeopleStep() {
   const { next } = useFlow();
   const open = useApi<InviteView[]>("/api/people/invites", { revalidateOnFocus: false });

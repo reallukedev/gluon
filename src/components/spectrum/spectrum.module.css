@@ -25,7 +25,6 @@
 }
 .group:first-child { border-left: 0; padding-left: 2px; }
 .lines { flex: 1; display: flex; align-items: stretch; justify-content: space-evenly; gap: 2px; min-width: 24px; }
-/* Callout: a hairline drops from the group's edge to its label row. */
 .group::after {
   content: "";
   position: absolute;
@@ -58,7 +57,6 @@
 }
 .group:first-child .groupLabel { left: 6px; }
 
-/* A generous hit area around each 2px line. */
 .hit {
   position: relative;
   width: 10px;
@@ -70,7 +68,6 @@
   border-radius: 3px;
 }
 .hit:focus-visible { outline: 2px solid var(--ink); outline-offset: -1px; }
-/* An old copy's lines sit a step apart from the app they copy. */
 .hit[data-gap] { margin-left: 8px; }
 
 .line {
@@ -87,7 +84,6 @@
 .line[data-state="stopped"] { opacity: 0.2; }
 .line[data-state="paused"], .line[data-state="unknown"] { background: repeating-linear-gradient(to bottom, var(--ink) 0 2px, transparent 2px 5px); opacity: 0.5; }
 .line[data-state="attention"] { background: var(--attn); opacity: 1; }
-/* The doubled line. Collapses when the item is resolved (state changes). */
 .line::after {
   content: "";
   position: absolute;
@@ -104,7 +100,6 @@
 .line[data-state="attention"]::after { opacity: 1; transform: scaleY(1); }
 .hit:has(.line[data-state="attention"]) { width: 14px; }
 
-/* Isolation on hover/focus */
 .field[data-active] .line { opacity: 0.18; }
 .field[data-active] .line[data-state="attention"],
 .field[data-active] .line[data-state="unhealthy"] { opacity: 0.35; }

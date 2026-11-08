@@ -17,7 +17,7 @@ export function getPrefs(userId: string): Prefs {
   return parsed.success ? parsed.data : defaultPrefs;
 }
 
-/** Merge a partial update over the stored prefs; unknown keys are dropped, invalid values rejected. */
+/** Unknown keys are dropped, invalid values rejected. */
 export function updatePrefs(userId: string, patch: Record<string, unknown>): Prefs {
   const merged = prefsSchema.parse({ ...getPrefs(userId), ...patch });
   run(
@@ -29,7 +29,7 @@ export function updatePrefs(userId: string, patch: Record<string, unknown>): Pre
   return merged;
 }
 
-/** Mirror the appearance prefs into a cookie so the next server render has no theme flash. */
+/** So the next server render has no theme flash. */
 export async function writeUiCookie(p: Prefs) {
   (await cookies()).set(UI_COOKIE, encodeUiCookie(uiBits(p)), {
     httpOnly: false,

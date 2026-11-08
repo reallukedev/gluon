@@ -1,16 +1,9 @@
 import { edgeCovered, type DnsRecordT, type DnsType } from "@/lib/cloudflare-types";
 
 /**
- * What DNS should say for the public addresses, and what to change in Cloudflare to get there.
- * Pure: no network, no store. sync.ts feeds it the routes, the zone's records and the addresses.
- *
- * Every record is an A (and optionally AAAA) record at this network's address. With the proxy on,
- * web names go through Cloudflare (orange cloud): the base domain, the wildcard that covers every
- * name one level under it, and any deeper name Cloudflare's free certificate still covers. Chat
- * and voice can't be proxied, and addresses marked "direct" opt out, so they get records of their
- * own that point straight here. Game addresses (Minecraft through mc-router, forwarded game ports)
- * always point straight here, and so do the extra names the admin asks Gluon to keep, unless one
- * of those is marked as proxied.
+ * Pure: sync.ts feeds it the routes, the zone's records and the addresses. Web names go through
+ * Cloudflare's proxy where its free certificate covers them; chat, voice, game addresses and names
+ * marked "direct" can't or won't be proxied, so they get records of their own pointing straight here.
  */
 
 /** Written on every record Gluon makes, so it can tell its own records from anyone else's. */
@@ -49,8 +42,8 @@ export interface PlanInput {
   games?: PlanGame[];
   kept?: PlanKept[];
   /**
-   * Names another updater (cloudflare-ddns) is still writing. Gluon plans them but changes nothing
-   * there until it stops, so the two never take turns rewriting the same record.
+   * Gluon plans these but changes nothing there until the other updater stops, so the two never take
+   * turns rewriting the same record.
    */
   defer?: string[];
   /** Something Gluon keeps couldn't be read this time (the game addresses), so nothing is removed. */
@@ -178,12 +171,9 @@ const same = (a: Pick<DnsRecordT, "content" | "proxied"> & { type: string }, b: 
 const strip = (r: ExistingRecord): DnsRecordT => ({ type: r.type as DnsType, content: r.content, proxied: r.proxied });
 
 /**
- * Compare what Gluon wants with the zone's records.
- *
- * `adopted` names are ones the person handed to Gluon: their records count as Gluon's own. Any
- * other record Gluon didn't make blocks its name ("conflict") and nothing there is touched.
- * Gluon's own records at names it no longer wants are removed, but never at a name it only
- * skipped for want of an address.
+ * `adopted` names were handed to Gluon, so their records count as its own. Any other record Gluon
+ * didn't make blocks its name ("conflict"). Gluon's own records at names it no longer wants are
+ * removed, but never at a name it only skipped for want of an address.
  */
 export function plan(input: PlanInput, existing: ExistingRecord[], adopted: Iterable<string> = []): Plan {
   const { wants, held, problems, covered } = wanted(input);

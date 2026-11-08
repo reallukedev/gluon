@@ -17,7 +17,6 @@ const post = z.object({
     .or(z.literal("").transform(() => null)),
   role: z.enum(["member", "admin"]).default("member"),
   days: z.number().int().min(1).max(90).default(7),
-  /** One link several people can use until it expires. */
   reusable: z.boolean().default(false),
 });
 

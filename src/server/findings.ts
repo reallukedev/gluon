@@ -8,7 +8,7 @@ export type Severity = "fault" | "attention" | "info";
 /** A finding that comes back this soon after clearing continues its episode instead of starting a new one. */
 export const REOPEN_GRACE_MS = 10 * 60_000;
 
-/** A one-click fix the server knows how to perform. `action` maps to a handler in alerts/remedies. */
+/** `action` maps to a handler in alerts/remedies. */
 export interface Remedy {
   action: string;
   label: string;
@@ -79,10 +79,7 @@ export interface FindingInput {
   remedy?: Remedy | null;
 }
 
-/**
- * Record that a condition is currently true. Idempotent: the same id updates in place.
- * Returns "new" when it (re)opened, so the caller can notify.
- */
+/** Idempotent: the same id updates in place. Returns "new" when it (re)opened, so the caller can notify. */
 export function raise(f: FindingInput): "new" | "updated" {
   const t = now();
   const existing = one<Row>("SELECT * FROM findings WHERE id = ?", f.id);
@@ -144,7 +141,6 @@ export function raise(f: FindingInput): "new" | "updated" {
   return "updated";
 }
 
-/** The condition is no longer true. */
 export function resolve(id: string, note?: string) {
   const r = one<Row>("SELECT * FROM findings WHERE id = ? AND resolved_at IS NULL", id);
   if (!r) return false;
@@ -154,7 +150,7 @@ export function resolve(id: string, note?: string) {
   return true;
 }
 
-/** Resolve every open finding of `kind` whose id isn't in `stillTrue`. Used by checks that enumerate. */
+/** For checks that enumerate. */
 export function resolveMissing(kind: string, stillTrue: Set<string>) {
   const open = all<{ id: string }>("SELECT id FROM findings WHERE kind = ? AND resolved_at IS NULL", kind);
   for (const { id } of open) if (!stillTrue.has(id)) resolve(id);

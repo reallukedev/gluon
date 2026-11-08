@@ -14,9 +14,8 @@ import { addStarter } from "./import";
 import { copyToVersion, newVersionName, pruneVersions, removeVersions, versionDir, versionsOnDisk } from "./versions";
 
 /**
- * Sites as people see them: a draft, an address, and the version that address serves. Whether a
- * site is live is read from routes.json every time (someone may have turned the address off on the
- * Network page, or restored an older routes file), never from a copy kept here.
+ * Whether a site is live is read from routes.json every time, since someone may have turned the
+ * address off on the Network page or restored an older routes file.
  */
 
 type Where = { ip: string; zone: string };
@@ -25,8 +24,8 @@ type SiteRoute = SubdomainRoute & { site: NonNullable<SubdomainRoute["site"]> };
 export const routeIdFor = (id: string) => `site-${id}`;
 
 /**
- * The site's route, as long as it's shaped like one. routes.json is edited by hand too, so anything
- * else in it (a null, a route with no host) is ignored instead of breaking the Sites page.
+ * routes.json is edited by hand too, so anything else in it is ignored instead of breaking the Sites
+ * page.
  */
 function routeOf(cfg: RoutesConfig | null, id: string): SiteRoute | null {
   const routes: unknown[] = Array.isArray(cfg?.routes) ? cfg!.routes : [];
@@ -118,9 +117,8 @@ export interface PublishInput {
 }
 
 /**
- * Publish the draft: copy it into a new version, point the site's address at it through the same
- * checked save as the Network page (Caddy must accept it before anything is saved), and only then
- * record it. If Caddy says no, the new copy is removed and the old version keeps serving.
+ * The address goes through the same checked save as the Network page and the version is recorded only
+ * after; if Caddy says no, the new copy is removed and the old version keeps serving.
  */
 export function publishSite(user: User, where: Where, id: string, input: PublishInput): Promise<SiteDetail> {
   return withSite(id, async () => {
@@ -168,11 +166,7 @@ export function publishSite(user: User, where: Where, id: string, input: Publish
   });
 }
 
-/**
- * Whether anything serves a version after a failed save: routes.json points at it ("saved"),
- * Caddy's running config does ("loaded"), neither does ("not-served"), or Caddy can't be asked
- * ("unknown"). Only "not-served" lets the copy go; any other leftover is cleared by pruning later.
- */
+/** Only "not-served" lets the copy go; any other leftover is cleared by pruning later. */
 async function servedNow(id: string, version: string): Promise<"saved" | "loaded" | "not-served" | "unknown"> {
   if (routeOf(tryReadConfig(), id)?.site.version === version) return "saved";
   try {
@@ -188,7 +182,7 @@ function forget(id: string, versions: string[]) {
   for (const v of versions) run("DELETE FROM site_versions WHERE site_id = ? AND version = ?", id, v);
 }
 
-/** Point the address back at an earlier version. The draft stays as it is. */
+/** The draft stays as it is. */
 export function rollbackSite(user: User, where: Where, id: string, version: string): Promise<SiteDetail> {
   return withSite(id, async () => {
     const row = siteRow(id);
@@ -212,7 +206,7 @@ export function rollbackSite(user: User, where: Where, id: string, version: stri
 
 const versionWhen = (v: string) => `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)} ${v.slice(9, 11)}:${v.slice(11, 13)} UTC`;
 
-/** Turn the address off. The site, its address and its versions stay, so publishing again brings it back. */
+/** The site, its address and its versions stay, so publishing again brings it back. */
 export function unpublishSite(user: User, where: Where, id: string): Promise<SiteDetail> {
   return withSite(id, async () => {
     const row = siteRow(id);
@@ -224,7 +218,6 @@ export function unpublishSite(user: User, where: Where, id: string): Promise<Sit
   });
 }
 
-/** Delete the site: its address, every published version and the draft. */
 export function deleteSite(user: User, where: Where, id: string): Promise<{ ok: true }> {
   return withSite(id, async () => {
     const row = siteRow(id);

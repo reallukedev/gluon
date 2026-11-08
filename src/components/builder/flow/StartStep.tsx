@@ -20,7 +20,6 @@ import f from "./flow.module.css";
 
 type Job = ReturnType<typeof useJob>;
 
-/** The run itself, streamed, then a plain answer: it's running (open it), or what went wrong. */
 export function StartStep({ detail: d, job, target, address, onRetry, onBackToReview }: { detail: CustomAppDetail; job: Job; target: BuilderTarget; address: AddressState; onRetry: () => void; onBackToReview: () => void }) {
   const { view, running, startError, follow } = job;
   const name = d.spec.details.name.trim() || "The app";
@@ -70,7 +69,6 @@ export function StartStep({ detail: d, job, target, address, onRetry, onBackToRe
 
 type AddressResult = { state: "idle" | "saving" } | { state: "saved"; url: string; warnings: RouteWarning[] } | { state: "failed"; message: string };
 
-/** It's running: open it, find it, and (when chosen) its new public address with any warnings. */
 function Running({ detail: d, address: { choice, update } }: { detail: CustomAppDetail; address: AddressState }) {
   const name = d.spec.details.name.trim() || "the app";
   const w = d.spec.web;

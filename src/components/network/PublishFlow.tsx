@@ -23,12 +23,7 @@ import { DnsHelp } from "./DnsHelp";
 import { certUploads, hasNewCert, httpsFieldOf, httpsFormFrom, httpsSetting, httpsSummary, verifyHttps, type HttpsForm } from "./https-form";
 import f from "./flow.module.css";
 
-/**
- * "Put an app on the internet": pick the app → choose its address (live preview, whether the name is
- * free, direct or through Cloudflare) → protection (does it have a login; publish all of it or only
- * some paths) → review where it will sit on the map → save. Editing an address reuses the same steps,
- * opened on the review. Redirects and the "everything else" app use a shorter version.
- */
+/** Editing reuses the same steps, opened on the review. */
 
 export type FlowTarget = { mode: "new"; appId?: string } | { mode: "edit"; id: string } | { mode: "redirect"; id?: string } | { mode: "fallback" };
 
@@ -39,7 +34,6 @@ const LABEL_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 const HOST_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const PATH_RE = /^[A-Za-z0-9._~-]+(\/[A-Za-z0-9._~-]+)*$/;
 const MATCH_RE = /^\/[A-Za-z0-9._~/-]*\*?$/;
-/** The domain picker's "type the whole name" choice. */
 const OTHER = "__other__";
 const URL_RE = /^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?(\/[A-Za-z0-9._~%/-]*)?$/;
 
@@ -48,10 +42,8 @@ interface Form {
   other: boolean;
   port: string;
   lane: "direct" | "cloudflare";
-  /** With Cloudflare's proxy on: skip it and go straight to this network. */
   direct: boolean;
   label: string;
-  /** Which domain the name sits in: "" for the base domain, a Cloudflare domain, or OTHER for a full name typed in. */
   domain: string;
   path: string;
   name: string;
@@ -104,7 +96,6 @@ function blank(): Form {
   };
 }
 
-/** Redirects that lead to this subdomain (its short links). */
 function linksTo(routes: RouteT[], host: string): RedirectRouteT[] {
   return routes.filter((r): r is RedirectRouteT => r.type === "redirect" && hostOf(r.target) === host.toLowerCase());
 }
@@ -155,7 +146,6 @@ interface Props {
   apps: AppSummary[] | undefined;
   exposure: ExposureReport | undefined;
   publicIp: string | null;
-  /** Live checks: the IPv6 address and what DNS says about saved names. */
   status: NetworkStatus | undefined;
   commit: Commit;
   onClose: () => void;
@@ -260,7 +250,6 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
     }
   }, [apps, target, choose]);
 
-  // ---- derived
   const port = Number(form.port);
   const direct = mode === "app" && form.lane === "direct";
   const domain = form.domain || base;
@@ -314,7 +303,6 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
   const linkSkip = new Set([ownLinks[0]?.id].filter(Boolean) as string[]);
   const nameOf = (r: RouteT) => data.apps[r.id]?.name ?? r.name;
 
-  // Is the address free? One live line under the name.
   const availability: { state: "running" | "unhealthy"; text: string } | null = (() => {
     if (mode === "redirect" || mode === "fallback") {
       if (mode === "fallback") return null;
@@ -343,7 +331,6 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
     return t ? { state: "unhealthy", text: `Already used by ${nameOf(t)}.` } : { state: "running", text: "Free." };
   })();
 
-  // Does it have a login? The admin's setting first, then Gluon's own look at the page.
   const lan = exposure?.lan.find((l) => l.proto === "tcp" && l.port === port);
   const routeExp = existing ? exposure?.internet.find((x) => x.routeId === existing.id) : undefined;
   const declared = loginOverride ?? (app?.hasLogin !== "unknown" ? app?.hasLogin : undefined);
@@ -441,7 +428,6 @@ export function PublishFlow({ target, data, apps, exposure, publicIp, status, co
   async function go(to: Step) {
     const i = steps.indexOf(to);
     if (i > idx) {
-      // Validate every step up to the target.
       for (const s of steps.slice(0, i)) {
         const e = check(s);
         if (Object.keys(e).length) {
@@ -1151,7 +1137,6 @@ function ScopeChoice({ on, onPick, title, text }: { on: boolean; onPick: () => v
   );
 }
 
-/** Where the address will sit on the map: one lane from a visitor to the app. */
 function MiniLane({ lane, end }: { lane: "direct" | "cloudflare"; end: React.ReactNode }) {
   const hops: { icon: React.ReactNode; name: string }[] = [
     { icon: <Internet />, name: "Anyone" },

@@ -1,7 +1,7 @@
 import "server-only";
 import { all, now, run, tx } from "../db";
 import { AppError, badRequest, notFound } from "../errors";
-import { publicBaseUrl, getSetting } from "../settings";
+import { publicBaseUrl } from "../settings";
 import { findById, setPassword, updateProfile, deleteUser, type Role, type User, type UserRow } from "../auth/users";
 import { createInvite, listInvites, revokeInvite } from "../auth/invites";
 import { listSessions, revokeSession } from "../auth/session";
@@ -61,8 +61,6 @@ const notSelf = (viewer: User, id: string, msg: string) => {
   if (viewer.id === id) throw new AppError("self", msg, 400);
 };
 
-// ---------------------------------------------------------------- invites
-
 export function inviteLinks(token: string): { url: string; path: string } {
   const path = `/invite/${token}`;
   return { path, url: `${publicBaseUrl()}${path}` };
@@ -85,8 +83,6 @@ export function cancelInvite(id: string): InviteView {
   revokeInvite(id);
   return inv;
 }
-
-// ---------------------------------------------------------------- account changes
 
 export function changeRole(id: string, role: Role): Row {
   const row = personOrThrow(id);
@@ -150,8 +146,6 @@ export function resetMfa(viewer: User, id: string): Row {
   disableTotp(id);
   return personOrThrow(id);
 }
-
-// ---------------------------------------------------------------- sessions
 
 export function sessionsOf(id: string, viewerSessionHash: string): PersonSession[] {
   personOrThrow(id);
