@@ -11,6 +11,7 @@ import type { User } from "../auth/users";
 import type { ZipEstimate } from "@/lib/files-types";
 import { formatBytes, plural } from "@/lib/format";
 import { authorize, isTrashDirName, scopeFor } from "./paths";
+import { inDir, inParent, openFileIn } from "./safe";
 import { isCompressed } from "./kinds";
 import { disposition } from "./stream";
 
@@ -33,6 +34,7 @@ interface Pending {
   expires: number;
   bytes: number;
   files: number;
+  partial: boolean;
 }
 
 type G = typeof globalThis & { __gluonZips?: Map<string, Pending> };
@@ -103,12 +105,29 @@ export async function prepareZip(user: User, paths: string[]): Promise<ZipEstima
   else if (m.files > WARN_FILES) warning = `This is${more} ${plural(m.files, "file")}. Zipping them takes a while.`;
   else if (m.partial) warning = "This folder is very large; Gluon stopped counting early.";
   const token = newToken(18);
-  pending().set(token, { userId: user.id, name: zipName, items: filtered, expires: Date.now() + TOKEN_MS, bytes: m.bytes, files: m.files });
+  pending().set(token, { userId: user.id, name: zipName, items: filtered, expires: Date.now() + TOKEN_MS, bytes: m.bytes, files: m.files, partial: m.partial });
   return { token, name: `${zipName}.zip`, bytes: m.bytes, files: m.files, dirs: m.dirs, partial: m.partial, warning };
 }
 
-/** Walk and add entries lazily so a 100k-file tree never holds 100k open files. */
-async function addTree(archive: ZipArchive, real: string, name: string, signal: AbortSignal) {
+/** Entries handed to the archiver but not yet written: each holds an open file. */
+const AHEAD = 8;
+
+/**
+ * Walk and add entries as the archive drains, so a 100k-file tree never holds 100k open files or
+ * queues a million entries in memory. Each file is opened here, through folders opened without
+ * following links and checked to be the file that was looked at, never later by path: a member who
+ * can write in the share could otherwise swap it for a link to a file they may not read.
+ */
+interface Feed {
+  signal: AbortSignal;
+  /** Wait until the archive has written enough to take another file. */
+  room: () => Promise<void>;
+  /** Files handed over and not yet finished, closed if the download stops. */
+  open: Set<fs.ReadStream>;
+}
+
+async function addTree(archive: ZipArchive, real: string, name: string, feed: Feed) {
+  const { signal, room } = feed;
   const stack: { real: string; rel: string }[] = [{ real, rel: name }];
   while (stack.length) {
     if (signal.aborted) return;
@@ -123,22 +142,26 @@ async function addTree(archive: ZipArchive, real: string, name: string, signal: 
       archive.append("", { name: `${cur.rel}/`, type: "directory", date: st.mtime, mode: st.mode & 0o7777 });
       let names: string[] = [];
       try {
-        names = await fs.promises.readdir(hostPath(cur.real));
+        names = await inDir(cur.real, st, (d) => fs.promises.readdir(d.here));
       } catch {
         continue;
       }
       for (const n of names.sort().reverse()) if (!isTrashDirName(n)) stack.push({ real: path.posix.join(cur.real, n), rel: `${cur.rel}/${n}` });
     } else if (st.isFile()) {
-      archive.file(hostPath(cur.real), { name: cur.rel, date: st.mtime, mode: st.mode & 0o7777, stats: st, store: isCompressed(cur.rel) } as Parameters<ZipArchive["file"]>[1]);
+      await room();
+      if (signal.aborted) return;
+      const fh = await inParent(cur.real, (d, n) => openFileIn(d, n, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, undefined, st));
+      const source = fh.createReadStream({ highWaterMark: 256 * 1024, autoClose: true });
+      feed.open.add(source);
+      source.once("close", () => feed.open.delete(source));
+      archive.append(source, { name: cur.rel, date: st.mtime, mode: st.mode & 0o7777, stats: st, store: isCompressed(cur.rel) } as Parameters<ZipArchive["append"]>[1]);
     } else if (st.isSymbolicLink()) {
       try {
-        archive.symlink(cur.rel, await fs.promises.readlink(hostPath(cur.real)), st.mode & 0o7777);
+        archive.symlink(cur.rel, await inParent(cur.real, (d, n) => fs.promises.readlink(d.at(n))), st.mode & 0o7777);
       } catch {
         /* skip */
       }
     }
-    // Let the archiver drain between batches (it queues entries internally).
-    if (stack.length % 1000 === 0) await new Promise((r) => setImmediate(r));
   }
 }
 
@@ -153,7 +176,7 @@ export async function streamZip(req: NextRequest, user: User, input: { token?: s
     const t = await authorize(user, input.path, "read");
     if (!t.stat?.isDirectory()) throw badRequest("Only folders are zipped. Download the file directly.");
     const name = path.posix.basename(t.path) || "Computer";
-    job = { userId: user.id, name, items: [{ real: t.real, name }], expires: 0, bytes: 0, files: 0 };
+    job = { userId: user.id, name, items: [{ real: t.real, name }], expires: 0, bytes: 0, files: 0, partial: true };
   } else {
     throw badRequest("Choose a folder to download.");
   }
@@ -161,23 +184,57 @@ export async function streamZip(req: NextRequest, user: User, input: { token?: s
   const scope = await scopeFor(user);
   for (const i of job.items) await authorize(user, i.real, "read", { scope });
 
-  const big = job.bytes > 3.5 * 1024 ** 3 || job.files > 60_000;
+  // Zip64 whenever the size isn't known to be small: a direct folder link has no estimate, and an
+  // estimate that stopped counting early may be far below the real size.
+  const big = job.partial || job.bytes > 3.5 * 1024 ** 3 || job.files > 60_000;
   const archive = new ZipArchive({ zlib: { level: 6 }, forceZip64: big, statConcurrency: 4 });
   const abort = new AbortController();
-  req.signal.addEventListener("abort", () => {
+  let queued = 0;
+  let written = 0;
+  let finished = false;
+  let wake: (() => void) | null = null;
+  const nudge = () => {
+    const w = wake;
+    wake = null;
+    w?.();
+  };
+  const open = new Set<fs.ReadStream>();
+  const stop = () => {
     abort.abort();
+    nudge();
+    for (const f of open) f.destroy();
+  };
+  archive.on("entry", (e: { type?: string }) => {
+    if (e.type === "file") written++;
+    nudge();
+  });
+  const room = async () => {
+    while (queued - written >= AHEAD && !abort.signal.aborted) await new Promise<void>((r) => (wake = r));
+    queued++;
+  };
+  req.signal.addEventListener("abort", () => {
+    stop();
     archive.abort();
   });
   archive.on("warning", (e) => console.warn("[gluon] zip warning", e.message));
   archive.on("error", (e) => {
     console.error("[gluon] zip failed", e.message);
+    stop();
     archive.destroy(e);
+  });
+  archive.on("close", () => {
+    if (!finished) stop();
   });
   void (async () => {
     try {
-      for (const i of job.items) await addTree(archive, i.real, i.name, abort.signal);
-      if (!abort.signal.aborted) await archive.finalize();
+      for (const i of job.items) await addTree(archive, i.real, i.name, { signal: abort.signal, room, open });
+      if (!abort.signal.aborted) {
+        finished = true;
+        await archive.finalize();
+      }
     } catch (e) {
+      // A file that changed or can't be read ends the download as failed, rather than a zip quietly missing it.
+      stop();
       archive.destroy(e as Error);
     }
   })();

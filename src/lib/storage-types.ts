@@ -222,6 +222,8 @@ export interface SmartSummary {
   notes: string[];
   /** Why SMART couldn't be read (state = unavailable). */
   message: string | null;
+  /** While asleep: the verdict of the last real reading (a failing drive that spins down is still failing). */
+  lastState?: SmartState | null;
 }
 
 export interface SmartDetail {

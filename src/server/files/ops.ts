@@ -12,7 +12,7 @@ import type { ConflictPolicy, FileEntry, FileJob } from "@/lib/files-types";
 import { formatBytes, plural } from "@/lib/format";
 import { assertMutable, assertRemovable, authorize, cleanName, freeName, logicalChild, scopeFor, type Target } from "./paths";
 import { freeBytes, mountOf } from "./mounts";
-import { Cancelled, startJob, type JobContext } from "./jobs";
+import { Cancelled, humanError, startJob, type JobContext } from "./jobs";
 import { moveToTrash } from "./trash";
 import { Changed, inDir, inParent, openFileIn, type Dir } from "./safe";
 import { cachedSizes, pinMap, toEntry } from "./list";
@@ -196,8 +196,9 @@ async function copyFile(from: Dir, name: string, st: fs.Stats, to: Dir, toName: 
         { signal: ctx.signal },
       );
       await output.sync();
-      await output.chmod(st.mode & 0o7777).catch(() => {});
+      // Owner before mode: chown clears setuid/setgid bits, so the other order would lose them.
       await output.chown(st.uid, st.gid).catch(() => {});
+      await output.chmod(st.mode & 0o7777).catch(() => {});
       await output.utimes(st.atime, st.mtime).catch(() => {});
     } finally {
       await output.close().catch(() => {});
@@ -252,8 +253,8 @@ async function copyTree(src: string, dest: string, ctx: JobContext, state: CopyS
   // Folders last, deepest first, so their times aren't bumped by the files written into them.
   for (const d of dirsToFinish.reverse()) {
     await inDir(d.dest, null, async (h) => {
-      await h.chmod(d.st.mode & 0o7777).catch(() => {});
       await h.chown(d.st.uid, d.st.gid).catch(() => {});
+      await h.chmod(d.st.mode & 0o7777).catch(() => {});
       await h.utimes(d.st.atime, d.st.mtime).catch(() => {});
     });
   }
@@ -382,13 +383,17 @@ async function transfer(user: User, ctx: JobContext, d: Target, todo: Plan[], mo
     try {
       await copyTree(p.src.real, temp, ctx, state, p.src.path);
       const tempName = path.posix.basename(temp);
-      if (p.replace) await moveToTrash(final, user.id);
-      else if (await lexists(final)) {
+      // The thing to replace may have gone while copying: then there's nothing to put in the trash.
+      if (p.replace && (await lexists(final))) await moveToTrash(final, user.id);
+      else if (!p.replace && (await lexists(final))) {
         // Someone created it meanwhile: never clobber.
         const alt = await freeName(d.real, p.finalName!);
         await inDir(d.real, d.stat, (dd) => fs.promises.rename(dd.at(tempName), dd.at(alt)));
         done.push({ from: p.src.real, to: path.posix.join(d.real, alt) });
-        if (mode === "move") await removeSource(p, ctx);
+        if (mode === "move") {
+          await removeSource(p, ctx);
+          repointPins([p.src.path, p.src.real], logicalChild(d, alt));
+        }
         continue;
       }
       await inDir(d.real, d.stat, (dd) => fs.promises.rename(dd.at(tempName), dd.at(p.finalName!)));
@@ -422,10 +427,16 @@ async function transfer(user: User, ctx: JobContext, d: Target, todo: Plan[], mo
 
 async function removeSource(p: Plan, ctx: JobContext) {
   ctx.progress({ phase: "Removing originals", current: p.src.path });
-  await inParent(p.src.real, async (dir, name) => {
-    const st = await fs.promises.lstat(dir.at(name));
-    if (st.dev !== p.src.stat!.dev || st.ino !== p.src.stat!.ino) throw new Changed(name);
-    await fs.promises.rm(dir.at(name), { recursive: true, force: false, maxRetries: 2 });
-  });
+  try {
+    await inParent(p.src.real, async (dir, name) => {
+      const st = await fs.promises.lstat(dir.at(name));
+      if (st.dev !== p.src.stat!.dev || st.ino !== p.src.stat!.ino) throw new Changed(name);
+      await fs.promises.rm(dir.at(name), { recursive: true, force: false, maxRetries: 2 });
+    });
+  } catch (e) {
+    // The copy is already in place by now: say so, or a "failed" move reads as if nothing arrived.
+    const why = e instanceof AppError ? e.message : humanError(e);
+    throw new AppError("partial_move", `${p.name} was copied, but the original couldn't be fully removed: ${why}`, 500);
+  }
   ctx.progress({ phase: "Moving" });
 }

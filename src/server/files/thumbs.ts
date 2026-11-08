@@ -9,6 +9,9 @@ import type { User } from "../auth/users";
 import { authorize } from "./paths";
 import { kindOf } from "./kinds";
 import { etagOf } from "./stream";
+import { inParent, openFileIn } from "./safe";
+
+const PROC_FD = process.platform === "linux" && fs.existsSync("/proc/self/fd");
 
 /**
  * Small WebP thumbnails for the grid view, made with sharp (which ships with Next.js) and kept in
@@ -99,13 +102,23 @@ export async function thumbnail(req: NextRequest, user: User, rawPath: string, w
   if (!lib) throw new AppError("no_thumbnail", "Thumbnails aren't available on this server.", 415);
   let out: Buffer;
   try {
-    out = await slot(() =>
-      lib(t.fsPath, { failOn: "none", limitInputPixels: 120_000_000, animated: false, density: 72 })
-        .rotate()
-        .resize(size, size, { fit: "inside", withoutEnlargement: true, fastShrinkOnLoad: true })
-        .webp({ quality: 72, effort: 2 })
-        .toBuffer(),
-    );
+    out = await slot(async () => {
+      // Read the file that was checked, through its opened folder: a path handed to sharp could be
+      // swapped for a link to a picture this person may not see.
+      const fh = await inParent(t.real, (d, n) => openFileIn(d, n, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, undefined, t.stat));
+      try {
+        const input = PROC_FD ? `/proc/self/fd/${fh.fd}` : await fh.readFile();
+        return await lib(input, { failOn: "none", limitInputPixels: 120_000_000, animated: false, density: 72 })
+          .rotate()
+          .resize(size, size, { fit: "inside", withoutEnlargement: true, fastShrinkOnLoad: true })
+          .webp({ quality: 72, effort: 2 })
+          // A crafted image can take minutes to decode; give up rather than hold a slot.
+          .timeout({ seconds: 20 })
+          .toBuffer();
+      } finally {
+        await fh.close().catch(() => {});
+      }
+    });
   } catch {
     throw new AppError("no_thumbnail", "This image couldn't be read.", 415);
   }

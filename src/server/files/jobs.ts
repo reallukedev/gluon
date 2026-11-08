@@ -1,4 +1,6 @@
 import "server-only";
+import fs from "node:fs";
+import path from "node:path";
 import { all, now, one, run } from "../db";
 import { id as newId } from "../crypto";
 import { AppError, forbidden, notFound } from "../errors";
@@ -6,6 +8,7 @@ import { audit } from "../audit";
 import { publish } from "../events";
 import type { User } from "../auth/users";
 import type { FileJob, JobKind, JobProgress, JobStatus } from "@/lib/files-types";
+import { inDir } from "./safe";
 
 /**
  * Background work for Files (copy, move across drives, extract, ownership, delete forever). Jobs
@@ -318,6 +321,8 @@ export function cancelJob(user: Pick<User, "id" | "role">, id: string): FileJob 
 /** Jobs that were running when Gluon stopped can't be resumed; say so instead of leaving them "running". */
 export function markInterrupted() {
   try {
+    const stuck = all<{ id: string; kind: JobKind; params: string }>("SELECT id, kind, params FROM file_jobs WHERE status IN ('queued', 'running')");
+    void removeLeftovers(stuck);
     run(
       "UPDATE file_jobs SET status = 'failed', error = ?, message = ?, finished_at = ? WHERE status IN ('queued', 'running')",
       "Gluon restarted while this was running. Anything already finished stays in place; start it again to do the rest.",
@@ -327,5 +332,25 @@ export function markInterrupted() {
     run(`DELETE FROM file_jobs WHERE id NOT IN (SELECT id FROM file_jobs ORDER BY created_at DESC LIMIT ${MAX_KEEP})`);
   } catch {
     /* not migrated */
+  }
+}
+
+/** Hidden half-copies and half-extractions an interrupted job left next to where it was writing. */
+async function removeLeftovers(rows: { id: string; kind: JobKind; params: string }[]) {
+  for (const r of rows) {
+    let params: { dest?: unknown; path?: unknown };
+    try {
+      params = JSON.parse(r.params) as typeof params;
+    } catch {
+      continue;
+    }
+    const dir = (r.kind === "copy" || r.kind === "move") && typeof params.dest === "string" ? params.dest : r.kind === "extract" && typeof params.path === "string" ? path.posix.dirname(params.path) : null;
+    if (!dir?.startsWith("/")) continue;
+    const mine = (n: string) => n.startsWith(`.gluon-part-${r.id}-`) || n === `.gluon-extract-${r.id}`;
+    await inDir(dir, null, async (d) => {
+      for (const n of await fs.promises.readdir(d.here)) {
+        if (mine(n)) await fs.promises.rm(d.at(n), { recursive: true, force: true }).catch(() => {});
+      }
+    }).catch(() => {});
   }
 }

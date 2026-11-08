@@ -18,6 +18,9 @@ export interface Where {
   zone?: string;
 }
 
+const VIRTUAL_FS = new Set(["proc", "sysfs", "devtmpfs", "devpts", "cgroup", "cgroup2", "securityfs", "pstore", "efivarfs", "bpf", "autofs", "hugetlbfs", "mqueue", "debugfs", "tracefs", "fusectl", "configfs", "binfmt_misc", "nsfs", "overlay", "rpc_pipefs", "ramfs", "squashfs"]);
+const SYSTEM_TREES = ["/proc", "/sys", "/dev", "/boot", "/var/lib/docker", "/var/lib/containerd", "/snap", "/run/docker", "/run/containerd", "/run/user", "/run/lock", "/run/credentials"];
+
 /** Filesystems Gluon knows how to mount. */
 const MOUNTABLE = new Set(["ext4", "ext3", "ext2", "xfs", "btrfs", "vfat", "exfat", "ntfs", "ntfs3", "f2fs"]);
 const NON_POSIX = new Set(["vfat", "exfat", "ntfs", "ntfs3"]);
@@ -50,7 +53,14 @@ export function afterChange() {
   publish("storage.changed", { at: Date.now() });
 }
 
-export function persistEntry(r: VolumeRecord, target: string, opts: { noatime?: boolean; currentOptions?: string[]; superOptions?: string[] } = {}): FstabEntry {
+/** The fstab type for an NTFS drive: whatever driver mounted it now (ntfs-3g shows as fuseblk). */
+function ntfsType(live: string | undefined): string {
+  if (live === "fuseblk") return "ntfs-3g";
+  if (live === "ntfs") return "ntfs";
+  return "ntfs3";
+}
+
+export function persistEntry(r: VolumeRecord, target: string, opts: { noatime?: boolean; currentOptions?: string[]; superOptions?: string[]; liveFstype?: string } = {}): FstabEntry {
   const fstype = r.vol.fstype ?? "auto";
   const mntops = [...PERSIST_BASE_OPTIONS];
   const noatime = opts.noatime ?? r.disk.rotational;
@@ -63,7 +73,7 @@ export function persistEntry(r: VolumeRecord, target: string, opts: { noatime?: 
   }
   const spec = r.vol.uuid ? `UUID=${r.vol.uuid}` : r.vol.partUuid ? `PARTUUID=${r.vol.partUuid}` : r.vol.path;
   const pass = /^ext[234]$/.test(fstype) ? 2 : 0;
-  return { spec, file: target, vfstype: fstype === "ntfs" ? "ntfs3" : fstype, mntops, freq: 0, passno: pass };
+  return { spec, file: target, vfstype: fstype === "ntfs" ? ntfsType(opts.liveFstype) : fstype, mntops, freq: 0, passno: pass };
 }
 
 function volumeOrThrow(s: InventoryState, key: string): VolumeRecord {
@@ -122,6 +132,7 @@ export async function mountVolume(user: User, input: { device: string; target: s
     }
     let note = "";
     if (plan.entry) {
+      if (r.vol.fstype === "ntfs") plan.entry.vfstype = ntfsType(mountAt(plan.target)?.fstype);
       try {
         const s = await getInventoryState(true);
         await writeFstab(applyChanges(s.fstabText, [{ kind: "add", entry: plan.entry, comment: gluonComment(`${r.disk.model ?? r.disk.title} (${r.vol.name})`) }]), s.fstabText);
@@ -147,6 +158,10 @@ export async function planUnmount(target: string): Promise<UnmountPlan & { recor
   if (!m) throw notFound(`A mount at ${target}`);
   const r = s.volumes.find((v) => v.vol.mounts.some((x) => x.target === m.target)) ?? null;
   if (isSystemTarget(m.target) || (r && r.disk.system)) blockers.push(`${m.target} is on the system disk. Unmounting it could stop the server from working.`);
+  else if (!r && (VIRTUAL_FS.has(m.fstype) || SYSTEM_TREES.some((t) => isWithin2(m.target, [t])))) {
+    // Kernel and container plumbing (/proc, /run, cgroups, Docker's layers): never a drive to unmount.
+    blockers.push(`${m.target} belongs to the operating system or Docker, not a drive. Unmounting it could stop the server from working.`);
+  }
   const mv = r?.vol.mounts.find((x) => x.target === m.target);
   if (mv?.bind) warnings.push(`${m.target} is a second view (bind mount) of ${r?.vol.primaryMount ?? "another folder"}; the drive itself stays mounted.`);
   const { holders } = await findHolders(m.target, { containers: s.containers });
@@ -247,14 +262,17 @@ export async function planPersist(targets: string[] | null, opts: { noatime?: bo
       continue;
     }
     const m = mounts.find((x) => x.target === t);
-    const entry = persistEntry(r, t, { noatime: opts.noatime, currentOptions: m?.options, superOptions: m?.superOptions });
+    const entry = persistEntry(r, t, { noatime: opts.noatime, currentOptions: m?.options, superOptions: m?.superOptions, liveFstype: m?.fstype });
     const after = formatEntry(entry);
     // An existing line for this filesystem elsewhere, or for another filesystem here: fix it rather than duplicate.
     const sameFs = s.fstab.lines.find((l) => l.entry && !isBindEntry(l.entry) && !isSwapEntry(l.entry) && matchesVolume(l.entry, r.ident));
     const sameTarget = s.fstab.lines.find((l) => l.entry && l.entry.file === t && !isSwapEntry(l.entry));
     if (sameFs) {
-      changes.push({ kind: "replace", index: sameFs.index, expectRaw: sameFs.raw, entry: { ...entry, mntops: mergeOptions(sameFs.entry!.mntops, entry.mntops) } });
-      plan.items.push({ target: t, device: r.vol.path, action: "update", line: sameFs.index + 1, before: sameFs.raw, after: formatEntry({ ...entry, mntops: mergeOptions(sameFs.entry!.mntops, entry.mntops) }) });
+      // Keep a type someone chose by hand (ntfs-3g, a specific driver); "auto" gets the real one.
+      const vfstype = sameFs.entry!.vfstype && sameFs.entry!.vfstype !== "auto" ? sameFs.entry!.vfstype : entry.vfstype;
+      const updated = { ...entry, vfstype, mntops: mergeOptions(sameFs.entry!.mntops, entry.mntops) };
+      changes.push({ kind: "replace", index: sameFs.index, expectRaw: sameFs.raw, entry: updated });
+      plan.items.push({ target: t, device: r.vol.path, action: "update", line: sameFs.index + 1, before: sameFs.raw, after: formatEntry(updated) });
       if (sameTarget && sameTarget.index !== sameFs.index) {
         changes.push({ kind: "comment-out", index: sameTarget.index, expectRaw: sameTarget.raw, note: `Replaced by Gluon on ${new Date().toISOString().slice(0, 10)}` });
       }
@@ -270,10 +288,13 @@ export async function planPersist(targets: string[] | null, opts: { noatime?: bo
   return { plan, changes, text: s.fstabText };
 }
 
-/** Keep hand-added options from an existing line, but make sure ours are there. */
-function mergeOptions(existing: string[], ours: string[]): string[] {
+/**
+ * Keep hand-added options from an existing line, but make sure ours are there. "noauto" goes:
+ * the point is that it mounts at startup, and saying so with noauto kept would be untrue.
+ */
+export function mergeOptions(existing: string[], ours: string[]): string[] {
   const keys = new Set(ours.map((o) => o.split("=")[0]));
-  const kept = existing.filter((o) => o !== "defaults" && !keys.has(o.split("=")[0]) && o !== "auto");
+  const kept = existing.filter((o) => o !== "defaults" && !keys.has(o.split("=")[0]) && o !== "auto" && o !== "noauto");
   return [...ours, ...kept];
 }
 

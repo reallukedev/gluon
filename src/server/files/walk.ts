@@ -124,6 +124,23 @@ export function walkTree(fsRoot: string, o: WalkOptions, onBatch: (hits: WalkHit
   };
 }
 
+/**
+ * Split a tab-separated record into `n` fields, the last keeping any further tabs: it's a path,
+ * and file names may contain tabs.
+ */
+export function splitFields(rec: string, n: number): string[] {
+  const out: string[] = [];
+  let at = 0;
+  for (let i = 0; i < n - 1; i++) {
+    const tab = rec.indexOf("\t", at);
+    if (tab < 0) break;
+    out.push(rec.slice(at, tab));
+    at = tab + 1;
+  }
+  out.push(rec.slice(at));
+  return out;
+}
+
 /** A find-style name (case-insensitive, `*` and `?` wildcards, otherwise "contains") as a RegExp. */
 export function globToRegExp(q: string): RegExp {
   const term = q.trim();

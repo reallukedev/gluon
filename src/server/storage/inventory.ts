@@ -4,6 +4,7 @@ import path from "node:path";
 import { host, local } from "../host/exec";
 import { hostPath, isWithin } from "../host/paths";
 import { filesystems } from "../metrics/sampler";
+import { hostStatfs, isRemoteFs, mountOf } from "../files/mounts";
 import { formatBytes, listJoin } from "@/lib/format";
 import { readMountinfo, readSwaps, isSystemTarget, type MountEntry } from "./mounts";
 import { readFstab, matchesVolume, sourceRef, isBindEntry, isSwapEntry, readMountUnits, resolveDevLink, listBackups, type ParsedFstab, type FstabEntry, type VolumeIdentity } from "./fstab";
@@ -96,8 +97,9 @@ function mediaOf(n: LsblkNode): DiskMedia {
   const model = (str(n.model) ?? "").toLowerCase();
   if (tran === "nvme" || n.name.startsWith("nvme")) return "nvme";
   if (n.name.startsWith("mmcblk") || /card reader|sd\/mmc|cardreader/.test(model)) return "card";
-  if (bool(n.rota)) return "hdd";
+  // USB sticks and many USB bridges claim to be rotational, so removable USB is decided first.
   if (tran === "usb" && bool(n.rm)) return "flash";
+  if (bool(n.rota)) return "hdd";
   if (tran === "usb" || tran === "sata" || tran === "sas" || tran === "ata") return "ssd";
   return "unknown";
 }
@@ -165,7 +167,8 @@ function mountViews(majMin: string, devPaths: string[], mounts: MountEntry[]): M
     .map((m) => {
       const bind = m.fsroot !== "/" || primaryFound;
       if (!bind) primaryFound = true;
-      return { target: m.target, fsroot: m.fsroot, bind, options: m.options, readOnly: m.options.includes("ro") };
+      // The kernel turning a filesystem read-only after errors shows only in the super options.
+      return { target: m.target, fsroot: m.fsroot, bind, options: m.options, readOnly: m.options.includes("ro") || m.superOptions.includes("ro") };
     });
 }
 
@@ -195,15 +198,13 @@ function persistenceOf(target: string, ident: VolumeIdentity, parsed: ParsedFsta
 function usageFor(target: string) {
   const f = filesystems().find((x) => x.mount === target);
   if (f) return { size: f.size, used: f.used, avail: f.avail, pct: f.pct };
-  try {
-    const s = fs.statfsSync(hostPath(target));
-    const size = s.blocks * s.bsize;
-    const avail = s.bavail * s.bsize;
-    const used = size - s.bfree * s.bsize;
-    return { size, used, avail, pct: used + avail > 0 ? (used / (used + avail)) * 100 : 0 };
-  } catch {
-    return null;
-  }
+  // Never a blocking statfs here: on a share whose server is gone it would freeze the process.
+  const s = hostStatfs(target);
+  if (!s) return null;
+  const size = s.blocks * s.bsize;
+  const avail = s.bavail * s.bsize;
+  const used = size - s.bfree * s.bsize;
+  return { size, used, avail, pct: used + avail > 0 ? (used / (used + avail)) * 100 : 0 };
 }
 
 function appName(c: ContainerRef, names: Map<string, string>): { appId: string; app: string } {
@@ -397,7 +398,9 @@ async function build(): Promise<InventoryState> {
     const bind = isBindEntry(e);
     const swap = isSwapEntry(e);
     const match = bind || ref.kind === "network" || ref.kind === "none" ? null : volumes.find((r) => matchesVolume(e, r.ident));
-    const present = bind ? fs.existsSync(hostPath(e.spec.startsWith("/") ? e.spec : "/")) : ref.kind === "network" || ref.kind === "none" ? null : !!match;
+    const bindSrc = e.spec.startsWith("/") ? e.spec : "/";
+    // A bind of a folder on a network share isn't checked: a stat there can hang on a dead server.
+    const present = bind ? (isRemoteFs(mountOf(bindSrc)?.fstype ?? "") ? null : fs.existsSync(hostPath(bindSrc))) : ref.kind === "network" || ref.kind === "none" ? null : !!match;
     const nofail = e.mntops.includes("nofail");
     const noauto = e.mntops.includes("noauto");
     const mounted = swap ? !!match?.vol.swapActive : mountedTargets.has(e.file);

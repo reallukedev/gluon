@@ -177,6 +177,50 @@ export async function mkdirs(real: string, mode = 0o755): Promise<string[]> {
 }
 
 /**
+ * Change the owner of many paths (never following a link, at the end or on the way), keeping the
+ * last folder open so siblings share one walk. Returns how many were changed and how many failed.
+ */
+export async function lchownMany(
+  items: AsyncIterable<{ path: string; uid: number; gid: number }>,
+  onProgress: (done: number) => void,
+  check: () => void,
+): Promise<{ done: number; failed: number }> {
+  let done = 0;
+  let failed = 0;
+  let cur = null as { path: string; dir: Dir | null } | null;
+  try {
+    for await (const it of items) {
+      let norm: string;
+      try {
+        norm = normalizeHostPath(it.path);
+      } catch {
+        failed++;
+        continue;
+      }
+      const parent = path.posix.dirname(norm);
+      if (cur?.path !== parent) {
+        await cur?.dir?.close();
+        cur = { path: parent, dir: await openDir(parent).catch(() => null) };
+      }
+      try {
+        if (!cur.dir || norm === "/") throw new Changed();
+        await fs.promises.lchown(cur.dir.at(path.posix.basename(norm)), it.uid, it.gid);
+      } catch {
+        failed++;
+      }
+      if (++done % 400 === 0) {
+        check();
+        onProgress(done);
+      }
+    }
+  } finally {
+    await cur?.dir?.close();
+  }
+  onProgress(done);
+  return { done, failed };
+}
+
+/**
  * Open a file inside an open folder without following a link in its place, check it's the file
  * that was looked at (when `expect` is given), and hand back the handle.
  */

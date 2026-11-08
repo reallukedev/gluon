@@ -6,7 +6,7 @@ import type Docker from "dockerode";
 import { DATA_DIR } from "../db";
 import { AppError, badRequest, notFound } from "../errors";
 import { hostPath, isWithin, normalizeHostPath } from "../host/paths";
-import { host, localSpawn } from "../host/exec";
+import { localSpawn } from "../host/exec";
 import { docker } from "../docker/client";
 import { listApps, type AppSummary } from "../docker/apps";
 import type { User } from "../auth/users";
@@ -15,6 +15,8 @@ import { listJoin, plural } from "@/lib/format";
 import { assertMutable, authorize, protectedInside, resolveHost } from "./paths";
 import { groupName, userName } from "./ids";
 import { startJob } from "./jobs";
+import { lchownMany } from "./safe";
+import { splitFields } from "./walk";
 
 type Where = { ip: string; zone: string };
 
@@ -208,7 +210,7 @@ function walkOwners(real: string, target: RunsAs, signal: AbortSignal, onProgres
       while ((i = buf.indexOf("\0")) >= 0) {
         const rec = buf.slice(0, i);
         buf = buf.slice(i + 1);
-        const [u, g, y, rel = ""] = rec.split("\t");
+        const [u, g, y, rel = ""] = splitFields(rec, 4);
         const uid = Number(u);
         const gid = Number(g);
         s.total++;
@@ -303,35 +305,18 @@ async function* readManifest(file: string): AsyncGenerator<{ header: Manifest } 
         yield { header: JSON.parse(rec) as Manifest };
         continue;
       }
-      const [u, g, rel = ""] = rec.split("\t");
+      const [u, g, rel = ""] = splitFields(rec, 3);
       yield { uid: Number(u), gid: Number(g), rel };
     }
   }
 }
 
-/** chown in batches of 400 paths per call, one owner per call. Returns how many failed. */
-async function chownStream(entries: AsyncIterable<{ owner: string; path: string }>, onBatch: (n: number) => void, check: () => void): Promise<number> {
-  let failed = 0;
-  let owner = "";
-  let batch: string[] = [];
-  const flush = async () => {
-    if (!batch.length) return;
-    check();
-    const { stderr } = await host("chown", ["-h", "--", owner, ...batch], { timeoutMs: 120_000, okCodes: [1] });
-    if (stderr) failed += stderr.trim().split("\n").filter(Boolean).length;
-    onBatch(batch.length);
-    batch = [];
-  };
-  for await (const e of entries) {
-    if (e.owner !== owner || batch.length >= 400) {
-      await flush();
-      owner = e.owner;
-    }
-    batch.push(e.path);
-  }
-  await flush();
-  return failed;
-}
+/**
+ * Owners are changed by Gluon itself, one item at a time through folders opened without following
+ * links: the tree belongs to an app that can write in it, and between listing and changing it could
+ * swap a folder for a link to /etc. chown(1) given a path would follow that link.
+ */
+const chownAll = lchownMany;
 
 /** Give a folder tree to an app's user. Saves the previous owners so it can be undone. */
 export async function applyOwnership(user: User, input: { path: string; app?: string; uid?: number; gid?: number }, where: Where): Promise<FileJob> {
@@ -375,16 +360,11 @@ export async function applyOwnership(user: User, input: { path: string; app?: st
         return { message: `Everything in ${t.real} already belonged to ${who}.`, result: { changed: 0 } };
       }
       ctx.progress({ phase: "Changing owners", done: 0, total: s.toChange });
-      const owner = `${target.uid}:${target.gid}`;
-      let done = 0;
-      const failed = await chownStream(
+      const { done, failed } = await chownAll(
         (async function* () {
-          for await (const r of readManifest(manifest)) if (!("header" in r)) yield { owner, path: r.rel ? path.posix.join(t.real, r.rel) : t.real };
+          for await (const r of readManifest(manifest)) if (!("header" in r)) yield { uid: target.uid, gid: target.gid, path: r.rel ? path.posix.join(t.real, r.rel) : t.real };
         })(),
-        (n) => {
-          done += n;
-          ctx.progress({ done });
-        },
+        (done) => ctx.progress({ done }),
         () => ctx.check(),
       );
       return {
@@ -417,15 +397,11 @@ export async function undoOwnership(user: User, jobId: string, where: Where): Pr
     where,
     async (ctx) => {
       ctx.progress({ phase: "Restoring owners", done: 0 });
-      let done = 0;
-      const failed = await chownStream(
+      const { done, failed } = await chownAll(
         (async function* () {
-          for await (const r of readManifest(manifest)) if (!("header" in r)) yield { owner: `${r.uid}:${r.gid}`, path: r.rel ? path.posix.join(root, r.rel) : root };
+          for await (const r of readManifest(manifest)) if (!("header" in r) && Number.isInteger(r.uid) && Number.isInteger(r.gid)) yield { uid: r.uid, gid: r.gid, path: r.rel ? path.posix.join(root, r.rel) : root };
         })(),
-        (n) => {
-          done += n;
-          ctx.progress({ done });
-        },
+        (done) => ctx.progress({ done }),
         () => ctx.check(),
       );
       fs.renameSync(manifest, `${manifest}.undone`);

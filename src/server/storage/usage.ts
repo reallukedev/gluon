@@ -1,5 +1,6 @@
 import "server-only";
 import fs from "node:fs";
+import { StringDecoder } from "node:string_decoder";
 import type { ChildProcess } from "node:child_process";
 import { localSpawn } from "../host/exec";
 import { hostPath, HOST_ROOT, isWithin, normalizeHostPath } from "../host/paths";
@@ -108,8 +109,10 @@ export async function startUsage(user: User | null, raw: string): Promise<Storag
   let unreadable = 0;
   let buf = "";
   let done = 0;
+  const decoder = new StringDecoder("utf8");
   child.stdout?.on("data", (d: Buffer) => {
-    buf += d.toString("utf8");
+    // A name's multi-byte character can be split across two reads.
+    buf += decoder.write(d);
     let i: number;
     while ((i = buf.indexOf("\0")) >= 0) {
       const rec = buf.slice(0, i);

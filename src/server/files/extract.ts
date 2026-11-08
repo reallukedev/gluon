@@ -9,7 +9,7 @@ import type { User } from "../auth/users";
 import type { FileJob } from "@/lib/files-types";
 import { formatBytes, plural } from "@/lib/format";
 import { assertMutable, authorize, canSee, freeName, resolveHost, splitName, type Scope } from "./paths";
-import { inDir, openDir, openFileIn } from "./safe";
+import { inDir, inParent, openDir, openFileIn } from "./safe";
 import { freeBytes } from "./mounts";
 import { Cancelled, startJob, type JobContext } from "./jobs";
 
@@ -49,12 +49,18 @@ function findTool(names: string[]): { cmd: string; where: "local" | "host" } | n
   return null;
 }
 
+const MULTI_PART = /\.(part\d+\.rar|r\d{2}|7z\.\d{3}|z\d{2})$/i;
+
 const ENV = { PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" };
 
-/** `into` is an open folder handed to the tool as its descriptor 3, so it extracts there and nowhere else. */
-function run(cmd: string, args: string[], where: "local" | "host", stdin: "pipe" | "ignore" = "ignore", into: number | null = null): ChildProcess {
+/**
+ * `into` is an open folder handed to the tool as its descriptor 3, so it extracts there and nowhere
+ * else; `archive` is the opened archive as descriptor 4, so it reads the file that was checked.
+ */
+function run(cmd: string, args: string[], where: "local" | "host", stdin: "pipe" | "ignore" = "ignore", into: number | null = null, archive: number | null = null): ChildProcess {
   const full = where === "host" ? ["nsenter", "-t", "1", "-m", "-u", "-i", "-n", "-p", "--", cmd, ...args] : [cmd, ...args];
-  return spawn(full[0]!, full.slice(1), { env: ENV as unknown as NodeJS.ProcessEnv, stdio: into === null ? [stdin, "pipe", "pipe"] : [stdin, "pipe", "pipe", into] });
+  const extra = into === null ? [] : archive === null ? [into] : [into, archive];
+  return spawn(full[0]!, full.slice(1), { env: ENV as unknown as NodeJS.ProcessEnv, stdio: [stdin, "pipe", "pipe", ...extra] });
 }
 
 /**
@@ -67,7 +73,8 @@ interface SpaceWatch {
   reserve: number;
 }
 
-function wait(child: ChildProcess, ctx: JobContext, onLine?: (l: string) => void, space?: SpaceWatch): Promise<void> {
+/** unzip and 7-Zip exit with 1 for warnings; for tar and bsdtar 1 means it failed. */
+function wait(child: ChildProcess, ctx: JobContext, onLine?: (l: string) => void, space?: SpaceWatch, warnExit = false): Promise<void> {
   return new Promise((resolve, reject) => {
     let err = "";
     let buf = "";
@@ -105,7 +112,7 @@ function wait(child: ChildProcess, ctx: JobContext, onLine?: (l: string) => void
       clearInterval(watch);
       if (full) return reject(new AppError("no_space", "Stopped: extracting this archive would have filled the drive. The partly extracted files were removed.", 507));
       if (ctx.signal.aborted) return reject(new Cancelled("Stopped. The partly extracted files were removed."));
-      if (code === 0 || (code === 1 && /warning/i.test(err))) return resolve();
+      if (code === 0 || (warnExit && code === 1 && /warning/i.test(err))) return resolve();
       const last = err.trim().split("\n").filter(Boolean).slice(-2).join(" ").replace(/\/proc\/1\/root/g, "");
       reject(new AppError("extract_failed", /No space left/i.test(err) ? "The drive ran out of space while extracting." : /password|encrypted/i.test(err) ? "That archive is password-protected, which Gluon can't open." : `The archive couldn't be extracted${last ? `: ${last}` : "."}`, 500));
     });
@@ -210,27 +217,42 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
     async (ctx) => {
       const tempName = `.gluon-extract-${ctx.id}`;
       const temp = path.posix.join(parent.real, tempName);
-      const archiveFs = toolUse.where === "host" ? t.real : t.fsPath;
-      await inDir(parent.real, parent.stat, (d) => fs.promises.mkdir(d.at(tempName), { mode: 0o755 }));
+      // Private until it's finished: what's being extracted (as root) may hold setuid programs
+      // that no one should be able to run before the owners are settled.
+      await inDir(parent.real, parent.stat, (d) => fs.promises.mkdir(d.at(tempName), { mode: 0o700 }));
       // The tool gets the temp folder as an open descriptor where it can, so a folder on the way
       // swapped for a link can't make it extract (as root) somewhere else.
       const into = await openDir(temp);
       const tempFs = into.fd !== null ? "/proc/self/fd/3" : toolUse.where === "host" ? temp : hostPath(temp);
+      // And the archive itself, opened and checked: the file at that path could be swapped for a
+      // link to an archive the person may not read, which would land in their folder.
+      let src: fs.promises.FileHandle;
+      try {
+        src = await inParent(t.real, (d, n) => openFileIn(d, n, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, undefined, t.stat));
+      } catch (e) {
+        await into.close();
+        await inDir(parent.real, null, (d) => fs.promises.rmdir(d.at(tempName))).catch(() => {});
+        throw e;
+      }
+      // Multi-part archives are found by name next to the first part, so those are read by path.
+      const byFd = into.fd !== null && !MULTI_PART.test(name);
+      const archiveFs = byFd ? "/proc/self/fd/4" : toolUse.where === "host" ? t.real : t.fsPath;
+      const fds = [into.fd, byFd ? src.fd : null] as const;
       try {
         ctx.progress({ phase: "Extracting", total: zt?.files ?? null, bytesTotal: fmt.kind === "tar" || fmt.kind === "single" ? size : (zt?.bytes ?? null) });
         let files = 0;
         if (viaBsdtar) {
-          const child = run(toolUse.cmd, ["-x", "--no-same-owner", "-f", archiveFs, "-C", tempFs], toolUse.where, "ignore", into.fd);
+          const child = run(toolUse.cmd, ["-x", "--no-same-owner", "-f", archiveFs, "-C", tempFs], toolUse.where, "ignore", ...fds);
           await wait(child, ctx, undefined, space);
         } else if (fmt.kind === "zip") {
-          const child = run(toolUse.cmd, ["-o", "-d", tempFs, archiveFs], toolUse.where, "ignore", into.fd);
+          const child = run(toolUse.cmd, ["-o", "-d", tempFs, archiveFs], toolUse.where, "ignore", ...fds);
           await wait(child, ctx, (l) => {
             const m = l.match(/^\s*(inflating|extracting|linking):\s+(.*?)\s*$/);
             if (m) {
               files++;
               ctx.progress({ done: files, current: m[2]!.replace(tempFs + "/", "") });
             }
-          }, space);
+          }, space, true);
         } else if (fmt.kind === "tar" || fmt.kind === "single") {
           // Feed the archive through stdin so progress = bytes read of the archive.
           const args =
@@ -238,7 +260,7 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
               ? ["-x", "-f", "-", "-C", tempFs, "--no-same-owner", "--delay-directory-restore", ...(fmt.flag ? [fmt.flag] : [])]
               : ["-d", "-c"];
           const child = run(toolUse.cmd, args, toolUse.where, "pipe", fmt.kind === "tar" ? into.fd : null);
-          const input = fs.createReadStream(t.fsPath, { highWaterMark: 1024 * 1024 });
+          const input = fs.createReadStream("", { fd: src.fd, autoClose: false, emitClose: false, highWaterMark: 1024 * 1024 });
           let read = 0;
           input.on("data", (b) => {
             read += b.length;
@@ -257,11 +279,11 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
           }
         } else {
           const args = toolUse.cmd.endsWith("unrar") ? ["x", "-o+", "-idq", archiveFs, `${tempFs}/`] : ["x", "-y", "-bsp1", "-bso0", `-o${tempFs}`, archiveFs];
-          const child = run(toolUse.cmd, args, toolUse.where, "ignore", into.fd);
+          const child = run(toolUse.cmd, args, toolUse.where, "ignore", ...fds);
           await wait(child, ctx, (l) => {
             const m = l.match(/(\d+)%/);
             if (m) ctx.progress({ bytesDone: Math.round((Number(m[1]) / 100) * size), bytesTotal: size });
-          }, space);
+          }, space, !toolUse.cmd.endsWith("unrar"));
         }
         ctx.check();
 
@@ -287,6 +309,7 @@ export async function extractArchive(user: User, p: string, where: Where): Promi
         throw e;
       } finally {
         await into.close();
+        await src.close().catch(() => {});
       }
     },
     { action: "files.extract", target: t.real },

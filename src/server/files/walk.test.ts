@@ -4,7 +4,7 @@ import path from "node:path";
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { engineChooser, globToRegExp, probeFindPrintf, walkTree, type WalkHit, type WalkOptions } from "./walk";
+import { engineChooser, globToRegExp, probeFindPrintf, splitFields, walkTree, type WalkHit, type WalkOptions } from "./walk";
 
 let root: string;
 
@@ -127,5 +127,13 @@ describe("engineChooser", () => {
     };
     expect(await probeFindPrintf(fake(0))()).toBe(true);
     expect(await probeFindPrintf(fake(1, "find: -printf: unknown primary or operator"))()).toBe(false);
+  });
+});
+
+describe("splitFields", () => {
+  it("keeps tabs inside the last field, where a file name may have them", () => {
+    expect(splitFields("1000\t100\tf\tMusic/a\tb.mp3", 4)).toEqual(["1000", "100", "f", "Music/a\tb.mp3"]);
+    expect(splitFields("1000\t100\t", 3)).toEqual(["1000", "100", ""]);
+    expect(splitFields("short", 4)).toEqual(["short"]);
   });
 });

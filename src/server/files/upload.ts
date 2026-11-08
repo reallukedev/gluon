@@ -178,7 +178,14 @@ export async function putChunk(user: User, id: string, offset: number, body: Rea
 
   locks.add(id);
   let written = 0;
-  const fh = await fs.promises.open(tempFile(id), "r+");
+  let fh: fs.promises.FileHandle;
+  try {
+    fh = await fs.promises.open(tempFile(id), "r+");
+  } catch {
+    locks.delete(id);
+    update(id, { status: "failed", error: "The partial upload was lost. Start it again." });
+    throw new AppError("lost", "The partial upload was lost. Start it again.", 410);
+  }
   try {
     const reader = body.getReader();
     for (;;) {
@@ -291,31 +298,46 @@ async function finalize(user: User, r: Row, where: Where): Promise<UploadSession
       } else {
         if (existing.isDirectory()) throw new AppError("conflict", `A folder called ${name} is already here, so the file can't replace it.`, 409);
         await assertRemovable({ real: target, root: dir.root, scope: dir.scope }, "replace");
-        // Overwrite = the old file goes to the trash, never silently lost.
-        await moveToTrash(target, user.id, existing);
       }
     }
 
     const src = tempFile(r.id);
     const hostSrc = containerToHost(src, dir.real);
     const sameMount = !!hostSrc && mountOf(hostSrc)?.mount === mountOf(dir.real)?.mount;
-    // The file, next to the target, ready to link or rename into place: Gluon's own temp file on the
-    // same drive, or a copy written into the destination.
+    // The file, next to the target, ready to link or rename into place: a link to Gluon's own temp
+    // file on the same drive, or a copy written into the destination.
     const stagedName = `.gluon-upload-${r.id}`;
-    let staged: string;
+    await fs.promises.unlink(d.at(stagedName)).catch(() => {}); // left by an earlier attempt
+    let staged: string | null = null;
+    let ownStaged = false;
     if (sameMount) {
-      staged = hostPath(hostSrc!);
-    } else {
+      try {
+        await fs.promises.link(hostPath(hostSrc!), d.at(stagedName));
+        staged = d.at(stagedName);
+        ownStaged = true;
+      } catch (e) {
+        const code = (e as NodeJS.ErrnoException).code;
+        // No hard links here (vfat/exfat): the temp file itself is renamed into place.
+        if (code === "EPERM" || code === "ENOTSUP" || code === "EOPNOTSUPP") staged = hostPath(hostSrc!);
+        // EXDEV: one mount spanning filesystems that refuse links between them (btrfs subvolumes): copy.
+        else if (code !== "EXDEV") throw e;
+      }
+    }
+    if (!staged) {
       const free = freeBytes(dir.real);
       if (free !== null && r.size > free) throw new AppError("no_space", `${mountOf(dir.real)?.mount ?? "The drive"} only has ${formatBytes(free)} free; ${r.name} needs ${formatBytes(r.size)}.`, 507);
       staged = d.at(stagedName);
+      ownStaged = true;
       const out = await openFileIn(d, stagedName, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o644);
       try {
         await pipeline(fs.createReadStream(src, { highWaterMark: 1024 * 1024 }), fs.createWriteStream("", { fd: out.fd, autoClose: false, emitClose: false }));
         await out.sync();
-      } finally {
+      } catch (e) {
         await out.close().catch(() => {});
+        await fs.promises.unlink(d.at(stagedName)).catch(() => {});
+        throw e;
       }
+      await out.close().catch(() => {});
     }
     try {
       // Owner, mode and time are set on the open file, never through a path someone could swap.
@@ -328,6 +350,9 @@ async function finalize(user: User, r: Row, where: Where): Promise<UploadSession
         await fh.close().catch(() => {});
       }
       if (r.conflict === "overwrite") {
+        // Overwrite = the old file goes to the trash, never silently lost. Only now that the new
+        // one is ready: a copy that fails (no space) must not leave the folder without either.
+        if (existing && (await fs.promises.lstat(d.at(name)).catch(() => null))) await moveToTrash(target, user.id, existing);
         await fs.promises.rename(staged, d.at(name));
       } else {
         // No-clobber: link() fails if the name was taken meanwhile; pick another name then.
@@ -353,7 +378,7 @@ async function finalize(user: User, r: Row, where: Where): Promise<UploadSession
         }
       }
     } catch (e) {
-      if (!sameMount) await fs.promises.unlink(d.at(stagedName)).catch(() => {});
+      if (ownStaged) await fs.promises.unlink(d.at(stagedName)).catch(() => {});
       throw e;
     }
     // Make the new directory entry durable.
