@@ -1,9 +1,9 @@
 name: Publish
 
-# edge follows main. latest (and the version tag) move only when a release tag is pushed.
+# Never runs on a plain push. Pushing a v* tag publishes the version and latest. Running it by hand
+# from the Actions tab on main publishes edge.
 on:
   push:
-    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
