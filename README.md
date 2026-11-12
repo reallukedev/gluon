@@ -36,6 +36,15 @@ cd gluon
 docker compose -f docker/compose.yaml up -d --build
 ```
 
+Or skip the clone and build straight from GitHub with one command (Docker Compose 2.20 or newer):
+
+```sh
+docker compose -f https://raw.githubusercontent.com/slukedev/gluon/main/docker/compose.remote.yaml up -d --build
+```
+
+That builds the newest release, `latest`. Put `GLUON_REF=edge` in front to build the newest commit on
+`main` instead, or `GLUON_REF=v1.5.1` for a specific release. Run the same command again to update.
+
 The first build takes a few minutes. Then open `http://<your server>:8130` and enter the setup code,
 which this prints:
 
