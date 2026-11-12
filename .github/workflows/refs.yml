@@ -1,0 +1,21 @@
+name: Move edge and latest
+
+# Nothing is built here. People build Gluon themselves from these branches
+# (see docker/compose.remote.yaml): edge follows main, latest follows the newest v* tag.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move the ref
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then ref=latest; else ref=edge; fi
+          git push --force origin "HEAD:refs/heads/$ref"

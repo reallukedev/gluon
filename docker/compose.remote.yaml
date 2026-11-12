@@ -1,0 +1,42 @@
+# Gluon built on your own machine straight from GitHub, no repository checkout needed:
+#   docker compose -f https://raw.githubusercontent.com/slukedev/gluon/main/docker/compose.remote.yaml up -d --build
+# Needs Docker Compose 2.20 or newer. Otherwise download this file and run it with -f.
+#
+# GLUON_REF picks what gets built: latest (the newest release, the default), edge (the newest
+# main), or a release tag such as v1.5.0.
+#   GLUON_REF=edge docker compose -f <this file> up -d --build
+# To update, run the same command again with --pull.
+#
+# Then open http://<this server>:8130; the first visit asks for a one-time setup code, printed in
+# `docker logs gluon`. The rest matches docker/compose.yaml.
+name: gluon
+
+services:
+  gluon:
+    build:
+      context: https://github.com/slukedev/gluon.git#${GLUON_REF:-latest}
+      dockerfile: docker/Dockerfile
+    image: gluon:local
+    container_name: gluon
+    restart: unless-stopped
+    stop_grace_period: 20s
+    privileged: true
+    pid: host
+    network_mode: host
+    cgroup: host
+    environment:
+      PORT: "8130"
+      GLUON_DATA: /data
+      # TZ: Europe/London
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - gluon-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8130/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  gluon-data:
