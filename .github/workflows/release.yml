@@ -1,0 +1,28 @@
+name: Release
+
+# Run by hand from the Actions tab on main. Tags the version in package.json as v<version>,
+# creates the GitHub release, and moves the latest branch to it.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag, release, and move latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="v$(node -p "require('./package.json').version")"
+          if git ls-remote --exit-code --tags origin "refs/tags/$v" >/dev/null; then
+            echo "$v already exists" >&2
+            exit 1
+          fi
+          git tag "$v"
+          git push origin "$v"
+          gh release create "$v" --title "$v" --generate-notes --verify-tag
+          git push --force origin "HEAD:refs/heads/latest"
