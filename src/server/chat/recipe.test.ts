@@ -12,7 +12,7 @@ describe("Quark's recipe", () => {
 
   it("runs the pinned image with the domain and the first admin from the environment", () => {
     expect(compose).toContain(`image: ${QUARK_IMAGE}`);
-    expect(QUARK_IMAGE).toBe("ghcr.io/reallukedev/quark:0.1");
+    expect(QUARK_IMAGE).toBe("ghcr.io/slukedev/quark:edge");
     expect(compose).toContain('QUARK_DOMAIN: "chat.example.com"');
     expect(compose).toContain('QUARK_ADMINS: "sam@chat.example.com"');
   });
@@ -43,13 +43,13 @@ describe("Quark's recipe", () => {
 
 describe("telling chat servers apart by image", () => {
   it("finds Quark from the published image or a local build", () => {
-    for (const img of ["ghcr.io/reallukedev/quark:0.1", "quark", "quark:latest", "QUARK:dev"]) expect(chatServerOf(img)).toBe("quark");
+    for (const img of ["ghcr.io/slukedev/quark:edge", "quark", "quark:latest", "QUARK:dev"]) expect(chatServerOf(img)).toBe("quark");
     for (const img of ["quarkus/app:1", "ghcr.io/x/quarkly:1", "redis:7"]) expect(chatServerOf(img)).toBeNull();
     expect(chatServerOf("prosodyim/prosody:13.0")).toBe("prosody");
   });
 
   it("gives Quark and Prosody apps the Chat server tab", () => {
-    expect(serviceKind(["ghcr.io/reallukedev/quark:0.1"])).toBe("quark");
+    expect(serviceKind(["ghcr.io/slukedev/quark:edge"])).toBe("quark");
     expect(serviceKind(["prosodyim/prosody:13.0"])).toBe("prosody");
     expect(serviceKind(["mumblevoip/mumble-server:latest"])).toBe("mumble");
   });

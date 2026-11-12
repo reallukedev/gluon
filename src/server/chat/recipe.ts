@@ -8,7 +8,7 @@ import { isStandardPorts, QUARK_CONTAINER_PORTS, QUARK_PORTS, type QuarkPorts } 
  */
 
 export const PROSODY_IMAGE = "prosodyim/prosody:13.0";
-export const QUARK_IMAGE = "ghcr.io/reallukedev/quark:0.1";
+export const QUARK_IMAGE = "ghcr.io/slukedev/quark:edge";
 /** Where Quark picks up <host>.crt and <host>.key (it reloads them on its own). */
 export const QUARK_CERT_DIR = "/etc/quark/certs";
 /** Quark's built-in call relay: the TURN port and the ports calls are relayed on. */
@@ -141,8 +141,8 @@ ${env}
       description: `Quark, an XMPP chat server, for addresses like you@${a.domain}. Manage accounts, invites and group chats in Gluon under Apps, Quark, Chat server.`,
       category: "social",
       icon: null,
-      website: "https://github.com/reallukedev/quark",
-      support: "https://github.com/reallukedev/quark",
+      website: "https://github.com/slukedev/quark",
+      support: "https://github.com/slukedev/quark",
       developer: "Quark",
       version: "0.1",
       releaseNotes: "",
